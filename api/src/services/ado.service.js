@@ -336,11 +336,145 @@ async function getAttachmentContent(url) {
     }
 }
 
+// --- SourceAdapter Implementation ---
+
+/**
+ * Streams ingestion items.
+ * @param {Object} filter - { queryId, wiql }
+ * @returns {AsyncGenerator<import('./interfaces/source.adapter').IngestionItem>}
+ */
+async function* fetchStream(filter) {
+    if (!witApi) await connectToAdo();
+
+    let rawResult;
+    if (filter.queryId) {
+        rawResult = await _fetchBySavedQuery(filter.queryId);
+    } else if (filter.wiql) {
+        // Fetch ALL IDs for streaming (up to generic limit, e.g. 20000 or API limit)
+        // Note: queryByWiql allows 20k results by default? Need to check.
+        // For safe streaming, we might need a recursive folder based query if it's huge, 
+        // but simple WIQL assume < 20k for now.
+        rawResult = await witApi.queryByWiql({ query: filter.wiql, top: 20000 });
+    } else {
+        throw new Error("ADO Adapter requires 'queryId' or 'wiql' in filter.");
+    }
+
+    if (!rawResult?.workItems?.length) return;
+
+    const allIds = rawResult.workItems.map(wi => wi.id);
+    const BATCH_SIZE = 50;
+
+    // Fields to ensure we have content for the IngestionItem
+    const fields = [
+        "System.Id", "System.Title", "System.Description", "System.State",
+        "System.WorkItemType", "System.ChangedDate", "System.CreatedDate",
+        "System.AssignedTo", "System.AreaPath", "System.IterationPath"
+    ];
+
+    for (let i = 0; i < allIds.length; i += BATCH_SIZE) {
+        const chunkIds = allIds.slice(i, i + BATCH_SIZE);
+        const detailedItems = await _getWorkItemsInBatches(chunkIds, fields);
+
+        if (!detailedItems) continue;
+
+        for (const item of detailedItems) {
+            // Map to IngestionItem
+            const description = item.fields["System.Description"] || "";
+            // Strip HTML for 'content' but keep raw in metadata if needed?
+            // Usually we want raw text for content.
+            const textContent = description.replace(/<[^>]*>?/gm, '');
+
+            yield {
+                id: item.id.toString(),
+                type: 'work_item',
+                content: `${item.fields["System.Title"]}\n\n${textContent}`,
+                metadata: {
+                    ...item.fields,
+                    relations: item.relations ? item.relations.map(r => ({ rel: r.rel, url: r.url })) : [],
+                    source: 'ado',
+                    url: item.url
+                },
+                context: {
+                    repo: null, // Not a repo
+                    areaPath: item.fields["System.AreaPath"],
+                    project: process.env.ADO_PROJECT || "Unknown" // ideally fetch from env or item
+                }
+            };
+        }
+    }
+}
+
+// --- SourceAdapter Implementation ---
+
+/**
+ * Streams ingestion items.
+ * @param {Object} filter - { queryId, wiql }
+ * @returns {AsyncGenerator<import('./interfaces/source.adapter').IngestionItem>}
+ */
+async function* fetchStream(filter) {
+    if (!witApi) await connectToAdo();
+
+    let rawResult;
+    if (filter.queryId) {
+        rawResult = await _fetchBySavedQuery(filter.queryId);
+    } else if (filter.wiql) {
+        // Fetch ALL IDs for streaming (up to generic limit or API limit)
+        // For safe streaming, assume < 20k for now as per ADO limits.
+        rawResult = await witApi.queryByWiql({ query: filter.wiql, top: 20000 });
+    } else {
+        throw new Error("ADO Adapter requires 'queryId' or 'wiql' in filter.");
+    }
+
+    if (!rawResult?.workItems?.length) return;
+
+    const allIds = rawResult.workItems.map(wi => wi.id);
+    const BATCH_SIZE = 50;
+
+    // Fields to ensure we have content for the IngestionItem
+    const fields = [
+        "System.Id", "System.Title", "System.Description", "System.State",
+        "System.WorkItemType", "System.ChangedDate", "System.CreatedDate",
+        "System.AssignedTo", "System.AreaPath", "System.IterationPath"
+    ];
+
+    for (let i = 0; i < allIds.length; i += BATCH_SIZE) {
+        const chunkIds = allIds.slice(i, i + BATCH_SIZE);
+        const detailedItems = await _getWorkItemsInBatches(chunkIds, fields);
+
+        if (!detailedItems) continue;
+
+        for (const item of detailedItems) {
+            // Map to IngestionItem
+            const description = item.fields["System.Description"] || "";
+            const textContent = description.replace(/<[^>]*>?/gm, '');
+
+            yield {
+                id: item.id.toString(),
+                type: 'work_item',
+                content: `${item.fields["System.Title"]}\n\n${textContent}`,
+                metadata: {
+                    ...item.fields,
+                    relations: item.relations ? item.relations.map(r => ({ rel: r.rel, url: r.url })) : [],
+                    source: 'ado',
+                    url: item.url
+                },
+                context: {
+                    repo: null,
+                    areaPath: item.fields["System.AreaPath"],
+                    project: process.env.ADO_PROJECT || "Unknown"
+                }
+            };
+        }
+    }
+}
+
 module.exports = {
     connectToAdo,
     getWorkItemsUniversal,
     searchWorkItems,
     getWorkItemById,
     checkHealth,
-    getAttachmentContent
+    getAttachmentContent,
+    fetchStream,
+    validateConfig: checkHealth
 };

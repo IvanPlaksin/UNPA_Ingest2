@@ -267,6 +267,142 @@ class IngestionService {
             }))
         };
     }
+    // ... (existing methods)
+
+    /**
+     * Ingests data from a source adapter stream.
+     * @param {import('./interfaces/source.adapter').SourceAdapter} adapter 
+     * @param {Object} filter 
+     */
+    async ingestFromSource(adapter, filter) {
+        console.log(`[Ingestion] Starting ingestion from source...`);
+
+        if (adapter.validateConfig) {
+            const isHealthy = await adapter.validateConfig();
+            if (!isHealthy) throw new Error("Source adapter is not healthy.");
+        }
+
+        let count = 0;
+        const results = [];
+
+        try {
+            for await (const item of adapter.fetchStream(filter)) {
+                console.log(`[Ingestion] Processing item: ${item.id} (${item.type})`);
+                const result = await this.processIngestionItem(item);
+                results.push(result);
+                count++;
+            }
+        } catch (e) {
+            console.error(`[Ingestion] Stream error:`, e);
+            throw e;
+        }
+
+        return { count, results };
+    }
+
+    /**
+     * Processes a single unified IngestionItem.
+     * @param {import('./interfaces/source.adapter').IngestionItem} item 
+     */
+    async processIngestionItem(item) {
+        // 1. Check if already processed (Idempotency)
+        // Use ID or URL from metadata
+        const uniqueId = item.metadata.url || item.id;
+        const status = await neo4jService.checkDocumentStatus(uniqueId);
+
+        if (status.processed) {
+            console.log(`[Ingestion] Item ${item.id} already processed. Skipping.`);
+            return { status: 'skipped', id: item.id };
+        }
+
+        // 2. Parse Content (if needed)
+        // If type is file, check extension
+        let processedContent = item.content;
+        let atoms = [];
+
+        if (item.type === 'file') {
+            const fileName = item.metadata.path || item.metadata.name || 'unknown';
+            const lowerName = fileName.toLowerCase();
+
+            // Assume content is text for source files, but handle processors if BUFFER is needed
+            // For now, existing processors take Buffer. 
+            // If item.content is string, convert to Buffer?
+            const buffer = Buffer.from(item.content);
+
+            if (lowerName.endsWith('.msg')) {
+                atoms = await msgProcessor.process(buffer);
+            } else if (lowerName.endsWith('.pdf')) {
+                atoms = await pdfProcessor.process(buffer);
+            } else if (lowerName.endsWith('.docx')) {
+                atoms = await docxProcessor.process(buffer);
+            } else {
+                // Default: Treat as code/text file
+                atoms = [{ content: item.content, type: 'code', context: item.context }];
+            }
+        } else {
+            // Work Item or other text
+            atoms = [{ content: item.content, type: 'text', context: item.context }];
+        }
+
+        // 3. Vectorize & Save (Entities, Chroma, Graph)
+        // Reuse logic from processAttachment, but simpler for now
+
+        const chunks = [];
+        const entities = [];
+        const fileHash = this._generateHash(Buffer.from(item.content)); // item.content might be string
+
+        for (let i = 0; i < atoms.length; i++) {
+            const atom = atoms[i];
+            const text = `${JSON.stringify(atom.context || {})}\n${atom.content}`;
+
+            let vector;
+            try {
+                vector = await this.ai.embedText(text);
+            } catch (e) {
+                console.error(`[Ingestion] Vectorization failed for atom ${i}`, e);
+                continue;
+            }
+
+            chunks.push({
+                id: `item_${fileHash}_${i}`,
+                text: atom.content,
+                metadata: {
+                    source: uniqueId,
+                    itemId: item.id,
+                    type: atom.type,
+                    context: atom.context
+                },
+                vector: vector
+            });
+
+            // Entity Extraction (Heuristic/LLM could be added here)
+        }
+
+        // Save to Chroma
+        if (chunks.length > 0) {
+            await chromaService.saveVectors(chunks);
+        }
+
+        // Save to Neo4j
+        const docData = {
+            url: uniqueId,
+            name: item.metadata.title || item.metadata.path || item.id,
+            hash: fileHash,
+            processedAt: new Date().toISOString()
+        };
+
+        // Relation Handling from Metadata
+        if (item.metadata.relations) {
+            // Logic to save relations to graph could go here
+        }
+
+        await neo4jService.saveDocument(docData, item.id);
+
+        // Extract Entities?
+        // await neo4jService.saveExtractedEntities(uniqueId, entities);
+
+        return { status: 'processed', id: item.id, chunks: chunks.length };
+    }
 }
 
 module.exports = new IngestionService();

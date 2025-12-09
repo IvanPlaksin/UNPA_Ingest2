@@ -171,9 +171,107 @@ async function getCommitDiff({ repositoryName, projectName, commitId }) {
     }
 }
 
+// --- SourceAdapter Implementation ---
+
+/**
+ * Streams ingestion items.
+ * @param {Object} filter - { type: 'commit'|'file', repositoryName, projectName, limit, path }
+ * @returns {AsyncGenerator<import('./interfaces/source.adapter').IngestionItem>}
+ */
+async function* fetchStream(filter) {
+    const api = await getGitApi();
+    const repo = await api.getRepository(filter.repositoryName, filter.projectName);
+
+    if (!repo) throw new Error(`Repository verified failed: ${filter.repositoryName}`);
+
+    if (filter.type === 'commit') {
+        const commits = await getCommits({
+            repositoryName: filter.repositoryName,
+            projectName: filter.projectName,
+            limit: filter.limit || 50
+        });
+
+        if (commits.error) throw new Error(commits.error);
+
+        for (const c of commits) {
+            yield {
+                id: c.commitId,
+                type: 'commit',
+                content: c.comment,
+                metadata: {
+                    author: c.author,
+                    date: c.date,
+                    url: c.url,
+                    source: 'git'
+                },
+                context: {
+                    repo: filter.repositoryName,
+                    project: filter.projectName
+                }
+            };
+        }
+    } else if (filter.type === 'file') {
+        // List files recursively
+        // RecursionLevel.Full = 120
+        const items = await api.getItems(
+            repo.id,
+            filter.projectName,
+            filter.path || '/',
+            120, // Full recursion
+            false, // includeContentMetadata
+            false, // latestProcessedChange
+            false, // download
+            false // includeLinks
+        );
+
+        if (!items) return;
+
+        for (const item of items) {
+            if (item.isFolder) continue;
+
+            const contentResult = await getFileContent({
+                repositoryName: filter.repositoryName,
+                projectName: filter.projectName,
+                filePath: item.path
+            });
+
+            if (contentResult.error) {
+                console.warn(`[Git Adapter] Failed to read ${item.path}: ${contentResult.error}`);
+                continue;
+            }
+
+            yield {
+                id: item.objectId, // Git Object ID
+                type: 'file',
+                content: contentResult.content,
+                metadata: {
+                    path: item.path,
+                    url: item.url,
+                    source: 'git'
+                },
+                context: {
+                    repo: filter.repositoryName,
+                    project: filter.projectName
+                }
+            };
+        }
+    }
+}
+
+async function validateConfig() {
+    try {
+        await getGitApi();
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 module.exports = {
     getRepositories,
     getCommits,
     getFileContent,
-    getCommitDiff
+    getCommitDiff,
+    fetchStream,
+    validateConfig
 };
