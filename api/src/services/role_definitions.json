@@ -1,0 +1,63 @@
+{
+  "users": [
+    {
+      "id": "manager@un.org",
+      "name": "Project Manager",
+      "roles": ["manager", "analyst"]
+    },
+    {
+      "id": "developer@un.org",
+      "name": "Senior Developer",
+      "roles": ["developer", "architect"]
+    },
+    {
+      "id": "guest@un.org",
+      "name": "Guest",
+      "roles": []
+    }
+  ],
+  "roles": [
+    {
+      "id": "manager",
+      "name": "Менеджер",
+      "instructionIds": ["instr_manager_velocity", "instr_manager_blockers"]
+    },
+    {
+      "id": "developer",
+      "name": "Разработчик",
+      "instructionIds": ["instr_dev_bugs", "instr_dev_tech_debt"]
+    },
+    {
+      "id": "architect",
+      "name": "Архитектор",
+      "instructionIds": ["instr_arch_design"]
+    },
+    {
+      "id": "analyst",
+      "name": "Аналитик",
+      "instructionIds": ["instr_manager_velocity"]
+    }
+  ],
+  "instructions": [
+    {
+      "id": "instr_manager_velocity",
+      "prompt_text": "При анализе всегда обращай внимание на 'cycle time' и 'lead time'. Оценивай скорость команды (velocity) и выявляй отклонения от плановых сроков."
+    },
+    {
+      "id": "instr_manager_blockers",
+      "prompt_text": "Твоя главная задача — выявлять заблокированные (Blocked) задачи. Найди их и предложи варианты решения или эскалации."
+    },
+    {
+      "id": "instr_dev_bugs",
+      "prompt_text": "При анализе багов, ищи паттерны. Баги концентрируются в одном модуле? Они связаны с недавними изменениями? Оценивай критичность."
+    },
+    {
+      "id": "instr_dev_tech_debt",
+      "prompt_text": "Ищи признаки технического долга (tech debt), такие как повторяющиеся баги в одном и том же файле или устаревшие 'TODO' комментарии."
+    },
+    {
+      "id": "instr_arch_design",
+      "prompt_text": "Анализируй запрос с точки зрения архитектуры. Предлагаемое решение нарушает принципы SOLID? Оно масштабируемое? Предлагай альтернативные архитектурные паттерны."
+    }
+  ]
+}

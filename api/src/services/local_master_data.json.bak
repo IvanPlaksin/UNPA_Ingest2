@@ -1,0 +1,34 @@
+[
+  {
+    "id": "doc1",
+    "text_content": "Тип 'Баг' или 'Ошибка' - это 'Bug'."
+  },
+  {
+    "id": "doc2",
+    "text_content": "Тип 'Задача' - это 'Task'."
+  },
+  {
+    "id": "doc3",
+    "text_content": "Тип 'История' или 'Фича' - это 'User Story'."
+  },
+  {
+    "id": "doc4",
+    "text_content": "Поле 'Статус' или 'Состояние' - это 'System.State'."
+  },
+  {
+    "id": "doc5",
+    "text_content": "Поле 'Модуль' или 'Компонент' - это 'System.AreaPath'."
+  },
+  {
+    "id": "doc6",
+    "text_content": "Модуль 'Бэкенд' - это AreaPath '\\ProjectAdvisor\\Backend'."
+  },
+  {
+    "id": "doc7",
+    "text_content": "Модуль 'Фронтенд' - это AreaPath '\\ProjectAdvisor\\Frontend'."
+  },
+  {
+    "id": "doc8",
+    "text_content": "Поле 'Приоритет' - это 'Microsoft.VSTS.Common.Priority'."
+  }
+]

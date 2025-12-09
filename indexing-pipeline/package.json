@@ -1,0 +1,29 @@
+{
+    "name": "indexing-pipeline",
+    "version": "1.0.0",
+    "description": "ETL Worker for Knowledge Engine",
+    "main": "src/run.js",
+    "scripts": {
+        "start:worker": "node src/run.js",
+        "dev:worker": "nodemon src/run.js"
+    },
+    "dependencies": {
+        "@google/generative-ai": "^0.1.3",
+        "@kenjiuno/msgreader": "^1.27.0-alpha.3",
+        "@qdrant/js-client-rest": "^1.16.2",
+        "axios": "^1.13.2",
+        "azure-devops-node-api": "^12.0.0",
+        "bullmq": "^5.64.1",
+        "chromadb": "^1.8.1",
+        "dotenv": "^16.3.1",
+        "ioredis": "^5.8.2",
+        "mammoth": "^1.11.0",
+        "neo4j-driver": "^5.28.2",
+        "pdf-parse": "^1.1.1",
+        "redis": "^4.6.10",
+        "uuid": "^13.0.0"
+    },
+    "devDependencies": {
+        "nodemon": "^3.0.1"
+    }
+}

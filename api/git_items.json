@@ -1,0 +1,150 @@
+[
+  {
+    "path": "/",
+    "isFolder": true
+  },
+  {
+    "path": "/.babelrc"
+  },
+  {
+    "path": "/.env.development"
+  },
+  {
+    "path": "/.env.iccpreprod"
+  },
+  {
+    "path": "/.env.localhost"
+  },
+  {
+    "path": "/.env.ngrok"
+  },
+  {
+    "path": "/.env.pdr"
+  },
+  {
+    "path": "/.env.plugin"
+  },
+  {
+    "path": "/.env.production"
+  },
+  {
+    "path": "/.env.security"
+  },
+  {
+    "path": "/.env.unesb"
+  },
+  {
+    "path": "/.eslintignore"
+  },
+  {
+    "path": "/.gitignore"
+  },
+  {
+    "path": "/.vscode",
+    "isFolder": true
+  },
+  {
+    "path": "/LICENSE"
+  },
+  {
+    "path": "/README.md"
+  },
+  {
+    "path": "/action_no.txt"
+  },
+  {
+    "path": "/azure.cmd"
+  },
+  {
+    "path": "/build.cmd"
+  },
+  {
+    "path": "/cert.crt"
+  },
+  {
+    "path": "/certificate.cmd"
+  },
+  {
+    "path": "/chrome.cmd"
+  },
+  {
+    "path": "/createCert.cmd"
+  },
+  {
+    "path": "/fs_about.js"
+  },
+  {
+    "path": "/key.pem"
+  },
+  {
+    "path": "/keytmp.pem"
+  },
+  {
+    "path": "/localhost.cer"
+  },
+  {
+    "path": "/localhost.cnf"
+  },
+  {
+    "path": "/localhost.crt"
+  },
+  {
+    "path": "/localhost.key"
+  },
+  {
+    "path": "/localhost_Temp.key"
+  },
+  {
+    "path": "/openssl.cfg"
+  },
+  {
+    "path": "/package-lock.json"
+  },
+  {
+    "path": "/package.json"
+  },
+  {
+    "path": "/plugin.cmd"
+  },
+  {
+    "path": "/public",
+    "isFolder": true
+  },
+  {
+    "path": "/src",
+    "isFolder": true
+  },
+  {
+    "path": "/start.cmd"
+  },
+  {
+    "path": "/start_ngrok.cmd"
+  },
+  {
+    "path": "/sw_build.js"
+  },
+  {
+    "path": "/sw_build_dev.js"
+  },
+  {
+    "path": "/sw_build_number.js"
+  },
+  {
+    "path": "/webpack.MOPGlobal.plugin.js"
+  },
+  {
+    "path": "/webpack.TR.plugin.js"
+  },
+  {
+    "path": "/webpack.config.js"
+  },
+  {
+    "path": "/webpack.module.js"
+  },
+  {
+    "path": "/webpack.plugin.js"
+  },
+  {
+    "path": "/webpack.vendor.js"
+  }
+]

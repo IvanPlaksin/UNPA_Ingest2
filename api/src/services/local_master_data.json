@@ -1,0 +1,30 @@
+[
+  {
+    "id": "doc_wiql_rule_1",
+    "text_content": "ПРАВИЛО СИНТАКСИСА WIQL: Ключевое слово 'TOP' НЕ ПОДДЕРЖИВАЕТСЯ. Используй 'limit' в инструменте."
+  },
+  {
+    "id": "doc_wiql_rule_2",
+    "text_content": "ПРАВИЛО СИНТАКСИСА WIQL: Запрос всегда должен начинаться с 'SELECT [System.Id] FROM workitems'."
+  },
+  {
+    "id": "doc_wiql_rule_filtering",
+    "text_content": "ПРАВИЛО ФИЛЬТРАЦИИ (Pre-filtering): Чтобы отфильтровать данные на стороне сервера (DevOps), используй условие 'WHERE' в WIQL запросе. Это критично для производительности."
+  },
+  {
+    "id": "field_map_common",
+    "text_content": "КАРТА ПОЛЕЙ (Common): \n- 'Тип' = [System.WorkItemType]\n- 'Статус' = [System.State]\n- 'Заголовок' = [System.Title]\n- 'Описание' = [System.Description]\n- 'Назначено на' = [System.AssignedTo]\n- 'Дата создания' = [System.CreatedDate]\n- 'Кем создано' = [System.CreatedBy]"
+  },
+  {
+    "id": "field_map_paths",
+    "text_content": "КАРТА ПОЛЕЙ (Paths): \n- 'Проект' = [System.TeamProject]\n- 'Модуль' или 'Область' = [System.AreaPath]\n- 'Итерация' или 'Спринт' = [System.IterationPath]"
+  },
+  {
+    "id": "field_map_advanced",
+    "text_content": "КАРТА ПОЛЕЙ (Advanced): \n- 'Приоритет' = [Microsoft.VSTS.Common.Priority] (1=Высокий, 4=Низкий)\n- 'Серьезность' (Severity) = [Microsoft.VSTS.Common.Severity]\n- 'Теги' = [System.Tags] (Используй оператор CONTAINS)"
+  },
+  {
+    "id": "example_wiql_filtering",
+    "text_content": "ПРИМЕР ФИЛЬТРАЦИИ WIQL:\nЗадача: 'Найти критические баги в Бэкенде, созданные на этой неделе'.\nWIQL: SELECT [System.Id] FROM workitems WHERE [System.WorkItemType] = 'Bug' AND [Microsoft.VSTS.Common.Priority] = 1 AND [System.AreaPath] UNDER '\\ProjectAdvisor\\Backend' AND [System.CreatedDate] >= @Today - 7 ORDER BY [System.CreatedDate] DESC"
+  }
+]

@@ -1,0 +1,67 @@
+.sidebar {
+    width: 64px;
+    /* Collapsed by default or just narrow icon-only mode */
+    /* Или 200px, если нужен текст, но компактный */
+    min-width: 200px;
+    background-color: var(--un-navy);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid rgba(0, 0, 0, 0.1);
+    font-size: 13px;
+}
+
+.logo {
+    height: 48px;
+    /* Compact header */
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    gap: 10px;
+}
+
+.sidebar nav {
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    /* Minimal gap */
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    /* Compact item */
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    border-radius: var(--radius);
+    transition: all 0.1s;
+}
+
+.nav-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.nav-item.active {
+    background: var(--un-blue);
+    color: white;
+    font-weight: 500;
+}
+
+.nav-item svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* Smaller icons */
+
+.bottom {
+    padding: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}

@@ -1,0 +1,8 @@
+# test.http
+
+POST http://localhost:3000/api/v1/chat
+Content-Type: application/json
+
+{
+    "message": "Привет! Можешь найти мне все задачи, используя ID запроса 'caaea5fd-a40b-4a4a-922e-60bf4104aa9a'?"
+}

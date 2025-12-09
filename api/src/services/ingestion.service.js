@@ -1,0 +1,272 @@
+const neo4jService = require('./neo4j.service');
+const chromaService = require('./chroma.service');
+const adoService = require('./ado.service');
+const graphExtractor = require('./graph.extractor');
+const msgProcessor = require('../processors/msg.structure.processor');
+const pdfProcessor = require('../../../indexing-pipeline/src/processors/pdf.structure.processor'); // Cross-module import
+const docxProcessor = require('../../../indexing-pipeline/src/processors/docx.structure.processor'); // Cross-module import
+const { getAIProvider } = require('./llm/ai.factory');
+const crypto = require('crypto');
+
+class IngestionService {
+    constructor() {
+        // Default to local Llama 3 for now, can be configured
+        this.ai = getAIProvider('local', 'llama3');
+    }
+
+    /**
+     * Generates a hash for the content to check for changes.
+     * @param {Buffer} buffer 
+     */
+    _generateHash(buffer) {
+        return crypto.createHash('sha256').update(buffer).digest('hex');
+    }
+
+    /**
+     * Orchestrates the ingestion of an attachment.
+     * @param {string} attachmentUrl 
+     * @param {string} workItemId 
+     * @param {string} fileName 
+     */
+    async processAttachment(attachmentUrl, workItemId, fileName) {
+        console.log(`[Ingestion] Processing attachment: ${fileName} (${attachmentUrl})`);
+
+        // 1. Check Status (Idempotency)
+        const status = await neo4jService.checkDocumentStatus(attachmentUrl);
+        if (status.processed) {
+            console.log(`[Ingestion] Document already processed. Returning existing graph.`);
+            // TODO: Fetch existing chunks from Chroma if needed for the UI inspector
+            // For now, we'll return the graph and empty chunks (or fetch from Chroma if we implement that)
+            const graphData = await neo4jService.getDocumentGraph(attachmentUrl);
+            return {
+                graphData: this._formatGraphData(graphData),
+                chunks: [], // We could fetch these from Chroma if we want to show them again
+                status: 'cached'
+            };
+        }
+
+        // 2. Download
+        const contentBuffer = await adoService.getAttachmentContent(attachmentUrl);
+        const fileHash = this._generateHash(Buffer.from(contentBuffer));
+
+        // 3. Parse
+        let atoms = [];
+        const lowerName = fileName.toLowerCase();
+
+        if (lowerName.endsWith('.msg')) {
+            atoms = await msgProcessor.process(contentBuffer);
+        } else if (lowerName.endsWith('.pdf')) {
+            atoms = await pdfProcessor.process(contentBuffer);
+        } else if (lowerName.endsWith('.docx')) {
+            atoms = await docxProcessor.process(contentBuffer);
+        } else {
+            throw new Error(`Unsupported file type: ${fileName}`);
+        }
+
+        // 4. Vectorize & Enrich
+        const chunks = [];
+        const entities = [];
+
+        for (let i = 0; i < atoms.length; i++) {
+            const atom = atoms[i];
+            const text = `${atom.context}\n${atom.content}`;
+
+            // Vectorize
+            let vector;
+            try {
+                vector = await this.ai.embedText(text);
+            } catch (e) {
+                console.error(`[Ingestion] Vectorization failed for atom ${i}`, e);
+                continue;
+            }
+
+            chunks.push({
+                id: `doc_${fileHash}_${i}`,
+                text: atom.content,
+                metadata: {
+                    source: attachmentUrl,
+                    workItemId: workItemId,
+                    type: atom.type,
+                    context: atom.context
+                },
+                vector: vector,
+                // For UI display
+                tokenCount: atom.content.split(' ').length,
+                vectorSample: vector.slice(0, 5)
+            });
+
+            // Extract Entities (Heuristics for now, can use LLM later)
+            if (atom.metadata && atom.metadata.sender) {
+                entities.push({ name: atom.metadata.sender, type: 'Person', relation: 'AUTHORED_BY' });
+            }
+            // Simple keyword extraction for demo
+            if (atom.content.includes('Node.js')) entities.push({ name: 'Node.js', type: 'Technology' });
+            if (atom.content.includes('Neo4j')) entities.push({ name: 'Neo4j', type: 'Technology' });
+        }
+
+        // 5. Save to Chroma
+        await chromaService.saveVectors(chunks);
+
+        // 6. Save to Neo4j (Graph)
+        const docData = {
+            url: attachmentUrl,
+            name: fileName,
+            hash: fileHash,
+            processedAt: new Date().toISOString()
+        };
+        await neo4jService.saveDocument(docData, workItemId);
+        await neo4jService.saveExtractedEntities(attachmentUrl, entities);
+
+        // 7. Return Result
+        const graphData = await neo4jService.getDocumentGraph(attachmentUrl);
+
+        return {
+            graphData: this._formatGraphData(graphData),
+            chunks: chunks.map(c => ({ ...c, vector: c.vector })), // Return full vectors for UI
+            status: 'processed'
+        };
+    }
+
+    /**
+     * Simulates the ingestion of an attachment (Dry Run).
+     * @param {string} attachmentUrl 
+     * @param {string} workItemId 
+     * @param {string} fileName 
+     */
+    async simulateAttachment(attachmentUrl, workItemId, fileName) {
+        console.log(`[Ingestion] Simulating attachment: ${fileName} (${attachmentUrl})`);
+
+        // Ensure model exists
+        if (this.ai.ensureModelExists) {
+            await this.ai.ensureModelExists();
+        }
+
+        // 1. Download
+        const contentBuffer = await adoService.getAttachmentContent(attachmentUrl);
+        const fileHash = this._generateHash(Buffer.from(contentBuffer));
+
+        // 2. Parse
+        let atoms = [];
+        const lowerName = fileName.toLowerCase();
+
+        if (lowerName.endsWith('.msg')) {
+            atoms = await msgProcessor.process(contentBuffer);
+        } else if (lowerName.endsWith('.pdf')) {
+            atoms = await pdfProcessor.process(contentBuffer);
+        } else if (lowerName.endsWith('.docx')) {
+            atoms = await docxProcessor.process(contentBuffer);
+        } else {
+        }
+
+        // 3. Vectorize & Enrich
+        const chunks = [];
+        const graphNodes = [];
+        const graphEdges = [];
+
+        // Create Document Node
+        const docNodeId = `sim_doc_${fileHash}`;
+        graphNodes.push({
+            id: docNodeId,
+            label: `Document: ${fileName}`,
+            type: 'Artifact',
+            data: {
+                status: 'AI_VERIFIED',
+                verificationDate: new Date().toISOString(),
+                initiator: 'Gemini-3-Pro',
+                version: 1,
+                isSimulation: true,
+                url: attachmentUrl
+            }
+        });
+
+        for (let i = 0; i < atoms.length; i++) {
+            const atom = atoms[i];
+            const text = `${atom.context}\n${atom.content}`;
+
+            // Vectorize
+            let vector;
+            try {
+                vector = await this.ai.embedText(text);
+            } catch (e) {
+                console.error(`[Ingestion] Vectorization failed for atom ${i}`, e);
+                continue;
+            }
+
+            chunks.push({
+                id: `chk_${i}`,
+                text: atom.content,
+                metadata: {
+                    source: attachmentUrl,
+                    workItemId: workItemId,
+                    type: atom.type,
+                    context: atom.context
+                },
+                vectorPreview: vector.slice(0, 50), // Preview for UI
+                tokens: atom.content.split(' ').length
+            });
+
+            // --- GRAPH EXTRACTION (LLM) ---
+            try {
+                // Only extract graph if content is substantial enough
+                if (atom.content.length > 30) {
+                    const chunkGraph = await graphExtractor.extractGraphFromChunk(atom.content, docNodeId, this.ai);
+
+                    if (chunkGraph.nodes.length > 0) {
+                        chunkGraph.nodes.forEach(n => graphNodes.push(n));
+                        chunkGraph.edges.forEach(e => graphEdges.push(e));
+                        console.log(`[Ingestion] Extracted ${chunkGraph.nodes.length} nodes from atom ${i}`);
+                    }
+                }
+            } catch (graphErr) {
+                console.warn(`[Ingestion] Graph extraction failed for atom ${i}:`, graphErr.message);
+            }
+        }
+
+        // Deduplicate entities (simple ID check)
+        const uniqueNodes = Array.from(new Map(graphNodes.map(n => [n.id, n])).values());
+        const uniqueEdges = Array.from(new Map(graphEdges.map(e => [e.id || `${e.source}-${e.target}`, e])).values());
+
+        return {
+            chunks: chunks,
+            graphData: {
+                nodes: uniqueNodes,
+                edges: uniqueEdges,
+                metadata: {
+                    graphId: crypto.randomUUID(),
+                    version: 1,
+                    verification: { status: 'AI_VERIFIED' },
+                    date: new Date().toISOString(),
+                    initiator: 'Gemini-3-Pro'
+                }
+            }
+        };
+    }
+
+    async vectorizeQuery(text) {
+        const vector = await this.ai.embedText(text);
+        return { vector };
+    }
+
+    // Helper to format Neo4j driver result to UI expected format
+    _formatGraphData(neo4jResult) {
+        // neo4jResult is { nodes: [], edges: [] } from our service
+        // We need to ensure it matches what the UI expects (id, label, type, etc.)
+        // Our service already does a decent job, but let's ensure IDs are strings
+        return {
+            nodes: neo4jResult.nodes.map(n => ({
+                id: n.id,
+                label: n.label,
+                type: n.type,
+                data: n.properties // ReactFlow might want 'data'
+            })),
+            edges: neo4jResult.edges.map(e => ({
+                id: e.id,
+                source: e.source,
+                target: e.target,
+                label: e.label
+            }))
+        };
+    }
+}
+
+module.exports = new IngestionService();

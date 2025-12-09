@@ -1,0 +1,9 @@
+# Ignore data and dependencies in root and nested directories
+**/node_modules/
+**/data/
+**/raw_data/
+.env
+.env.*
+!.env.example
+api/ADO_req.http
+docker-compose.yml
