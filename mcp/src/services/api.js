@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3003/api/v1';
+// Configurable API URL via .env
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
 
 const api = axios.create({
     baseURL: API_URL,
@@ -49,10 +50,18 @@ export const ingestWorkItems = async (ids, userId) => {
 
 /**
  * Starts Ingestion Job
+ * Supports legacy (ids, userId) or new (sourceConfig, userId)
  */
-export const startIngestionJob = async (ids, userId) => {
+export const startIngestionJob = async (arg1, userId) => {
     try {
-        const response = await api.post('/knowledge/ingest', { ids, userId });
+        let payload = {};
+        if (Array.isArray(arg1)) {
+            payload = { ids: arg1, userId };
+        } else {
+            payload = { sourceConfig: arg1, userId };
+        }
+
+        const response = await api.post('/knowledge/ingest', payload);
         return response.data;
     } catch (error) {
         console.warn("API failed, using mock for startIngestionJob:", error);
@@ -115,6 +124,41 @@ export const fetchTfvcChangesetChanges = async (id) => {
 export const fetchTfvcDiff = async (path, changesetId) => {
     const response = await api.get('/tfvc/diff', { params: { path, changesetId } });
     return response.data;
+};
+
+// --- Ingestion Simulation Methods ---
+
+export const simulateIngestion = async (formData) => {
+    // This expects a FormData object with 'file' or 'text'
+    // Currently using analyze-attachment as the endpoint logic is similar
+    const response = await api.post('/knowledge/analyze-attachment', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data;
+};
+
+// Fetch basic entity details for initial graph
+export const fetchEntityDetails = async (type, id) => {
+    // Call the real backend endpoint
+    // Assuming backend is at http://localhost:3000/api/v1
+    const response = await api.get(`/nexus/entity/${type}/${id}`);
+
+    // The backend should return the structured object we need
+    return response.data;
+};
+
+
+export const fetchRepositories = async () => {
+    // Mock for Git Repos
+    return new Promise(resolve => {
+        setTimeout(() => {
+            resolve([
+                { id: '1', name: 'UNPA_Ingest', url: 'https://dev.azure.com/unpa/_git/ingest' },
+                { id: '2', name: 'UNPA_Frontend', url: 'https://dev.azure.com/unpa/_git/frontend' },
+                { id: '3', name: 'Legacy_Core', url: 'https://dev.azure.com/unpa/_git/core' }
+            ]);
+        }, 500);
+    });
 };
 
 export default api;

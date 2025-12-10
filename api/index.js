@@ -15,6 +15,7 @@ const knowledgeRoutes = require('./src/routes/knowledge.route');
 const healthRoutes = require('./src/routes/health.route');
 const rabbitholeRoutes = require('./src/routes/rabbithole.route');
 const tfvcRoutes = require('./src/routes/tfvc.route');
+const nexusRoutes = require('./src/routes/nexus.route');
 
 const app = express();
 console.log("DEBUG: App created, type:", typeof app);
@@ -47,7 +48,9 @@ process.on('unhandledRejection', (reason, promise) => {
 
 app.use('/api/v1/health', healthRoutes);
 app.get('/api/v1/health-test', (req, res) => res.json({ status: 'inline-ok' }));
-app.use('/api/v1/chat', chatRoutes);
+app.use('/api/v1/rabbithole', rabbitholeRoutes);
+app.use('/api/v1/tfvc', tfvcRoutes);
+app.use('/api/v1/nexus', nexusRoutes);
 app.use('/api/v1/knowledge', knowledgeRoutes);
 app.use('/api/v1/rabbithole', rabbitholeRoutes);
 app.use('/api/v1/tfvc', tfvcRoutes);

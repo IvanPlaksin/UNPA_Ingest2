@@ -41,7 +41,7 @@ const WorkItemsTable = ({ items, page, pageSize, onNextPage, onPrevPage, visible
                                 ))}
                                 <td style={{ textAlign: 'right' }}>
                                     <Link
-                                        to={`/nexus/${item.id}`}
+                                        to={`/nexus/workitem/${item.id}`}
                                         className="btn-secondary"
                                         style={{ padding: '4px 8px', display: 'inline-flex', alignItems: 'center', gap: '4px', textDecoration: 'none', fontSize: '11px' }}
                                     >

@@ -25,6 +25,13 @@ function App() {
                             <Route path="/knowledge/rabbit-hole" element={<RabbitHolePage />} />
                             <Route path="/workitems" element={<WorkItemsListPage />} />
                             <Route path="/workitem/:id" element={<WorkItemPage />} />
+                            <Route path="/workitem/:id" element={<WorkItemPage />} />
+
+                            {/* Nexus Routes */}
+                            <Route path="/nexus/workitem/:id" element={<WorkItemNexusPage />} />
+                            <Route path="/nexus/changeset/:id" element={<WorkItemNexusPage />} />
+                            <Route path="/nexus/file/*" element={<WorkItemNexusPage />} />
+                            {/* Fallback/Legacy */}
                             <Route path="/nexus/:id" element={<WorkItemNexusPage />} />
                             <Route path="/knowledge/tfvc" element={<TfvcBrowserPage />} />
                             <Route path="/agent" element={<AgentPage />} />

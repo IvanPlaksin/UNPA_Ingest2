@@ -10,30 +10,42 @@ const adoService = require('../services/ado.service');
  * POST /ingest
  * Запускает задачу и возвращает ID для трекинга
  */
+/**
+ * POST /ingest
+ * Запускает задачу и возвращает ID для трекинга
+ * Supports legacy { ids: [] } or new { sourceConfig: { type, filter } }
+ */
 async function ingestWorkItems(req, res) {
     try {
-        const { ids, userId } = req.body;
+        const { ids, userId, sourceConfig } = req.body;
 
-        if (!ids || !Array.isArray(ids) || ids.length === 0) {
-            return res.status(400).json({ error: "Неверный массив ID" });
+        let formattedConfig = null;
+
+        // Legacy support
+        if (ids && Array.isArray(ids) && ids.length > 0) {
+            if (ids.length > 50) return res.status(400).json({ error: "Limit 50 items" });
+            formattedConfig = { type: 'ado', filter: { ids } };
         }
-        if (ids.length > 50) {
-            return res.status(400).json({ error: "Лимит 50 записей" });
+        // New Source Config
+        else if (sourceConfig && sourceConfig.type) {
+            formattedConfig = sourceConfig;
+        } else {
+            return res.status(400).json({ error: "Invalid request. Provide 'ids' or 'sourceConfig'." });
         }
 
-        // Добавляем в очередь BullMQ
-        const job = await queueService.addIngestionJob(ids, userId);
+        // Add to Queue (Unified)
+        const job = await queueService.addIngestionJob(formattedConfig, userId);
 
-        console.log(`[Knowledge API] Задача создана: ${job.id} (User: ${userId})`);
+        console.log(`[Knowledge API] Job Created: ${job.id} (Type: ${formattedConfig.type})`);
 
         res.status(202).json({
             jobId: job.id,
             status: "queued",
-            message: "Задача поставлена в очередь"
+            message: "Ingestion job queued successfully"
         });
 
     } catch (error) {
-        console.error("Ошибка ingestWorkItems:", error);
+        console.error("Error ingestWorkItems:", error);
         res.status(500).json({ error: error.message });
     }
 }
@@ -107,47 +119,78 @@ async function processContext(req, res) {
 
 async function analyzeAttachment(req, res) {
     try {
-        const { attachmentUrl, workItemId, fileType } = req.body;
+        // Multer puts fields in req.body and file in req.file
+        const { attachmentUrl, workItemId, fileType, type } = req.body;
+        const uploadedFile = req.file;
 
-        if (!attachmentUrl) {
-            return res.status(400).json({ error: "Attachment URL is required" });
+        console.log(`[Knowledge API] Analyze request. Type: ${type}, WorkItem: ${workItemId}, File: ${uploadedFile ? uploadedFile.originalname : 'None'}`);
+
+        let targetFilePath = null;
+        let targetFileType = fileType || 'unknown';
+
+        // Case 1: Direct File Upload
+        if (uploadedFile) {
+            targetFilePath = uploadedFile.path;
+            targetFileType = uploadedFile.originalname; // e.g. "doc.pdf"
+        }
+        // Case 2: Attachment URL (Download needed)
+        else if (attachmentUrl) {
+            // ... (Previous download logic would go here if needed)
+            // For now, assume we need a file.
+            return res.status(400).json({ error: "Attachment URL download not implemented yet. Please upload file directly." });
+        }
+        // Case 3: ADO Work Item ID (Just simulate based on ID?)
+        else if (workItemId) {
+            console.log(`[Knowledge API] Simulating based on Work Item ID: ${workItemId}`);
+            // If this is a simulation WITHOUT a file (just data), we might need a different flow.
+            // But the user clicked "Run Analysis" in Source Selector -> ADO Tab.
+            // This usually implies fetching the work item content and simulating THAT.
+
+            // Let's fetch the work item content using ADO service
+            const adoService = require('../services/ado.service');
+            const workItem = await adoService.getWorkItemById(workItemId);
+
+            if (!workItem) throw new Error("Work Item not found");
+
+            // Create a temp file with the Work Item content for simulation?
+            // Or adapt simulation service to accept string content.
+            // SimulationService expects a filePath currently.
+
+            const fs = require('fs');
+            const path = require('path');
+            const os = require('os');
+            const { v4: uuidv4 } = require('uuid');
+
+            const tempDir = os.tmpdir();
+            targetFilePath = path.join(tempDir, `workitem_${workItemId}_${uuidv4()}.txt`);
+
+            const content = `Title: ${workItem.fields['System.Title']}\n\nDescription:\n${workItem.fields['System.Description'] || ''}`;
+            fs.writeFileSync(targetFilePath, content);
+            targetFileType = 'workitem.txt'; // Treat as text file
+        }
+        else {
+            return res.status(400).json({ error: "No file, URL, or Work Item ID provided." });
         }
 
-        console.log(`[Knowledge API] Analyzing attachment: ${attachmentUrl}`);
+        // 2. Call Simulation Service
+        // Note: simulationService.simulateAttachment expects a file path.
+        const simulationResult = await simulationService.simulateAttachmentProcessing(targetFilePath, targetFileType);
 
-        // 1. Download file to temp
-        // We can reuse ingestionService.downloadAttachment or implement simple download here
-        // Since ingestionService is not fully visible, let's use axios directly or assume ingestionService has a helper.
-        // But wait, ingestionService.simulateAttachment was the placeholder.
-        // Let's implement download here using axios + fs.
-
+        // Cleanup temp file if it was uploaded/created
         const fs = require('fs');
-        const path = require('path');
-        const os = require('os');
-        const { v4: uuidv4 } = require('uuid');
+        if (targetFilePath && fs.existsSync(targetFilePath)) {
+            // fs.unlinkSync(targetFilePath); // Optional: keep for debugging for now
+        }
 
-        const tempDir = os.tmpdir();
-        const tempFilePath = path.join(tempDir, `sim_${uuidv4()}_${fileType}`);
+        res.json(simulationResult);
 
-        // 1. Download file using ADO Service (handles Auth)
-        const fileBuffer = await adoService.getAttachmentContent(attachmentUrl);
-
-        // Write buffer to temp file
-        fs.writeFileSync(tempFilePath, fileBuffer);
-
-        // 2. Run Simulation
-        const result = await simulationService.simulateAttachmentProcessing(tempFilePath, fileType);
-
-        // 3. Cleanup
-        fs.unlinkSync(tempFilePath);
-
-        res.json(result);
-
-    } catch (error) {
-        console.error("Ingestion error:", error);
-        res.status(500).json({ error: error.message });
+    } catch (e) {
+        console.error("Analysis Error:", e);
+        res.status(500).json({ error: e.message });
     }
 }
+
+
 
 async function vectorizeQuery(req, res) {
     try {

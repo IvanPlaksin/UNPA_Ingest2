@@ -14,10 +14,13 @@
         "lucide-react": "^0.554.0",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
+        "react-force-graph-3d": "^1.29.0",
         "react-markdown": "^10.1.0",
         "react-resizable-panels": "^3.0.6",
+        "react-resize-detector": "^12.3.0",
         "react-router-dom": "^7.9.6",
-        "reactflow": "^11.11.4"
+        "reactflow": "^11.11.4",
+        "three": "^0.181.2"
     },
     "devDependencies": {
         "@types/react": "^18.2.15",

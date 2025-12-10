@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Copy, Check, FileCode, AlertTriangle } from 'lucide-react';
+import { Copy, Check, FileCode, AlertTriangle, ExternalLink } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import { fetchTfvcContent } from '../../../services/api';
 
@@ -101,18 +101,31 @@ const FileViewer = ({ path }) => {
                 <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {path}
                 </div>
-                <button
-                    onClick={handleCopy}
-                    style={{
-                        display: 'flex', alignItems: 'center', gap: '4px',
-                        background: 'transparent', border: 'none',
-                        fontSize: '11px', color: 'var(--text-secondary)',
-                        cursor: 'pointer'
-                    }}
-                >
-                    {copied ? <Check size={14} color="green" /> : <Copy size={14} />}
-                    {copied ? "Copied" : "Copy"}
-                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                        onClick={() => window.open(`/nexus/file/${encodeURIComponent(path)}`, '_self')}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '4px',
+                            background: 'transparent', border: 'none',
+                            fontSize: '11px', color: 'var(--un-blue)',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        <ExternalLink size={14} /> Analyze
+                    </button>
+                    <button
+                        onClick={handleCopy}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '4px',
+                            background: 'transparent', border: 'none',
+                            fontSize: '11px', color: 'var(--text-secondary)',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        {copied ? <Check size={14} color="green" /> : <Copy size={14} />}
+                        {copied ? "Copied" : "Copy"}
+                    </button>
+                </div>
             </div>
             <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
                 <Editor

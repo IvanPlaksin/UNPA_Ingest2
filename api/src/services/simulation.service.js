@@ -25,6 +25,21 @@ class SimulationService {
             atoms = await msgParser.parse(filePath);
         } else if (ext === '.docx') {
             atoms = await docxParser.parse(filePath);
+        } else if (ext === '.txt' || ext === '.md' || fileType.endsWith('.txt')) {
+            const fs = require('fs');
+            const content = fs.readFileSync(filePath, 'utf-8');
+            // Simple chunking by paragraph
+            const paragraphs = content.split(/\n\s*\n/);
+
+            atoms = paragraphs
+                .filter(p => p.trim().length > 0)
+                .map((p, index) => ({
+                    id: uuidv4(),
+                    content: p.trim(),
+                    type: 'text',
+                    context: [`Paragraph ${index + 1}`],
+                    metadata: { source: fileType }
+                }));
         } else {
             throw new Error(`Unsupported file type for simulation: ${ext}`);
         }

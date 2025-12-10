@@ -269,7 +269,7 @@ async function getWorkItemById(id) {
             parseInt(id),
             undefined, // fields (undefined = all)
             undefined, // asOf
-            WorkItemExpand.Relations // expand
+            WorkItemExpand.All // expand to get all fields including custom ones and relations
         );
 
         if (!item) return null;

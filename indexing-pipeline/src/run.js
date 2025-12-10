@@ -153,10 +153,37 @@ async function processWorkItems(job, ai, ids) {
     return documentsToSave;
 }
 
+const fs = require('fs');
+const crypto = require('crypto');
+
 async function processDocument(job, ai, filePath) {
     const jobId = job.id;
+    const workItemId = job.data.workItemId; // Assuming passed in job data if linked to a User Story
 
-    // --- STEP 1: PARSING & ATOMIZATION ---
+    // --- STEP A: DEDUPLICATION (Hash Check) ---
+    await publishEvent(jobId, 'step_dedup', 'running');
+
+    const fileBuffer = fs.readFileSync(filePath);
+    const fileHash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
+    const fileName = path.basename(filePath);
+
+    // Check Memgraph
+    const existingNode = await memgraphService.findNodeByHash(fileHash);
+    if (existingNode) {
+        console.log(`[Ingest] Deduplication: Document ${fileName} already exists (Hash: ${fileHash.substring(0, 8)}).`);
+
+        if (workItemId) {
+            // Link existing document to Work Item if needed
+            // await memgraphService.mergeRelationship(workItemId, existingNode.id, 'HAS_ATTACHMENT');
+        }
+
+        await publishEvent(jobId, 'step_dedup', 'completed', { status: 'duplicate', id: existingNode.id });
+        return; // STOP
+    }
+
+    await publishEvent(jobId, 'step_dedup', 'completed', { status: 'new', hash: fileHash });
+
+    // --- STEP B: TRANSFORMATION (Parsing & Enrichment) ---
     await publishEvent(jobId, 'step_parsing', 'running');
 
     const ext = path.extname(filePath).toLowerCase();
@@ -164,112 +191,52 @@ async function processDocument(job, ai, filePath) {
 
     try {
         if (ext === '.pdf') {
-            atoms = await pdfParser.parse(filePath);
+            atoms = await pdfParser.parse(fileBuffer); // Pass buffer!
         } else if (ext === '.msg') {
-            atoms = await msgParser.parse(filePath);
+            atoms = await msgParser.parse(filePath); // MSG Parser reads file usually, or refactor to buffer
         } else {
-            // TODO: Add DOCX support if needed
             throw new Error(`Unsupported file type: ${ext}`);
         }
 
         await publishEvent(jobId, 'step_parsing', 'completed', { count: atoms.length });
 
-        // --- STEP 2: ENRICHMENT (Summary + Graph) ---
+        // Enrichment
         await publishEvent(jobId, 'step_enrichment', 'running');
 
-        const documentsToSave = [];
+        const enrichedAtoms = [];
         const textsToEmbed = [];
+        const qdrantPoints = [];
 
-        // Create Document Node
-        const docNodeId = `doc_${path.basename(filePath)}`;
-        const docNode = {
-            id: docNodeId,
-            label: path.basename(filePath),
-            type: 'Document',
-            path: filePath
-        };
-
-        // Save Document Node immediately
-        await memgraphService.mergeNode('Document', docNode);
-
+        // Pre-calculate Qdrant IDs to use in Graph
         for (let i = 0; i < atoms.length; i++) {
             const atom = atoms[i];
 
-            // 1. Generate Summary
+            // Generate deterministic Vector ID: Hash(FileHash + Index)
+            // This ensures if we re-process same file, we get same IDs
+            const vectorId = uuidv4(); // Or deterministic: crypto.createHash('md5').update(fileHash + i).digest('hex');
+
+            // 1. Enrich (Summary + Graph)
+            // Note: enrichmentService.extractGraphEntities calls strict graph extractor now
+            const graphData = await enrichmentService.extractGraphEntities(atom.content);
             const summary = await enrichmentService.generateSummary(atom.content);
 
-            // 2. Extract Graph Entities
-            const graphData = await enrichmentService.extractGraphEntities(atom.content);
-
-            // 3. Prepare Text for Embedding
-            // Format: ${atom.context}\n${summary}\n${atom.content}
             const textToEmbed = `${atom.context}\n${summary}\n${atom.content}`;
 
-            const doc = {
-                id: atom.id,
-                text: textToEmbed,
-                metadata: {
-                    ...atom.metadata,
-                    context: atom.context,
-                    summary: summary,
-                    type: atom.type,
-                    jobId: jobId,
-                    original_content: atom.content
-                }
-            };
-
-            documentsToSave.push(doc);
-            textsToEmbed.push(textToEmbed);
-
-            // --- GRAPH PERSISTENCE (Per Atom) ---
-
-            // Save Atom Node
-            await memgraphService.mergeNode('Atom', {
-                id: doc.id,
-                type: doc.metadata.type,
-                summary: doc.metadata.summary,
-                context: doc.metadata.context,
-                content: doc.metadata.original_content.substring(0, 100) + "..."
+            enrichedAtoms.push({
+                ...atom,
+                id: atom.id || `atom_${fileHash}_${i}`,
+                vectorId: vectorId,
+                summary: summary,
+                graphData: graphData,
+                textToEmbed: textToEmbed
             });
 
-            // Link Document -> Atom
-            await memgraphService.mergeRelationship(docNodeId, doc.id, 'CONTAINS');
-
-            // Save Extracted Entities & Link to Atom
-            if (graphData.nodes && graphData.nodes.length > 0) {
-                for (const node of graphData.nodes) {
-                    // Normalize ID (Idempotency)
-                    if (!node.id) continue;
-                    const entityId = node.id.toLowerCase().replace(/\s+/g, '_');
-                    const nodeType = node.type || 'Entity';
-
-                    // Merge Entity Node
-                    await memgraphService.mergeNode(nodeType, {
-                        id: entityId,
-                        name: node.label || node.id // Use label as name, fallback to id
-                    });
-
-                    // Link Atom -> Entity
-                    await memgraphService.mergeRelationship(doc.id, entityId, 'MENTIONS');
-                }
-            }
-
-            // Save Extracted Relationships
-            if (graphData.edges && graphData.edges.length > 0) {
-                for (const edge of graphData.edges) {
-                    if (!edge.source || !edge.target || !edge.label) continue;
-
-                    const sourceId = edge.source.toLowerCase().replace(/\s+/g, '_');
-                    const targetId = edge.target.toLowerCase().replace(/\s+/g, '_');
-
-                    await memgraphService.mergeRelationship(sourceId, targetId, edge.label);
-                }
-            }
+            textsToEmbed.push(textToEmbed);
         }
 
-        await publishEvent(jobId, 'step_enrichment', 'completed', { count: documentsToSave.length });
+        await publishEvent(jobId, 'step_enrichment', 'completed', { count: enrichedAtoms.length });
 
-        // --- STEP 3: VECTORIZATION (TEI) ---
+        // --- STEP C: VECTORIZATION & QDRANT ---
         await publishEvent(jobId, 'step_vectorization', 'running');
 
         let vectors = [];
@@ -277,36 +244,107 @@ async function processDocument(job, ai, filePath) {
             vectors = await teiService.getEmbeddings(textsToEmbed);
         }
 
-        await publishEvent(jobId, 'step_vectorization', 'completed', { vectorSize: vectors[0]?.length });
-
-        // --- STEP 4: PERSISTENCE (Qdrant) ---
-        await publishEvent(jobId, 'step_structuring', 'running');
-
-        const qdrantPoints = [];
-
-        for (let i = 0; i < documentsToSave.length; i++) {
-            const doc = documentsToSave[i];
-            const vector = vectors[i];
-
+        // Prepare Qdrant Points
+        for (let i = 0; i < enrichedAtoms.length; i++) {
+            const atom = enrichedAtoms[i];
             qdrantPoints.push({
-                id: doc.id,
-                vector: vector,
+                id: atom.vectorId,
+                vector: vectors[i],
                 payload: {
-                    text: doc.text,
-                    ...doc.metadata
+                    file_name: fileName,
+                    file_hash: fileHash,
+                    content: atom.content,
+                    context: atom.context,
+                    summary: atom.summary,
+                    type: atom.type
                 }
             });
         }
 
-        // Batch save to Qdrant
+        // Action: Upsert to Qdrant
         if (qdrantPoints.length > 0) {
             await qdrantService.upsertPoints(qdrantPoints);
         }
 
-        await publishEvent(jobId, 'step_structuring', 'completed', { savedNodes: documentsToSave.length });
+        await publishEvent(jobId, 'step_vectorization', 'completed', { count: vectors.length });
+
+
+        // --- STEP D: GRAPH PERSISTENCE (With Rollback) ---
+        await publishEvent(jobId, 'step_graph_persistence', 'running');
+
+        try {
+            // 1. Create Document Node
+            const docNodeId = `doc_${fileHash}`;
+            await memgraphService.mergeNode('Document', {
+                id: docNodeId,
+                name: fileName,
+                fileHash: fileHash,
+                type: 'Document'
+            });
+
+            // 2. Loop Atoms
+            for (const atom of enrichedAtoms) {
+                // Atom Node with vector reference
+                await memgraphService.mergeNode('Atom', {
+                    id: atom.id,
+                    content: atom.content.substring(0, 200),
+                    summary: atom.summary,
+                    qdrant_vector_id: atom.vectorId, // LINK TO VECTOR
+                    type: atom.type
+                });
+
+                // Link Document -> Atom
+                await memgraphService.mergeRelationship(docNodeId, atom.id, 'CONTAINS');
+
+                // 3. Merges Entites & Relationships
+                const { nodes, edges } = atom.graphData;
+
+                // Entities
+                if (nodes) {
+                    for (const n of nodes) {
+                        if (!n.id) continue;
+                        await memgraphService.mergeNode(n.type || 'Concept', {
+                            id: n.id,
+                            name: n.label || n.id
+                        });
+                        // Link Atom -> Entity
+                        await memgraphService.mergeRelationship(atom.id, n.id, 'MENTIONS');
+                    }
+                }
+
+                // Internal Edges (Entity -> Entity)
+                if (edges) {
+                    for (const e of edges) {
+                        try {
+                            await memgraphService.mergeRelationship(e.source, e.target, e.label || 'RELATED_TO');
+                        } catch (edgeErr) {
+                            console.warn(`Edge creation failed: ${e.source}->${e.target}`, edgeErr.message);
+                        }
+                    }
+                }
+            }
+
+            await publishEvent(jobId, 'step_graph_persistence', 'completed', { status: 'success' });
+
+        } catch (graphError) {
+            console.error(`[Ingest] Graph persistence failed! Initiating Rollback... Error: ${graphError.message}`);
+
+            // --- ROLLBACK LOGIC ---
+            // Delete the vectors we just inserted
+            const vectorIdsToDelete = enrichedAtoms.map(a => a.vectorId);
+            try {
+                await qdrantService.deletePoints(vectorIdsToDelete);
+                console.log(`[Ingest] Rollback successful: Deleted ${vectorIdsToDelete.length} vectors.`);
+            } catch (rollbackError) {
+                console.error(`[Ingest] CRITICAL: Rollback failed! Vectors orphaned. IDs: ${vectorIdsToDelete.join(',')}`, rollbackError);
+            }
+
+            // Fail the job
+            throw new Error(`Graph sync failed: ${graphError.message}. Vectors rolled back.`);
+        }
 
     } catch (e) {
-        await publishEvent(jobId, 'step_parsing', 'error', e.message);
+        await publishEvent(jobId, 'step_processing', 'error', e.message);
         throw e;
     }
 }

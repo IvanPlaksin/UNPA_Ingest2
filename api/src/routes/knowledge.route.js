@@ -11,10 +11,14 @@ router.get('/stream/:jobId', knowledgeController.streamIngestionStatus);
 // Агрегация контекста
 router.get('/context/:id', knowledgeController.getContext);
 
-// Симуляция Ingestion
+// Multer setup for file uploads
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' }); // Temp storage
+
 // Симуляция Ingestion
 router.post('/simulate', knowledgeController.processContext);
-router.post('/analyze-attachment', knowledgeController.analyzeAttachment);
+// Use multer to handle multipart/form-data (both file and fields)
+router.post('/analyze-attachment', upload.single('file'), knowledgeController.analyzeAttachment);
 router.post('/vectorize-query', knowledgeController.vectorizeQuery);
 
 module.exports = router;

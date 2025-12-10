@@ -34,7 +34,7 @@ const ContextualChat = ({ filters, visibleItems, visibleColumns, fieldDefinition
         setLoading(true);
 
         try {
-            const response = await fetch('http://localhost:3003/api/v1/rabbithole/chat', {
+            const response = await fetch('http://localhost:3000/api/v1/rabbithole/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

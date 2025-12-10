@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { GitCommit, User, Calendar, MessageSquare, ChevronRight, ChevronDown } from 'lucide-react';
+import { GitCommit, User, Calendar, MessageSquare, ChevronRight, ChevronDown, ExternalLink } from 'lucide-react';
 import { fetchTfvcHistory } from '../../../services/api';
 import ChangesetDetails from './ChangesetDetails';
+import { Link } from 'react-router-dom';
 
 const ChangesetList = ({ path }) => {
     const [changesets, setChangesets] = useState([]);
@@ -72,9 +72,19 @@ const ChangesetList = ({ path }) => {
                                     {expandedId === cs.changesetId ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                                 </td>
                                 <td style={{ padding: '8px 12px', fontFamily: 'monospace', color: 'var(--un-blue)', fontWeight: 500 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                                        <GitCommit size={12} style={{ marginRight: '4px', opacity: 0.5 }} />
-                                        {cs.changesetId}
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                                            <GitCommit size={12} style={{ marginRight: '4px', opacity: 0.5 }} />
+                                            {cs.changesetId}
+                                        </div>
+                                        <Link
+                                            to={`/nexus/changeset/${cs.changesetId}`}
+                                            title="Analyze in Nexus"
+                                            onClick={(e) => e.stopPropagation()}
+                                            style={{ color: 'var(--un-blue)', opacity: 0.8, marginLeft: '8px' }}
+                                        >
+                                            <ExternalLink size={12} />
+                                        </Link>
                                     </div>
                                 </td>
                                 <td style={{ padding: '8px 12px', color: 'var(--text-primary)' }}>

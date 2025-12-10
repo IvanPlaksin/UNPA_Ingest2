@@ -16,24 +16,30 @@ class GraphExtractor {
     async extractGraphFromChunk(text, parentId, aiProvider = null) {
         const ai = aiProvider || this.ai;
 
-        const systemPrompt = "Ты эксперт по извлечению знаний. Твоя цель — структурировать неструктурированный текст в граф.";
+        const systemPrompt = "You are a precise Knowledge Graph extractor. You must output STRICT VALID JSON only. No markdown. No explanations.";
 
         const userPrompt = `
-Analyze the following text from a project document/email.
-Extract key entities and relationships.
+Analyze the following text and extract a Knowledge Graph.
 
-Target Entity Types: [Person, System, Component, Date, Metric, Risk]
-Target Relationship Types: [MENTIONS, RESPONSIBLE_FOR, AFFECTS, DEPENDS_ON, DEADLINE_IS]
+STRICT ONTOLOGY:
+Node Types: [Person, System, WorkItem, Document, Commit, Concept, Technology]
+Edge Types:
+- MENTIONS (General link)
+- RESPONSIBLE_FOR (Person -> System/Task)
+- DEPENDS_ON (System -> System)
+- AFFECTS (Commit -> System)
+- DEFINED_IN (Concept -> Document)
+- IMPLEMENTS (Code -> WorkItem)
 
 Text: """${text}"""
 
-Return ONLY valid JSON in the following format (no markdown, no explanations):
+Return ONLY valid JSON obeying the following interface:
 {
   "nodes": [
-    { "id": "entity_name_normalized", "label": "Original Name", "type": "EntityType" }
+    { "id": "snake_case_id", "label": "Original Name", "type": "OneOfAllowedTypes" }
   ],
   "edges": [
-    { "source": "entity_name_normalized", "target": "entity_name_normalized", "label": "RELATIONSHIP_TYPE" }
+    { "source": "id_source", "target": "id_target", "label": "OneOfAllowedEdgeTypes" }
   ]
 }
 `;
@@ -43,67 +49,97 @@ Return ONLY valid JSON in the following format (no markdown, no explanations):
             return this._parseResponse(response, parentId);
         } catch (error) {
             console.error("[GraphExtractor] Extraction failed:", error);
+            // Return empty graph on failure to prevent pipeline crash
             return { nodes: [], edges: [] };
         }
     }
 
     _parseResponse(response, parentId) {
-        let jsonStr = response;
-
-        // Attempt to extract JSON block if wrapped in markdown or extra text
-        const jsonMatch = response.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-            jsonStr = jsonMatch[0];
-        }
-
         try {
+            const jsonStr = this._cleanJson(response);
             const data = JSON.parse(jsonStr);
+
             const nodes = data.nodes || [];
             const edges = data.edges || [];
 
-            // Normalize and Enrich
-            const enrichedNodes = nodes.map(n => ({
-                ...n,
-                id: this._normalizeId(n.id),
-                data: {
-                    source: "ai_extraction",
-                    parentId: parentId,
-                    status: 'AI_VERIFIED', // For simulation UI
-                    initiator: 'Llama-3'
-                }
-            }));
+            // Validation & Normalization
+            const validNodes = [];
+            const validEdges = [];
 
-            const enrichedEdges = edges.map(e => ({
-                ...e,
-                source: this._normalizeId(e.source),
-                target: this._normalizeId(e.target),
-                data: {
-                    source: "ai_extraction"
-                }
-            }));
+            const allowedNodeTypes = ['Person', 'System', 'WorkItem', 'Document', 'Commit', 'Concept', 'Technology'];
+            const allowedEdgeTypes = ['MENTIONS', 'RESPONSIBLE_FOR', 'DEPENDS_ON', 'AFFECTS', 'DEFINED_IN', 'IMPLEMENTS'];
 
-            // Add "CONTAINS_ENTITY" edges from Parent -> Entity
-            enrichedNodes.forEach(n => {
-                enrichedEdges.push({
-                    id: `edge_${parentId}_${n.id}`,
+            // 1. Process Nodes
+            nodes.forEach(n => {
+                if (!n.id || !n.type) return;
+
+                // Enforce Node Type (fallback to Concept if invalid)
+                let type = n.type;
+                if (!allowedNodeTypes.includes(type)) {
+                    type = 'Concept';
+                }
+
+                validNodes.push({
+                    id: this._normalizeId(n.id),
+                    label: n.label || n.id,
+                    type: type,
+                    data: {
+                        source: "ai_extraction",
+                        parentId: parentId,
+                        status: 'AI_VERIFIED',
+                        initiator: 'Gemini-3-Pro'
+                    }
+                });
+            });
+
+            // 2. Process Edges
+            edges.forEach(e => {
+                if (!e.source || !e.target || !e.label) return;
+
+                if (!allowedEdgeTypes.includes(e.label)) {
+                    // Skip invalid edge types or default to MENTIONS?
+                    // Strict ontology request suggests skipping or fixing. Let's default to MENTIONS.
+                    e.label = 'MENTIONS';
+                }
+
+                validEdges.push({
+                    source: this._normalizeId(e.source),
+                    target: this._normalizeId(e.target),
+                    label: e.label,
+                    data: { source: "ai_extraction" }
+                });
+            });
+
+            // 3. Add Link to Parent
+            validNodes.forEach(n => {
+                validEdges.push({
+                    id: `link_${parentId}_${n.id}`,
                     source: parentId,
                     target: n.id,
-                    label: "CONTAINS_ENTITY",
+                    label: "CONTAINS_ENTITY", // System edge, acts like DEFINED_IN but usually structural
                     data: { source: "system_link" }
                 });
             });
 
-            return { nodes: enrichedNodes, edges: enrichedEdges };
+            return { nodes: validNodes, edges: validEdges };
 
         } catch (e) {
-            console.warn("[GraphExtractor] Failed to parse JSON response:", response.substring(0, 100) + "...");
+            console.warn("[GraphExtractor] Failed to parse JSON response:", response.substring(0, 100) + "...", e.message);
             return { nodes: [], edges: [] };
         }
     }
 
+    _cleanJson(text) {
+        // Remove markdown blocks
+        let clean = text.replace(/```json/g, '').replace(/```/g, '');
+        // Trim whitespace
+        return clean.trim();
+    }
+
     _normalizeId(id) {
         if (!id) return `unknown_${Math.random().toString(36).substring(7)}`;
-        return id.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+        // snake_case: lowercase, replace spaces with _, remove non-alphanumeric
+        return id.toLowerCase().trim().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
     }
 }
 

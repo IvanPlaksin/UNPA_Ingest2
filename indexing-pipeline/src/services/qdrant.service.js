@@ -84,6 +84,25 @@ class QdrantService {
             throw error;
         }
     }
+
+    /**
+     * Deletes points by their IDs.
+     * @param {Array<string|number>} ids 
+     */
+    async deletePoints(ids) {
+        try {
+            if (!ids || ids.length === 0) return;
+
+            await this.client.delete(COLLECTION_NAME, {
+                wait: true,
+                points: ids
+            });
+            console.log(`Deleted ${ids.length} points from Qdrant.`);
+        } catch (error) {
+            console.error('Error deleting points:', error);
+            throw error;
+        }
+    }
 }
 
 module.exports = new QdrantService();
