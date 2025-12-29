@@ -7,6 +7,17 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { ShieldCheck, Activity } from 'lucide-react';
+import {
+    Paper,
+    Box,
+    Typography,
+    Button,
+    Stack,
+    Alert,
+    List,
+    ListItem,
+    CircularProgress
+} from '@mui/material';
 
 const IngestionControlPanel = ({ nexusModel, onIngest, isProcessing, ingestionReport, onResetReport, width, simulationGraph }) => {
 
@@ -164,21 +175,30 @@ const IngestionControlPanel = ({ nexusModel, onIngest, isProcessing, ingestionRe
     const fields = core.fields || {};
 
     return (
-        <div
-            className="bg-white border-l border-gray-200 flex flex-col shrink-0 z-10 shadow-xl h-full"
-            style={{ width: width }}
+        <Paper
+            elevation={3}
+            sx={{
+                width: width,
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                zIndex: 10,
+                borderLeft: 1,
+                borderColor: 'divider'
+            }}
         >
-            <div className="p-4 border-b border-gray-100">
-                <h3 className="flex items-center gap-2 font-bold text-gray-800">
-                    <ShieldCheck size={18} className="text-green-600" /> Ingestion Control
-                </h3>
-                <p className="text-xs text-gray-500 mt-1">
+            <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                    <ShieldCheck size={18} color="green" />
+                    <Typography variant="subtitle1" fontWeight="bold">Ingestion Control</Typography>
+                </Stack>
+                <Typography variant="caption" color="text.secondary">
                     Review the Nexus Graph below.
-                </p>
-            </div>
+                </Typography>
+            </Box>
 
             {/* GRAPH VISUALIZATION */}
-            <div className="flex-1 bg-gray-50 relative border-b border-gray-200 h-full w-full">
+            <Box sx={{ flex: 1, bgcolor: 'background.default', position: 'relative', borderBottom: 1, borderColor: 'divider' }}>
                 <ReactFlow
                     nodes={nodes}
                     edges={edges}
@@ -191,43 +211,59 @@ const IngestionControlPanel = ({ nexusModel, onIngest, isProcessing, ingestionRe
                     <Background color="#aaa" gap={16} />
                     <Controls showInteractive={false} />
                 </ReactFlow>
-            </div>
+            </Box>
 
             {/* ACTIONS */}
-            <div className="p-4 bg-white">
+            <Box sx={{ p: 2, bgcolor: 'background.paper' }}>
                 {!ingestionReport ? (
-                    <div className="flex flex-col gap-4">
-                        <div className="p-3 bg-blue-50 text-blue-800 text-xs rounded border border-blue-100">
-                            <strong>Ready to Process</strong>
-                            <ul className="list-disc pl-4 mt-1 space-y-1">
-                                <li>Core Fields: {Object.keys(fields).length}</li>
-                                <li>Linked Artifacts: {(linkedArtifacts.commits?.length || 0) + (linkedArtifacts.tfvcChangesets?.length || 0)}</li>
-                            </ul>
-                        </div>
-                        <button
+                    <Stack spacing={2}>
+                        <Alert severity="info" sx={{ '& .MuiAlert-message': { width: '100%' } }}>
+                            <Typography variant="subtitle2" fontWeight="bold">Ready to Process</Typography>
+                            <Box component="ul" sx={{ pl: 2, mt: 0.5, mb: 0 }}>
+                                <Typography component="li" variant="caption">Core Fields: {Object.keys(fields).length}</Typography>
+                                <Typography component="li" variant="caption">
+                                    Linked Artifacts: {(linkedArtifacts.commits?.length || 0) + (linkedArtifacts.tfvcChangesets?.length || 0)}
+                                </Typography>
+                            </Box>
+                        </Alert>
+
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            fullWidth
                             onClick={onIngest}
                             disabled={isProcessing}
-                            className="btn-primary w-full justify-center py-2 h-auto"
+                            startIcon={isProcessing ? <CircularProgress size={16} color="inherit" /> : <Activity size={16} />}
                         >
-                            {isProcessing ? <Activity className="animate-spin" size={16} /> : "Approve & Ingest"}
-                        </button>
-                    </div>
+                            {isProcessing ? "Processing..." : "Approve & Ingest"}
+                        </Button>
+                    </Stack>
                 ) : (
-                    <div className="flex flex-col gap-4 h-full">
-                        <div className="p-3 bg-green-50 border border-green-200 rounded text-sm text-green-800">
-                            <strong>Processing Complete</strong>
-                            <button
-                                className="text-underline text-xs block mt-1 hover:text-green-900"
-                                onClick={onResetReport}
-                            >Reset</button>
-                        </div>
-                        <div className="flex-1 bg-gray-900 text-green-400 p-3 rounded text-xs font-mono overflow-auto max-h-40">
-                            <pre className="whitespace-pre-wrap">{ingestionReport}</pre>
-                        </div>
-                    </div>
+                    <Stack spacing={2} sx={{ height: '100%' }}>
+                        <Alert severity="success" action={
+                            <Button color="inherit" size="small" onClick={onResetReport}>
+                                Reset
+                            </Button>
+                        }>
+                            <Typography variant="subtitle2" fontWeight="bold">Processing Complete</Typography>
+                        </Alert>
+                        <Box sx={{
+                            flex: 1,
+                            bgcolor: 'grey.900',
+                            color: 'success.light',
+                            p: 1.5,
+                            borderRadius: 1,
+                            fontFamily: 'monospace',
+                            fontSize: '0.75rem',
+                            overflow: 'auto',
+                            maxHeight: 160
+                        }}>
+                            <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{ingestionReport}</pre>
+                        </Box>
+                    </Stack>
                 )}
-            </div>
-        </div>
+            </Box>
+        </Paper>
     );
 };
 

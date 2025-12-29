@@ -4,6 +4,7 @@ import FileViewer from '../components/Knowledge/TFVC/FileViewer';
 import ChangesetList from '../components/Knowledge/TFVC/ChangesetList';
 import { Folder, FileText, History, ChevronRight } from 'lucide-react';
 import { Storage } from '../utils/storage';
+import { Box, Paper, Tabs, Tab, Typography, Divider, Stack } from '@mui/material';
 
 const STORAGE_KEY_SELECTION = 'tfvc_selected_item';
 const STORAGE_KEY_TAB = 'tfvc_active_tab';
@@ -37,119 +38,98 @@ const TfvcBrowserPage = () => {
         handleSelect({ path: newPath, isFolder: true });
     };
 
+    const handleTabChange = (event, newValue) => {
+        setActiveTab(newValue);
+    };
+
     return (
-        <div className="page-content" style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', bgcolor: 'background.default' }}>
             {/* Header / Breadcrumbs */}
-            <TfvcBreadcrumbs
-                path={selectedItem?.path}
-                onNavigate={handleBreadcrumbNavigate}
-            />
+            <Box sx={{ p: 1, borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
+                <TfvcBreadcrumbs
+                    path={selectedItem?.path}
+                    onNavigate={handleBreadcrumbNavigate}
+                />
+            </Box>
 
             {/* Main Content - Split View */}
-            <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+            <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
                 {/* Left Panel - Tree */}
-                <div style={{
-                    width: '300px',
-                    minWidth: '250px',
-                    maxWidth: '400px',
-                    borderRight: '1px solid var(--border-color)',
-                    background: 'var(--bg-surface)',
+                <Paper square sx={{
+                    width: 300,
+                    minWidth: 250,
+                    maxWidth: 400,
+                    borderRight: 1,
+                    borderColor: 'divider',
                     display: 'flex',
-                    flexDirection: 'column'
+                    flexDirection: 'column',
+                    zIndex: 1
                 }}>
-                    <div style={{
-                        padding: '8px 12px',
-                        background: '#f8f9fa',
-                        borderBottom: '1px solid var(--border-color)',
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        color: 'var(--text-secondary)',
-                        textTransform: 'uppercase'
+                    <Box sx={{
+                        px: 2,
+                        py: 1.5,
+                        borderBottom: 1,
+                        borderColor: 'divider',
+                        bgcolor: 'background.paper'
                     }}>
-                        Explorer
-                    </div>
-                    <div style={{ flex: 1, overflow: 'auto', padding: '8px' }}>
+                        <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase' }}>
+                            Explorer
+                        </Typography>
+                    </Box>
+                    <Box sx={{ flex: 1, overflow: 'auto', p: 1 }}>
                         <TfvcTree
                             onSelect={handleSelect}
                             selectedPath={selectedItem?.path}
                             persistenceKey="tfvc_tree_main"
                         />
-                    </div>
-                </div>
+                    </Box>
+                </Paper>
 
                 {/* Right Panel - Content/History */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg-app)' }}>
+                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', bgcolor: 'background.default', overflow: 'hidden' }}>
                     {/* Tabs */}
-                    <div style={{
-                        display: 'flex',
-                        borderBottom: '1px solid var(--border-color)',
-                        background: 'var(--bg-surface)',
-                        paddingLeft: '16px'
-                    }}>
-                        <button
-                            onClick={() => setActiveTab('contents')}
-                            style={{
-                                display: 'flex', alignItems: 'center', gap: '6px',
-                                padding: '10px 16px',
-                                background: 'transparent',
-                                border: 'none',
-                                borderBottom: activeTab === 'contents' ? '2px solid var(--un-blue)' : '2px solid transparent',
-                                color: activeTab === 'contents' ? 'var(--un-blue)' : 'var(--text-secondary)',
-                                fontWeight: 500,
-                                fontSize: '13px',
-                                cursor: 'pointer',
-                                borderRadius: 0
-                            }}
-                        >
-                            <FileText size={14} />
-                            Contents
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('history')}
-                            style={{
-                                display: 'flex', alignItems: 'center', gap: '6px',
-                                padding: '10px 16px',
-                                background: 'transparent',
-                                border: 'none',
-                                borderBottom: activeTab === 'history' ? '2px solid var(--un-blue)' : '2px solid transparent',
-                                color: activeTab === 'history' ? 'var(--un-blue)' : 'var(--text-secondary)',
-                                fontWeight: 500,
-                                fontSize: '13px',
-                                cursor: 'pointer',
-                                borderRadius: 0
-                            }}
-                        >
-                            <History size={14} />
-                            History
-                        </button>
-                    </div>
+                    <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
+                        <Tabs value={activeTab} onChange={handleTabChange} aria-label="tfvc tabs" sx={{ minHeight: 40 }}>
+                            <Tab
+                                label="Contents"
+                                value="contents"
+                                icon={<FileText size={16} />}
+                                iconPosition="start"
+                                sx={{ minHeight: 40, py: 1 }}
+                            />
+                            <Tab
+                                label="History"
+                                value="history"
+                                icon={<History size={16} />}
+                                iconPosition="start"
+                                sx={{ minHeight: 40, py: 1 }}
+                            />
+                        </Tabs>
+                    </Box>
 
                     {/* Tab Content */}
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '16px' }}>
+                    <Box sx={{ flex: 1, p: 2, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                         {activeTab === 'contents' && (
                             selectedItem && !selectedItem.isFolder ? (
-                                <div className="card" style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                                <Paper variant="outlined" sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                                     <FileViewer path={selectedItem.path} />
-                                </div>
+                                </Paper>
                             ) : (
-                                <div style={{
-                                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                                    height: '100%', color: 'var(--text-secondary)', opacity: 0.5
-                                }}>
-                                    <Folder size={48} style={{ marginBottom: '16px' }} />
-                                    <p>Select a file to view content</p>
-                                </div>
+                                <Stack alignItems="center" justifyContent="center" sx={{ height: '100%', color: 'text.disabled' }}>
+                                    <Folder size={48} />
+                                    <Typography variant="body1" sx={{ mt: 2 }}>Select a file to view content</Typography>
+                                </Stack>
                             )
                         )}
                         {activeTab === 'history' && (
-                            <div className="card" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+                            <Paper variant="outlined" sx={{ flex: 1, overflowY: 'auto' }}>
                                 <ChangesetList path={selectedItem?.path} />
-                            </div>
+                            </Paper>
                         )}
-                    </div>
-                </div>
-            </div>
-        </div>
+                    </Box>
+                </Box>
+            </Box>
+        </Box>
     );
 };
 

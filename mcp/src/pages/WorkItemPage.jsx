@@ -3,8 +3,9 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import ReactFlow, { Background, Controls } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { getWorkItemGraph, ingestWorkItems } from '../services/api'; // ⭐ IMPORT
-import { Database } from 'lucide-react';
+import { getWorkItemGraph, ingestWorkItems } from '../services/api';
+import { Database, Search } from 'lucide-react';
+import { Box, AppBar, Toolbar, Typography, Button, IconButton, Paper, Stack } from '@mui/material';
 
 const WorkItemPage = () => {
     const { id } = useParams();
@@ -19,7 +20,6 @@ const WorkItemPage = () => {
         });
     }, [id]);
 
-    // ⭐ НОВАЯ ФУНКЦИЯ
     const handleSingleIngest = async () => {
         setIsSyncing(true);
         try {
@@ -33,34 +33,47 @@ const WorkItemPage = () => {
     };
 
     return (
-        <div className="page-content" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <header style={{ padding: '20px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h1>Work Item #{id} Investigation</h1>
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
+            {/* Header */}
+            <AppBar position="static" color="default" elevation={1} sx={{ bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider' }}>
+                <Toolbar variant="dense">
+                    <Typography variant="h6" sx={{ flexGrow: 1 }}>
+                        Work Item #{id} Investigation
+                    </Typography>
 
-                <div style={{ display: 'flex', gap: '10px' }}>
-                    {/* ⭐ НОВАЯ КНОПКА */}
-                    <button
-                        onClick={handleSingleIngest}
-                        disabled={isSyncing}
-                        style={{ padding: '8px 16px', background: '#107c10', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
-                    >
-                        <Database size={16} />
-                        {isSyncing ? 'Syncing...' : 'Sync to Knowledge Base'}
-                    </button>
+                    <Stack direction="row" spacing={2}>
+                        <Button
+                            variant="contained"
+                            color="success"
+                            startIcon={<Database size={16} />}
+                            onClick={handleSingleIngest}
+                            disabled={isSyncing}
+                            size="small"
+                        >
+                            {isSyncing ? 'Syncing...' : 'Sync to Knowledge Base'}
+                        </Button>
 
-                    <button onClick={() => alert('Запущен поиск...')} style={{ padding: '8px 16px', background: '#0078d4', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                        🔍 Find Related Emails
-                    </button>
-                </div>
-            </header>
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            startIcon={<Search size={16} />}
+                            onClick={() => alert('Запущен поиск...')}
+                            size="small"
+                        >
+                            Find Related Emails
+                        </Button>
+                    </Stack>
+                </Toolbar>
+            </AppBar>
 
-            <div style={{ flex: 1, position: 'relative' }}>
+            {/* Content using ReactFlow */}
+            <Box sx={{ flex: 1, position: 'relative', bgcolor: 'background.default' }}>
                 <ReactFlow nodes={nodes} edges={edges} fitView>
-                    <Background />
+                    <Background color="#aaa" gap={16} />
                     <Controls />
                 </ReactFlow>
-            </div>
-        </div>
+            </Box>
+        </Box>
     );
 };
 

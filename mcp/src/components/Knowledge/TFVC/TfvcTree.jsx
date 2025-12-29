@@ -1,7 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Folder, FileCode, ChevronRight, ChevronDown, Loader2 } from 'lucide-react';
+import { Folder, FileCode, ChevronRight, ChevronDown } from 'lucide-react';
 import { fetchTfvcTree } from '../../../services/api';
 import { Storage } from '../../../utils/storage';
+import {
+    Box,
+    List,
+    ListItem,
+    ListItemButton,
+    ListItemIcon,
+    ListItemText,
+    Collapse,
+    CircularProgress,
+    Typography,
+    alpha
+} from '@mui/material';
 
 const TreeNode = ({ item, onSelect, selectedPath, level = 0, expandedPaths, onToggle }) => {
     const [children, setChildren] = useState([]);
@@ -10,8 +22,6 @@ const TreeNode = ({ item, onSelect, selectedPath, level = 0, expandedPaths, onTo
 
     const isExpanded = expandedPaths.has(item.path);
     const isSelected = selectedPath === item.path;
-    // Add extra indentation for files to distinguish them from folders
-    const paddingLeft = `${level * 20 + (item.isFolder ? 0 : 16)}px`;
 
     // Load children when expanded
     useEffect(() => {
@@ -55,46 +65,72 @@ const TreeNode = ({ item, onSelect, selectedPath, level = 0, expandedPaths, onTo
     };
 
     return (
-        <div>
-            <div
+        <Box>
+            <ListItemButton
                 onClick={handleClick}
-                style={{
-                    paddingLeft,
-                    display: 'flex',
-                    alignItems: 'center',
-                    paddingTop: '4px',
-                    paddingBottom: '4px',
-                    paddingRight: '8px',
-                    cursor: 'pointer',
-                    color: isSelected ? 'var(--un-blue)' : 'var(--text-primary)',
-                    fontWeight: isSelected ? 600 : 400,
-                    backgroundColor: isSelected ? '#e3f2fd' : 'transparent',
-                    fontSize: '13px'
+                selected={isSelected}
+                sx={{
+                    pl: level * 2 + (item.isFolder ? 0 : 2), // Adjust padding based on level
+                    pr: 1,
+                    py: 0.5,
+                    minHeight: 32,
+                    '&.Mui-selected': {
+                        bgcolor: 'primary.lighter',
+                        color: 'primary.main',
+                        '&:hover': {
+                            bgcolor: 'primary.lighter',
+                        },
+                        borderLeft: 3,
+                        borderLeftColor: 'primary.main',
+                        paddingLeft: `${level * 16 + (item.isFolder ? 0 : 16) - 3}px` // Compensate for border
+                    },
+                    '&:hover': {
+                        bgcolor: 'action.hover'
+                    }
                 }}
-                onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.backgroundColor = '#f1f1f1'; }}
-                onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent'; }}
             >
-                <div
-                    style={{ marginRight: '4px', width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                {/* Expand/Collapse Icon */}
+                <Box
+                    component="span"
                     onClick={handleExpand}
+                    sx={{
+                        display: 'inline-flex',
+                        mr: 0.5,
+                        width: 20,
+                        height: 20,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: '50%',
+                        '&:hover': { bgcolor: 'action.selected' },
+                        visibility: item.isFolder ? 'visible' : 'hidden'
+                    }}
                 >
-                    {item.isFolder && (
-                        loading ? <Loader2 size={12} className="animate-spin" /> :
-                            isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />
+                    {loading ? (
+                        <CircularProgress size={12} color="inherit" />
+                    ) : (
+                        isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />
                     )}
-                </div>
-                {item.isFolder ? (
-                    <Folder size={16} style={{ marginRight: '8px', color: '#FBC02D' }} />
-                ) : (
-                    <FileCode size={16} style={{ marginRight: '8px', color: 'var(--un-blue)' }} />
-                )}
-                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {item.path.split('/').pop()}
-                </span>
-            </div>
+                </Box>
 
-            {isExpanded && (
-                <div>
+                {/* File/Folder Icon */}
+                <ListItemIcon sx={{ minWidth: 24, color: item.isFolder ? '#FBC02D' : 'primary.main' }}>
+                    {item.isFolder ? <Folder size={16} /> : <FileCode size={16} />}
+                </ListItemIcon>
+
+                {/* Label */}
+                <ListItemText
+                    primary={item.path.split('/').pop()}
+                    primaryTypographyProps={{
+                        variant: 'body2',
+                        noWrap: true,
+                        fontWeight: isSelected ? 600 : 400,
+                        fontSize: '0.8125rem'
+                    }}
+                />
+            </ListItemButton>
+
+            <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                <List component="div" disablePadding>
                     {children.map(child => (
                         <TreeNode
                             key={child.path}
@@ -107,13 +143,16 @@ const TreeNode = ({ item, onSelect, selectedPath, level = 0, expandedPaths, onTo
                         />
                     ))}
                     {children.length === 0 && hasLoaded && (
-                        <div style={{ paddingLeft: `${(level + 1) * 20 + 24}px`, fontSize: '12px', color: 'var(--text-secondary)', paddingTop: '4px', paddingBottom: '4px' }}>
-                            (Empty)
-                        </div>
+                        <ListItem sx={{ pl: (level + 2) * 2 }}>
+                            <ListItemText
+                                primary="(Empty)"
+                                primaryTypographyProps={{ variant: 'caption', color: 'text.secondary', fontStyle: 'italic' }}
+                            />
+                        </ListItem>
                     )}
-                </div>
-            )}
-        </div>
+                </List>
+            </Collapse>
+        </Box>
     );
 };
 
@@ -179,22 +218,28 @@ const TfvcTree = ({ onSelect, selectedPath, persistenceKey = 'tfvc_tree_expanded
     }, []);
 
     if (loading) {
-        return <div style={{ display: 'flex', justifyContent: 'center', padding: '16px' }}><Loader2 className="animate-spin" style={{ color: 'var(--un-blue)' }} /></div>;
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                <CircularProgress size={24} />
+            </Box>
+        );
     }
 
     return (
-        <div style={{ overflowY: 'auto', height: '100%' }}>
-            {rootItems.map(item => (
-                <TreeNode
-                    key={item.path}
-                    item={item}
-                    onSelect={onSelect}
-                    selectedPath={selectedPath}
-                    expandedPaths={expandedPaths}
-                    onToggle={handleToggle}
-                />
-            ))}
-        </div>
+        <Box sx={{ overflowY: 'auto', height: '100%' }}>
+            <List component="nav" disablePadding>
+                {rootItems.map(item => (
+                    <TreeNode
+                        key={item.path}
+                        item={item}
+                        onSelect={onSelect}
+                        selectedPath={selectedPath}
+                        expandedPaths={expandedPaths}
+                        onToggle={handleToggle}
+                    />
+                ))}
+            </List>
+        </Box>
     );
 };
 

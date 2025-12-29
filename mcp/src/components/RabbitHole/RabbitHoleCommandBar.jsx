@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
 import { Sparkles, ArrowRight } from 'lucide-react';
+import {
+    Paper,
+    InputBase,
+    IconButton,
+    Stack,
+    Typography,
+    Divider
+} from '@mui/material';
 
 const RabbitHoleCommandBar = ({ onCommand, loading }) => {
     const [input, setInput] = useState('');
@@ -13,38 +21,43 @@ const RabbitHoleCommandBar = ({ onCommand, loading }) => {
     };
 
     return (
-        <div className="card" style={{ padding: '12px', marginBottom: '16px', background: 'linear-gradient(to right, #f8f9fa, #ffffff)' }}>
-            <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--un-blue)' }}>
-                    <Sparkles size={16} />
-                    <span style={{ fontSize: '13px', fontWeight: '500', whiteSpace: 'nowrap' }}>Ask AI:</span>
-                </div>
-                <input
-                    type="text"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    placeholder="e.g., 'Show me high priority bugs in ATS' or 'Add a column for Created By'"
-                    style={{
-                        flex: 1,
-                        height: '36px',
-                        padding: '0 12px',
-                        borderRadius: 'var(--radius)',
-                        border: '1px solid var(--border-color)',
-                        fontSize: '13px',
-                        outline: 'none'
-                    }}
-                    disabled={loading}
-                />
-                <button
-                    type="submit"
-                    disabled={loading || !input.trim()}
-                    className="btn-primary"
-                    style={{ height: '36px', display: 'flex', alignItems: 'center', gap: '6px' }}
-                >
-                    Go <ArrowRight size={14} />
-                </button>
-            </form>
-        </div>
+        <Paper
+            component="form"
+            onSubmit={handleSubmit}
+            sx={{
+                p: '8px 16px',
+                mb: 2,
+                display: 'flex',
+                alignItems: 'center',
+                background: 'linear-gradient(to right, #f8f9fa, #ffffff)', // Keep subtle gradient or use theme
+                borderRadius: 2
+            }}
+            variant="outlined"
+        >
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ color: 'primary.main', mr: 2 }}>
+                <Sparkles size={18} />
+                <Typography variant="body2" fontWeight={600} noWrap>Ask AI:</Typography>
+            </Stack>
+
+            <InputBase
+                sx={{ flex: 1, fontSize: '0.875rem' }}
+                placeholder="e.g., 'Show me high priority bugs in ATS' or 'Add a column for Created By'"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                disabled={loading}
+            />
+
+            <Divider sx={{ height: 28, m: 0.5 }} orientation="vertical" />
+
+            <IconButton
+                type="submit"
+                color="primary"
+                sx={{ p: '10px' }}
+                disabled={loading || !input.trim()}
+            >
+                <ArrowRight size={18} />
+            </IconButton>
+        </Paper>
     );
 };
 

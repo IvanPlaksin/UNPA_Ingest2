@@ -1,17 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { Activity, Server, Database, Cpu, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { getHealth } from '../../services/api';
+import { Box, Paper, Typography, Stack, CircularProgress } from '@mui/material';
 
 const ServiceStatusWidget = () => {
     const [status, setStatus] = useState(null);
     const [loading, setLoading] = useState(true);
 
     const fetchStatus = async () => {
-        const data = await getHealth();
-        if (data) {
-            setStatus(data);
+        try {
+            const data = await getHealth();
+            if (data) {
+                setStatus(data);
+            }
+        } catch (e) {
+            console.error("Health check failed", e);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     useEffect(() => {
@@ -20,14 +26,16 @@ const ServiceStatusWidget = () => {
         return () => clearInterval(interval);
     }, []);
 
-    if (loading && !status) return <div className="service-widget loading">Loading status...</div>;
+    if (loading && !status) return <Box sx={{ p: 2, textAlign: 'center' }}><CircularProgress size={20} /></Box>;
+
     if (!status) return (
-        <div className="service-widget" style={{ padding: '10px', borderTop: '1px solid #eee', fontSize: '12px', color: 'red' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '8px', fontWeight: '600' }}>
-                <Activity size={16} /> System Status
-            </div>
-            <div>Error loading status</div>
-        </div>
+        <Paper variant="outlined" sx={{ p: 2, borderColor: 'error.main', bgcolor: 'error.lighter' }}>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ color: 'error.main', mb: 1 }}>
+                <Activity size={16} />
+                <Typography variant="subtitle2" fontWeight="bold">System Status</Typography>
+            </Stack>
+            <Typography variant="caption" color="error">Error loading status</Typography>
+        </Paper>
     );
 
     const getIcon = (state) => {
@@ -36,31 +44,31 @@ const ServiceStatusWidget = () => {
         return <XCircle size={14} color="#f44336" />;
     };
 
+    const StatusItem = ({ label, icon: Icon, state }) => (
+        <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2} sx={{ mb: 0.5 }}>
+            <Stack direction="row" alignItems="center" spacing={1}>
+                <Icon size={12} className="text-gray-500" />
+                <Typography variant="caption" color="text.secondary">{label}</Typography>
+            </Stack>
+            {getIcon(state)}
+        </Stack>
+    );
+
     return (
-        <div className="service-widget" style={{ padding: '10px', borderTop: '1px solid #eee', fontSize: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '8px', fontWeight: '600', color: '#666' }}>
-                <Activity size={16} /> System Status
-            </div>
+        <Paper variant="outlined" sx={{ p: 2, bgcolor: 'background.default' }}>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5, color: 'text.secondary' }}>
+                <Activity size={16} />
+                <Typography variant="subtitle2" fontWeight="bold">System Status</Typography>
+            </Stack>
 
-            <div className="status-item" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><Server size={12} /> ADO</span>
-                {getIcon(status.ado)}
-            </div>
+            <StatusItem label="ADO" icon={Server} state={status.ado} />
+            <StatusItem label="Redis" icon={Database} state={status.redis} />
+            <StatusItem label="Worker" icon={Cpu} state={status.worker} />
 
-            <div className="status-item" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><Database size={12} /> Redis</span>
-                {getIcon(status.redis)}
-            </div>
-
-            <div className="status-item" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><Cpu size={12} /> Worker</span>
-                {getIcon(status.worker)}
-            </div>
-
-            <div style={{ fontSize: '10px', color: '#999', marginTop: '5px', textAlign: 'right' }}>
+            <Typography variant="caption" display="block" textAlign="right" color="text.disabled" sx={{ mt: 1, fontSize: '0.65rem' }}>
                 Updated: {new Date(status.timestamp).toLocaleTimeString()}
-            </div>
-        </div>
+            </Typography>
+        </Paper>
     );
 };
 

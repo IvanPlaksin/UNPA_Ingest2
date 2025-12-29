@@ -1,11 +1,28 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { Play, Settings, Sun, Moon, Maximize2, X, ChevronUp, ChevronDown, List, Terminal, Database } from 'lucide-react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { Play, Settings, Sun, Moon, X, ChevronDown, Database } from 'lucide-react';
 import { useParams, useLocation } from 'react-router-dom';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+import {
+    ThemeProvider,
+    createTheme,
+    CssBaseline,
+    Box,
+    AppBar,
+    Toolbar,
+    Typography,
+    IconButton,
+    Button,
+    Paper,
+    Tabs,
+    Tab,
+    CircularProgress,
+    Stack
+} from '@mui/material';
 
 import SourceSelector from '../components/Nexus/Ingestion/SourceSelector';
 import LayeredGraph3D from '../components/Nexus/LayeredGraph3D';
 import WorkItemDetails from '../components/Nexus/WorkItemDetails';
+import DraggableWindow from '../components/Nexus/DraggableWindow';
 import * as api from '../services/api';
 
 const WorkItemNexusPage = () => {
@@ -46,9 +63,63 @@ const WorkItemNexusPage = () => {
 
     // Panel State
     const [rightPanelOpen, setRightPanelOpen] = useState(true);
-    const [bottomPanelOpen, setBottomPanelOpen] = useState(true);
+    const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+
+    // --- Theme ---
+    const theme = useMemo(() => createTheme({
+        palette: {
+            mode: themeMode,
+            primary: { main: '#3b82f6' }, // Tailwind blue-500
+            background: {
+                default: themeMode === 'dark' ? '#000000' : '#f9fafb',
+                paper: themeMode === 'dark' ? '#111827' : '#ffffff',
+            }
+        },
+        components: {
+            MuiAppBar: {
+                styleOverrides: {
+                    root: {
+                        backgroundImage: 'none',
+                        borderBottom: `1px solid ${themeMode === 'dark' ? '#1f2937' : '#e5e7eb'}`,
+                        backgroundColor: themeMode === 'dark' ? '#111827' : '#ffffff',
+                        color: themeMode === 'dark' ? '#fff' : '#111827',
+                        boxShadow: 'none',
+                    }
+                }
+            },
+            MuiTab: {
+                styleOverrides: {
+                    root: {
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        fontSize: '0.75rem',
+                        minHeight: 32,
+                        padding: '6px 16px',
+                    }
+                }
+            },
+            MuiTabs: {
+                styleOverrides: {
+                    root: {
+                        minHeight: 32,
+                    },
+                    indicator: {
+                        height: 3,
+                    }
+                }
+            }
+        }
+    }), [themeMode]);
 
     // --- Effects ---
+    useEffect(() => {
+        if (themeMode === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    }, [themeMode]);
+
     useEffect(() => {
         const loadSeed = async () => {
             console.log(`[Cockpit] Loading seed: ${entityType} ${entityId}`);
@@ -83,24 +154,26 @@ const WorkItemNexusPage = () => {
         loadSeed();
     }, [entityType, entityId]);
 
-    // --- Handlers ---
     // --- Refs ---
     const rightPanelRef = React.useRef(null);
-    const bottomPanelRef = React.useRef(null);
+    // const bottomPanelRef = React.useRef(null); // Removed
 
     // --- Handlers ---
     const handleNodeClick = (node) => {
         console.log("Node Clicked:", node);
         setSelectedNode(node);
-        setActiveTab('details');
-        if (bottomPanelRef.current) bottomPanelRef.current.expand();
+        setActiveTab('details'); // Default to details on selection
+        setIsDetailsOpen(true);
+        // Fetch full details if needed (mocked or real)
+        // If real fetching is needed, it can be added here or inside DraggableWindow's effect
     };
 
     const handleIngest = async () => {
         setIsProcessing(true);
         setSourceStatus({});
+        setSourceStatus({});
         setActiveTab('console');
-        if (bottomPanelRef.current) bottomPanelRef.current.expand();
+        setIsDetailsOpen(true); // Open window to show console
 
         const targetId = entityId || sourceConfig.workItemId || 'demo';
         const sourcesParam = activeSources.join(',');
@@ -114,9 +187,19 @@ const WorkItemNexusPage = () => {
 
         eventSource.addEventListener('graph_update', (e) => {
             const graphUpdate = JSON.parse(e.data);
+
+            // Debug: Check for Parent Node 136937
+            const parentNode = graphUpdate.nodes.find(n => String(n.id) === '136937');
+            if (parentNode) {
+                console.log("!!! PARENT WORK ITEM DATA RECEIVED !!!");
+                console.log(JSON.stringify(parentNode, null, 2));
+            } else {
+                console.log("Graph Update received. Nodes:", graphUpdate.nodes.map(n => n.id));
+            }
+
             setSimulationGraph(prev => {
-                const existingNodeIds = new Set(prev.nodes.map(n => n.id));
-                const newNodes = graphUpdate.nodes.filter(n => !existingNodeIds.has(n.id));
+                const existingNodeIds = new Set(prev.nodes.map(n => String(n.id)));
+                const newNodes = graphUpdate.nodes.filter(n => !existingNodeIds.has(String(n.id)));
                 return { nodes: [...prev.nodes, ...newNodes], edges: [...prev.edges, ...graphUpdate.edges] };
             });
         });
@@ -149,151 +232,151 @@ const WorkItemNexusPage = () => {
         }
     };
 
-    // Bottom Panel Toggle logic is tri-state (collapsed vs expanded). 
-    // If we want a header to toggle it, we do similar:
-    const handleToggleBottomPanel = () => {
-        const panel = bottomPanelRef.current;
-        if (panel) {
-            if (bottomPanelOpen) panel.collapse();
-            else panel.expand();
-        }
-    };
+    // toggleBottomPanel removed
 
 
     const renderDetailsContent = () => {
-        if (!selectedNode) return <div className="p-4 text-gray-400">Select a node to view details.</div>;
+        if (!selectedNode) return <Box p={2} color="text.secondary">Select a node to view details.</Box>;
         if (selectedNode.type === 'WorkItem' || selectedNode.source === 'ADO') {
             const fields = selectedNode.data?.fields || selectedNode.metadata;
             if (fields) return <WorkItemDetails core={{ id: selectedNode.id }} fields={fields} relations={selectedNode.data?.relations} />;
         }
         return (
-            <div className="p-4">
-                <h3 className="font-bold text-lg mb-2">{selectedNode.label}</h3>
-                <pre className="bg-gray-100 p-2 rounded text-xs overflow-auto max-h-60">{JSON.stringify(selectedNode, null, 2)}</pre>
-            </div>
+            <Box p={2}>
+                <Typography variant="h6" fontWeight="bold" gutterBottom>{selectedNode.label}</Typography>
+                <Paper variant="outlined" sx={{ p: 1, bgcolor: 'background.default', maxHeight: 400, overflow: 'auto' }}>
+                    <pre style={{ margin: 0, fontSize: '0.75rem' }}>{JSON.stringify(selectedNode, null, 2)}</pre>
+                </Paper>
+            </Box>
         );
     };
 
     return (
-        <div className={`h-screen flex flex-col relative overflow-hidden ${themeMode === 'dark' ? 'bg-black text-white' : 'bg-gray-50 text-gray-900'}`}>
+        <ThemeProvider theme={theme}>
+            <CssBaseline />
+            <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-            {/* 1. Header */}
-            <header className={`h-14 flex items-center justify-between px-4 z-50 border-b ${themeMode === 'dark' ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-white'}`}>
-                <div className="flex items-center gap-4">
-                    <span className={`font-bold tracking-tight ${themeMode === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                        NEXUS <span className="text-blue-500">COCKPIT</span>
-                    </span>
-                </div>
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={() => setIsProcessing(!isProcessing) || handleIngest()}
-                        disabled={isProcessing}
-                        className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all
-                            ${isProcessing ? 'bg-yellow-500/20 text-yellow-500 animate-pulse border border-yellow-500/50' : 'bg-blue-600 hover:bg-blue-500 text-white'}`}
-                    >
-                        {isProcessing ? <Play size={14} className="animate-spin" /> : <Play size={14} />} {isProcessing ? 'Analyzing...' : 'Run Analysis'}
-                    </button>
-                    <button onClick={() => setThemeMode(themeMode === 'dark' ? 'light' : 'dark')} className="p-2 rounded-full hover:bg-gray-800">
-                        {themeMode === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-                    </button>
-                    {/* Source Panel Toggle */}
-                    <button
-                        onClick={handleToggleRightPanel}
-                        className={`p-2 rounded-full transition-colors ${rightPanelOpen ? 'bg-blue-500/20 text-blue-500' : 'text-gray-400 hover:bg-gray-800'}`}
-                    >
-                        <Settings size={18} />
-                    </button>
-                </div>
-            </header>
+                {/* 1. Header */}
+                <AppBar position="static" elevation={0}>
+                    <Toolbar variant="dense">
+                        <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Typography variant="h6" fontWeight="bold" sx={{ letterSpacing: '-0.025em' }}>
+                                NEXUS <Box component="span" sx={{ color: 'primary.main' }}>COCKPIT</Box>
+                            </Typography>
+                        </Box>
 
-            {/* 2. Resizable Panels Layout */}
-            <div className="flex-1 relative w-full h-full">
-                <PanelGroup direction="horizontal">
-
-                    {/* LEFT SIDE: Graph + Bottom Panel */}
-                    <Panel defaultSize={80} minSize={30}>
-                        <PanelGroup direction="vertical">
-                            {/* Graph Area */}
-                            <Panel defaultSize={70} minSize={10} className="relative">
-                                <div className="w-full h-full absolute inset-0">
-                                    <LayeredGraph3D graphData={simulationGraph} themeMode={themeMode} onNodeClick={handleNodeClick} />
-                                </div>
-                            </Panel>
-
-                            <PanelResizeHandle className={`h-1 hover:bg-blue-500 transition-colors ${themeMode === 'dark' ? 'bg-gray-800' : 'bg-gray-200'}`} />
-
-                            {/* Bottom Details Area */}
-                            <Panel
-                                ref={bottomPanelRef}
-                                defaultSize={30}
-                                minSize={0}
-                                collapsible={true}
-                                collapsedSize={0}
-                                onCollapse={() => setBottomPanelOpen(false)}
-                                onExpand={() => setBottomPanelOpen(true)}
-                                className="relative"
+                        <Stack direction="row" spacing={1} alignItems="center">
+                            <Button
+                                variant={isProcessing ? "outlined" : "contained"}
+                                color={isProcessing ? "warning" : "primary"}
+                                size="small"
+                                onClick={() => setIsProcessing(!isProcessing) || handleIngest()}
+                                disabled={isProcessing}
+                                startIcon={isProcessing ? <CircularProgress size={14} color="inherit" /> : <Play size={14} />}
+                                sx={{ borderRadius: 10, fontWeight: 'bold', textTransform: 'uppercase', minWidth: 140 }}
                             >
-                                <div className={`absolute inset-0 flex flex-col ${themeMode === 'dark' ? 'bg-gray-900' : 'bg-white'}`}>
-                                    {/* Tabs / Header */}
-                                    <div className={`h-8 flex-none flex items-center justify-between border-b px-2 ${themeMode === 'dark' ? 'border-gray-800' : 'border-gray-200'}`}>
-                                        <div className="flex items-center">
-                                            <button onClick={() => setActiveTab('details')} className={`mr-4 text-xs font-bold uppercase ${activeTab === 'details' ? 'text-blue-500' : 'text-gray-500'}`}>Details</button>
-                                            <button onClick={() => setActiveTab('console')} className={`text-xs font-bold uppercase ${activeTab === 'console' ? 'text-blue-500' : 'text-gray-500'}`}>Console</button>
-                                        </div>
-                                        <button onClick={handleToggleBottomPanel} className="text-gray-500 hover:text-gray-300">
-                                            <ChevronDown size={14} />
-                                        </button>
-                                    </div>
+                                {isProcessing ? 'Analyzing...' : 'Run Analysis'}
+                            </Button>
 
-                                    {/* Content */}
-                                    <div className="flex-1 min-h-0 overflow-y-auto w-full">
-                                        {activeTab === 'details' ? renderDetailsContent() : (
-                                            <div className="p-4 font-mono text-xs w-full">
-                                                {Object.entries(sourceStatus).map(([source, status]) => (
-                                                    <div key={source} className="mb-1"><span className="font-bold text-blue-400">[{source.toUpperCase()}]</span> {status.message}</div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </Panel>
-                        </PanelGroup>
-                    </Panel>
+                            <IconButton onClick={() => setThemeMode(themeMode === 'dark' ? 'light' : 'dark')} size="small">
+                                {themeMode === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+                            </IconButton>
 
-                    <PanelResizeHandle className={`w-1 hover:bg-blue-500 transition-colors ${themeMode === 'dark' ? 'bg-gray-800' : 'bg-gray-200'}`} />
+                            <IconButton
+                                onClick={handleToggleRightPanel}
+                                color={rightPanelOpen ? 'primary' : 'default'}
+                                size="small"
+                            >
+                                <Settings size={18} />
+                            </IconButton>
+                        </Stack>
+                    </Toolbar>
+                </AppBar>
 
-                    {/* RIGHT SIDE: Source Panel */}
-                    <Panel
-                        ref={rightPanelRef}
-                        defaultSize={20}
-                        minSize={0}
-                        collapsible={true}
-                        collapsedSize={0}
-                        onCollapse={() => setRightPanelOpen(false)}
-                        onExpand={() => setRightPanelOpen(true)}
-                        className="relative"
-                    >
-                        <div className={`absolute inset-0 border-l flex flex-col ${themeMode === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
-                            <div className="p-3 border-b text-xs font-bold uppercase opacity-70 flex justify-between items-center flex-none">
-                                <span>Data Sources</span>
-                                <button onClick={handleToggleRightPanel}><X size={14} /></button>
-                            </div>
-                            <div className="flex-1 min-h-0 overflow-y-auto w-full">
-                                <SourceSelector
-                                    activeSources={activeSources}
-                                    lockedSources={lockedSources}
-                                    sourceStatus={sourceStatus}
-                                    entityData={entityData}
-                                    onToggleSource={handleToggleSource}
-                                    onConfigChange={handleConfigChange}
+                {/* 2. Resizable Panels Layout */}
+                <Box sx={{ flex: 1, position: 'relative', width: '100%', height: '100%' }}>
+                    <PanelGroup direction="horizontal">
+
+                        {/* LEFT SIDE: Graph Only (Window is floating) */}
+                        <Panel defaultSize={80} minSize={30}>
+                            <Box sx={{ width: '100%', height: '100%', position: 'relative' }}>
+                                <LayeredGraph3D
+                                    graphData={simulationGraph}
+                                    themeMode={themeMode}
+                                    onNodeClick={handleNodeClick}
+                                    selectedNode={selectedNode}
+                                    mainPlaneZ={entityType === 'changeset' ? 100 : entityType === 'file' ? 200 : 0}
                                 />
-                            </div>
-                        </div>
-                    </Panel>
 
-                </PanelGroup>
-            </div>
-        </div>
+                                {/* Floating Details Window */}
+                                <DraggableWindow
+                                    open={isDetailsOpen}
+                                    onClose={() => setIsDetailsOpen(false)}
+                                    title={selectedNode ? (selectedNode.label || `Node #${selectedNode.id}`) : 'Details'}
+                                >
+                                    <Paper square elevation={0} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                                        {/* Tabs */}
+                                        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                                            <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)}>
+                                                <Tab label="Details" value="details" />
+                                                <Tab label="Console" value="console" />
+                                            </Tabs>
+                                        </Box>
+
+                                        {/* Content */}
+                                        <Box sx={{ flex: 1, p: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                                            <Box sx={{ flex: 1, overflowY: 'auto' }}>
+                                                {activeTab === 'details' ? renderDetailsContent() : (
+                                                    <Box p={2} sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
+                                                        {Object.entries(sourceStatus).map(([source, status]) => (
+                                                            <Box key={source} mb={0.5}>
+                                                                <Box component="span" sx={{ fontWeight: 'bold', color: 'primary.main' }}>[{source.toUpperCase()}]</Box> {status.message}
+                                                            </Box>
+                                                        ))}
+                                                    </Box>
+                                                )}
+                                            </Box>
+                                        </Box>
+                                    </Paper>
+                                </DraggableWindow>
+                            </Box>
+                        </Panel>
+
+                        <PanelResizeHandle style={{ width: 4, backgroundColor: themeMode === 'dark' ? '#1f2937' : '#e5e7eb', cursor: 'col-resize', transition: 'background-color 0.2s' }} />
+
+                        {/* RIGHT SIDE: Source Panel */}
+                        <Panel
+                            ref={rightPanelRef}
+                            defaultSize={20}
+                            minSize={0}
+                            collapsible={true}
+                            collapsedSize={0}
+                            onCollapse={() => setRightPanelOpen(false)}
+                            onExpand={() => setRightPanelOpen(true)}
+                            style={{ display: 'flex', flexDirection: 'column' }}
+                        >
+                            <Paper square sx={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', borderLeft: 1, borderColor: 'divider' }}>
+                                <Box sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <Typography variant="overline" fontWeight="bold" sx={{ opacity: 0.7 }}>Data Sources</Typography>
+                                    <IconButton size="small" onClick={handleToggleRightPanel}><X size={14} /></IconButton>
+                                </Box>
+                                <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+                                    <SourceSelector
+                                        activeSources={activeSources}
+                                        lockedSources={lockedSources}
+                                        sourceStatus={sourceStatus}
+                                        entityData={entityData}
+                                        onToggleSource={handleToggleSource}
+                                        onConfigChange={handleConfigChange}
+                                    />
+                                </Box>
+                            </Paper>
+                        </Panel>
+
+                    </PanelGroup>
+                </Box>
+            </Box>
+        </ThemeProvider>
     );
 };
 

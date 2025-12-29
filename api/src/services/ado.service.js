@@ -42,13 +42,16 @@ async function _getWorkItemsInBatches(ids, fields, batchSize = 50) {
         const chunkIds = ids.slice(i, i + batchSize);
         console.log(`[ADO Tool] Загрузка пакета ${Math.floor(i / batchSize) + 1}...`);
         try {
-            // ⭐ ИЗМЕНЕНИЕ: Добавлен expand: WorkItemExpand.Relations ТОЛЬКО если fields не указаны
-            // Если fields указаны, expand должен быть undefined (или null), иначе ошибка API
+            // ⭐ ИЗМЕНЕНИЕ: Всегда запрашиваем Relations. 
+            // Проверим, работает ли это с fields. Если API упадет, придется убрать fields.
+            // Но для отображения иконок нам нужны relations.
+            // FIX: "The expand parameter can not be used with the fields parameter."
+            // When using Expand, fields must be null/undefined.
             const chunkItems = await witApi.getWorkItems(
                 chunkIds,
-                fields,
+                undefined, // Must be undefined if expand is used
                 undefined,
-                (fields && fields.length > 0) ? undefined : WorkItemExpand.Relations
+                WorkItemExpand.Relations
             );
             if (!chunkItems) return null;
             allItems.push(...chunkItems);
@@ -169,7 +172,7 @@ async function searchWorkItems(filters, page = 1, limit = 20) {
     // --- CACHE CHECK ---
     const cacheKeyPayload = { filters, page, limit };
     const cacheKeyHash = crypto.createHash('md5').update(JSON.stringify(cacheKeyPayload)).digest('hex');
-    const cacheKey = `ado:search:${cacheKeyHash}`;
+    const cacheKey = `ado:search:v2:${cacheKeyHash}`;
 
     const cachedResult = await redisService.get(cacheKey);
     if (cachedResult) {
@@ -199,6 +202,21 @@ async function searchWorkItems(filters, page = 1, limit = 20) {
             if (operator === 'Equals') operator = '=';
 
             // Handle value formatting
+            console.log(`[ADO Service] Processing filter field: '${f.field}' with value: '${value}'`);
+
+            const fieldName = f.field.trim().toLowerCase();
+            if (fieldName === 'relations' || fieldName === 'haslinks') {
+                // Special mapping for Relations: [System.RelatedLinkCount]
+                console.log(`[ADO Service] Applied special mapping for HasLinks/Relations.`);
+                const isTrue = String(value).toLowerCase() === 'true';
+                if (isTrue) {
+                    whereClauses.push(`[System.RelatedLinkCount] > 0`);
+                } else {
+                    whereClauses.push(`[System.RelatedLinkCount] = 0`);
+                }
+                return; // Skip standard processing
+            }
+
             if (typeof value === 'string') {
                 if (value.startsWith('@')) {
                     // Macros (e.g. @today, @me) - do not quote
@@ -238,21 +256,26 @@ async function searchWorkItems(filters, page = 1, limit = 20) {
 
     const skip = (page - 1) * limit;
 
-    const result = await getWorkItemsUniversal({
-        wiql: query,
-        limit: limit,
-        skip: skip,
-        fieldsToReturn: ["System.Id", "System.Title", "System.State", "System.AssignedTo", "System.AreaPath", "System.WorkItemType", "System.ChangedDate"]
-    });
+    try {
+        const result = await getWorkItemsUniversal({
+            wiql: query,
+            limit: limit,
+            skip: skip,
+            fieldsToReturn: ["System.Id", "System.Title", "System.State", "System.AssignedTo", "System.AreaPath", "System.WorkItemType", "System.ChangedDate"]
+        });
 
-    // --- CACHE SET ---
-    if (result && !result.error) {
-        await redisService.set(cacheKey, result, 60); // Cache for 60 seconds
-        console.log(`[ADO Service] Cached result for key: ${cacheKey}`);
+        // --- CACHE SET ---
+        if (result && !result.error) {
+            await redisService.set(cacheKey, result, 60); // Cache for 60 seconds
+            console.log(`[ADO Service] Cached result for key: ${cacheKey}`);
+        }
+        // -----------------
+
+        return result;
+    } catch (apiError) {
+        console.error(`[ADO Service] Search API Failed. WIQL: ${query}`, apiError);
+        return { error: `ADO Search Failed: ${apiError.message}`, generatedWiql: query };
     }
-    // -----------------
-
-    return result;
 }
 
 /**

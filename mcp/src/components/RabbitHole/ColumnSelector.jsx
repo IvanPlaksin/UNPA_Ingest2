@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
 import { Columns, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+    Paper,
+    Box,
+    Typography,
+    Stack,
+    Collapse,
+    FormControlLabel,
+    Checkbox,
+    IconButton
+} from '@mui/material';
 
 const ColumnSelector = ({ visibleColumns, onToggleColumn, fieldDefinitions }) => {
     const [isExpanded, setIsExpanded] = useState(false);
@@ -8,36 +18,58 @@ const ColumnSelector = ({ visibleColumns, onToggleColumn, fieldDefinitions }) =>
     const allFields = Object.keys(fieldDefinitions);
 
     return (
-        <div className="card" style={{ padding: '12px', marginBottom: '16px' }}>
-            <div
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+        <Paper variant="outlined" sx={{ mb: 2, overflow: 'hidden' }}>
+            <Box
                 onClick={() => setIsExpanded(!isExpanded)}
+                sx={{
+                    p: 1.5,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    cursor: 'pointer',
+                    bgcolor: isExpanded ? 'background.default' : 'transparent'
+                }}
             >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Columns size={14} color="var(--un-navy)" />
-                    <h3 style={{ fontSize: '14px', fontWeight: '500', margin: 0, color: 'var(--un-navy)' }}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                    <Columns size={16} className="text-gray-500" />
+                    <Typography variant="subtitle2" fontWeight={600}>
                         Columns ({visibleColumns.length})
-                    </h3>
-                </div>
-                {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-            </div>
+                    </Typography>
+                </Stack>
+                {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </Box>
 
-            {isExpanded && (
-                <div style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '8px' }}>
+            <Collapse in={isExpanded}>
+                <Box sx={{
+                    p: 2,
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+                    gap: 1,
+                    borderTop: 1,
+                    borderColor: 'divider'
+                }}>
                     {allFields.map(field => (
-                        <label key={field} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer' }}>
-                            <input
-                                type="checkbox"
-                                checked={visibleColumns.includes(field)}
-                                onChange={() => onToggleColumn(field)}
-                                style={{ cursor: 'pointer' }}
-                            />
-                            {fieldDefinitions[field].label}
-                        </label>
+                        <FormControlLabel
+                            key={field}
+                            control={
+                                <Checkbox
+                                    checked={visibleColumns.includes(field)}
+                                    onChange={() => onToggleColumn(field)}
+                                    size="small"
+                                    sx={{ p: 0.5 }}
+                                />
+                            }
+                            label={
+                                <Typography variant="body2" sx={{ fontSize: '0.8125rem' }}>
+                                    {fieldDefinitions[field].label}
+                                </Typography>
+                            }
+                            sx={{ ml: 0, mr: 1, alignItems: 'center' }}
+                        />
                     ))}
-                </div>
-            )}
-        </div>
+                </Box>
+            </Collapse>
+        </Paper>
     );
 };
 

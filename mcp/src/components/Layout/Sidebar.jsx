@@ -1,9 +1,22 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { MessageSquare, Database, GitGraph, Settings, Search, LayoutDashboard, ListTodo, FolderTree, Bot } from 'lucide-react';
-import './Sidebar.css';
-
+import { MessageSquare, Database, GitGraph, Settings, Search, LayoutDashboard, ListTodo, FolderTree, Bot, FlaskConical } from 'lucide-react';
+import {
+    Box,
+    Drawer,
+    List,
+    ListItem,
+    ListItemButton,
+    ListItemIcon,
+    ListItemText,
+    Typography,
+    Divider,
+    Stack,
+    Avatar
+} from '@mui/material';
 import ServiceStatusWidget from './ServiceStatusWidget';
+
+const DRAWER_WIDTH = 240;
 
 const Sidebar = () => {
     const location = useLocation();
@@ -13,44 +26,96 @@ const Sidebar = () => {
         return location.pathname.startsWith(path);
     };
 
+    const NavItem = ({ to, icon: Icon, label, exact = false }) => {
+        const active = isActive(to);
+        return (
+            <ListItem disablePadding sx={{ mb: 0.5 }}>
+                <ListItemButton
+                    component={Link}
+                    to={to}
+                    selected={active}
+                    sx={{
+                        borderRadius: 2,
+                        mx: 1,
+                        '&.Mui-selected': {
+                            bgcolor: 'primary.main',
+                            color: 'primary.contrastText',
+                            '&:hover': { bgcolor: 'primary.dark' },
+                            '& .MuiListItemIcon-root': { color: 'primary.contrastText' }
+                        }
+                    }}
+                >
+                    <ListItemIcon sx={{ minWidth: 40, color: active ? 'inherit' : 'text.secondary' }}>
+                        <Icon size={20} />
+                    </ListItemIcon>
+                    <ListItemText primary={label} primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: active ? 600 : 400 }} />
+                </ListItemButton>
+            </ListItem>
+        );
+    };
+
+    const SectionHeader = ({ title }) => (
+        <Typography variant="caption" sx={{ px: 3, pt: 2, pb: 1, display: 'block', textTransform: 'uppercase', fontWeight: 'bold', color: 'text.disabled', letterSpacing: '0.05em' }}>
+            {title}
+        </Typography>
+    );
+
     return (
-        <div className="sidebar">
-            <div className="logo">
-                <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center text-white font-bold shadow-sm">UN</div>
-                Project Advisor
-            </div>
-            <nav>
-                <Link to="/" className={`nav-item ${isActive('/') ? 'active' : ''}`}>
-                    <LayoutDashboard size={18} /> Dashboard
-                </Link>
-                <Link to="/workitems" className={`nav-item ${isActive('/workitems') ? 'active' : ''}`}>
-                    <ListTodo size={18} /> Work Items
-                </Link>
+        <Drawer
+            variant="permanent"
+            sx={{
+                width: DRAWER_WIDTH,
+                flexShrink: 0,
+                '& .MuiDrawer-paper': {
+                    width: DRAWER_WIDTH,
+                    boxSizing: 'border-box',
+                    borderRight: '1px solid',
+                    borderColor: 'divider',
+                    bgcolor: 'background.paper',
+                    display: 'flex',
+                    flexDirection: 'column'
+                },
+            }}
+        >
+            {/* Logo Area */}
+            <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Avatar sx={{ bgcolor: 'primary.main', borderRadius: 2, width: 32, height: 32, fontWeight: 'bold' }}>UN</Avatar>
+                <Typography variant="subtitle1" fontWeight="bold" sx={{ lineHeight: 1.2 }}>
+                    Project <Box component="span" sx={{ color: 'primary.main' }}>Advisor</Box>
+                </Typography>
+            </Box>
 
-                <div className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider mt-2">Knowledge</div>
+            <Divider sx={{ mb: 2 }} />
 
-                <Link to="/knowledge" className={`nav-item ${isActive('/knowledge') && !isActive('/knowledge/rabbit-hole') && !isActive('/knowledge/tfvc') ? 'active' : ''}`}>
-                    <Database size={18} /> Overview
-                </Link>
-                <Link to="/knowledge/tfvc" className={`nav-item ${isActive('/knowledge/tfvc') ? 'active' : ''}`}>
-                    <FolderTree size={18} /> TFVC Browser
-                </Link>
-                <Link to="/knowledge/rabbit-hole" className={`nav-item ${isActive('/knowledge/rabbit-hole') ? 'active' : ''}`}>
-                    <Search size={18} /> Rabbit Hole
-                </Link>
+            {/* Navigation */}
+            <Box sx={{ flex: 1, overflowY: 'auto' }}>
+                <List>
+                    <NavItem to="/" icon={LayoutDashboard} label="Dashboard" exact />
+                    <NavItem to="/workitems" icon={ListTodo} label="Work Items" />
 
-                <div className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider mt-2">Assistant</div>
-                <Link to="/agent" className={`nav-item ${isActive('/agent') ? 'active' : ''}`}>
-                    <Bot size={18} /> Chat Agent
-                </Link>
-            </nav>
-            <div className="bottom">
+                    <SectionHeader title="Knowledge" />
+                    <NavItem to="/knowledge" icon={Database} label="Overview" />
+                    <NavItem to="/knowledge/tfvc" icon={FolderTree} label="TFVC Browser" />
+                    <NavItem to="/knowledge/rabbit-hole" icon={Search} label="Rabbit Hole" />
+
+                    <SectionHeader title="Assistant" />
+                    <NavItem to="/agent" icon={Bot} label="Chat Agent" />
+                </List>
+            </Box>
+
+            {/* Bottom Section */}
+            <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
                 <ServiceStatusWidget />
-                <div className="nav-item"><Settings size={18} /> Settings</div>
-            </div>
-        </div>
+                <ListItemButton sx={{ mt: 1, borderRadius: 2, color: 'text.secondary' }}>
+                    <ListItemIcon sx={{ minWidth: 40, color: 'text.secondary' }}>
+                        <Settings size={20} />
+                    </ListItemIcon>
+                    <ListItemText primary="Settings" primaryTypographyProps={{ fontSize: '0.875rem' }} />
+                </ListItemButton>
+                <NavItem to="/experimental" icon={FlaskConical} label="Experimental" />
+            </Box>
+        </Drawer>
     );
 };
-
 
 export default Sidebar;

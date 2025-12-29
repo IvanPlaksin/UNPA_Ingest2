@@ -1,5 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Database, ChevronDown, ChevronUp, Columns } from 'lucide-react';
+import {
+    Paper,
+    Box,
+    Typography,
+    Stack,
+    IconButton,
+    Button,
+    Chip,
+    Collapse,
+    Checkbox,
+    FormControlLabel,
+    Grid,
+    Divider
+} from '@mui/material';
 
 const WorkItemFieldsPanel = ({ workItem, visibleFields, onToggleField }) => {
 
@@ -104,130 +118,129 @@ const WorkItemFieldsPanel = ({ workItem, visibleFields, onToggleField }) => {
 
         if (fieldDef.valueType === 'HTML' || fieldDef.valueType === 'History') {
             return (
-                <div key={fieldDef.fieldName} style={{ width: '100%', marginBottom: '8px' }}>
-                    <strong style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>
+                <Box key={fieldDef.fieldName} sx={{ width: '100%', mb: 1.5 }}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" mb={0.5}>
                         {fieldDef.displayName}:
-                    </strong>
-                    <div
-                        className="p-2 bg-gray-50 rounded text-sm"
-                        style={{ maxHeight: '300px', overflowY: 'auto' }}
-                        dangerouslySetInnerHTML={{ __html: value || '<span class="text-gray-400">Empty</span>' }}
-                    />
-                </div>
+                    </Typography>
+                    <Paper
+                        variant="outlined"
+                        sx={{
+                            p: 1.5,
+                            bgcolor: 'background.default',
+                            fontSize: '0.875rem',
+                            maxHeight: 300,
+                            overflowY: 'auto',
+                            '& p': { mb: 1 } // Basic style for HTML content
+                        }}
+                    >
+                        <div dangerouslySetInnerHTML={{ __html: value || '<span style="color: grey">Empty</span>' }} />
+                    </Paper>
+                </Box>
             );
         }
 
-        let displayValue = value !== undefined && value !== null ? String(value) : <span className="text-gray-400">-</span>;
+        let displayValue = value !== undefined && value !== null ? String(value) : <Typography component="span" color="text.disabled">-</Typography>;
 
         if (fieldDef.valueType === 'DateTime' && value) {
             displayValue = formatDate(value);
         }
 
         return (
-            <div key={fieldDef.fieldName} style={{ display: 'flex', alignItems: 'baseline', gap: '6px', fontSize: '13px', marginRight: '16px', marginBottom: '4px' }}>
-                <strong style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{fieldDef.displayName}:</strong>
-                <span style={{ color: 'var(--un-navy)' }}>{displayValue}</span>
-            </div>
+            <Box key={fieldDef.fieldName} sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mr: 2, mb: 0.5 }}>
+                <Typography variant="body2" color="text.secondary" fontWeight={600} noWrap sx={{ minWidth: 'fit-content' }}>
+                    {fieldDef.displayName}:
+                </Typography>
+                <Typography variant="body2" color="text.primary">
+                    {displayValue}
+                </Typography>
+            </Box>
         );
     };
 
     if (!workItem || !workItem.fields) {
-        return <div className="p-4 text-gray-500">No Work Item data available.</div>;
+        return <Paper sx={{ p: 3, color: 'text.secondary' }}>No Work Item data available.</Paper>;
     }
 
     return (
-        <div className="card mb-4 p-4">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-                    <span className="status-badge active">CORE</span> DevOps Data
-                </h3>
+        <Paper variant="outlined" sx={{ mb: 2, p: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                    <Chip label="CORE" color="secondary" size="small" />
+                    <Typography variant="h6" fontSize="1rem" fontWeight={600}>DevOps Data</Typography>
+                </Stack>
 
                 {/* Field Selector Toggle */}
-                <button
+                <Button
                     onClick={() => setIsSelectorExpanded(!isSelectorExpanded)}
-                    style={{
-                        background: 'none',
-                        border: 'none',
-                        cursor: isControlled ? 'not-allowed' : 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        color: 'var(--text-secondary)',
-                        fontSize: '12px',
-                        opacity: isControlled ? 0.5 : 1
-                    }}
-                    title={isControlled ? "Field visibility is controlled by parent" : "Select fields to display"}
+                    startIcon={<Columns size={14} />}
+                    endIcon={!isControlled && (isSelectorExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />)}
+                    size="small"
+                    sx={{ textTransform: 'none', color: 'text.secondary', opacity: isControlled ? 0.5 : 1 }}
                     disabled={isControlled}
+                    title={isControlled ? "Field visibility is controlled by parent" : "Select fields to display"}
                 >
-                    <Columns size={14} />
                     {isControlled ? 'Fixed View' : 'Select Fields'}
-                    {!isControlled && (isSelectorExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />)}
-                </button>
-            </div>
+                </Button>
+            </Box>
 
             {/* Field Selector Panel */}
-            {isSelectorExpanded && !isControlled && (
-                <div style={{
-                    marginBottom: '16px',
-                    padding: '12px',
-                    background: 'var(--bg-secondary)',
-                    borderRadius: 'var(--radius)',
-                    border: '1px solid var(--border-color)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '12px'
-                }}>
+            <Collapse in={isSelectorExpanded && !isControlled}>
+                <Paper
+                    variant="outlined"
+                    sx={{ mb: 2, p: 2, bgcolor: 'background.default', display: 'flex', flexDirection: 'column', gap: 2 }}
+                >
                     {FIELD_CATEGORIES.map(category => (
-                        <div key={category.category}>
-                            <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--un-navy)', margin: '0 0 4px 0' }}>{category.category}</h4>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px' }}>
+                        <Box key={category.category}>
+                            <Typography variant="subtitle2" fontWeight="bold" color="primary.main" gutterBottom>
+                                {category.category}
+                            </Typography>
+                            <Grid container spacing={1}>
                                 {category.fields.map(field => (
-                                    <label key={field.fieldName} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer' }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={currentVisibleFields.includes(field.fieldName)}
-                                            onChange={() => handleToggle(field.fieldName)}
-                                            style={{ cursor: 'pointer' }}
+                                    <Grid item xs={6} sm={4} md={3} lg={2} key={field.fieldName}>
+                                        <FormControlLabel
+                                            control={
+                                                <Checkbox
+                                                    checked={currentVisibleFields.includes(field.fieldName)}
+                                                    onChange={() => handleToggle(field.fieldName)}
+                                                    size="small"
+                                                    sx={{ p: 0.5 }}
+                                                />
+                                            }
+                                            label={
+                                                <Typography variant="caption" noWrap title={field.fieldName}>
+                                                    {field.displayName}
+                                                </Typography>
+                                            }
+                                            sx={{ m: 0, width: '100%' }}
                                         />
-                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={field.fieldName}>
-                                            {field.displayName}
-                                        </span>
-                                    </label>
+                                    </Grid>
                                 ))}
-                            </div>
-                        </div>
+                            </Grid>
+                        </Box>
                     ))}
-                </div>
-            )}
+                </Paper>
+            </Collapse>
 
             {/* Categorized Fields Display */}
-            <div className="flex flex-col gap-4">
+            <Stack spacing={2}>
                 {FIELD_CATEGORIES.map(category => {
                     // Check if any fields in this category are visible
                     const hasVisibleFields = category.fields.some(f => currentVisibleFields.includes(f.fieldName));
                     if (!hasVisibleFields) return null;
 
                     return (
-                        <div key={category.category} style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                            <h4 style={{
-                                fontSize: '13px',
-                                fontWeight: '600',
-                                color: 'var(--un-blue)',
-                                margin: '0 0 8px 0',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px'
-                            }}>
+                        <Box key={category.category} sx={{ borderBottom: 1, borderColor: 'divider', pb: 1, '&:last-child': { borderBottom: 0 } }}>
+                            <Typography variant="subtitle2" color="primary.main" fontWeight={600} gutterBottom>
                                 {category.category}
-                            </h4>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', rowGap: '4px' }}>
+                            </Typography>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', rowGap: 0.5 }}>
                                 {category.fields.map(field => renderField(field))}
-                            </div>
-                        </div>
+                            </Box>
+                        </Box>
                     );
                 })}
-            </div>
-        </div>
+            </Stack>
+        </Paper>
     );
 };
 

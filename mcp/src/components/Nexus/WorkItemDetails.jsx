@@ -1,116 +1,296 @@
 import React from 'react';
-import { Clock, User, Layers } from 'lucide-react';
+import { Clock, Layers, ChevronDown, Database, Play, Users } from 'lucide-react';
+import {
+    Box,
+    Paper,
+    Typography,
+    Chip,
+    Grid,
+    Avatar,
+    Stack,
+    Divider,
+    Accordion,
+    AccordionSummary,
+    AccordionDetails
+} from '@mui/material';
 
-const WorkItemDetails = ({ core, fields, relations }) => {
+const WorkItemDetails = ({ core, fields: rawFields, relations }) => {
+
+    // --- Utils & Formatting ---
+    const formatDate = (dateStr) => {
+        if (!dateStr) return '';
+        try {
+            const date = new Date(dateStr);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = String(date.getFullYear()).slice(-2);
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${day}/${month}/${year} ${hours}:${minutes}`;
+        } catch (e) { return dateStr; }
+    };
+
+    const formatIdentity = (val) => {
+        if (!val) return 'Unknown';
+        if (typeof val === 'object' && val.displayName) return val.displayName;
+        if (typeof val === 'string' && val.includes('[object')) return 'Unknown';
+        return val; // Fallback string
+    };
+
+    const formatBoolean = (val) => val ? 'Yes' : 'No';
+
+    // --- Classification Logic ---
+    const GROUPS = {
+        CONTEXT: {
+            title: 'Knowledge Context & Connectivity',
+            icon: <Layers size={16} />,
+            keys: [
+                'System.Parent', 'System.Tags', 'System.NodeName', 'System.IterationPath',
+                'UnitedNations.Service', 'UnitedNations.Client', 'Common.Discipline',
+                'CMMI.TaskType', 'CMMI.Blocked', 'System.TeamProject', 'System.Rev', 'System.CommentCount'
+            ]
+        },
+        STATUS: {
+            title: 'Status & Planning',
+            icon: <Play size={16} />, // Visual placeholder
+            keys: [
+                'System.Reason', 'Common.Priority', 'Common.Triage', 'Microsoft.VSTS.Scheduling.OriginalEstimate',
+                'Microsoft.VSTS.Scheduling.CompletedWork', 'Microsoft.VSTS.Common.ResolvedReason'
+            ]
+        },
+        TIMELINE: {
+            title: 'Timeline',
+            icon: <Clock size={16} />,
+            keys: [
+                'System.CreatedDate', 'Microsoft.VSTS.Common.ActivatedDate', 'Microsoft.VSTS.Common.ResolvedDate',
+                'Microsoft.VSTS.Common.ClosedDate', 'System.AuthorizedDate', 'Microsoft.VSTS.Common.StateChangeDate'
+            ],
+            formatter: formatDate
+        },
+        PEOPLE: {
+            title: 'People (Social Graph)',
+            icon: <Users size={16} />,
+            keys: [
+                'System.CreatedBy', 'System.ChangedBy', 'Microsoft.VSTS.Common.ActivatedBy',
+                'Microsoft.VSTS.Common.ResolvedBy', 'Microsoft.VSTS.Common.ClosedBy', 'System.AssignedTo'
+            ],
+            formatter: formatIdentity
+        },
+        METADATA: {
+            title: 'System Metadata',
+            icon: <Database size={16} />,
+            keys: [
+                'System.AreaId', 'System.IterationId', 'System.PersonId', 'System.Watermark',
+                'Microsoft.VSTS.CMMI.RequiresReview', 'Microsoft.VSTS.CMMI.RequiresTest',
+                'UnitedNations.Areas', 'UnitedNations.AccountingTreatment', 'System.AreaPath'
+            ]
+        }
+    };
+
+    // --- Grouping Data ---
+    const fieldGroups = {
+        CONTEXT: {},
+        STATUS: {},
+        TIMELINE: {},
+        PEOPLE: {},
+        METADATA: {},
+        OTHER: {} // Catch-all
+    };
+
+    const allDefinedKeys = new Set(Object.values(GROUPS).flatMap(g => g.keys));
+
+    Object.entries(rawFields || {}).forEach(([key, value]) => {
+        // Find group
+        let found = false;
+        for (const [groupKey, config] of Object.entries(GROUPS)) {
+            if (config.keys.includes(key)) {
+                fieldGroups[groupKey][key] = value;
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            // Check manual ignored list from previous logic to avoid duplication in header
+            const headerFields = ['System.Id', 'System.WorkItemType', 'System.Title', 'System.State', 'System.Description'];
+            if (!headerFields.includes(key)) {
+                fieldGroups.OTHER[key] = value;
+            }
+        }
+    });
+
+    // Helper to get value
+    const getRenderValue = (groupKey, key, value) => {
+        const config = GROUPS[groupKey];
+        if (config?.formatter) return config.formatter(value);
+        if (typeof value === 'boolean') return formatBoolean(value);
+
+        // Specific field overrides
+        if (key === 'System.Tags') return String(value || '').split(';').map(t => t.trim()).join(', ');
+
+        return String(value);
+    };
+
+
+    // --- Relation Logic ---
+    // Keep existing relation logic for "Actual Links" not just fields
+    const hierarchyRelations = (relations || []).filter(r =>
+        r.rel.includes('Hierarchy') || r.rel.includes('Related')
+    );
+    const artifactRelations = (relations || []).filter(r =>
+        r.rel.includes('ArtifactLink') || r.rel.includes('Hyperlink') ||
+        (!hierarchyRelations.includes(r))
+    );
+
+
+    // --- Styles ---
+    const AccordionStyle = {
+        boxShadow: 'none',
+        '&:before': { display: 'none' },
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: 1,
+        mb: 1,
+        bgcolor: 'background.paper'
+    };
+
+    const AccordionSummaryStyle = {
+        minHeight: 40,
+        px: 2,
+        '& .MuiAccordionSummary-content': { my: 1 }
+    };
+
+    const renderRelation = (rel, idx) => (
+        <Paper key={idx} variant="outlined" sx={{ p: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ overflow: 'hidden' }}>
+                <Layers size={14} className="text-gray-400" />
+                <Typography variant="caption" fontWeight="bold" sx={{ textTransform: 'uppercase' }}>
+                    {rel.rel.split('.').pop().replace('Hierarchy-', '')}
+                </Typography>
+            </Stack>
+            <a href={rel.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+                <Typography variant="caption" color="primary" sx={{ '&:hover': { textDecoration: 'underline' } }}>
+                    {rel.url.split('/').pop()}
+                </Typography>
+            </a>
+        </Paper>
+    );
+
+
     const getStatusColor = (state) => {
         const s = (state || '').toLowerCase();
-        if (s === 'active' || s === 'committed') return 'bg-green-100 text-green-800 border-green-200';
-        if (s === 'resolved' || s === 'closed' || s === 'done') return 'bg-gray-100 text-gray-800 border-gray-200';
-        if (s === 'new' || s === 'to do') return 'bg-blue-100 text-blue-800 border-blue-200';
-        if (s === 'removed') return 'bg-red-100 text-red-800 border-red-200';
-        return 'bg-gray-50 text-gray-600 border-gray-100';
+        if (s === 'active' || s === 'committed') return 'success';
+        if (s === 'resolved' || s === 'closed' || s === 'done') return 'default';
+        if (s === 'new' || s === 'to do') return 'info';
+        if (s === 'removed') return 'error';
+        return 'default';
     };
 
-    const renderUser = (userField) => {
-        if (!userField || !userField.displayName) return <span className="text-gray-400">Unassigned</span>;
-        return (
-            <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold">
-                    {userField.displayName.charAt(0)}
-                </div>
-                <span className="text-sm text-gray-700">{userField.displayName}</span>
-            </div>
-        );
-    };
-
-    // Filter out fields shown in header
-    const ignoredFields = ['System.Id', 'System.WorkItemType', 'System.Title', 'System.State', 'System.AssignedTo', 'System.AreaPath', 'System.ChangedDate', 'System.Description'];
-    const otherFields = Object.entries(fields || {}).filter(([key]) => !ignoredFields.includes(key));
 
     return (
-        <div className="p-6 bg-white min-h-full">
-            {/* Header */}
-            <div className="flex justify-between items-start mb-4 pb-4 border-b border-gray-100">
-                <div>
-                    <div className="flex items-center gap-3 text-sm text-gray-500 mb-1">
-                        <span className="font-mono font-bold text-gray-700 bg-gray-100 px-2 py-0.5 rounded">#{core.id}</span>
-                        <span className="font-medium text-gray-600">{fields['System.WorkItemType']}</span>
-                        <span className="text-gray-300">|</span>
-                        <span className="flex items-center gap-1 text-xs">
-                            <Clock size={12} /> {new Date(fields['System.ChangedDate']).toLocaleDateString()}
-                        </span>
-                    </div>
-                    <h1 className="text-xl font-bold text-gray-900 leading-tight">
-                        {fields['System.Title']}
-                    </h1>
-                </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${getStatusColor(fields['System.State'])}`}>
-                    {fields['System.State']}
-                </span>
-            </div>
-
-            {/* Core Metadata Grid */}
-            <div className="grid grid-cols-2 gap-4 mb-6 text-sm bg-gray-50 p-4 rounded-lg border border-gray-100">
-                <div className="flex flex-col gap-1">
-                    <span className="text-gray-400 text-xs uppercase font-bold tracking-wider">Assigned To</span>
-                    {renderUser(fields['System.AssignedTo'])}
-                </div>
-                <div className="flex flex-col gap-1">
-                    <span className="text-gray-400 text-xs uppercase font-bold tracking-wider">Area Path</span>
-                    <span className="font-medium text-gray-700 truncate" title={fields['System.AreaPath']}>{fields['System.AreaPath']}</span>
-                </div>
-            </div>
-
-            {/* Description */}
-            {fields['System.Description'] && (
-                <div className="mb-6">
-                    <h3 className="text-sm font-bold text-gray-900 mb-2 uppercase tracking-wider flex items-center gap-2">
-                        Description
-                    </h3>
-                    <div
-                        className="prose prose-sm max-w-none text-gray-700 bg-white p-4 border rounded shadow-sm"
-                        dangerouslySetInnerHTML={{ __html: fields['System.Description'] }}
+        <Box sx={{ height: '100%', overflowY: 'auto', p: 1 }}>
+            {/* HEADER: Always Visible High-Level Info */}
+            <Paper elevation={0} sx={{ p: 2, mb: 1, bgcolor: 'background.paper', border: 1, borderColor: 'divider' }}>
+                <Stack direction="row" spacing={1} alignItems="center" mb={1}>
+                    <Chip label={`#${core.id}`} size="small" variant="outlined" sx={{ borderRadius: 1, fontFamily: 'monospace', fontWeight: 'bold' }} />
+                    <Typography variant="caption" fontWeight="bold" color="text.secondary">{rawFields['System.WorkItemType']}</Typography>
+                    <Chip
+                        label={rawFields['System.State']}
+                        color={getStatusColor(rawFields['System.State'])}
+                        size="small"
+                        sx={{ ml: 'auto', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '0.65rem' }}
                     />
-                </div>
+                </Stack>
+                <Typography variant="subtitle1" fontWeight="bold" lineHeight={1.2}>
+                    {rawFields['System.Title']}
+                </Typography>
+            </Paper>
+
+            {/* DESCRIPTION (If present, separate block) */}
+            {rawFields['System.Description'] && (
+                <Accordion defaultExpanded sx={AccordionStyle}>
+                    <AccordionSummary expandIcon={<ChevronDown size={16} />} sx={AccordionSummaryStyle}>
+                        <Typography variant="subtitle2" fontWeight="bold">DESCRIPTION</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails sx={{ pt: 0 }}>
+                        <Paper variant="outlined" sx={{ p: 1.5, bgcolor: 'background.default', '& .prose': { fontSize: '0.875rem' } }}>
+                            <div
+                                className="prose prose-sm max-w-none text-gray-700 dark:text-gray-300"
+                                dangerouslySetInnerHTML={{ __html: rawFields['System.Description'] }}
+                            />
+                        </Paper>
+                    </AccordionDetails>
+                </Accordion>
             )}
 
-            {/* Other Fields Table */}
-            {otherFields.length > 0 && (
-                <div className="mb-6">
-                    <h3 className="text-sm font-bold text-gray-900 mb-2 uppercase tracking-wider">Details</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm border-t pt-2">
-                        {otherFields.map(([key, value]) => (
-                            <div key={key} className="flex justify-between py-1 border-b border-gray-50">
-                                <span className="text-gray-500 truncate w-1/2 overflow-hidden" title={key}>{key.replace('System.', '').replace('Microsoft.VSTS.', '')}</span>
-                                <span className="font-medium text-gray-800 truncate w-1/2 text-right" title={String(value)}>{String(value)}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+            {/* 5 SEMANTIC GROUPS */}
+            {Object.entries(GROUPS).map(([groupKey, config]) => {
+                const groupData = fieldGroups[groupKey];
+                if (Object.keys(groupData).length === 0) return null;
+
+                return (
+                    <Accordion key={groupKey} defaultExpanded sx={AccordionStyle}>
+                        <AccordionSummary expandIcon={<ChevronDown size={16} />} sx={AccordionSummaryStyle}>
+                            <Stack direction="row" alignItems="center" spacing={1}>
+                                {config.icon}
+                                <Typography variant="subtitle2" fontWeight="bold">{config.title.toUpperCase()}</Typography>
+                            </Stack>
+                        </AccordionSummary>
+                        <AccordionDetails sx={{ pt: 0 }}>
+                            <Stack spacing={0.5}>
+                                {Object.entries(groupData).map(([k, v]) => (
+                                    <Box key={k} sx={{ py: 0.5, display: 'flex', justifyContent: 'space-between', borderBottom: 1, borderColor: 'divider' }}>
+                                        <Typography variant="caption" color="text.secondary" noWrap sx={{ width: '45%' }}>
+                                            {k.split('.').pop()} {/* Simplified Label */}
+                                        </Typography>
+                                        <Typography variant="caption" fontWeight="medium" sx={{ width: '50%', textAlign: 'right', wordBreak: 'break-word' }} title={String(v)}>
+                                            {getRenderValue(groupKey, k, v)}
+                                        </Typography>
+                                    </Box>
+                                ))}
+                            </Stack>
+                        </AccordionDetails>
+                    </Accordion>
+                );
+            })}
+
+            {/* OTHER FIELDS (Catch-all) */}
+            {Object.keys(fieldGroups.OTHER).length > 0 && (
+                <Accordion sx={AccordionStyle}>
+                    <AccordionSummary expandIcon={<ChevronDown size={16} />} sx={AccordionSummaryStyle}>
+                        <Typography variant="subtitle2" fontWeight="bold">OTHER FIELDS</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails sx={{ pt: 0 }}>
+                        <Stack spacing={0.5}>
+                            {Object.entries(fieldGroups.OTHER).map(([k, v]) => (
+                                <Box key={k} sx={{ py: 0.5, display: 'flex', justifyContent: 'space-between', borderBottom: 1, borderColor: 'divider' }}>
+                                    <Typography variant="caption" color="text.secondary" noWrap sx={{ width: '45%' }}>{k}</Typography>
+                                    <Typography variant="caption" fontWeight="medium" sx={{ width: '50%', textAlign: 'right' }}>{String(v)}</Typography>
+                                </Box>
+                            ))}
+                        </Stack>
+                    </AccordionDetails>
+                </Accordion>
             )}
 
-            {/* Relations */}
-            {relations && relations.length > 0 && (
-                <div>
-                    <h3 className="text-sm font-bold text-gray-900 mb-2 uppercase tracking-wider flex items-center gap-2">
-                        Relations <span className="bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded text-xs">{relations.length}</span>
-                    </h3>
-                    <div className="space-y-2">
-                        {relations.map((rel, idx) => (
-                            <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 rounded border border-gray-100 hover:bg-blue-50 transition-colors">
-                                <div className="flex items-center gap-2 overflow-hidden">
-                                    <Layers size={14} className="text-gray-400 flex-shrink-0" />
-                                    <span className="text-xs font-bold text-gray-600 uppercase">{rel.rel}</span>
-                                </div>
-                                <a href={rel.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline truncate ml-2 max-w-[200px]">
-                                    {rel.url.split('/').pop()}
-                                </a>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-        </div>
+            {/* LINKS: RELATIONS & ARTIFACTS */}
+            <Accordion sx={AccordionStyle}>
+                <AccordionSummary expandIcon={<ChevronDown size={16} />} sx={AccordionSummaryStyle}>
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                        <Layers size={16} />
+                        <Typography variant="subtitle2" fontWeight="bold">LINKED ITEMS ({hierarchyRelations.length + artifactRelations.length})</Typography>
+                    </Stack>
+                </AccordionSummary>
+                <AccordionDetails sx={{ pt: 0 }}>
+                    <Stack spacing={1}>
+                        {hierarchyRelations.map(renderRelation)}
+                        {artifactRelations.map(renderRelation)}
+                        {(relations || []).length === 0 && <Typography variant="caption" color="text.disabled">No links.</Typography>}
+                    </Stack>
+                </AccordionDetails>
+            </Accordion>
+
+        </Box>
     );
 };
 

@@ -1,0 +1,149 @@
+{
+  "id": 137837,
+  "label": "Task 137837",
+  "type": "WorkItem",
+  "source": "ADO",
+  "data": {
+    "core": {
+      "id": 137837
+    },
+    "fields": {
+      "System.Id": 137837,
+      "System.AreaId": 448,
+      "System.AreaPath": "ATS",
+      "System.TeamProject": "ATS",
+      "System.NodeName": "ATS",
+      "System.AreaLevel1": "ATS",
+      "System.Rev": 3,
+      "System.AuthorizedDate": "2025-12-03T07:50:22.007Z",
+      "System.RevisedDate": "9999-01-01T00:00:00Z",
+      "System.IterationId": 444,
+      "System.IterationPath": "ATS",
+      "System.IterationLevel1": "ATS",
+      "System.WorkItemType": "Task",
+      "System.State": "Resolved",
+      "System.Reason": "Complete and Requires Test",
+      "System.AssignedTo": {
+        "displayName": "Oleksandr Prokopets",
+        "url": "https://devops-unops.dfs.un.org/tfs/DefaultCollection/_apis/Identities/a20e7fe9-3200-49a9-b36e-7f8ef0269be3",
+        "_links": {
+          "avatar": {
+            "href": "https://devops-unops.dfs.un.org/tfs/DefaultCollection/_apis/GraphProfile/MemberAvatars/win.Uy0xLTUtMjEtMzY5NjI3MDg2LTExNjkxOTIzNDctMjE0MDY3ODQyMy0zNjUyNg"
+          }
+        },
+        "id": "a20e7fe9-3200-49a9-b36e-7f8ef0269be3",
+        "uniqueName": "UNLB\\OProkopets",
+        "imageUrl": "https://devops-unops.dfs.un.org/tfs/DefaultCollection/_apis/GraphProfile/MemberAvatars/win.Uy0xLTUtMjEtMzY5NjI3MDg2LTExNjkxOTIzNDctMjE0MDY3ODQyMy0zNjUyNg",
+        "descriptor": "win.Uy0xLTUtMjEtMzY5NjI3MDg2LTExNjkxOTIzNDctMjE0MDY3ODQyMy0zNjUyNg"
+      },
+      "System.CreatedDate": "2025-11-27T08:10:40.383Z",
+      "System.CreatedBy": {
+        "displayName": "Marco Guadalupi",
+        "url": "https://devops-unops.dfs.un.org/tfs/DefaultCollection/_apis/Identities/57e6957b-bf1a-441c-955d-447ddfc07ca7",
+        "_links": {
+          "avatar": {
+            "href": "https://devops-unops.dfs.un.org/tfs/DefaultCollection/_apis/GraphProfile/MemberAvatars/win.Uy0xLTUtMjEtMzY5NjI3MDg2LTExNjkxOTIzNDctMjE0MDY3ODQyMy0zNjkyOQ"
+          }
+        },
+        "id": "57e6957b-bf1a-441c-955d-447ddfc07ca7",
+        "uniqueName": "UNLB\\MGuadalupi",
+        "imageUrl": "https://devops-unops.dfs.un.org/tfs/DefaultCollection/_apis/GraphProfile/MemberAvatars/win.Uy0xLTUtMjEtMzY5NjI3MDg2LTExNjkxOTIzNDctMjE0MDY3ODQyMy0zNjkyOQ",
+        "descriptor": "win.Uy0xLTUtMjEtMzY5NjI3MDg2LTExNjkxOTIzNDctMjE0MDY3ODQyMy0zNjkyOQ"
+      },
+      "System.ChangedDate": "2025-12-03T07:50:22.007Z",
+      "System.ChangedBy": {
+        "displayName": "Oleksandr Prokopets",
+        "url": "https://devops-unops.dfs.un.org/tfs/DefaultCollection/_apis/Identities/a20e7fe9-3200-49a9-b36e-7f8ef0269be3",
+        "_links": {
+          "avatar": {
+            "href": "https://devops-unops.dfs.un.org/tfs/DefaultCollection/_apis/GraphProfile/MemberAvatars/win.Uy0xLTUtMjEtMzY5NjI3MDg2LTExNjkxOTIzNDctMjE0MDY3ODQyMy0zNjUyNg"
+          }
+        },
+        "id": "a20e7fe9-3200-49a9-b36e-7f8ef0269be3",
+        "uniqueName": "UNLB\\OProkopets",
+        "imageUrl": "https://devops-unops.dfs.un.org/tfs/DefaultCollection/_apis/GraphProfile/MemberAvatars/win.Uy0xLTUtMjEtMzY5NjI3MDg2LTExNjkxOTIzNDctMjE0MDY3ODQyMy0zNjUyNg",
+        "descriptor": "win.Uy0xLTUtMjEtMzY5NjI3MDg2LTExNjkxOTIzNDctMjE0MDY3ODQyMy0zNjUyNg"
+      },
+      "System.AuthorizedAs": {
+        "displayName": "Oleksandr Prokopets",
+        "url": "https://devops-unops.dfs.un.org/tfs/DefaultCollection/_apis/Identities/a20e7fe9-3200-49a9-b36e-7f8ef0269be3",
+        "_links": {
+          "avatar": {
+            "href": "https://devops-unops.dfs.un.org/tfs/DefaultCollection/_apis/GraphProfile/MemberAvatars/win.Uy0xLTUtMjEtMzY5NjI3MDg2LTExNjkxOTIzNDctMjE0MDY3ODQyMy0zNjUyNg"
+          }
+        },
+        "id": "a20e7fe9-3200-49a9-b36e-7f8ef0269be3",
+        "uniqueName": "UNLB\\OProkopets",
+        "imageUrl": "https://devops-unops.dfs.un.org/tfs/DefaultCollection/_apis/GraphProfile/MemberAvatars/win.Uy0xLTUtMjEtMzY5NjI3MDg2LTExNjkxOTIzNDctMjE0MDY3ODQyMy0zNjUyNg",
+        "descriptor": "win.Uy0xLTUtMjEtMzY5NjI3MDg2LTExNjkxOTIzNDctMjE0MDY3ODQyMy0zNjUyNg"
+      },
+      "System.PersonId": 178472,
+      "System.Watermark": 634026,
+      "System.CommentCount": 0,
+      "System.Title": "INT, OATR Class I UAS clicking on Add and cancelling Import from gpx file button becomes available  - DEV",
+      "Microsoft.VSTS.Common.StateChangeDate": "2025-12-03T07:50:22.007Z",
+      "Microsoft.VSTS.Common.ActivatedDate": "2025-12-01T08:21:33.21Z",
+      "Microsoft.VSTS.Common.ActivatedBy": {
+        "displayName": "Oleksandr Prokopets",
+        "url": "https://devops-unops.dfs.un.org/tfs/DefaultCollection/_apis/Identities/a20e7fe9-3200-49a9-b36e-7f8ef0269be3",
+        "_links": {
+          "avatar": {
+            "href": "https://devops-unops.dfs.un.org/tfs/DefaultCollection/_apis/GraphProfile/MemberAvatars/win.Uy0xLTUtMjEtMzY5NjI3MDg2LTExNjkxOTIzNDctMjE0MDY3ODQyMy0zNjUyNg"
+          }
+        },
+        "id": "a20e7fe9-3200-49a9-b36e-7f8ef0269be3",
+        "uniqueName": "UNLB\\OProkopets",
+        "imageUrl": "https://devops-unops.dfs.un.org/tfs/DefaultCollection/_apis/GraphProfile/MemberAvatars/win.Uy0xLTUtMjEtMzY5NjI3MDg2LTExNjkxOTIzNDctMjE0MDY3ODQyMy0zNjUyNg",
+        "descriptor": "win.Uy0xLTUtMjEtMzY5NjI3MDg2LTExNjkxOTIzNDctMjE0MDY3ODQyMy0zNjUyNg"
+      },
+      "Microsoft.VSTS.Common.ResolvedDate": "2025-12-03T07:50:22.007Z",
+      "Microsoft.VSTS.Common.ResolvedBy": {
+        "displayName": "Oleksandr Prokopets",
+        "url": "https://devops-unops.dfs.un.org/tfs/DefaultCollection/_apis/Identities/a20e7fe9-3200-49a9-b36e-7f8ef0269be3",
+        "_links": {
+          "avatar": {
+            "href": "https://devops-unops.dfs.un.org/tfs/DefaultCollection/_apis/GraphProfile/MemberAvatars/win.Uy0xLTUtMjEtMzY5NjI3MDg2LTExNjkxOTIzNDctMjE0MDY3ODQyMy0zNjUyNg"
+          }
+        },
+        "id": "a20e7fe9-3200-49a9-b36e-7f8ef0269be3",
+        "uniqueName": "UNLB\\OProkopets",
+        "imageUrl": "https://devops-unops.dfs.un.org/tfs/DefaultCollection/_apis/GraphProfile/MemberAvatars/win.Uy0xLTUtMjEtMzY5NjI3MDg2LTExNjkxOTIzNDctMjE0MDY3ODQyMy0zNjUyNg",
+        "descriptor": "win.Uy0xLTUtMjEtMzY5NjI3MDg2LTExNjkxOTIzNDctMjE0MDY3ODQyMy0zNjUyNg"
+      },
+      "Microsoft.VSTS.Common.ResolvedReason": "Accepted",
+      "Microsoft.VSTS.Common.Priority": 2,
+      "Microsoft.VSTS.Common.Triage": "Pending",
+      "Microsoft.VSTS.Scheduling.OriginalEstimate": 3,
+      "Microsoft.VSTS.CMMI.Blocked": "No",
+      "Microsoft.VSTS.Common.Discipline": "Development",
+      "Microsoft.VSTS.CMMI.TaskType": "Planned",
+      "Microsoft.VSTS.CMMI.RequiresReview": "No",
+      "Microsoft.VSTS.CMMI.RequiresTest": "No",
+      "Microsoft.VSTS.Scheduling.RemainingWork": 0,
+      "Microsoft.VSTS.Scheduling.CompletedWork": 3,
+      "UnitedNations.Areas": "Maintenance",
+      "UnitedNations.PriorityText": {
+        "displayName": "2 - High",
+        "id": null
+      },
+      "UnitedNations.AccountingTreatment": "CAPEX",
+      "UnitedNations.Client": "OICT",
+      "UnitedNations.Service": "SYSDEV/[NETDEV] - .Net Development",
+      "System.Tags": [
+        "DEV",
+        "RP 219"
+      ],
+      "System.Parent": 136937
+    },
+    "relations": [
+      {
+        "rel": "System.LinkTypes.Hierarchy-Reverse",
+        "url": "https://devops-unops.dfs.un.org/tfs/DefaultCollection/df970578-a257-4e5d-9b25-615db4c4abe3/_apis/wit/workItems/136937",
+        "attributes": {
+          "isLocked": false,
+          "name": "Parent"
+        }
+      }
+    ]
+  }
+}

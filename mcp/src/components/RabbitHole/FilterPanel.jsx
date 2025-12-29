@@ -1,10 +1,29 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Filter, Plus, X, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+    Paper,
+    Box,
+    Typography,
+    Chip,
+    Button,
+    Collapse,
+    TextField,
+    MenuItem,
+    IconButton,
+    Stack
+} from '@mui/material';
 
 const FilterPanel = ({ filters, onFilterChange, onSearch, fieldDefinitions }) => {
+    // Local state for deferred filtering
+    const [localFilters, setLocalFilters] = useState(filters);
     const [isExpanded, setIsExpanded] = useState(false);
     const [focusedFilterIndex, setFocusedFilterIndex] = useState(null);
     const inputRefs = useRef([]);
+
+    // Sync local state when parent filters change (e.g. via AI or initial load)
+    useEffect(() => {
+        setLocalFilters(filters);
+    }, [filters]);
 
     useEffect(() => {
         if (isExpanded && focusedFilterIndex !== null && inputRefs.current[focusedFilterIndex]) {
@@ -13,24 +32,34 @@ const FilterPanel = ({ filters, onFilterChange, onSearch, fieldDefinitions }) =>
         }
     }, [isExpanded, focusedFilterIndex]);
 
+    // Update local state only
     const updateFilter = (index, key, value) => {
-        const newFilters = [...filters];
+        const newFilters = [...localFilters];
         newFilters[index][key] = value;
-        onFilterChange(newFilters);
+        setLocalFilters(newFilters);
     };
 
+    // Update local state only
     const removeFilter = (index) => {
-        const newFilters = filters.filter((_, i) => i !== index);
-        onFilterChange(newFilters);
+        const newFilters = localFilters.filter((_, i) => i !== index);
+        setLocalFilters(newFilters);
     };
 
+    // Update local state only
     const addFilter = () => {
-        onFilterChange([...filters, { field: 'System.AssignedTo', operator: '=', value: '' }]);
+        setLocalFilters([...localFilters, { field: 'System.AssignedTo', operator: '=', value: '' }]);
         setIsExpanded(true);
         // Focus the new filter (last index) after render
         setTimeout(() => {
-            setFocusedFilterIndex(filters.length);
+            // Use current length as index for the new item
+            setFocusedFilterIndex(localFilters.length);
         }, 0);
+    };
+
+    // Apply changes to parent
+    const handleApplySearch = () => {
+        onFilterChange(localFilters);
+        onSearch();
     };
 
     const handleHeaderClick = (e) => {
@@ -46,15 +75,6 @@ const FilterPanel = ({ filters, onFilterChange, onSearch, fieldDefinitions }) =>
         setFocusedFilterIndex(index);
     };
 
-    const inputStyle = {
-        height: '32px',
-        fontSize: '13px',
-        padding: '0 8px',
-        borderRadius: 'var(--radius)',
-        border: '1px solid var(--border-color)',
-        width: '100%'
-    };
-
     const getFilterLabel = (filter) => {
         const fieldLabel = fieldDefinitions[filter.field]?.label || filter.field;
         const valueDisplay = filter.value || '(empty)';
@@ -62,99 +82,131 @@ const FilterPanel = ({ filters, onFilterChange, onSearch, fieldDefinitions }) =>
     };
 
     return (
-        <div className="card" style={{ padding: '12px', marginBottom: '16px' }}>
-            <div
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+        <Paper variant="outlined" sx={{ mb: 2, overflow: 'hidden' }}>
+            <Box
                 onClick={handleHeaderClick}
+                sx={{
+                    p: 1.5,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    cursor: 'pointer',
+                    bgcolor: isExpanded ? 'background.default' : 'transparent'
+                }}
             >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, overflow: 'hidden' }}>
-                    <Filter size={14} color="var(--un-navy)" />
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ flex: 1, overflow: 'hidden' }}>
+                    <Filter size={16} className="text-gray-500" />
 
-                    {filters.length === 0 ? (
-                        <span style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-secondary)' }}>
+                    {localFilters.length === 0 ? (
+                        <Typography variant="body2" color="text.secondary" fontWeight={500}>
                             No active filters
-                        </span>
+                        </Typography>
                     ) : (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                            {filters.map((filter, index) => (
-                                <span
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                            {localFilters.map((filter, index) => (
+                                <Chip
                                     key={index}
+                                    label={getFilterLabel(filter)}
+                                    size="small"
                                     onClick={(e) => handleFilterChipClick(e, index)}
-                                    style={{
-                                        fontSize: '12px',
-                                        background: 'var(--bg-secondary)',
-                                        padding: '2px 8px',
-                                        borderRadius: '12px',
-                                        border: '1px solid var(--border-color)',
-                                        color: 'var(--un-navy)',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '4px'
-                                    }}
-                                    title="Click to edit"
-                                >
-                                    {getFilterLabel(filter)}
-                                </span>
+                                    onDelete={(e) => { e.stopPropagation(); removeFilter(index); }}
+                                    variant="outlined"
+                                    sx={{ fontSize: '0.75rem', height: 24, cursor: 'pointer' }}
+                                />
                             ))}
-                        </div>
+                        </Box>
                     )}
-                </div>
+                </Stack>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                        <button onClick={(e) => { e.stopPropagation(); addFilter(); }} style={{ background: 'none', border: 'none', color: 'var(--un-blue)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}>
-                            <Plus size={14} /> Add
-                        </button>
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onSearch(); }}
-                            className="btn-primary"
-                            style={{ height: '28px', fontSize: '12px', padding: '0 12px' }}
-                        >
-                            Search
-                        </button>
-                    </div>
-                    {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                </div>
-            </div>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                    <Button
+                        size="small"
+                        startIcon={<Plus size={14} />}
+                        onClick={(e) => { e.stopPropagation(); addFilter(); }}
+                        sx={{ textTransform: 'none', fontSize: '0.75rem' }}
+                    >
+                        Add
+                    </Button>
+                    <Button
+                        variant="contained"
+                        size="small"
+                        onClick={(e) => { e.stopPropagation(); handleApplySearch(); }}
+                        disableElevation
+                        sx={{ textTransform: 'none', fontSize: '0.75rem', px: 2, height: 28 }}
+                    >
+                        Search
+                    </Button>
+                    {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </Stack>
+            </Box>
 
-            {isExpanded && (
-                <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--border-color)', paddingTop: '12px' }}>
-                    {filters.map((filter, index) => (
-                        <div key={index} style={{ display: 'flex', gap: '8px', alignItems: 'center', width: '100%' }}>
-                            <select
+            <Collapse in={isExpanded}>
+                <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1.5, borderTop: 1, borderColor: 'divider' }}>
+                    {localFilters.map((filter, index) => (
+                        <Stack key={index} direction="row" spacing={1} alignItems="center">
+                            <TextField
+                                select
+                                size="small"
                                 value={filter.field}
                                 onChange={(e) => updateFilter(index, 'field', e.target.value)}
-                                style={{ ...inputStyle, width: '45%' }}
+                                sx={{ width: '45%' }}
+                                InputProps={{ sx: { fontSize: '0.875rem' } }}
                             >
                                 {Object.keys(fieldDefinitions).map(key => (
-                                    <option key={key} value={key}>{fieldDefinitions[key].label}</option>
+                                    <MenuItem key={key} value={key} sx={{ fontSize: '0.875rem' }}>{fieldDefinitions[key].label}</MenuItem>
                                 ))}
-                            </select>
-                            <select
+                            </TextField>
+
+                            <TextField
+                                select
+                                size="small"
                                 value={filter.operator}
                                 onChange={(e) => updateFilter(index, 'operator', e.target.value)}
-                                style={{ ...inputStyle, width: '10%', minWidth: '60px', textAlign: 'center' }}
+                                sx={{ width: '15%', minWidth: 80 }}
+                                InputProps={{ sx: { fontSize: '0.875rem', textAlign: 'center' } }}
                             >
                                 {['=', '<>', '>', '<', '>=', '<=', 'Contains'].map(op => (
-                                    <option key={op} value={op}>{op}</option>
+                                    <MenuItem key={op} value={op} sx={{ fontSize: '0.875rem' }}>{op}</MenuItem>
                                 ))}
-                            </select>
-                            <input
-                                ref={el => inputRefs.current[index] = el}
-                                type="text"
-                                value={filter.value}
-                                onChange={(e) => updateFilter(index, 'value', e.target.value)}
-                                style={{ ...inputStyle, width: '45%', flex: 1 }}
-                            />
-                            <button onClick={() => removeFilter(index)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#999', padding: '4px' }}>
-                                <X size={14} />
-                            </button>
-                        </div>
+                            </TextField>
+
+                            {fieldDefinitions[filter.field]?.type === 'boolean' ? (
+                                <TextField
+                                    select
+                                    size="small"
+                                    value={filter.value}
+                                    onChange={(e) => updateFilter(index, 'value', e.target.value)}
+                                    fullWidth
+                                    InputProps={{ sx: { fontSize: '0.875rem' } }}
+                                >
+                                    <MenuItem value="True">Yes</MenuItem>
+                                    <MenuItem value="False">No</MenuItem>
+                                </TextField>
+                            ) : (
+                                <TextField
+                                    inputRef={el => inputRefs.current[index] = el}
+                                    size="small"
+                                    value={filter.value}
+                                    onChange={(e) => updateFilter(index, 'value', e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            handleApplySearch();
+                                        }
+                                    }}
+                                    placeholder="Value"
+                                    fullWidth
+                                    InputProps={{ sx: { fontSize: '0.875rem' } }}
+                                />
+                            )}
+
+                            <IconButton onClick={() => removeFilter(index)} size="small" sx={{ color: 'text.secondary' }}>
+                                <X size={16} />
+                            </IconButton>
+                        </Stack>
                     ))}
-                </div>
-            )}
-        </div>
+                </Box>
+            </Collapse>
+        </Paper>
     );
 };
 

@@ -1,44 +1,90 @@
 import React from 'react';
 import { Paperclip, Activity, Microscope } from 'lucide-react';
+import {
+    Paper,
+    Box,
+    Typography,
+    List,
+    ListItem,
+    ListItemText,
+    ListItemAvatar,
+    Avatar,
+    Button,
+    Stack
+} from '@mui/material';
 
 const AttachmentsList = ({ attachments, onAnalyze, analyzingAttachmentUrl }) => {
     return (
-        <div className="card p-6">
-            <h3 className="flex items-center gap-2 text-gray-900 font-bold mb-4 border-b pb-2">
-                <Paperclip size={18} className="text-gray-600" /> Attachments
-            </h3>
-            <div className="space-y-3">
+        <Paper variant="outlined" sx={{ p: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, pb: 1, borderBottom: 1, borderColor: 'divider' }}>
+                <Paperclip size={18} className="text-gray-600" />
+                <Typography variant="subtitle1" fontWeight={700}>Attachments</Typography>
+            </Box>
+
+            <List disablePadding>
                 {(attachments && attachments.length > 0) ? (
                     attachments.map((att, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 border border-gray-100 rounded hover:bg-gray-100 transition-colors">
-                            <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 bg-red-100 text-red-600 rounded flex items-center justify-center font-bold text-xs">
-                                    {att.name.split('.').pop().toUpperCase()}
-                                </div>
-                                <div>
-                                    <div className="text-sm font-medium text-gray-800 truncate max-w-[200px]" title={att.name}>{att.name}</div>
-                                    <div className="text-xs text-gray-500">{att.size ? `${(att.size / 1024).toFixed(1)} KB` : 'Unknown Size'}</div>
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => onAnalyze(att)}
-                                disabled={analyzingAttachmentUrl === att.url}
-                                className="flex items-center gap-1 px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-bold rounded hover:bg-indigo-100 transition-colors disabled:opacity-50"
-                            >
-                                {analyzingAttachmentUrl === att.url ? (
-                                    <Activity size={14} className="animate-spin" />
-                                ) : (
-                                    <Microscope size={14} />
-                                )}
-                                Analyze
-                            </button>
-                        </div>
+                        <ListItem
+                            key={idx}
+                            disablePadding
+                            sx={{
+                                mb: 1,
+                                p: 1,
+                                bgcolor: 'background.default',
+                                borderRadius: 1,
+                                border: 1,
+                                borderColor: 'divider',
+                                '&:hover': { bgcolor: 'action.hover' }
+                            }}
+                            secondaryAction={
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={() => onAnalyze(att)}
+                                    disabled={analyzingAttachmentUrl === att.url}
+                                    startIcon={analyzingAttachmentUrl === att.url ? <Activity size={14} className="animate-spin" /> : <Microscope size={14} />}
+                                    sx={{
+                                        textTransform: 'none',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 600,
+                                        minWidth: 'auto',
+                                        ml: 2
+                                    }}
+                                >
+                                    Analyze
+                                </Button>
+                            }
+                        >
+                            <ListItemAvatar sx={{ minWidth: 40 }}>
+                                <Avatar
+                                    sx={{
+                                        width: 32,
+                                        height: 32,
+                                        bgcolor: 'error.light',
+                                        color: 'error.main',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 'bold'
+                                    }}
+                                    variant="rounded"
+                                >
+                                    {att.name.split('.').pop().toUpperCase().slice(0, 3)}
+                                </Avatar>
+                            </ListItemAvatar>
+                            <ListItemText
+                                primary={att.name}
+                                secondary={att.size ? `${(att.size / 1024).toFixed(1)} KB` : 'Unknown Size'}
+                                primaryTypographyProps={{ variant: 'body2', fontWeight: 500, noWrap: true, title: att.name }}
+                                secondaryTypographyProps={{ variant: 'caption' }}
+                            />
+                        </ListItem>
                     ))
                 ) : (
-                    <div className="text-sm text-gray-400 italic p-2">No attachments found.</div>
+                    <Typography variant="body2" color="text.secondary" fontStyle="italic" sx={{ p: 1 }}>
+                        No attachments found.
+                    </Typography>
                 )}
-            </div>
-        </div>
+            </List>
+        </Paper>
     );
 };
 

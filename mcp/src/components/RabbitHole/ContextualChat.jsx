@@ -1,5 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User } from 'lucide-react';
+import {
+    Box,
+    Paper,
+    Typography,
+    Avatar,
+    TextField,
+    IconButton,
+    Stack
+} from '@mui/material';
 
 const ContextualChat = ({ filters, visibleItems, visibleColumns, fieldDefinitions, onAIAction, pendingCommand, onCommandHandled }) => {
     const [messages, setMessages] = useState([
@@ -73,85 +82,96 @@ const ContextualChat = ({ filters, visibleItems, visibleColumns, fieldDefinition
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'white' }}>
-            <div style={{ padding: '12px', borderBottom: '1px solid var(--border-color)', background: '#FAFAFA', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#e3f2fd', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--un-blue)' }}>
-                    <Bot size={16} />
-                </div>
-                <div>
-                    <h3 style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>Rabbit Hole Guide</h3>
-                    <p style={{ fontSize: '10px', color: 'var(--text-secondary)', margin: 0 }}>AI Assistant</p>
-                </div>
-            </div>
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: 'background.paper' }}>
+            <Box sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider', bgcolor: 'background.default', display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.light' }}>
+                    <Bot size={20} className="text-blue-700" />
+                </Avatar>
+                <Box>
+                    <Typography variant="subtitle2" fontWeight={600}>Rabbit Hole Guide</Typography>
+                    <Typography variant="caption" color="text.secondary">AI Assistant</Typography>
+                </Box>
+            </Box>
 
-            <div style={{ flex: 1, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <Box sx={{ flex: 1, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {messages.map((msg, index) => (
-                    <div key={index} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
-                        <div style={{ display: 'flex', flexDirection: msg.role === 'user' ? 'row-reverse' : 'row', gap: '8px', maxWidth: '90%' }}>
-                            <div style={{
-                                width: '24px', height: '24px', borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                background: msg.role === 'user' ? 'var(--un-blue)' : '#eee',
-                                color: msg.role === 'user' ? 'white' : '#666'
+                    <Box key={index} sx={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                        <Box sx={{ display: 'flex', flexDirection: msg.role === 'user' ? 'row-reverse' : 'row', gap: 1, maxWidth: '90%' }}>
+                            <Avatar sx={{
+                                width: 28,
+                                height: 28,
+                                bgcolor: msg.role === 'user' ? 'primary.main' : 'action.selected',
+                                color: msg.role === 'user' ? 'common.white' : 'text.secondary'
                             }}>
-                                {msg.role === 'user' ? <User size={12} /> : <Bot size={12} />}
-                            </div>
-                            <div style={{
-                                padding: '8px 12px',
-                                borderRadius: 'var(--radius)',
-                                fontSize: '12px',
-                                lineHeight: '1.4',
-                                background: msg.role === 'user' ? 'var(--un-blue)' : (msg.role === 'system' ? '#f8f9fa' : '#f0f0f0'),
-                                color: msg.role === 'user' ? 'white' : (msg.role === 'system' ? 'var(--text-secondary)' : 'var(--text-primary)'),
-                                border: msg.role === 'system' ? '1px solid var(--border-color)' : 'none',
-                                fontStyle: msg.role === 'system' ? 'italic' : 'normal'
-                            }}>
-                                {msg.text}
-                            </div>
-                        </div>
-                    </div>
+                                {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
+                            </Avatar>
+                            <Paper
+                                variant={msg.role === 'system' ? 'outlined' : 'elevation'}
+                                elevation={msg.role === 'system' ? 0 : 1}
+                                sx={{
+                                    p: 1.5,
+                                    borderRadius: 2,
+                                    bgcolor: msg.role === 'user' ? 'primary.main' : (msg.role === 'system' ? 'background.default' : 'background.paper'),
+                                    color: msg.role === 'user' ? 'primary.contrastText' : (msg.role === 'system' ? 'text.secondary' : 'text.primary'),
+                                    fontSize: '0.875rem',
+                                    fontStyle: msg.role === 'system' ? 'italic' : 'normal'
+                                }}
+                            >
+                                <Typography variant="body2">{msg.text}</Typography>
+                            </Paper>
+                        </Box>
+                    </Box>
                 ))}
                 {loading && (
-                    <div style={{ display: 'flex', justifyContent: 'flex-start', marginLeft: '32px' }}>
-                        <div style={{ display: 'flex', gap: '4px', padding: '8px', background: '#f0f0f0', borderRadius: 'var(--radius)' }}>
-                            <div style={{ width: '6px', height: '6px', background: '#999', borderRadius: '50%', animation: 'bounce 1s infinite 0ms' }}></div>
-                            <div style={{ width: '6px', height: '6px', background: '#999', borderRadius: '50%', animation: 'bounce 1s infinite 200ms' }}></div>
-                            <div style={{ width: '6px', height: '6px', background: '#999', borderRadius: '50%', animation: 'bounce 1s infinite 400ms' }}></div>
-                        </div>
-                    </div>
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-start', ml: 5 }}>
+                        <Box sx={{ display: 'flex', gap: 0.5, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
+                            {[0, 200, 400].map(delay => (
+                                <Box key={delay} sx={{
+                                    width: 6,
+                                    height: 6,
+                                    bgcolor: 'text.disabled',
+                                    borderRadius: '50%',
+                                    animation: `bounce 1s infinite ${delay}ms`
+                                }} />
+                            ))}
+                        </Box>
+                    </Box>
                 )}
                 <div ref={messagesEndRef} />
-            </div>
+            </Box>
 
-            <div style={{ padding: '12px', borderTop: '1px solid var(--border-color)', background: '#FAFAFA' }}>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'white', border: '1px solid var(--border-color)', borderRadius: 'var(--radius)', padding: '4px' }}>
-                    <input
-                        type="text"
+            <Box sx={{ p: 1.5, borderTop: 1, borderColor: 'divider', bgcolor: 'background.default' }}>
+                <Paper variant="outlined" component="form"
+                    sx={{ p: '2px 4px', display: 'flex', alignItems: 'center', bgcolor: 'background.paper' }}
+                    onSubmit={(e) => { e.preventDefault(); handleSend(); }}
+                >
+                    <TextField
+                        variant="standard"
+                        fullWidth
+                        placeholder="Ask the guide..."
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                        placeholder="Ask the guide..."
-                        style={{ flex: 1, border: 'none', outline: 'none', fontSize: '12px', padding: '4px 8px' }}
                         disabled={loading}
+                        InputProps={{ disableUnderline: true, sx: { px: 1, fontSize: '0.875rem' } }}
                     />
-                    <button
-                        onClick={handleSend}
+                    <IconButton
+                        type="submit"
                         disabled={loading || !input.trim()}
-                        style={{
-                            background: 'var(--un-blue)', color: 'white', border: 'none', borderRadius: '2px', width: '28px', height: '28px',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', opacity: (loading || !input.trim()) ? 0.5 : 1
-                        }}
+                        color="primary"
+                        size="small"
+                        sx={{ p: 1 }}
                     >
-                        <Send size={14} />
-                    </button>
-                </div>
-            </div>
+                        <Send size={18} />
+                    </IconButton>
+                </Paper>
+            </Box>
             <style>{`
                 @keyframes bounce {
                     0%, 100% { transform: translateY(0); }
                     50% { transform: translateY(-3px); }
                 }
             `}</style>
-        </div>
+        </Box>
     );
 };
 

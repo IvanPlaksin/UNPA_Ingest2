@@ -4,10 +4,13 @@ import WorkItemsTable from '../components/RabbitHole/WorkItemsTable';
 import ContextualChat from '../components/RabbitHole/ContextualChat';
 import ColumnSelector from '../components/RabbitHole/ColumnSelector';
 import RabbitHoleCommandBar from '../components/RabbitHole/RabbitHoleCommandBar';
-
 import { Storage } from '../utils/storage';
+import { Box, Paper, AppBar, Toolbar, Typography, Stack, Alert, CircularProgress } from '@mui/material';
 
 const FIELD_DEFINITIONS = {
+    // 'HasLinks' is a virtual field for UI, mapped to System.RelatedLinkCount in fetchWorkItems
+    'HasLinks': { label: 'Links', type: 'boolean' },
+    'System.RelatedLinkCount': { label: 'Links Count', type: 'integer' },
     'System.Id': { label: 'ID', type: 'integer' },
     'System.WorkItemType': { label: 'Type', type: 'string' },
     'System.Title': { label: 'Title', type: 'string' },
@@ -21,7 +24,7 @@ const FIELD_DEFINITIONS = {
     'System.Tags': { label: 'Tags', type: 'string' }
 };
 
-const BASE_COLUMNS = ['System.Id', 'System.WorkItemType', 'System.Title', 'System.State', 'System.CreatedDate', 'System.ChangedDate'];
+const BASE_COLUMNS = ['HasLinks', 'System.Id', 'System.WorkItemType', 'System.Title', 'System.State', 'System.CreatedDate', 'System.ChangedDate'];
 const STORAGE_KEY_FILTERS = 'rabbit_hole_filters';
 const STORAGE_KEY_COLUMNS = 'rabbit_hole_columns';
 
@@ -52,11 +55,24 @@ const RabbitHolePage = () => {
         setLoading(true);
         setError(null);
         try {
+            // Transform filters for backend (Handle 'HasLinks' mapping here)
+            const apiFilters = currentFilters.map(f => {
+                if (f.field === 'HasLinks') {
+                    const isTrue = String(f.value).toLowerCase() === 'true';
+                    return {
+                        field: 'System.RelatedLinkCount',
+                        operator: isTrue ? '>' : '=',
+                        value: 0
+                    };
+                }
+                return f;
+            });
+
             const response = await fetch('http://localhost:3000/api/v1/rabbithole/search', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    filters: currentFilters,
+                    filters: apiFilters,
                     page: currentPage,
                     limit: pageSize
                 })
@@ -182,27 +198,23 @@ const RabbitHolePage = () => {
     };
 
     return (
-        <div className="page-content" style={{ flexDirection: 'row', overflow: 'hidden' }}>
+        <Box sx={{ display: 'flex', height: '100%', flexDirection: 'row', overflow: 'hidden', bgcolor: 'background.default' }}>
             {/* Main Content Area */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
-                <header style={{
-                    height: '48px',
-                    padding: '0 16px',
-                    background: 'var(--bg-header)',
-                    borderBottom: '1px solid var(--border-color)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between'
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '20px' }}>🐇</span>
-                        <h1 style={{ fontSize: '16px', fontWeight: 500, margin: 0, color: 'var(--un-navy)' }}>The Rabbit Hole</h1>
-                    </div>
-                    <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>Deep dive into your DevOps backlog with AI assistance.</p>
-                </header>
+            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+                <AppBar position="static" color="default" elevation={1} sx={{ bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider' }}>
+                    <Toolbar variant="dense" sx={{ minHeight: 48, justifyContent: 'space-between' }}>
+                        <Stack direction="row" alignItems="center" spacing={1}>
+                            <Typography variant="h6" fontSize="1.25rem">🐇</Typography>
+                            <Typography variant="subtitle1" fontWeight={600} color="text.primary">The Rabbit Hole</Typography>
+                        </Stack>
+                        <Typography variant="caption" color="text.secondary">
+                            Deep dive into your DevOps backlog with AI assistance.
+                        </Typography>
+                    </Toolbar>
+                </AppBar>
 
-                <main style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
-                    <div style={{ maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
+                <Box sx={{ flex: 1, overflowY: 'auto', p: 3 }}>
+                    <Box sx={{ maxWidth: 1200, mx: 'auto', width: '100%' }}>
                         {/* Natural Language Command Bar */}
                         <RabbitHoleCommandBar
                             onCommand={handleCommand}
@@ -225,27 +237,16 @@ const RabbitHolePage = () => {
                         />
 
                         {error && (
-                            <div style={{
-                                background: '#fde8e8',
-                                border: '1px solid #f8b4b4',
-                                color: '#9b1c1c',
-                                padding: '8px 12px',
-                                borderRadius: 'var(--radius)',
-                                marginBottom: '16px',
-                                fontSize: '12px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px'
-                            }}>
-                                <strong>Error:</strong> {error}
-                            </div>
+                            <Alert severity="error" sx={{ mb: 2 }}>
+                                {error}
+                            </Alert>
                         )}
 
                         {loading ? (
-                            <div className="card" style={{ padding: '40px', display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', gap: '12px' }}>
-                                <div className="spinner" style={{ width: '24px', height: '24px', border: '2px solid #f3f3f3', borderTop: '2px solid var(--un-blue)', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Digging deeper...</span>
-                            </div>
+                            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', gap: 2, p: 5 }}>
+                                <CircularProgress />
+                                <Typography variant="caption" color="text.secondary">Digging deeper...</Typography>
+                            </Box>
                         ) : (
                             <WorkItemsTable
                                 items={workItems}
@@ -257,16 +258,17 @@ const RabbitHolePage = () => {
                                 fieldDefinitions={FIELD_DEFINITIONS}
                             />
                         )}
-                    </div>
-                </main>
-            </div>
+                    </Box>
+                </Box>
+            </Box>
 
             {/* Right Sidebar: Chat */}
-            <div style={{
-                width: '320px',
+            <Box sx={{
+                width: 320,
                 flexShrink: 0,
-                background: 'white',
-                borderLeft: '1px solid var(--border-color)',
+                bgcolor: 'background.paper',
+                borderLeft: 1,
+                borderColor: 'divider',
                 height: '100%',
                 display: 'flex',
                 flexDirection: 'column'
@@ -280,14 +282,8 @@ const RabbitHolePage = () => {
                     pendingCommand={pendingCommand}
                     onCommandHandled={handleCommandHandled}
                 />
-            </div>
-            <style>{`
-                @keyframes spin {
-                    0% { transform: rotate(0deg); }
-                    100% { transform: rotate(360deg); }
-                }
-            `}</style>
-        </div>
+            </Box>
+        </Box>
     );
 };
 

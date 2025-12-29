@@ -1,5 +1,6 @@
 import React from 'react';
-import { Folder, ChevronRight } from 'lucide-react';
+import { Folder, ChevronRight, Home } from 'lucide-react';
+import { Paper, Breadcrumbs, Typography, Link as MuiLink, Box, Stack } from '@mui/material';
 
 const TfvcBreadcrumbs = ({ path, onNavigate }) => {
     // path is like $/ATSBranch/Folder/File
@@ -7,20 +8,6 @@ const TfvcBreadcrumbs = ({ path, onNavigate }) => {
 
     const handleBreadcrumbClick = (index) => {
         // Reconstruct path up to the clicked index
-        // e.g. if path is $/A/B/C and we click B (index 2 in parts ["$", "A", "B", "C"])
-        // we want $/A/B
-
-        // parts array: ["$", "A", "B", "C"]
-        // slice(0, index + 1) -> ["$", "A", "B"]
-        // join('/') -> "$/A/B"
-        // But wait, the first part is "$" which usually doesn't have a leading slash in the split array if we split by '/'
-        // "$/A".split('/') -> ["$", "A"]
-        // "$".split('/') -> ["$"]
-
-        // Let's verify split behavior:
-        // "$/A/B".split('/') -> ["$", "A", "B"]
-        // join('/') -> "$/A/B" - Correct.
-
         const newPath = parts.slice(0, index + 1).join('/');
         if (newPath !== path) {
             onNavigate(newPath);
@@ -28,52 +15,63 @@ const TfvcBreadcrumbs = ({ path, onNavigate }) => {
     };
 
     return (
-        <header style={{
-            height: '48px',
-            padding: '0 16px',
-            background: 'var(--bg-header)',
-            borderBottom: '1px solid var(--border-color)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px'
-        }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--un-navy)', fontWeight: 500 }}>
-                <Folder size={18} />
-                <span>TFVC Browser</span>
-            </div>
+        <Paper
+            elevation={0}
+            sx={{
+                height: 48,
+                px: 2,
+                display: 'flex',
+                alignItems: 'center',
+                borderBottom: 1,
+                borderColor: 'divider',
+                borderRadius: 0,
+                bgcolor: 'background.default'
+            }}
+        >
+            <Stack direction="row" alignItems="center" spacing={2} width="100%">
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ color: 'text.secondary' }}>
+                    <Folder size={18} />
+                    <Typography variant="subtitle2" fontWeight={600} color="text.primary">TFVC Browser</Typography>
+                </Stack>
 
-            <div style={{ width: '1px', height: '24px', background: 'var(--border-color)' }}></div>
+                <Box sx={{ width: 1, height: 24, bgcolor: 'divider' }} />
 
-            <div style={{ display: 'flex', alignItems: 'center', fontSize: '13px', color: 'var(--text-secondary)', overflow: 'hidden' }}>
-                {path ? (
-                    parts.map((part, index) => {
+                <Breadcrumbs
+                    separator={<ChevronRight size={14} />}
+                    aria-label="breadcrumb"
+                    sx={{
+                        '& .MuiBreadcrumbs-li': { overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 200 },
+                        '& .MuiBreadcrumbs-separator': { mx: 0.5 }
+                    }}
+                >
+                    {parts.length > 0 ? parts.map((part, index) => {
                         const isLast = index === parts.length - 1;
-                        return (
-                            <React.Fragment key={index}>
-                                {index > 0 && <ChevronRight size={14} style={{ margin: '0 4px', color: '#ccc' }} />}
-                                <span
-                                    onClick={() => !isLast && handleBreadcrumbClick(index)}
-                                    style={{
-                                        fontWeight: isLast ? 600 : 400,
-                                        color: isLast ? 'var(--text-primary)' : 'var(--un-blue)',
-                                        cursor: isLast ? 'default' : 'pointer',
-                                        textDecoration: isLast ? 'none' : 'underline',
-                                        textDecorationColor: 'transparent', // Hide underline by default
-                                        transition: 'all 0.2s'
-                                    }}
-                                    onMouseEnter={(e) => !isLast && (e.target.style.textDecorationColor = 'var(--un-blue)')}
-                                    onMouseLeave={(e) => !isLast && (e.target.style.textDecorationColor = 'transparent')}
-                                >
-                                    {part}
-                                </span>
-                            </React.Fragment>
+                        return isLast ? (
+                            <Typography key={index} color="text.primary" variant="body2" fontWeight={600} noWrap>
+                                {part}
+                            </Typography>
+                        ) : (
+                            <MuiLink
+                                key={index}
+                                component="button"
+                                variant="body2"
+                                onClick={() => handleBreadcrumbClick(index)}
+                                color="primary"
+                                underline="hover"
+                                sx={{ cursor: 'pointer', maxWidth: 200, display: 'block' }}
+                                noWrap
+                            >
+                                {part}
+                            </MuiLink>
                         );
-                    })
-                ) : (
-                    <span style={{ fontStyle: 'italic', opacity: 0.7 }}>Select a file or folder...</span>
-                )}
-            </div>
-        </header>
+                    }) : (
+                        <Typography variant="body2" color="text.secondary" fontStyle="italic">
+                            Select a file or folder...
+                        </Typography>
+                    )}
+                </Breadcrumbs>
+            </Stack>
+        </Paper>
     );
 };
 

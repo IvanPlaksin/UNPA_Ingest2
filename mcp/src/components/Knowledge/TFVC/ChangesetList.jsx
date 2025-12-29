@@ -1,7 +1,23 @@
+import React, { useState, useEffect } from 'react';
 import { GitCommit, User, Calendar, MessageSquare, ChevronRight, ChevronDown, ExternalLink } from 'lucide-react';
 import { fetchTfvcHistory } from '../../../services/api';
 import ChangesetDetails from './ChangesetDetails';
 import { Link } from 'react-router-dom';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    Paper,
+    Box,
+    Typography,
+    IconButton,
+    Stack,
+    CircularProgress,
+    Chip
+} from '@mui/material';
 
 const ChangesetList = ({ path }) => {
     const [changesets, setChangesets] = useState([]);
@@ -32,92 +48,110 @@ const ChangesetList = ({ path }) => {
     };
 
     if (!path) {
-        return <div style={{ padding: '16px', color: 'var(--text-secondary)', textAlign: 'center' }}>Select a file or folder to view history</div>;
+        return (
+            <Box sx={{ p: 2, color: 'text.secondary', textAlign: 'center' }}>
+                <Typography variant="body2">Select a file or folder to view history</Typography>
+            </Box>
+        );
     }
 
     if (loading) {
-        return <div style={{ padding: '16px', color: 'var(--text-secondary)', textAlign: 'center' }}>Loading history...</div>;
+        return (
+            <Box sx={{ p: 2, display: 'flex', justifyContent: 'center' }}>
+                <CircularProgress size={24} />
+            </Box>
+        );
     }
 
     if (changesets.length === 0) {
-        return <div style={{ padding: '16px', color: 'var(--text-secondary)', textAlign: 'center' }}>No history found.</div>;
+        return (
+            <Box sx={{ p: 2, color: 'text.secondary', textAlign: 'center' }}>
+                <Typography variant="body2">No history found.</Typography>
+            </Box>
+        );
     }
 
     return (
-        <div style={{ height: '100%', overflowY: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                <thead style={{ background: '#f8f9fa', color: 'var(--text-secondary)', position: 'sticky', top: 0, zIndex: 10 }}>
-                    <tr>
-                        <th style={{ width: '32px', padding: '8px', borderBottom: '1px solid var(--border-color)' }}></th>
-                        <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, borderBottom: '1px solid var(--border-color)' }}>ID</th>
-                        <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, borderBottom: '1px solid var(--border-color)' }}>Author</th>
-                        <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, borderBottom: '1px solid var(--border-color)' }}>Date</th>
-                        <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, borderBottom: '1px solid var(--border-color)' }}>Comment</th>
-                    </tr>
-                </thead>
-                <tbody>
+        <TableContainer component={Paper} elevation={0} sx={{ height: '100%', overflowY: 'auto', borderRadius: 0 }}>
+            <Table stickyHeader size="small">
+                <TableHead>
+                    <TableRow>
+                        <TableCell sx={{ width: 32, bgcolor: 'background.default' }} />
+                        <TableCell sx={{ bgcolor: 'background.default', fontWeight: 600 }}>ID</TableCell>
+                        <TableCell sx={{ bgcolor: 'background.default', fontWeight: 600 }}>Author</TableCell>
+                        <TableCell sx={{ bgcolor: 'background.default', fontWeight: 600 }}>Date</TableCell>
+                        <TableCell sx={{ bgcolor: 'background.default', fontWeight: 600 }}>Comment</TableCell>
+                    </TableRow>
+                </TableHead>
+                <TableBody>
                     {changesets.map((cs) => (
                         <React.Fragment key={cs.changesetId}>
-                            <tr
+                            <TableRow
+                                hover
                                 onClick={() => toggleExpand(cs.changesetId)}
-                                style={{
+                                sx={{
                                     cursor: 'pointer',
-                                    backgroundColor: expandedId === cs.changesetId ? '#f1f8ff' : 'transparent',
-                                    borderBottom: '1px solid #f0f0f0'
+                                    bgcolor: expandedId === cs.changesetId ? 'action.selected' : 'inherit',
+                                    '&:last-child td, &:last-child th': { border: 0 }
                                 }}
-                                onMouseEnter={(e) => { if (expandedId !== cs.changesetId) e.currentTarget.style.backgroundColor = '#f8fdff'; }}
-                                onMouseLeave={(e) => { if (expandedId !== cs.changesetId) e.currentTarget.style.backgroundColor = 'transparent'; }}
                             >
-                                <td style={{ padding: '8px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                <TableCell sx={{ p: 1, textAlign: 'center' }}>
                                     {expandedId === cs.changesetId ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                                </td>
-                                <td style={{ padding: '8px 12px', fontFamily: 'monospace', color: 'var(--un-blue)', fontWeight: 500 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center' }}>
-                                            <GitCommit size={12} style={{ marginRight: '4px', opacity: 0.5 }} />
+                                </TableCell>
+                                <TableCell>
+                                    <Stack direction="row" alignItems="center" spacing={1}>
+                                        <GitCommit size={14} style={{ opacity: 0.5 }} />
+                                        <Typography variant="body2" fontFamily="monospace" color="primary.main" fontWeight={500}>
                                             {cs.changesetId}
-                                        </div>
-                                        <Link
+                                        </Typography>
+                                        <IconButton
+                                            component={Link}
                                             to={`/nexus/changeset/${cs.changesetId}`}
-                                            title="Analyze in Nexus"
                                             onClick={(e) => e.stopPropagation()}
-                                            style={{ color: 'var(--un-blue)', opacity: 0.8, marginLeft: '8px' }}
+                                            size="small"
+                                            sx={{ p: 0.5, ml: 1, color: 'text.secondary', '&:hover': { color: 'primary.main' } }}
                                         >
                                             <ExternalLink size={12} />
-                                        </Link>
-                                    </div>
-                                </td>
-                                <td style={{ padding: '8px 12px', color: 'var(--text-primary)' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                                        <User size={12} style={{ marginRight: '4px', opacity: 0.5 }} />
-                                        {cs.author}
-                                    </div>
-                                </td>
-                                <td style={{ padding: '8px 12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                                        <Calendar size={12} style={{ marginRight: '4px', opacity: 0.5 }} />
-                                        {new Date(cs.date).toLocaleDateString()}
-                                    </div>
-                                </td>
-                                <td style={{ padding: '8px 12px', color: 'var(--text-secondary)', maxWidth: '300px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={cs.comment}>
-                                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                                        <MessageSquare size={12} style={{ marginRight: '4px', opacity: 0.5 }} />
-                                        {cs.comment}
-                                    </div>
-                                </td>
-                            </tr>
+                                        </IconButton>
+                                    </Stack>
+                                </TableCell>
+                                <TableCell>
+                                    <Stack direction="row" alignItems="center" spacing={1}>
+                                        <User size={14} style={{ opacity: 0.5 }} />
+                                        <Typography variant="body2" noWrap sx={{ maxWidth: 150 }}>
+                                            {cs.author}
+                                        </Typography>
+                                    </Stack>
+                                </TableCell>
+                                <TableCell>
+                                    <Stack direction="row" alignItems="center" spacing={1}>
+                                        <Calendar size={14} style={{ opacity: 0.5 }} />
+                                        <Typography variant="body2" textTransform="none" color="text.secondary">
+                                            {new Date(cs.date).toLocaleDateString()}
+                                        </Typography>
+                                    </Stack>
+                                </TableCell>
+                                <TableCell sx={{ maxWidth: 300 }}>
+                                    <Stack direction="row" alignItems="center" spacing={1}>
+                                        <MessageSquare size={14} style={{ opacity: 0.5, flexShrink: 0 }} />
+                                        <Typography variant="body2" noWrap title={cs.comment}>
+                                            {cs.comment}
+                                        </Typography>
+                                    </Stack>
+                                </TableCell>
+                            </TableRow>
                             {expandedId === cs.changesetId && (
-                                <tr>
-                                    <td colSpan="5" style={{ padding: 0, borderBottom: '1px solid var(--border-color)' }}>
+                                <TableRow>
+                                    <TableCell colSpan={5} sx={{ p: 0 }}>
                                         <ChangesetDetails changesetId={cs.changesetId} />
-                                    </td>
-                                </tr>
+                                    </TableCell>
+                                </TableRow>
                             )}
                         </React.Fragment>
                     ))}
-                </tbody>
-            </table>
-        </div>
+                </TableBody>
+            </Table>
+        </TableContainer>
     );
 };
 

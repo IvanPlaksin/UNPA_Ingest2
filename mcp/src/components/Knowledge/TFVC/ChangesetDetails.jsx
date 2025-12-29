@@ -1,7 +1,22 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FileCode, Loader2, ArrowRight } from 'lucide-react';
+import { FileCode, Loader2, ArrowRight, ChevronRight, ChevronDown } from 'lucide-react';
 import { fetchTfvcChangesetChanges, fetchTfvcDiff } from '../../../services/api';
 import TfvcDiffViewer from './TfvcDiffViewer';
+import {
+    Box,
+    Paper,
+    Typography,
+    List,
+    ListItem,
+    ListItemButton,
+    ListItemIcon,
+    ListItemText,
+    Collapse,
+    CircularProgress,
+    Stack,
+    Divider,
+    alpha
+} from '@mui/material';
 
 const ChangesetDetails = ({ changesetId }) => {
     const [changes, setChanges] = useState([]);
@@ -78,73 +93,119 @@ const ChangesetDetails = ({ changesetId }) => {
     }, [diffHeight]);
 
     if (loadingChanges) {
-        return <div className="p-4 flex justify-center"><Loader2 className="animate-spin text-blue-500" /></div>;
+        return (
+            <Box sx={{ p: 2, display: 'flex', justifyContent: 'center' }}>
+                <CircularProgress size={24} />
+            </Box>
+        );
     }
 
     if (changes.length === 0) {
-        return <div className="p-4 text-gray-500">No changes found in this changeset.</div>;
+        return (
+            <Box sx={{ p: 2, color: 'text.secondary' }}>
+                <Typography variant="body2">No changes found in this changeset.</Typography>
+            </Box>
+        );
     }
 
     return (
-        <div className="flex flex-col gap-4 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700">
-            {/* File List */}
-            <div className="w-full bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 overflow-hidden">
-                <div className="p-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 font-medium text-xs text-gray-500 uppercase flex justify-between items-center">
-                    <span>Changed Files ({changes.length})</span>
-                    <span className="text-[10px] font-normal opacity-70">Select a file to view diff</span>
-                </div>
-                <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 300px)' }}>
-                    {changes.map((file, index) => (
-                        <div key={index} className="border-b border-gray-100 dark:border-gray-800 last:border-0">
-                            <div
-                                onClick={() => handleSelectFile(file)}
-                                className={`p-2 text-sm cursor-pointer flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 ${selectedFile?.path === file.path ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-700 dark:text-gray-300'}`}
-                            >
-                                <FileCode className="w-4 h-4 shrink-0" />
-                                <div className="truncate flex-1" title={file.path}>
-                                    {file.path.split('/').pop()}
-                                    <div className="text-xs text-gray-400 truncate">{file.path}</div>
-                                </div>
-                                {selectedFile?.path === file.path ? <div className="w-2 h-2 rounded-full bg-blue-500" /> : <ArrowRight className="w-4 h-4 opacity-50" />}
-                            </div>
+        <Paper variant="outlined" sx={{ m: 2, bgcolor: 'background.default', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            {/* File List Header */}
+            <Box sx={{ p: 1, px: 2, bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="caption" fontWeight="bold" color="text.secondary" textTransform="uppercase">
+                    Changed Files ({changes.length})
+                </Typography>
+                <Typography variant="caption" color="text.disabled">
+                    Select a file to view diff
+                </Typography>
+            </Box>
 
-                            {/* Diff Viewer (Accordion) */}
-                            {selectedFile?.path === file.path && (
-                                <div className="border-t border-gray-100 dark:border-gray-800 animate-in fade-in slide-in-from-top-1 duration-200">
-                                    <div
-                                        className="w-full relative bg-gray-50 dark:bg-gray-900"
-                                        style={{ height: diffHeight }}
+            <List disablePadding sx={{ overflowY: 'auto', maxHeight: 'calc(100vh - 300px)' }}>
+                {changes.map((file, index) => {
+                    const isSelected = selectedFile?.path === file.path;
+                    return (
+                        <React.Fragment key={index}>
+                            <ListItem disablePadding divider={index < changes.length - 1}>
+                                <Stack width="100%">
+                                    <ListItemButton
+                                        onClick={() => handleSelectFile(file)}
+                                        selected={isSelected}
+                                        sx={{
+                                            py: 1,
+                                            '&.Mui-selected': { bgcolor: 'primary.lighter', color: 'primary.main' }
+                                        }}
                                     >
-                                        {diffData ? (
-                                            <TfvcDiffViewer
-                                                key={selectedFile.path}
-                                                original={diffData.old}
-                                                modified={diffData.new}
-                                                path={selectedFile.path}
-                                            />
-                                        ) : loadingDiff ? (
-                                            <div className="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-gray-800/80 z-10 backdrop-blur-sm">
-                                                <Loader2 className="animate-spin text-blue-500" />
-                                            </div>
-                                        ) : (
-                                            <div className="flex-1 flex items-center justify-center h-full text-gray-400">
-                                                Failed to load diff.
-                                            </div>
-                                        )}
-
-                                        {/* Resize Handle */}
-                                        <div
-                                            className="absolute bottom-0 left-0 right-0 h-1.5 cursor-ns-resize hover:bg-blue-500/50 transition-colors z-20 bg-gray-200 dark:bg-gray-700 opacity-50 hover:opacity-100"
-                                            onMouseDown={startResizing}
+                                        <ListItemIcon sx={{ minWidth: 32, color: isSelected ? 'primary.main' : 'inherit' }}>
+                                            <FileCode size={18} />
+                                        </ListItemIcon>
+                                        <ListItemText
+                                            primary={file.path.split('/').pop()}
+                                            secondary={file.path}
+                                            primaryTypographyProps={{ variant: 'body2', fontWeight: isSelected ? 600 : 400 }}
+                                            secondaryTypographyProps={{ variant: 'caption', noWrap: true, sx: { display: 'block' } }}
                                         />
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </div>
+                                        <Box sx={{ ml: 1, display: 'flex', alignItems: 'center', color: isSelected ? 'primary.main' : 'text.disabled' }}>
+                                            {isSelected ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                                        </Box>
+                                    </ListItemButton>
+
+                                    {/* Diff Viewer (Accordion) */}
+                                    <Collapse in={isSelected} timeout="auto" unmountOnExit>
+                                        <Box
+                                            sx={{
+                                                width: '100%',
+                                                position: 'relative',
+                                                bgcolor: 'background.paper',
+                                                borderTop: 1,
+                                                borderColor: 'divider',
+                                                height: diffHeight,
+                                                display: 'flex',
+                                                flexDirection: 'column'
+                                            }}
+                                        >
+                                            {diffData ? (
+                                                <TfvcDiffViewer
+                                                    key={selectedFile.path}
+                                                    original={diffData.old}
+                                                    modified={diffData.new}
+                                                    path={selectedFile.path}
+                                                />
+                                            ) : loadingDiff ? (
+                                                <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'background.paper', zIndex: 1 }}>
+                                                    <CircularProgress size={24} />
+                                                </Box>
+                                            ) : (
+                                                <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.disabled' }}>
+                                                    <Typography variant="body2">Failed to load diff.</Typography>
+                                                </Box>
+                                            )}
+
+                                            {/* Resize Handle */}
+                                            <Box
+                                                sx={{
+                                                    position: 'absolute',
+                                                    bottom: 0,
+                                                    left: 0,
+                                                    right: 0,
+                                                    height: 6,
+                                                    cursor: 'ns-resize',
+                                                    bgcolor: 'divider',
+                                                    opacity: 0.5,
+                                                    zIndex: 10,
+                                                    transition: 'opacity 0.2s',
+                                                    '&:hover': { opacity: 1, bgcolor: 'primary.main' }
+                                                }}
+                                                onMouseDown={startResizing}
+                                            />
+                                        </Box>
+                                    </Collapse>
+                                </Stack>
+                            </ListItem>
+                        </React.Fragment>
+                    );
+                })}
+            </List>
+        </Paper>
     );
 };
 

@@ -64,6 +64,7 @@ async function getEntityDetails(req, res) {
             }
 
             // Format to match Frontend expectations (SourceSelector/WorkItemDetails)
+            // Format to match Frontend expectations (SourceSelector/WorkItemDetails)
             const result = {
                 id: item.id,
                 label: `${item.fields['System.WorkItemType']} ${item.id}`,
@@ -72,9 +73,29 @@ async function getEntityDetails(req, res) {
                 data: {
                     core: { id: item.id, rev: item.rev },
                     fields: item.fields, // Pass all fields
-                    relations: item.relations
+                    relations: item.relations,
+                    ParentWorkItem: null
                 }
             };
+
+            // EXPANSION: Fetch Parent Object if exists
+            if (item.fields['System.Parent']) {
+                const parentId = item.fields['System.Parent'];
+                console.log(`[Nexus] Expanding Parent: ${parentId}`);
+                try {
+                    const parentItem = await adoService.getWorkItemById(parentId);
+                    if (parentItem) {
+                        result.data.ParentWorkItem = {
+                            id: parentItem.id,
+                            fields: parentItem.fields,
+                            url: parentItem.url,
+                            _links: parentItem._links
+                        };
+                    }
+                } catch (err) {
+                    console.error(`[Nexus] Failed to expand parent ${parentId}:`, err.message);
+                }
+            }
             return res.json(result);
         } else if (type === 'changeset') {
             // Placeholder for Git/TFVC

@@ -1,6 +1,7 @@
 import React from 'react';
 import { DiffEditor } from '@monaco-editor/react';
 import { FileText, FileDiff } from 'lucide-react';
+import { Box, Paper, Typography, Button, Stack, Tooltip } from '@mui/material';
 
 const getLanguageFromPath = (path) => {
     if (!path) return 'plaintext';
@@ -59,36 +60,58 @@ const TfvcDiffViewer = ({ original, modified, path }) => {
     }, [showChangesOnly]);
 
     return (
-        <div style={{ height: '100%', width: '100%' }} className="h-full flex flex-col border border-gray-200 dark:border-gray-700 rounded overflow-hidden">
+        <Paper
+            elevation={0}
+            variant="outlined"
+            sx={{
+                height: '100%',
+                width: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+                borderRadius: 1
+            }}
+        >
             {/* Toolbar */}
-            <div className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-                <div className="text-xs font-medium text-gray-500 dark:text-gray-400">
+            <Box
+                sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    px: 1.5,
+                    py: 1,
+                    bgcolor: 'background.default',
+                    borderBottom: 1,
+                    borderColor: 'divider'
+                }}
+            >
+                <Typography variant="caption" color="text.secondary" fontWeight={500}>
                     {path ? path.split('/').pop() : 'Diff Viewer'}
-                </div>
-                <button
-                    onClick={() => setShowChangesOnly(!showChangesOnly)}
-                    className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-colors ${showChangesOnly
-                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                        : 'text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700'
-                        }`}
-                    title={showChangesOnly ? "Show Full File" : "Show Changes Only"}
-                >
-                    {showChangesOnly ? (
-                        <>
-                            <FileText className="w-3.5 h-3.5" />
-                            <span>Full File</span>
-                        </>
-                    ) : (
-                        <div style={{ width: '100%' }}>
-                            <FileDiff className="w-3.5 h-3.5 flex-shrink-0" />
-                            <span>Changes Only</span>
-                        </div>
-                    )}
-                </button>
-            </div>
+                </Typography>
+
+                <Tooltip title={showChangesOnly ? "Show Full File" : "Show Changes Only"}>
+                    <Button
+                        size="small"
+                        onClick={() => setShowChangesOnly(!showChangesOnly)}
+                        variant={showChangesOnly ? "soft" : "text"}
+                        color={showChangesOnly ? "primary" : "inherit"}
+                        startIcon={showChangesOnly ? <FileText size={14} /> : <FileDiff size={14} />}
+                        sx={{
+                            fontSize: '0.75rem',
+                            textTransform: 'none',
+                            py: 0.5,
+                            minWidth: 'auto',
+                            bgcolor: showChangesOnly ? 'primary.lighter' : 'transparent',
+                            color: showChangesOnly ? 'primary.main' : 'text.secondary'
+                        }}
+                    >
+                        {showChangesOnly ? "Full File" : "Changes Only"}
+                    </Button>
+                </Tooltip>
+            </Box>
 
             {/* Editor */}
-            <div className="flex-1 min-h-0" style={{ width: '100%' }}>
+            <Box sx={{ flex: 1, minHeight: 0, width: '100%' }}>
                 <DiffEditor
                     height="100%"
                     width="100%"
@@ -112,8 +135,8 @@ const TfvcDiffViewer = ({ original, modified, path }) => {
                         }
                     }}
                 />
-            </div>
-        </div>
+            </Box>
+        </Paper>
     );
 };
 

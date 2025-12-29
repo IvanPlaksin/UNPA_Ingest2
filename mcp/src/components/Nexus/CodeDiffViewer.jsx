@@ -1,5 +1,18 @@
 import React, { useState } from 'react';
 import { FileCode, ArrowLeftRight, ChevronRight, ChevronDown } from 'lucide-react';
+import {
+    Paper,
+    Box,
+    Typography,
+    Stack,
+    List,
+    ListItem,
+    ListItemButton,
+    ListItemIcon,
+    ListItemText,
+    Divider,
+    Grid
+} from '@mui/material';
 
 const CodeDiffViewer = ({ files }) => {
     const [selectedFileIndex, setSelectedFileIndex] = useState(0);
@@ -14,78 +27,92 @@ const CodeDiffViewer = ({ files }) => {
     const maxLines = Math.max(oldLines.length, newLines.length);
 
     return (
-        <div className="card mt-4 overflow-hidden border border-gray-200 shadow-sm">
-            <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+        <Paper variant="outlined" sx={{ mt: 2, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ bgcolor: 'background.default', borderBottom: 1, borderColor: 'divider', px: 2, py: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Stack direction="row" alignItems="center" spacing={1}>
                     <ArrowLeftRight size={16} className="text-blue-600" />
-                    Code Changes
-                </h3>
-                <span className="text-xs text-gray-500">{files.length} file(s) modified</span>
-            </div>
+                    <Typography variant="subtitle2" fontWeight="bold" color="text.primary">Code Changes</Typography>
+                </Stack>
+                <Typography variant="caption" color="text.secondary">{files.length} file(s) modified</Typography>
+            </Box>
 
-            <div className="flex h-[400px]">
+            <Box sx={{ display: 'flex', height: 400 }}>
                 {/* File List */}
-                <div className="w-1/4 border-r border-gray-200 bg-white overflow-y-auto">
-                    {files.map((file, index) => (
-                        <div
-                            key={index}
-                            onClick={() => setSelectedFileIndex(index)}
-                            className={`px-4 py-3 cursor-pointer text-sm border-b border-gray-100 hover:bg-gray-50 transition-colors flex items-center gap-2 ${selectedFileIndex === index ? 'bg-blue-50 border-l-4 border-l-blue-500' : 'border-l-4 border-l-transparent'}`}
-                        >
-                            <FileCode size={14} className={selectedFileIndex === index ? 'text-blue-600' : 'text-gray-400'} />
-                            <div className="truncate">
-                                <div className={`font-medium truncate ${selectedFileIndex === index ? 'text-blue-700' : 'text-gray-700'}`}>
-                                    {file.path.split('/').pop()}
-                                </div>
-                                <div className="text-xs text-gray-400 truncate" title={file.path}>
-                                    {file.path}
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
+                <Box sx={{ width: '25%', borderRight: 1, borderColor: 'divider', bgcolor: 'background.paper', overflowY: 'auto' }}>
+                    <List disablePadding>
+                        {files.map((file, index) => (
+                            <ListItem key={index} disablePadding>
+                                <ListItemButton
+                                    selected={selectedFileIndex === index}
+                                    onClick={() => setSelectedFileIndex(index)}
+                                    sx={{
+                                        py: 1.5,
+                                        px: 2,
+                                        '&.Mui-selected': {
+                                            bgcolor: 'action.selected',
+                                            borderLeft: 3,
+                                            borderLeftColor: 'primary.main',
+                                            paddingLeft: '13px' // Adjust for border
+                                        }
+                                    }}
+                                >
+                                    <ListItemIcon sx={{ minWidth: 30 }}>
+                                        <FileCode size={16} className={selectedFileIndex === index ? 'text-blue-600' : 'text-gray-400'} />
+                                    </ListItemIcon>
+                                    <ListItemText
+                                        primary={file.path.split('/').pop()}
+                                        secondary={file.path}
+                                        primaryTypographyProps={{ variant: 'body2', fontWeight: selectedFileIndex === index ? 'bold' : 'normal', noWrap: true }}
+                                        secondaryTypographyProps={{ variant: 'caption', noWrap: true, title: file.path }}
+                                    />
+                                </ListItemButton>
+                                <Divider component="li" />
+                            </ListItem>
+                        ))}
+                    </List>
+                </Box>
 
                 {/* Diff View */}
-                <div className="w-3/4 bg-white overflow-auto font-mono text-xs">
-                    <div className="flex border-b border-gray-200 sticky top-0 bg-white z-10">
-                        <div className="w-1/2 px-4 py-2 bg-red-50 text-red-800 font-medium border-r border-gray-200">Original</div>
-                        <div className="w-1/2 px-4 py-2 bg-green-50 text-green-800 font-medium">Modified</div>
-                    </div>
+                <Box sx={{ width: '75%', bgcolor: 'common.white', overflow: 'auto', fontFamily: 'monospace', fontSize: '0.75rem' }}>
+                    <Box sx={{ display: 'flex', borderBottom: 1, borderColor: 'divider', position: 'sticky', top: 0, bgcolor: 'background.paper', zIndex: 1 }}>
+                        <Box sx={{ width: '50%', px: 2, py: 1, bgcolor: 'error.light', color: 'error.dark', fontWeight: 'bold', borderRight: 1, borderColor: 'divider' }}>Original</Box>
+                        <Box sx={{ width: '50%', px: 2, py: 1, bgcolor: 'success.light', color: 'success.dark', fontWeight: 'bold' }}>Modified</Box>
+                    </Box>
 
-                    <div className="divide-y divide-gray-100">
+                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                         {Array.from({ length: maxLines }).map((_, i) => {
                             const oldLine = oldLines[i] || "";
                             const newLine = newLines[i] || "";
                             const isDiff = oldLine !== newLine;
 
                             return (
-                                <div key={i} className={`flex hover:bg-gray-50 ${isDiff ? 'bg-yellow-50/30' : ''}`}>
+                                <Box key={i} sx={{ display: 'flex', '&:hover': { bgcolor: 'action.hover' }, ...(isDiff && { bgcolor: '#fff9c4' }) }}>
                                     {/* Old Line */}
-                                    <div className={`w-1/2 flex ${isDiff && oldLine ? 'bg-red-50' : ''}`}>
-                                        <div className="w-8 text-right pr-2 text-gray-300 select-none bg-gray-50 border-r border-gray-100 py-1">
+                                    <Box sx={{ width: '50%', display: 'flex', ...(isDiff && oldLine && { bgcolor: '#ffebee' }) }}>
+                                        <Box component="span" sx={{ width: 40, textAlign: 'right', pr: 1, color: 'text.disabled', userSelect: 'none', bgcolor: 'background.default', borderRight: 1, borderColor: 'divider', py: 0.5 }}>
                                             {oldLine ? i + 1 : ""}
-                                        </div>
-                                        <div className="flex-1 px-2 py-1 whitespace-pre-wrap break-all text-gray-600">
+                                        </Box>
+                                        <Box component="span" sx={{ flex: 1, px: 1, py: 0.5, whiteSpace: 'pre-wrap', wordBreak: 'break-all', color: 'text.secondary' }}>
                                             {oldLine}
-                                        </div>
-                                    </div>
+                                        </Box>
+                                    </Box>
 
                                     {/* New Line */}
-                                    <div className={`w-1/2 flex ${isDiff && newLine ? 'bg-green-50' : ''}`}>
-                                        <div className="w-8 text-right pr-2 text-gray-300 select-none bg-gray-50 border-r border-gray-100 border-l border-gray-200 py-1">
+                                    <Box sx={{ width: '50%', display: 'flex', ...(isDiff && newLine && { bgcolor: '#e8f5e9' }) }}>
+                                        <Box component="span" sx={{ width: 40, textAlign: 'right', pr: 1, color: 'text.disabled', userSelect: 'none', bgcolor: 'background.default', borderRight: 1, borderLeft: 1, borderColor: 'divider', py: 0.5 }}>
                                             {newLine ? i + 1 : ""}
-                                        </div>
-                                        <div className="flex-1 px-2 py-1 whitespace-pre-wrap break-all text-gray-800">
+                                        </Box>
+                                        <Box component="span" sx={{ flex: 1, px: 1, py: 0.5, whiteSpace: 'pre-wrap', wordBreak: 'break-all', color: 'text.primary' }}>
                                             {newLine}
-                                        </div>
-                                    </div>
-                                </div>
+                                        </Box>
+                                    </Box>
+                                </Box>
                             );
                         })}
-                    </div>
-                </div>
-            </div>
-        </div>
+                    </Box>
+                </Box>
+            </Box>
+        </Paper>
     );
 };
 

@@ -1,12 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { Database, GitBranch, FolderOpen, ToggleLeft, ToggleRight, Check, Loader2, ChevronDown, ChevronRight, FileText } from 'lucide-react';
+import { Database, GitBranch, FolderOpen, ToggleLeft, ToggleRight, Check, ChevronDown, ChevronRight, FileText } from 'lucide-react';
+import {
+    Box,
+    List,
+    ListItem,
+    ListItemButton,
+    ListItemText,
+    ListItemIcon,
+    Collapse,
+    TextField,
+    Typography,
+    IconButton,
+    Chip,
+    CircularProgress,
+    Stack,
+    Paper,
+    Divider
+} from '@mui/material';
 import WorkItemDetails from '../WorkItemDetails';
 
 const SourceSelector = ({ activeSources = [], lockedSources = [], sourceStatus = {}, entityData = {}, onToggleSource, onConfigChange }) => {
     // Local state for configuration inputs
-    // We lift 'entityData' from parent now, so less local state for "inputs" if the parent provides context.
-    // If no context, we still need inputs.
-
     const [workItemId, setWorkItemId] = useState('');
     const [expandedSources, setExpandedSources] = useState([]);
 
@@ -30,154 +44,162 @@ const SourceSelector = ({ activeSources = [], lockedSources = [], sourceStatus =
         const status = sourceStatus[id];
 
         return (
-            <div className={`border-b border-gray-100 transition-all duration-200 ${isActive ? 'bg-white' : 'bg-gray-50'}`}>
-                {/* Header */}
-                <div
-                    className={`p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 ${isActive ? 'bg-blue-50/20' : ''}`}
-                    onClick={() => isActive && toggleExpand(id)}
-                >
-                    <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg transition-colors ${isActive ? 'bg-blue-100 text-blue-600' : 'bg-gray-200 text-gray-500'}`}>
-                            <Icon size={20} />
-                        </div>
-                        <div>
-                            <h3 className="font-medium text-gray-800 flex items-center gap-2">
-                                {label}
-                                {isLocked && <span className="text-[10px] bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded flex items-center gap-1">Locked</span>}
-                            </h3>
-                            <p className="text-xs text-gray-500">{description}</p>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                        {isActive && (
-                            <button className="text-gray-400 hover:text-gray-600">
-                                {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                            </button>
-                        )}
-
-                        <button
+            <Paper elevation={0} square sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                <ListItem
+                    disablePadding
+                    secondaryAction={
+                        <IconButton
+                            edge="end"
+                            aria-label="toggle"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 if (!isLocked) onToggleSource(id);
                             }}
                             disabled={isLocked}
-                            className={`transition-colors ${isActive ? 'text-blue-600' : 'text-gray-300 hover:text-gray-400'} ${isLocked ? 'cursor-not-allowed opacity-50' : ''}`}
+                            color={isActive ? "primary" : "default"}
                         >
                             {isActive ? <ToggleRight size={32} /> : <ToggleLeft size={32} />}
-                        </button>
-                    </div>
-                </div>
+                        </IconButton>
+                    }
+                >
+                    <ListItemButton
+                        onClick={() => isActive && toggleExpand(id)}
+                        selected={isActive}
+                        sx={{
+                            py: 2,
+                            opacity: !isActive && !isLocked ? 0.7 : 1,
+                        }}
+                    >
+                        <ListItemIcon sx={{ minWidth: 40, color: isActive ? 'primary.main' : 'text.disabled' }}>
+                            <Icon size={24} />
+                        </ListItemIcon>
+                        <ListItemText
+                            primary={
+                                <Stack direction="row" alignItems="center" spacing={1}>
+                                    <Typography variant="subtitle2" fontWeight="bold">{label}</Typography>
+                                    {isLocked && <Chip label="Locked" size="small" sx={{ height: 16, fontSize: '0.6rem' }} />}
+                                </Stack>
+                            }
+                            secondary={description}
+                            secondaryTypographyProps={{ variant: 'caption', noWrap: true }}
+                        />
+                        {isActive && (
+                            <Box sx={{ mr: 2, color: 'text.secondary', display: 'flex' }}>
+                                {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                            </Box>
+                        )}
+                    </ListItemButton>
+                </ListItem>
 
-                {/* Body (Accordion) */}
-                {isActive && isExpanded && (
-                    <div className="px-4 pb-4 animate-in slide-in-from-top-2 fade-in duration-200">
+                <Collapse in={isActive && isExpanded} timeout="auto" unmountOnExit>
+                    <Box sx={{ p: 2, bgcolor: 'background.default' }}>
                         {/* Input Area (if needed) */}
                         {!entityData[id] && id === 'ado' && (
-                            <div className="mb-3">
-                                <input
-                                    type="text"
+                            <Box mb={2}>
+                                <TextField
+                                    fullWidth
+                                    size="small"
                                     placeholder="Enter Work Item ID..."
-                                    className="w-full text-sm border-gray-200 rounded-md focus:border-blue-500 focus:ring-1 focus:ring-blue-500 px-3 py-2"
                                     value={workItemId}
                                     onChange={(e) => {
                                         setWorkItemId(e.target.value);
                                         if (onConfigChange) onConfigChange({ workItemId: e.target.value });
                                     }}
+                                    variant="outlined"
                                 />
-                            </div>
+                            </Box>
                         )}
 
                         {/* Status Message */}
                         {status && (
-                            <div className="mb-3 p-2 bg-gray-50 rounded border border-gray-100 text-xs font-mono text-gray-600 flex items-start gap-2">
+                            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1, p: 1, border: 1, borderColor: 'divider', borderRadius: 1, bgcolor: 'background.paper' }}>
                                 {status.message !== 'Done.' ? (
-                                    <Loader2 size={14} className="animate-spin mt-0.5 text-blue-500 shrink-0" />
+                                    <CircularProgress size={14} />
                                 ) : (
-                                    <Check size={14} className="mt-0.5 text-green-500 shrink-0" />
+                                    <Check size={14} color="green" />
                                 )}
-                                <span>{status.message}</span>
-                            </div>
+                                <Typography variant="caption" fontFamily="monospace">{status.message}</Typography>
+                            </Box>
                         )}
 
                         {/* Content Children */}
-                        <div className="text-sm text-gray-600">
+                        <Box>
                             {children}
-                        </div>
-                    </div>
-                )}
-            </div>
+                        </Box>
+                    </Box>
+                </Collapse>
+            </Paper>
         );
     };
 
     return (
-        <div className="flex flex-col h-full bg-white border-r border-gray-200">
-            <div className="p-4 border-b border-gray-200 bg-gray-50/50">
-                <h2 className="text-sm font-semibold text-gray-800 uppercase tracking-wider">
-                    Dimensions
-                </h2>
-            </div>
+        <List sx={{ width: '100%', bgcolor: 'background.paper', p: 0 }}>
+            <SourceItem
+                id="ado"
+                label="Azure DevOps"
+                icon={Database}
+                description="Work Items, Tasks, Bugs"
+            >
+                {/* Embedded Work Item Details */}
+                {entityData.workItem ? (
+                    <Box sx={{ mt: 1, fontSize: '0.7rem' }}>
+                        <WorkItemDetails
+                            core={entityData.workItem.core}
+                            fields={entityData.workItem.fields}
+                        />
+                    </Box>
+                ) : entityData.ado ? (
+                    <Paper variant="outlined" sx={{ p: 1.5, bgcolor: 'primary.light', bgOpacity: 0.1, borderColor: 'primary.main' }}>
+                        <Typography variant="body2" fontWeight="bold">
+                            {entityData.ado.type || 'Work Item'} {entityData.ado.id}
+                        </Typography>
+                        <Typography variant="caption" display="block" color="text.secondary" noWrap>
+                            {entityData.ado.title || 'Loading details...'}
+                        </Typography>
+                    </Paper>
+                ) : (
+                    <Typography variant="caption" color="text.secondary" fontStyle="italic">No Work Item loaded.</Typography>
+                )}
+            </SourceItem>
 
-            <div className="flex-1 overflow-y-auto">
-                <SourceItem
-                    id="ado"
-                    label="Azure DevOps"
-                    icon={Database}
-                    description="Work Items, Tasks, Bugs"
-                >
-                    {/* Embedded Work Item Details */}
-                    {entityData.workItem ? (
-                        <div className="mt-2 text-[0.7rem]">
-                            <WorkItemDetails
-                                core={entityData.workItem.core}
-                                fields={entityData.workItem.fields}
-                            />
-                        </div>
-                    ) : entityData.ado ? (
-                        <div className="bg-blue-50 p-3 rounded text-xs border border-blue-100">
-                            <strong>{entityData.ado.type || 'Work Item'} {entityData.ado.id}</strong>
-                            <p className="mt-1 opacity-80 line-clamp-2">{entityData.ado.title || 'Loading details...'}</p>
-                        </div>
-                    ) : (
-                        <p className="text-xs text-gray-400 italic">No Work Item loaded.</p>
-                    )}
-                </SourceItem>
+            <SourceItem
+                id="git"
+                label="Git Repositories"
+                icon={GitBranch}
+                description="Commits, PRs, File Changes"
+            >
+                {entityData.git ? (
+                    <Paper variant="outlined" sx={{ p: 1.5, bgcolor: 'warning.light', bgOpacity: 0.1, borderColor: 'warning.main' }}>
+                        <Typography variant="body2" fontWeight="bold">
+                            Commit {entityData.git.id?.substring(0, 8)}
+                        </Typography>
+                        <Typography variant="caption" display="block" color="text.secondary">
+                            {entityData.git.message || 'Loading commit...'}
+                        </Typography>
+                    </Paper>
+                ) : (
+                    <Typography variant="caption" color="text.secondary" fontStyle="italic">No Git data loaded.</Typography>
+                )}
+            </SourceItem>
 
-                <SourceItem
-                    id="git"
-                    label="Git Repositories"
-                    icon={GitBranch}
-                    description="Commits, PRs, File Changes"
-                >
-                    {entityData.git ? (
-                        <div className="bg-orange-50 p-3 rounded text-xs border border-orange-100">
-                            <strong>Commit {entityData.git.id?.substring(0, 8)}</strong>
-                            <p className="mt-1 opacity-80">{entityData.git.message || 'Loading commit...'}</p>
-                        </div>
-                    ) : (
-                        <p className="text-xs text-gray-400 italic">No Git data loaded.</p>
-                    )}
-                </SourceItem>
-
-                <SourceItem
-                    id="kb"
-                    label="Knowledge Base"
-                    icon={FolderOpen}
-                    description="Vectors, Documentation, Context"
-                >
-                    <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-2 text-xs p-2 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer">
-                            <FileText size={14} className="text-gray-400" />
-                            <span>index.ts</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs p-2 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer">
-                            <FileText size={14} className="text-gray-400" />
-                            <span>readme.md</span>
-                        </div>
-                    </div>
-                </SourceItem>
-            </div>
-        </div>
+            <SourceItem
+                id="kb"
+                label="Knowledge Base"
+                icon={FolderOpen}
+                description="Vectors, Documentation, Context"
+            >
+                <Stack spacing={1}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, borderRadius: 1, cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}>
+                        <FileText size={14} className="text-gray-400" />
+                        <Typography variant="caption">index.ts</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, borderRadius: 1, cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}>
+                        <FileText size={14} className="text-gray-400" />
+                        <Typography variant="caption">readme.md</Typography>
+                    </Box>
+                </Stack>
+            </SourceItem>
+        </List>
     );
 };
 

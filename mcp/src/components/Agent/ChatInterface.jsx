@@ -1,6 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Send, Bot, User, FileText, Loader2 } from 'lucide-react';
+import {
+    Paper,
+    Box,
+    Typography,
+    TextField,
+    IconButton,
+    Avatar,
+    Stack,
+    Chip,
+    InputAdornment,
+    CircularProgress,
+    alpha
+} from '@mui/material';
 
 const ChatInterface = () => {
     const [messages, setMessages] = useState([
@@ -111,82 +124,139 @@ const ChatInterface = () => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-slate-50">
+        <Paper elevation={0} sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-6">
-                {messages.map((msg, idx) => (
-                    <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`flex max-w-[80%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} gap-3`}>
-                            {/* Avatar */}
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${msg.role === 'user' ? 'bg-blue-600' : 'bg-emerald-600'}`}>
-                                {msg.role === 'user' ? <User size={16} className="text-white" /> : <Bot size={16} className="text-white" />}
-                            </div>
+            <Box sx={{ flex: 1, overflowY: 'auto', p: 3, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {messages.map((msg, idx) => {
+                    const isUser = msg.role === 'user';
+                    return (
+                        <Box key={idx} sx={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start' }}>
+                            <Box sx={{
+                                display: 'flex',
+                                flexDirection: isUser ? 'row-reverse' : 'row',
+                                gap: 2,
+                                maxWidth: '85%'
+                            }}>
+                                {/* Avatar */}
+                                <Avatar
+                                    sx={{
+                                        width: 32,
+                                        height: 32,
+                                        bgcolor: isUser ? 'primary.main' : 'secondary.main'
+                                    }}
+                                >
+                                    {isUser ? <User size={18} /> : <Bot size={18} />}
+                                </Avatar>
 
-                            {/* Message Bubble */}
-                            <div className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                                <div className={`px-4 py-3 rounded-2xl shadow-sm ${msg.role === 'user'
-                                    ? 'bg-blue-600 text-white rounded-tr-none'
-                                    : 'bg-white text-slate-800 border border-slate-200 rounded-tl-none'
-                                    }`}>
+                                {/* Message Bubble */}
+                                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: isUser ? 'flex-end' : 'flex-start' }}>
+                                    <Paper
+                                        elevation={1}
+                                        sx={{
+                                            p: 2,
+                                            borderRadius: 2,
+                                            borderTopLeftRadius: isUser ? 2 : 0,
+                                            borderTopRightRadius: isUser ? 0 : 2,
+                                            bgcolor: isUser ? 'primary.main' : 'background.paper',
+                                            color: isUser ? 'primary.contrastText' : 'text.primary',
+                                            maxWidth: '100%'
+                                        }}
+                                    >
+                                        {/* Sources (Assistant Only) */}
+                                        {!isUser && msg.sources && msg.sources.length > 0 && (
+                                            <Box sx={{ mb: 1.5, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                                {msg.sources.map((source, sIdx) => (
+                                                    <Chip
+                                                        key={sIdx}
+                                                        icon={<FileText size={12} />}
+                                                        label={`${source.title || 'Unknown'} (${(source.score * 100).toFixed(0)}%)`}
+                                                        size="small"
+                                                        variant="outlined"
+                                                        color="secondary"
+                                                        sx={{ fontSize: '0.7rem', height: 20 }}
+                                                        component="a"
+                                                        href={source.url} // Assuming source has a URL if clickable
+                                                        target="_blank"
+                                                        clickable
+                                                    />
+                                                ))}
+                                            </Box>
+                                        )}
 
-                                    {/* Sources (Assistant Only) */}
-                                    {msg.role === 'assistant' && msg.sources && msg.sources.length > 0 && (
-                                        <div className="mb-3 flex flex-wrap gap-2">
-                                            {msg.sources.map((source, sIdx) => (
-                                                <div key={sIdx} className="flex items-center gap-1 bg-emerald-50 text-emerald-700 text-xs px-2 py-1 rounded-full border border-emerald-100" title={source.title}>
-                                                    <FileText size={10} />
-                                                    <span className="max-w-[150px] truncate">{source.title || 'Unknown Source'}</span>
-                                                    <span className="opacity-60">({(source.score * 100).toFixed(0)}%)</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
+                                        {/* Content */}
+                                        <Typography
+                                            variant="body1"
+                                            component="div"
+                                            sx={{
+                                                '& p': { m: 0, mb: 1, '&:last-child': { mb: 0 } },
+                                                '& a': { color: isUser ? 'inherit' : 'primary.main', textDecoration: 'underline' },
+                                                '& pre': { bgcolor: 'rgba(0,0,0,0.1)', p: 1, borderRadius: 1, overflowX: 'auto' },
+                                                '& code': { fontFamily: 'monospace' }
+                                            }}
+                                        >
+                                            <ReactMarkdown>{msg.content}</ReactMarkdown>
+                                        </Typography>
+                                    </Paper>
+                                </Box>
+                            </Box>
+                        </Box>
+                    );
+                })}
 
-                                    {/* Content */}
-                                    <div className={`prose prose-sm max-w-none ${msg.role === 'user' ? 'prose-invert' : ''}`}>
-                                        <ReactMarkdown>{msg.content}</ReactMarkdown>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                ))}
                 {isLoading && (
-                    <div className="flex justify-start">
-                        <div className="flex max-w-[80%] gap-3">
-                            <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center flex-shrink-0">
-                                <Bot size={16} className="text-white" />
-                            </div>
-                            <div className="bg-white px-4 py-3 rounded-2xl rounded-tl-none border border-slate-200 shadow-sm flex items-center">
-                                <Loader2 size={16} className="animate-spin text-slate-400" />
-                            </div>
-                        </div>
-                    </div>
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
+                        <Box sx={{ display: 'flex', gap: 2, maxWidth: '85%' }}>
+                            <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
+                                <Bot size={18} />
+                            </Avatar>
+                            <Paper sx={{ p: 2, borderRadius: 2, borderTopLeftRadius: 0, bgcolor: 'background.paper' }}>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <CircularProgress size={16} color="inherit" />
+                                    <Typography variant="body2" color="text.secondary">Thinking...</Typography>
+                                </Stack>
+                            </Paper>
+                        </Box>
+                    </Box>
                 )}
                 <div ref={messagesEndRef} />
-            </div>
+            </Box>
 
             {/* Input Area */}
-            <div className="p-4 bg-white border-t border-slate-200">
-                <div className="flex gap-2 max-w-4xl mx-auto">
-                    <textarea
+            <Paper elevation={3} sx={{ p: 2, borderTop: 1, borderColor: 'divider', bgcolor: 'background.paper', zIndex: 1 }}>
+                <Box sx={{ maxWidth: 'lg', mx: 'auto', display: 'flex', gap: 1 }}>
+                    <TextField
+                        fullWidth
+                        placeholder="Ask about your projects..."
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={handleKeyDown}
-                        placeholder="Ask about your projects..."
-                        className="flex-1 resize-none border border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent h-[50px] max-h-[150px]"
-                        rows={1}
+                        variant="outlined"
+                        size="medium"
+                        multiline
+                        maxRows={4}
+                        sx={{
+                            '& .MuiOutlinedInput-root': { borderRadius: 3 },
+                            bgcolor: 'background.default'
+                        }}
                     />
-                    <button
+                    <IconButton
+                        color="primary"
                         onClick={sendMessage}
                         disabled={isLoading || !input.trim()}
-                        className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white rounded-xl px-4 flex items-center justify-center transition-colors"
+                        sx={{
+                            width: 50,
+                            height: 50,
+                            bgcolor: 'primary.main',
+                            color: 'common.white',
+                            '&:hover': { bgcolor: 'primary.dark' },
+                            '&.Mui-disabled': { bgcolor: 'action.disabledBackground', color: 'action.disabled' }
+                        }}
                     >
                         <Send size={20} />
-                    </button>
-                </div>
-            </div>
-        </div>
+                    </IconButton>
+                </Box>
+            </Paper>
+        </Paper>
     );
 };
 

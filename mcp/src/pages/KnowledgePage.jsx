@@ -1,41 +1,76 @@
 import React, { useState } from 'react';
 import { triggerIngestion } from '../services/api';
+import { Box, Paper, Typography, Button, Stack, Container, CircularProgress } from '@mui/material';
+import { CloudDownload, Mail, FileText, Trello } from 'lucide-react';
 
 const KnowledgePage = () => {
     const [status, setStatus] = useState('Idle');
+    const [loadingSource, setLoadingSource] = useState(null);
 
     const handleIngest = async (source) => {
+        setLoadingSource(source);
         setStatus(`Processing ${source}...`);
-        await triggerIngestion(source);
-        setStatus(`Finished ${source}`);
+        try {
+            await triggerIngestion(source);
+            setStatus(`Finished ${source}`);
+        } catch (error) {
+            setStatus(`Error syncing ${source}`);
+        } finally {
+            setLoadingSource(null);
+        }
     };
 
-    const btnStyle = {
-        padding: '10px 20px',
-        border: '1px solid #ccc',
-        background: 'white',
-        borderRadius: '5px',
-        cursor: 'pointer',
-        fontWeight: '500'
-    };
+    const IngestButton = ({ source, icon: Icon, label }) => (
+        <Button
+            variant="outlined"
+            size="large"
+            onClick={() => handleIngest(source)}
+            disabled={!!loadingSource}
+            startIcon={loadingSource === source ? <CircularProgress size={20} /> : <Icon size={20} />}
+            sx={{ flex: 1, py: 3, display: 'flex', flexDirection: 'column', gap: 1, textTransform: 'none' }}
+        >
+            <Typography variant="subtitle1" fontWeight="bold">{label}</Typography>
+        </Button>
+    );
 
     return (
-        <div className="page-content" style={{ padding: '20px', background: '#f9f9f9', height: '100%' }}>
-            <h1>Knowledge Base Manager</h1>
+        <Container maxWidth="lg" sx={{ py: 4 }}>
+            <Typography variant="h4" fontWeight="bold" gutterBottom color="text.primary">
+                Knowledge Base Manager
+            </Typography>
+            <Typography variant="body1" color="text.secondary" paragraph>
+                Manage data sources and trigger manual ingestion processes to keep the Knowledge Graph up to date.
+            </Typography>
 
-            <div className="card" style={{ border: '1px solid #ddd', padding: '20px', marginTop: '20px', borderRadius: '8px', background: 'white' }}>
-                <h3>Data Sources</h3>
-                <p style={{ color: '#666', marginBottom: '15px' }}>Trigger manual ingestion from connected sources.</p>
-                <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
-                    <button onClick={() => handleIngest('Email')} style={btnStyle}>Sync Emails</button>
-                    <button onClick={() => handleIngest('SharePoint')} style={btnStyle}>Sync Docs</button>
-                    <button onClick={() => handleIngest('DevOps')} style={btnStyle}>Sync Work Items</button>
-                </div>
-                <div style={{ marginTop: '20px', fontWeight: 'bold', color: '#0078d4' }}>
-                    Status: {status}
-                </div>
-            </div>
-        </div>
+            <Paper variant="outlined" sx={{ p: 4, mt: 4, borderRadius: 2 }}>
+                <Stack spacing={3}>
+                    <Box>
+                        <Stack direction="row" alignItems="center" spacing={1} mb={1}>
+                            <CloudDownload size={24} className="text-blue-500" />
+                            <Typography variant="h6">Data Sources</Typography>
+                        </Stack>
+                        <Typography variant="body2" color="text.secondary">
+                            Trigger manual ingestion from connected sources.
+                        </Typography>
+                    </Box>
+
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                        <IngestButton source="Email" icon={Mail} label="Sync Emails" />
+                        <IngestButton source="SharePoint" icon={FileText} label="Sync Docs" />
+                        <IngestButton source="DevOps" icon={Trello} label="Sync Work Items" />
+                    </Stack>
+
+                    <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: 1, border: 1, borderColor: 'divider' }}>
+                        <Typography variant="caption" fontWeight="bold" color="text.secondary" display="block" mb={0.5}>
+                            SYSTEM STATUS
+                        </Typography>
+                        <Typography variant="body2" fontFamily="monospace" color="primary.main">
+                            {status}
+                        </Typography>
+                    </Box>
+                </Stack>
+            </Paper>
+        </Container>
     );
 };
 

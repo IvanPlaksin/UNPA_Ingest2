@@ -5,6 +5,29 @@ import { fetchWorkItemsList, searchWorkItems, startIngestionJob } from '../servi
 import IngestionVisualizer from '../components/Knowledge/IngestionVisualizer';
 import { RefreshCw, Database, CheckSquare, Square, Filter, Plus, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { Storage } from '../utils/storage';
+import {
+    Box,
+    Paper,
+    Typography,
+    Button,
+    IconButton,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    Checkbox,
+    Chip,
+    Stack,
+    Toolbar,
+    CircularProgress,
+    Select,
+    MenuItem,
+    TextField,
+    Collapse,
+    AppBar
+} from '@mui/material';
 
 const FIELD_DEFINITIONS = {
     'System.Id': { label: 'ID', type: 'integer' },
@@ -58,10 +81,6 @@ const WorkItemsListPage = () => {
             return `[${f.field}] ${f.operator} ${val}`;
         });
 
-        // Always exclude Closed items as per original logic, or make it a filter? 
-        // User requested "Base set of columns and filters should include those fields that are shown now"
-        // The original query was: WHERE [System.State] <> 'Closed'
-        // We will append this to the user filters.
         const baseCondition = "[System.State] <> 'Closed'";
         const whereClause = [baseCondition, ...whereConditions].join(' AND ');
 
@@ -71,8 +90,6 @@ const WorkItemsListPage = () => {
     const loadData = async () => {
         setLoading(true);
         try {
-            // Convert filters to API format
-            // We need to handle the "Closed" state filter which is implicit in this page
             const apiFilters = filters.map(f => ({
                 field: f.field,
                 operator: f.operator,
@@ -80,8 +97,6 @@ const WorkItemsListPage = () => {
             }));
 
             // Add implicit filter: State <> Closed
-            // Check if it's already there to avoid duplicates?
-            // For now, just add it.
             apiFilters.push({ field: 'System.State', operator: '<>', value: 'Closed' });
 
             console.log("Executing Search:", apiFilters);
@@ -155,158 +170,199 @@ const WorkItemsListPage = () => {
         }
     };
 
+    const getStatusColor = (status) => {
+        const s = status?.toLowerCase() || '';
+        if (s === 'active' || s === 'committed') return 'primary';
+        if (s === 'resolved' || s === 'done') return 'success';
+        if (s === 'closed') return 'default';
+        if (s === 'new') return 'info';
+        return 'default';
+    };
+
     return (
-        <div className="page-content" style={{ padding: '0' }}> {/* No padding on page level */}
+        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
 
             {/* Toolbar */}
-            <div style={{
-                padding: '8px 16px',
-                background: 'white',
-                borderBottom: '1px solid var(--border-color)',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <h2 style={{ fontSize: '16px', margin: 0 }}>Work Items</h2>
-                    <button
-                        onClick={() => setShowFilterPanel(!showFilterPanel)}
-                        className="btn-secondary"
-                        style={{ padding: '4px 8px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}
-                    >
-                        <Filter size={12} /> {filters.length} Filters {showFilterPanel ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                    </button>
-                </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                    <button onClick={loadData} className="btn-secondary">
-                        <RefreshCw size={14} /> Refresh
-                    </button>
-                    <button
-                        onClick={handleIngest}
-                        disabled={selectedIds.size === 0}
-                        className="btn-primary"
-                    >
-                        <Database size={14} /> Ingest ({selectedIds.size})
-                    </button>
-                </div>
-            </div>
+            <Paper elevation={1} square sx={{ zIndex: 1 }}>
+                <Toolbar variant="dense" sx={{ justifyContent: 'space-between', minHeight: 48 }}>
+                    <Stack direction="row" alignItems="center" spacing={2}>
+                        <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontSize: '1rem' }}>
+                            Work Items
+                        </Typography>
 
-            {/* Table Container with scroll */}
-            <div style={{ flex: 1, overflow: 'auto', padding: '16px', display: 'flex', flexDirection: 'column' }}>
-                {/* ⭐ ВИЗУАЛИЗАТОР (Показываем, если есть активная задача) */}
+                        <Button
+                            variant={showFilterPanel ? "contained" : "outlined"}
+                            size="small"
+                            startIcon={<Filter size={14} />}
+                            endIcon={showFilterPanel ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                            onClick={() => setShowFilterPanel(!showFilterPanel)}
+                            sx={{ minWidth: 100 }}
+                        >
+                            Filters ({filters.length})
+                        </Button>
+                    </Stack>
+
+                    <Stack direction="row" spacing={1}>
+                        <Button variant="outlined" size="small" onClick={loadData} startIcon={<RefreshCw size={14} />}>
+                            Refresh
+                        </Button>
+                        <Button
+                            variant="contained"
+                            size="small"
+                            onClick={handleIngest}
+                            disabled={selectedIds.size === 0}
+                            startIcon={<Database size={14} />}
+                        >
+                            Ingest ({selectedIds.size})
+                        </Button>
+                    </Stack>
+                </Toolbar>
+
+                {/* Filter Panel */}
+                <Collapse in={showFilterPanel}>
+                    <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
+                        <Stack spacing={2}>
+                            <Stack direction="row" justifyContent="space-between" alignItems="center">
+                                <Typography variant="subtitle2">Active Filters</Typography>
+                                <Button startIcon={<Plus size={14} />} size="small" onClick={addFilter}>Add Filter</Button>
+                            </Stack>
+
+                            {filters.map((filter, index) => (
+                                <Stack key={index} direction="row" spacing={1} alignItems="center">
+                                    <Select
+                                        value={filter.field}
+                                        onChange={(e) => updateFilter(index, 'field', e.target.value)}
+                                        size="small"
+                                        sx={{ minWidth: 150, fontSize: '0.875rem' }}
+                                    >
+                                        {Object.keys(FIELD_DEFINITIONS).map(key => (
+                                            <MenuItem key={key} value={key}>{FIELD_DEFINITIONS[key].label}</MenuItem>
+                                        ))}
+                                    </Select>
+                                    <Select
+                                        value={filter.operator}
+                                        onChange={(e) => updateFilter(index, 'operator', e.target.value)}
+                                        size="small"
+                                        sx={{ minWidth: 100, fontSize: '0.875rem' }}
+                                    >
+                                        {['=', '<>', '>', '<', '>=', '<=', 'Contains'].map(op => (
+                                            <MenuItem key={op} value={op}>{op}</MenuItem>
+                                        ))}
+                                    </Select>
+                                    <TextField
+                                        value={filter.value}
+                                        onChange={(e) => updateFilter(index, 'value', e.target.value)}
+                                        size="small"
+                                        variant="outlined"
+                                        fullWidth
+                                        sx={{ '& .MuiInputBase-input': { fontSize: '0.875rem', py: 1 } }}
+                                    />
+                                    <IconButton size="small" color="error" onClick={() => removeFilter(index)}>
+                                        <X size={16} />
+                                    </IconButton>
+                                </Stack>
+                            ))}
+                        </Stack>
+                    </Box>
+                </Collapse>
+            </Paper>
+
+            {/* Main Content */}
+            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', p: 2 }}>
+
+                {/* Visualizer (if active) */}
                 {activeJobId && (
-                    <div style={{ marginBottom: '16px' }}>
+                    <Paper sx={{ mb: 2, height: 300, overflow: 'hidden' }}>
                         <IngestionVisualizer
                             jobId={activeJobId}
                             onClose={() => setActiveJobId(null)}
                         />
-                    </div>
+                    </Paper>
                 )}
 
-                <div className="card" style={{ overflow: 'hidden', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                    {loading ? <p style={{ padding: '16px' }}>Loading...</p> : (
-                        <div style={{ overflow: 'auto', flex: 1 }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                <thead style={{ position: 'sticky', top: 0, background: 'white', zIndex: 1, borderBottom: '1px solid #eee' }}>
-                                    <tr>
-                                        <th style={{ width: '40px', padding: '8px' }}>
-                                            <div onClick={toggleSelectAll} style={{ cursor: 'pointer' }}>
-                                                {selectedIds.size === items.length && items.length > 0 ? <CheckSquare size={16} /> : <Square size={16} />}
-                                            </div>
-                                        </th>
-                                        {getVisibleColumns().map(col => (
-                                            <th key={col} style={{ padding: '8px', textAlign: 'left', fontSize: '12px', color: '#666' }}>
-                                                {FIELD_DEFINITIONS[col]?.label || col}
-                                            </th>
-                                        ))}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {items.map(item => {
-                                        const id = item['System.Id'];
-                                        return (
-                                            <tr key={id} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                                                <td style={{ padding: '8px' }}>
-                                                    <div onClick={() => toggleSelect(id)} style={{ cursor: 'pointer' }}>
-                                                        {selectedIds.has(id) ? <CheckSquare size={16} color="var(--un-blue)" /> : <Square size={16} color="var(--text-secondary)" />}
-                                                    </div>
-                                                </td>
-                                                {getVisibleColumns().map(col => (
-                                                    <td key={col} style={{ padding: '8px', fontSize: '13px' }}>
-                                                        {col === 'System.Title' ? (
-                                                            <Link to={`/workitem/${id}`} style={{ color: 'var(--un-blue)', textDecoration: 'none', fontWeight: '500' }}>
-                                                                {item[col]}
-                                                            </Link>
-                                                        ) : col === 'System.State' ? (
-                                                            <span className={`status-badge ${item[col]?.toLowerCase()}`}>
-                                                                {item[col]}
-                                                            </span>
-                                                        ) : (
-                                                            item[col]
-                                                        )}
-                                                    </td>
-                                                ))}
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </div>
-
-                {/* Filter Panel at the bottom */}
-                {showFilterPanel && (
-                    <div style={{
-                        marginTop: '16px',
-                        padding: '16px',
-                        background: '#f8f9fa',
-                        border: '1px solid #e0e0e0',
-                        borderRadius: '4px',
-                        maxHeight: '300px',
-                        overflowY: 'auto'
-                    }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                            <h3 style={{ fontSize: '14px', margin: 0 }}>Active Filters</h3>
-                            <button onClick={addFilter} style={{ background: 'none', border: 'none', color: 'var(--un-blue)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}>
-                                <Plus size={14} /> Add Filter
-                            </button>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {filters.map((filter, index) => (
-                                <div key={index} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                    <select
-                                        value={filter.field}
-                                        onChange={(e) => updateFilter(index, 'field', e.target.value)}
-                                        style={{ padding: '4px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '12px' }}
-                                    >
-                                        {Object.keys(FIELD_DEFINITIONS).map(key => (
-                                            <option key={key} value={key}>{FIELD_DEFINITIONS[key].label}</option>
-                                        ))}
-                                    </select>
-                                    <select
-                                        value={filter.operator}
-                                        onChange={(e) => updateFilter(index, 'operator', e.target.value)}
-                                        style={{ padding: '4px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '12px' }}
-                                    >
-                                        {['=', '<>', '>', '<', '>=', '<=', 'Contains'].map(op => (
-                                            <option key={op} value={op}>{op}</option>
-                                        ))}
-                                    </select>
-                                    <input
-                                        type="text"
-                                        value={filter.value}
-                                        onChange={(e) => updateFilter(index, 'value', e.target.value)}
-                                        style={{ padding: '4px', borderRadius: '4px', border: '1px solid #ccc', flex: 1, fontSize: '12px' }}
+                <TableContainer component={Paper} variant="outlined" sx={{ flex: 1 }}>
+                    <Table stickyHeader size="small">
+                        <TableHead>
+                            <TableRow>
+                                <TableCell padding="checkbox">
+                                    <Checkbox
+                                        indeterminate={selectedIds.size > 0 && selectedIds.size < items.length}
+                                        checked={items.length > 0 && selectedIds.size === items.length}
+                                        onChange={toggleSelectAll}
+                                        size="small"
                                     />
-                                    <button onClick={() => removeFilter(index)} style={{ background: 'none', border: 'none', color: '#d9534f', cursor: 'pointer' }}>
-                                        <X size={14} />
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-            </div>
-        </div>
+                                </TableCell>
+                                {getVisibleColumns().map(col => (
+                                    <TableCell key={col} sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                                        {FIELD_DEFINITIONS[col]?.label || col}
+                                    </TableCell>
+                                ))}
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {loading ? (
+                                <TableRow>
+                                    <TableCell colSpan={getVisibleColumns().length + 1} align="center" sx={{ py: 4 }}>
+                                        <CircularProgress size={24} />
+                                    </TableCell>
+                                </TableRow>
+                            ) : items.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={getVisibleColumns().length + 1} align="center" sx={{ py: 4, color: 'text.disabled' }}>
+                                        No items found
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                items.map(item => {
+                                    const id = item['System.Id'];
+                                    const isSelected = selectedIds.has(id);
+                                    return (
+                                        <TableRow
+                                            key={id}
+                                            hover
+                                            selected={isSelected}
+                                            onClick={() => toggleSelect(id)} // Allow row click to select? Or stick to checkbox to avoid conflict with title click.
+                                            role="checkbox"
+                                        >
+                                            <TableCell padding="checkbox">
+                                                <Checkbox checked={isSelected} onChange={(e) => { e.stopPropagation(); toggleSelect(id); }} size="small" />
+                                            </TableCell>
+                                            {getVisibleColumns().map(col => (
+                                                <TableCell key={col}>
+                                                    {col === 'System.Title' ? (
+                                                        <Link
+                                                            to={`/workitem/${id}`}
+                                                            style={{ color: 'inherit', textDecoration: 'none', fontWeight: 500 }}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            <Typography variant="body2" color="primary" sx={{ '&:hover': { textDecoration: 'underline' } }}>
+                                                                {item[col]}
+                                                            </Typography>
+                                                        </Link>
+                                                    ) : col === 'System.State' ? (
+                                                        <Chip
+                                                            label={item[col]}
+                                                            size="small"
+                                                            color={getStatusColor(item[col])}
+                                                            variant="outlined"
+                                                            sx={{ height: 20, fontSize: '0.7rem' }}
+                                                        />
+                                                    ) : (
+                                                        <Typography variant="body2" color="text.primary">
+                                                            {item[col]}
+                                                        </Typography>
+                                                    )}
+                                                </TableCell>
+                                            ))}
+                                        </TableRow>
+                                    );
+                                })
+                            )}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
+            </Box>
+        </Box>
     );
 };
 

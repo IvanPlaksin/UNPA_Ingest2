@@ -6,21 +6,33 @@ import ChatInput from '../components/Chat/ChatInput';
 import IngestionVisualizer from '../components/Knowledge/IngestionVisualizer';
 import { useChat } from '../context/ChatContext';
 import { Activity } from 'lucide-react';
+import {
+    Box,
+    AppBar,
+    Toolbar,
+    Typography,
+    IconButton,
+    Select,
+    MenuItem,
+    FormControl,
+    Paper,
+    Tooltip
+} from '@mui/material';
 
 const DashboardPage = () => {
     const { sendMessage, isLoading, currentUser, setCurrentUser, messages } = useChat();
 
-    // Состояние для правой панели
+    // State for right panel
     const [activeJobId, setActiveJobId] = useState(null);
     const [isRightPanelOpen, setIsRightPanelOpen] = useState(false);
 
-    // Функция для ручного открытия панели (например, для демо)
+    // Manual open handler
     const handleOpenVisualizer = (jobId) => {
         setActiveJobId(jobId);
         setIsRightPanelOpen(true);
     };
 
-    // Слушатель событий на window
+    // Window event listener
     useEffect(() => {
         const handler = (e) => handleOpenVisualizer(e.detail.jobId);
         window.addEventListener('open-ingestion-visualizer', handler);
@@ -28,79 +40,79 @@ const DashboardPage = () => {
     }, []);
 
     return (
-        <div className="page-content">
-            {/* Compact Header */}
-            <header style={{
-                height: '48px',
-                padding: '0 16px',
-                background: 'var(--bg-header)',
-                borderBottom: '1px solid var(--border-color)',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-            }}>
-                <div style={{ fontWeight: 500, fontSize: '14px', color: 'var(--un-navy)' }}>Operations Center</div>
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
+            {/* Header */}
+            <AppBar position="static" color="default" elevation={1} sx={{ bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider' }}>
+                <Toolbar variant="dense" sx={{ minHeight: 48, justifyContent: 'space-between' }}>
+                    <Typography variant="subtitle2" fontWeight="bold" color="text.primary">
+                        Operations Center
+                    </Typography>
 
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    {/* Compact Role Selector */}
-                    <select
-                        value={currentUser}
-                        onChange={(e) => setCurrentUser(e.target.value)}
-                        style={{ height: '28px', padding: '0 8px', fontSize: '12px' }}
-                    >
-                        <option value="manager@un.org">Manager</option>
-                        <option value="developer@un.org">Developer</option>
-                    </select>
+                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                        {/* Role Selector */}
+                        <FormControl size="small" variant="standard">
+                            <Select
+                                value={currentUser}
+                                onChange={(e) => setCurrentUser(e.target.value)}
+                                disableUnderline
+                                sx={{ fontSize: '0.875rem', fontWeight: 500 }}
+                            >
+                                <MenuItem value="manager@un.org">Manager</MenuItem>
+                                <MenuItem value="developer@un.org">Developer</MenuItem>
+                            </Select>
+                        </FormControl>
 
-                    <button
-                        onClick={() => setIsRightPanelOpen(!isRightPanelOpen)}
-                        className="btn-secondary"
-                        style={{ height: '28px', padding: '0 8px' }}
-                        title="Toggle Process View"
-                    >
-                        <Activity size={14} />
-                    </button>
-                </div>
-            </header>
+                        <Tooltip title="Toggle Process View">
+                            <IconButton
+                                onClick={() => setIsRightPanelOpen(!isRightPanelOpen)}
+                                size="small"
+                                color={isRightPanelOpen ? 'primary' : 'default'}
+                            >
+                                <Activity size={18} />
+                            </IconButton>
+                        </Tooltip>
+                    </Box>
+                </Toolbar>
+            </AppBar>
 
             {/* Resizable Content Area */}
-            <div style={{ flex: 1, overflow: 'hidden' }}>
+            <Box sx={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
                 <PanelGroup direction="horizontal">
 
                     {/* LEFT PANEL: CHAT */}
                     <Panel defaultSize={isRightPanelOpen ? 60 : 100} minSize={30}>
-                        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                             <ChatWindow messages={messages} />
                             <ChatInput onSend={sendMessage} disabled={isLoading} />
-                        </div>
+                        </Box>
                     </Panel>
 
                     {/* RIGHT PANEL: VISUALIZER (Conditional) */}
                     {isRightPanelOpen && (
                         <>
-                            <PanelResizeHandle style={{ width: '4px', background: 'var(--border-color)', cursor: 'col-resize' }} />
+                            <PanelResizeHandle style={{ width: '4px', background: 'var(--mui-palette-divider)', cursor: 'col-resize', position: 'relative', zIndex: 10 }} />
 
                             <Panel defaultSize={40} minSize={20}>
-                                <div style={{ height: '100%', overflowY: 'auto', background: 'var(--bg-app)', borderLeft: '1px solid var(--border-color)' }}>
+                                <Box sx={{ height: '100%', overflowY: 'auto', bgcolor: 'background.default', borderLeft: 1, borderColor: 'divider' }}>
                                     {activeJobId ? (
                                         <IngestionVisualizer
                                             jobId={activeJobId}
                                             onClose={() => setIsRightPanelOpen(false)}
                                         />
                                     ) : (
-                                        <div style={{ padding: '20px', color: 'var(--text-secondary)', textAlign: 'center', marginTop: '50px' }}>
+                                        <Box sx={{ p: 4, color: 'text.secondary', textAlign: 'center', mt: 6 }}>
                                             <Activity size={48} style={{ marginBottom: '10px', opacity: 0.5 }} />
-                                            <p>No active ETL processes.</p>
-                                            <p style={{ fontSize: '12px' }}>Start ingestion via Knowledge Base or Chat.</p>
-                                        </div>
+                                            <Typography variant="body1" gutterBottom>No active ETL processes.</Typography>
+                                            <Typography variant="caption">Start ingestion via Knowledge Base or Chat.</Typography>
+                                        </Box>
                                     )}
-                                </div>
+                                </Box>
                             </Panel>
                         </>
                     )}
                 </PanelGroup>
-            </div>
-        </div>
+            </Box>
+        </Box>
     );
 };
 

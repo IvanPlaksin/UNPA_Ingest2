@@ -88,109 +88,10 @@ h3 {
 }
 
 /* --- BUTTONS (Compact) --- */
-button {
-  font-family: inherit;
-  cursor: pointer;
-  transition: all 0.1s;
-  border-radius: var(--radius);
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.btn-primary {
-  background: var(--un-blue);
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  /* Compact padding */
-  height: 32px;
-  /* Fixed height */
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  justify-content: center;
-}
-
-.btn-primary:hover {
-  background: var(--un-blue-hover);
-}
-
-.btn-secondary {
-  background: white;
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-  padding: 6px 12px;
-  height: 32px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  justify-content: center;
-}
-
-.btn-secondary:hover {
-  background: #f5f5f5;
-  border-color: #ccc;
-}
-
-/* --- FORMS (Compact) --- */
-input[type="text"],
-select {
-  height: 32px;
-  /* Compact height */
-  padding: 0 8px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  font-size: 13px;
-  background: white;
-}
-
-input:focus,
-select:focus {
-  border-color: var(--un-blue);
-  outline: none;
-}
-
-label {
-  display: block;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  margin-bottom: 4px;
-}
+/* --- REMOVED GLOBAL FORM STYLES TO PREVENT MUI CONFLICTS --- */
 
 /* --- TABLE (High Density) --- */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-}
-
-th {
-  background: #FAFAFA;
-  color: var(--text-secondary);
-  font-weight: 700;
-  font-size: 11px;
-  text-transform: uppercase;
-  padding: 8px 12px;
-  /* Reduced padding */
-  border-bottom: 1px solid var(--border-color);
-  text-align: left;
-  height: 36px;
-}
-
-td {
-  padding: 6px 12px;
-  /* Very compact cells */
-  border-bottom: 1px solid #f0f0f0;
-  font-size: 13px;
-  height: 40px;
-  /* Target row height */
-  vertical-align: middle;
-}
-
-tr:hover td {
-  background-color: #f8fdff;
-}
+/* Global table styles removed to allow MUI to handle theming */
 
 /* Subtle hover */
 
@@ -327,64 +228,14 @@ tr:hover td {
 }
 
 /* --- FORMS (Compact) --- */
-input[type="text"],
-select {
-  height: 32px;
-  /* Compact height */
-  padding: 0 8px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  font-size: 13px;
-  background: white;
-}
+/* Global form styles removed to fix Dark Mode contrast */
 
-input:focus,
-select:focus {
-  border-color: var(--un-blue);
-  outline: none;
-}
-
-label {
-  display: block;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  margin-bottom: 4px;
-}
 
 /* --- TABLE (High Density) --- */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-}
+/* Global table styles removed to fix Dark Mode contrast */
+/* table { width: 100%; border-collapse: collapse; background: white; } */
+/* th { background: #FAFAFA; ... } */
 
-th {
-  background: #FAFAFA;
-  color: var(--text-secondary);
-  font-weight: 700;
-  font-size: 11px;
-  text-transform: uppercase;
-  padding: 8px 12px;
-  /* Reduced padding */
-  border-bottom: 1px solid var(--border-color);
-  text-align: left;
-  height: 36px;
-}
-
-td {
-  padding: 6px 12px;
-  /* Very compact cells */
-  border-bottom: 1px solid #f0f0f0;
-  font-size: 13px;
-  height: 40px;
-  /* Target row height */
-  vertical-align: middle;
-}
-
-tr:hover td {
-  background-color: #f8fdff;
-}
 
 /* Subtle hover */
 
