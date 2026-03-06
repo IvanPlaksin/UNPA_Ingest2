@@ -33,6 +33,11 @@ class NexusOrchestrator {
             tasks.push(this._analyzeKnowledgeBase(entityId, emit));
         }
 
+        // 4. SQL Extractions
+        if (activeSources.includes('sql')) {
+            tasks.push(this._analyzeSql(entityId, emit, context.sqlFilters));
+        }
+
         // Run all tasks (they emit their own progress)
         await Promise.all(tasks);
 
@@ -247,6 +252,113 @@ class NexusOrchestrator {
         emit('graph_update', mockGraph);
 
         emit('progress', { source: 'KB', message: 'Done.' });
+    }
+
+    async _analyzeSql(entityId, emit, filters = {}) {
+        emit('progress', { source: 'SQL', message: 'Searching SQL extraction sessions...' });
+
+        try {
+            const { IngestionGraphService } = require('./ingestion/ingestion-graph.service');
+            const memgraphService = require('./memgraph.service');
+            const ingestionGraph = new IngestionGraphService(memgraphService);
+
+            // Get completed sessions
+            const sessions = await ingestionGraph.getCompletedSessions(10);
+
+            if (!sessions || sessions.length === 0) {
+                emit('progress', { source: 'SQL', message: 'No SQL extraction sessions found.' });
+                return;
+            }
+
+            // Filter by database if specified
+            const filtered = filters.database
+                ? sessions.filter(s => s.sourceDatabase === filters.database)
+                : sessions;
+
+            emit('progress', { source: 'SQL', message: `Found ${filtered.length} extraction session(s). Loading entity graphs...` });
+
+            const allNodes = [];
+            const allEdges = [];
+            const addedIds = new Set();
+
+            for (const session of filtered) {
+                // Get entity graph for this session
+                const graphs = await this._getSessionKnowledgeGraphs(memgraphService, session.id);
+
+                for (const graph of graphs) {
+                    if (filters.minQuality && session.qualityScore < filters.minQuality) continue;
+                    if (graph.graphType === 'anomalies' && !filters.includeAnomalies) continue;
+                    if (graph.graphType === 'businessLogic' && filters.includeRules === false) continue;
+
+                    const graphData = await ingestionGraph.getKnowledgeGraph(graph.id);
+                    if (!graphData || !graphData.nodes.length) continue;
+
+                    // Convert to NEXUS format
+                    for (const node of graphData.nodes) {
+                        const nexusId = `sql_${session.id.slice(0, 8)}_${node.id}`;
+                        if (addedIds.has(nexusId)) continue;
+                        addedIds.add(nexusId);
+
+                        allNodes.push({
+                            id: nexusId,
+                            label: node.entityName || node.name || node.label || node.id,
+                            type: this._mapSqlNodeType(node.type || graph.graphType),
+                            source: 'SQL',
+                            state: graph.graphType,
+                            data: {
+                                ...node,
+                                sourceDatabase: session.sourceDatabase,
+                                sourceServer: session.sourceServer,
+                                sessionId: session.id,
+                                graphType: graph.graphType,
+                            },
+                        });
+                    }
+
+                    for (const edge of graphData.edges) {
+                        allEdges.push({
+                            source: `sql_${session.id.slice(0, 8)}_${edge.source}`,
+                            target: `sql_${session.id.slice(0, 8)}_${edge.target}`,
+                            label: edge.type || 'relates_to',
+                        });
+                    }
+                }
+            }
+
+            if (allNodes.length > 0) {
+                emit('graph_update', { nodes: allNodes, edges: allEdges });
+            }
+
+            emit('progress', { source: 'SQL', message: `SQL: ${allNodes.length} nodes, ${allEdges.length} edges from ${filtered.length} session(s).` });
+
+        } catch (error) {
+            console.error('[Nexus] SQL analysis error:', error);
+            emit('progress', { source: 'SQL', message: `SQL analysis failed: ${error.message}` });
+        }
+    }
+
+    async _getSessionKnowledgeGraphs(memgraphService, sessionId) {
+        try {
+            const results = await memgraphService.runQuery(`
+                MATCH (s:IngestionSession {id: $sessionId})-[:PRODUCED_GRAPH]->(g:KnowledgeGraph)
+                RETURN g.id as id, g.graphType as graphType, g.nodeCount as nodeCount
+            `, { sessionId });
+            return results || [];
+        } catch (err) {
+            console.warn(`[Nexus] Failed to get graphs for session ${sessionId}:`, err.message);
+            return [];
+        }
+    }
+
+    _mapSqlNodeType(type) {
+        const mapping = {
+            'MasterTable': 'entity', 'ReferenceTable': 'reference',
+            'TransactionTable': 'transaction', 'JunctionTable': 'reference',
+            'entities': 'entity', 'relationships': 'entity',
+            'businessLogic': 'rule', 'lifecycle': 'transaction',
+            'structure': 'entity', 'anomalies': 'warning',
+        };
+        return mapping[type] || 'entity';
     }
 
     _sleep(ms) {

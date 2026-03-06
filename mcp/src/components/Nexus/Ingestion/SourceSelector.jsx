@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Database, GitBranch, FolderOpen, ToggleLeft, ToggleRight, Check, ChevronDown, ChevronRight, FileText } from 'lucide-react';
+import { Database, GitBranch, FolderOpen, ToggleLeft, ToggleRight, Check, ChevronDown, ChevronRight, FileText, TableProperties } from 'lucide-react';
 import {
     Box,
     List,
@@ -198,6 +198,17 @@ const SourceSelector = ({ activeSources = [], lockedSources = [], sourceStatus =
                         <Typography variant="caption">readme.md</Typography>
                     </Box>
                 </Stack>
+            </SourceItem>
+
+            <SourceItem
+                id="sql"
+                label="SQL Extractions"
+                icon={TableProperties}
+                description="Extracted database entities & relationships"
+            >
+                <Typography variant="caption" color="text.secondary" fontStyle="italic">
+                    Entities and relationships from SQL Server extraction sessions.
+                </Typography>
             </SourceItem>
         </List>
     );

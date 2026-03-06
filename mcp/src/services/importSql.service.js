@@ -231,6 +231,7 @@ export const startAgentImport = (domainId, connectionName, options = {}, callbac
     'consulting_history', 'similar_sessions_found', 'strategy_adapted',
     'llm_call_start', 'llm_call_complete', 'llm_call_error',
     'decision_made', 'log',
+    'persisting_to_catalog', 'catalog_save_complete', 'catalog_save_error',
   ];
 
   agentEvents.forEach(eventType => {

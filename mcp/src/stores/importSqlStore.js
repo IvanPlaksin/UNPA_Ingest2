@@ -59,6 +59,13 @@ const initialState = {
   agentEvents: [],       // Recent SSE events for live log
   showAgentResults: false,
 
+  // === CATALOG INTEGRATION ===
+  agentCatalogEntries: [],     // [{ graphType, entryId, versionId }]
+  agentCatalogDuplicates: [],  // [{ graphType, existingEntryId }]
+
+  // === ANOMALIES (iNeed task generation) ===
+  agentAnomalies: [],          // [{ id, type, severity, description, table, affectedTables, count, hasTask }]
+
   // === GNN ANALYSIS ===
   lastImportedGraphData: null, // { nodes: [...], edges: [...] } — snapshot for GNN analysis
   showGnnPrompt: false,
@@ -206,6 +213,7 @@ const useImportSqlStore = create(
         agentQualityScore: null,
         agentCurrentPhase: null,
         agentEvents: [],
+        agentAnomalies: [],
         showAgentResults: false,
         importStatus: 'analyzing',
         logs: [],
@@ -291,6 +299,20 @@ const useImportSqlStore = create(
       toggleAgentResults: (show) => set(state => ({
         showAgentResults: show !== undefined ? show : !state.showAgentResults,
       }), false, 'toggleAgentResults'),
+
+      // === CATALOG INTEGRATION ACTIONS ===
+      setCatalogResult: (entries, duplicates) => set({
+        agentCatalogEntries: entries || [],
+        agentCatalogDuplicates: duplicates || [],
+      }, false, 'setCatalogResult'),
+
+      // === ANOMALY ACTIONS ===
+      setAgentAnomalies: (anomalies) => set({ agentAnomalies: anomalies || [] }, false, 'setAgentAnomalies'),
+      markAnomalyTaskCreated: (anomalyId) => set(state => ({
+        agentAnomalies: state.agentAnomalies.map(a =>
+          a.id === anomalyId ? { ...a, hasTask: true } : a
+        ),
+      }), false, 'markAnomalyTaskCreated'),
 
       // === GNN ANALYSIS ACTIONS ===
       showGnnAnalysisPrompt: (graphData) => set({

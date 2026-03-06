@@ -360,6 +360,19 @@ export default function ImportSqlSelector() {
             case 'graph_ready':
               s.addLog('success', `Graph ${payload.type}: ${payload.nodes} nodes, ${payload.edges} edges`);
               break;
+            case 'catalog_save_complete':
+              s.setCatalogResult(payload.entries, []);
+              s.addLog('success', `Saved ${payload.saved} graph(s) to Catalog${payload.duplicates ? ` (${payload.duplicates} duplicates skipped)` : ''}`);
+              break;
+            case 'catalog_save_error':
+              s.addLog('warning', `Catalog save failed: ${payload.error}`);
+              break;
+            case 'anomaly_found':
+              s.addLog('warning', `Anomaly: [${payload.severity}] ${payload.type} — ${payload.description}`);
+              break;
+            case 'validation_complete':
+              s.addLog('info', `Validation: coverage ${payload.coverage}%, ${payload.anomalyCount} anomalies, quality ${Math.round((payload.qualityScore || 0) * 100)}%`);
+              break;
             case 'log':
               s.addLog(payload.level || 'info', payload.message);
               break;
@@ -372,6 +385,7 @@ export default function ImportSqlSelector() {
           const s = useImportSqlStore.getState();
           s.setAgentComplete(payload);
           if (payload.graphs) s.setAgentGraphs(payload.graphs);
+          if (payload.summary?.anomalies) s.setAgentAnomalies(payload.summary.anomalies);
           s.addLog('success', `Agent extraction complete! Quality: ${Math.round((payload.qualityScore || 0) * 100)}%`);
         },
         onError: (payload) => {

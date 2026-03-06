@@ -2,7 +2,7 @@
  * ImportSqlResults
  *
  * Container for displaying agentic import results.
- * Four sub-tabs: Summary, Graphs, Process Log, AI Assistant.
+ * Four sub-tabs: Summary, Graphs, Anomalies, Process Log.
  */
 
 import React, { useState, useMemo } from 'react';
@@ -12,7 +12,7 @@ import {
   Button, LinearProgress,
 } from '@mui/material';
 import {
-  BarChart3, Network, ScrollText, MessageSquare,
+  BarChart3, Network, ScrollText,
   ExternalLink, Download, X,
   CheckCircle2, AlertTriangle, XCircle,
 } from 'lucide-react';
@@ -20,11 +20,13 @@ import {
 import useImportSqlStore from '../../stores/importSqlStore';
 import MiniGraphView from './MiniGraphView';
 import ProcessLog from './ProcessLog';
+import AnomaliesTab from './AnomaliesTab';
 
 const TAB_CONFIG = [
-  { id: 'summary',  label: 'Summary',     icon: BarChart3 },
-  { id: 'graphs',   label: 'Graphs',      icon: Network },
-  { id: 'process',  label: 'Process Log', icon: ScrollText },
+  { id: 'summary',    label: 'Summary',     icon: BarChart3 },
+  { id: 'graphs',     label: 'Graphs',      icon: Network },
+  { id: 'anomalies',  label: 'Anomalies',   icon: AlertTriangle },
+  { id: 'process',    label: 'Process Log', icon: ScrollText },
 ];
 
 export default function ImportSqlResults({ onClose, onOpenInGXE, onRestartPhase }) {
@@ -37,13 +39,19 @@ export default function ImportSqlResults({ onClose, onOpenInGXE, onRestartPhase 
     phases,
     qualityScore,
     status,
+    catalogEntries,
+    catalogDuplicates,
+    anomalies,
   } = useImportSqlStore(useShallow(state => ({
-    sessionId:      state.agentSessionId,
-    sessionSummary: state.agentSummary,
-    graphs:         state.agentGraphs,
-    phases:         state.agentPhases,
-    qualityScore:   state.agentQualityScore,
-    status:         state.agentStatus,
+    sessionId:         state.agentSessionId,
+    sessionSummary:    state.agentSummary,
+    graphs:            state.agentGraphs,
+    phases:            state.agentPhases,
+    qualityScore:      state.agentQualityScore,
+    status:            state.agentStatus,
+    catalogEntries:    state.agentCatalogEntries,
+    catalogDuplicates: state.agentCatalogDuplicates,
+    anomalies:         state.agentAnomalies,
   })));
 
   const statusIcon = useMemo(() => {
@@ -56,9 +64,11 @@ export default function ImportSqlResults({ onClose, onOpenInGXE, onRestartPhase 
   const renderTabContent = () => {
     switch (activeTab) {
       case 'summary':
-        return <SummaryTab summary={sessionSummary} qualityScore={qualityScore} />;
+        return <SummaryTab summary={sessionSummary} qualityScore={qualityScore} catalogEntries={catalogEntries} catalogDuplicates={catalogDuplicates} />;
       case 'graphs':
         return <GraphsTab graphs={graphs} onOpenInGXE={onOpenInGXE} />;
+      case 'anomalies':
+        return <AnomaliesTab anomalies={anomalies} sessionId={sessionId} onTaskCreated={(anomalyId) => useImportSqlStore.getState().markAnomalyTaskCreated(anomalyId)} />;
       case 'process':
         return <ProcessLog phases={phases} onRestartPhase={onRestartPhase} />;
       default:
@@ -126,6 +136,17 @@ export default function ImportSqlResults({ onClose, onOpenInGXE, onRestartPhase 
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <tab.icon size={16} />
                 {tab.label}
+                {tab.id === 'anomalies' && anomalies?.length > 0 && (
+                  <Chip
+                    label={anomalies.length}
+                    size="small"
+                    sx={{
+                      height: 18, minWidth: 18, fontSize: 10,
+                      bgcolor: anomalies.some(a => a.severity === 'high') ? '#da3633' : '#9e6a03',
+                      color: 'white',
+                    }}
+                  />
+                )}
               </Box>
             }
           />
@@ -173,7 +194,7 @@ export default function ImportSqlResults({ onClose, onOpenInGXE, onRestartPhase 
 // SummaryTab
 // ═══════════════════════════════════════════════════════════════════
 
-function SummaryTab({ summary, qualityScore }) {
+function SummaryTab({ summary, qualityScore, catalogEntries = [], catalogDuplicates = [] }) {
   if (!summary) return <Typography color="#8b949e">No summary available</Typography>;
 
   const metrics = [
@@ -241,6 +262,36 @@ function SummaryTab({ summary, qualityScore }) {
           sx={{ bgcolor: '#21262d', color: '#8b949e' }}
         />
       </Box>
+
+      {/* Catalog Integration */}
+      {catalogEntries.length > 0 && (
+        <Box sx={{ mt: 3 }}>
+          <Typography variant="subtitle2" sx={{ color: '#8b949e', mb: 1 }}>
+            Saved to Graph Catalog
+          </Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            {catalogEntries.map(entry => (
+              <Chip
+                key={entry.entryId}
+                label={entry.graphType}
+                size="small"
+                icon={<CheckCircle2 size={14} />}
+                sx={{
+                  bgcolor: '#238636',
+                  color: 'white',
+                  textTransform: 'capitalize',
+                  '& .MuiChip-icon': { color: 'white' },
+                }}
+              />
+            ))}
+          </Box>
+          {catalogDuplicates.length > 0 && (
+            <Typography sx={{ color: '#8b949e', fontSize: 11, mt: 1 }}>
+              {catalogDuplicates.length} graph(s) already existed in catalog
+            </Typography>
+          )}
+        </Box>
+      )}
     </Box>
   );
 }

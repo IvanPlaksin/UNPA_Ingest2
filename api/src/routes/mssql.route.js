@@ -362,4 +362,34 @@ router.get('/agent-import', streamAgentImport);
  */
 router.post('/assistant', assistantChat);
 
+/**
+ * GET /api/v1/mssql/extraction-sessions
+ * List completed extraction sessions (for NEXUS SQL source filters).
+ */
+router.get('/extraction-sessions', async (req, res) => {
+  try {
+    const { IngestionGraphService } = require('../services/ingestion/ingestion-graph.service');
+    const memgraphService = require('../services/memgraph.service');
+    const ingestionGraph = new IngestionGraphService(memgraphService);
+
+    const sessions = await ingestionGraph.getCompletedSessions(50);
+
+    res.json({
+      success: true,
+      sessions: (sessions || []).map(s => ({
+        id: s.id,
+        sourceDatabase: s.sourceDatabase,
+        sourceServer: s.sourceServer,
+        completedAt: s.completedAt,
+        qualityScore: s.qualityScore,
+        tablesProcessed: s.tablesProcessed,
+        entitiesDiscovered: s.entitiesDiscovered,
+      })),
+    });
+  } catch (error) {
+    console.error('[MSSQL] Get extraction sessions error:', error);
+    res.json({ success: true, sessions: [] }); // Graceful fallback
+  }
+});
+
 module.exports = router;

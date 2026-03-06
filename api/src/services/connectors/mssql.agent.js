@@ -176,6 +176,42 @@ class MssqlAgent {
         }
       }
 
+      // Save to Graph Catalog (non-blocking — failure doesn't affect session)
+      if (this.session.context.graphs?.length > 0) {
+        try {
+          const { catalogIntegrationService } = require('../ingestion/catalog-integration.service');
+          const connInfo = this.connector?.getConnectionInfo?.() || {};
+
+          this.emit('persisting_to_catalog', { graphCount: this.session.context.graphs.length });
+
+          const catalogResult = await catalogIntegrationService.saveExtractedGraphs({
+            sessionId: this.session.id,
+            sourceDatabase: connInfo.databaseName || 'unknown',
+            sourceServer: connInfo.server || 'unknown',
+            graphs: this.session.context.graphs,
+            summary: {
+              tablesProcessed: this.session.context.databaseMap?.totalTables || 0,
+              entitiesDiscovered: this.session.context.entityRegistry?.totalAnalyzed || 0,
+              rulesExtracted: this.session.context.businessRules?.procedures?.length || 0,
+              qualityScore: this.session.context.validationResults?.coveragePercent
+                ? this.session.context.validationResults.coveragePercent / 100 : 0,
+            },
+          });
+
+          this.session.catalogEntries = catalogResult.savedEntries;
+
+          this.emit('catalog_save_complete', {
+            saved: catalogResult.savedEntries.length,
+            duplicates: catalogResult.skippedDuplicates.length,
+            errors: catalogResult.errors.length,
+            entries: catalogResult.savedEntries,
+          });
+        } catch (err) {
+          this.emit('catalog_save_error', { error: err.message });
+          this.emit('log', { level: 'warning', message: `Catalog integration failed: ${err.message}` });
+        }
+      }
+
       this.emit('agent_complete', {
         sessionId: this.session.id,
         phases: this.session.phases.length,

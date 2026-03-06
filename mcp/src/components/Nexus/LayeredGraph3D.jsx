@@ -57,6 +57,7 @@ const LayeredGraph3D = ({ graphData, onNodeClick, selectedNode, mainPlaneZ = 0 }
         if (node.type === 'Commit' || node.source === 'Git') borderColor = '#F05033';
         if (node.type === 'File' || node.source === 'KB') borderColor = '#FFB13B';
         if (node.type === 'Artifact') borderColor = '#808080'; // Gray for generic artifacts
+        if (node.source === 'SQL') borderColor = '#A855F7'; // Purple for SQL extractions
 
         // Override for Selection
         if (isSelected) {

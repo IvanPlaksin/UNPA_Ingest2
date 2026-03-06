@@ -72,6 +72,11 @@ const AGENT_EVENTS = {
 
   // === AGENT DECISIONS ===
   decision_made: { payload: ['type', 'subject', 'chosen', 'confidence', 'reasoning'] },
+
+  // === CATALOG INTEGRATION ===
+  persisting_to_catalog:  { payload: ['graphCount'] },
+  catalog_save_complete:  { payload: ['saved', 'duplicates', 'errors', 'entries'] },
+  catalog_save_error:     { payload: ['error'] },
 };
 
 module.exports = { AGENT_EVENTS };
