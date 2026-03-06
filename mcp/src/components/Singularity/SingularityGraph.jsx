@@ -231,6 +231,22 @@ const SingularityGraph = ({ rootId }) => {
     const [hoverNode, setHoverNode] = useState(null);
     const [activeLayer, setActiveLayer] = useState(null); // 'epic' | 'workitem' | 'file'
 
+    // -- TOOLTIP STATE --
+    const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, content: null, type: null });
+    const mousePos = useRef({ x: 0, y: 0 });
+
+    // Track Global Mouse Position for Tooltip
+    useEffect(() => {
+        const handleMouseMove = (e) => {
+            mousePos.current = { x: e.clientX, y: e.clientY };
+            if (tooltip.visible) {
+                setTooltip(prev => ({ ...prev, x: e.clientX, y: e.clientY }));
+            }
+        };
+        window.addEventListener('mousemove', handleMouseMove);
+        return () => window.removeEventListener('mousemove', handleMouseMove);
+    }, [tooltip.visible]);
+
     // -- HOVER LOGIC --
     // LAYER HOVER (LEGEND)
     const handleLayerHover = useCallback((layerId) => {
@@ -274,6 +290,19 @@ const SingularityGraph = ({ rootId }) => {
         setHoverNode(node || null);
 
         if (node) {
+            // Tooltip Logic
+            setTooltip({
+                visible: true,
+                x: mousePos.current.x,
+                y: mousePos.current.y,
+                type: 'node',
+                content: {
+                    title: node.name || `Node ${node.id}`,
+                    subtitle: `${(node.type || 'Item').toUpperCase()} | ID: ${node.id}`,
+                    details: node.data?.fields?.['System.State'] || 'Active'
+                }
+            });
+
             const neighbors = new Set();
             const links = new Set();
 
@@ -289,10 +318,38 @@ const SingularityGraph = ({ rootId }) => {
             setHighlightNodes(neighbors);
             setHighlightLinks(links);
         } else {
+            setTooltip(prev => ({ ...prev, visible: false }));
             setHighlightNodes(new Set());
             setHighlightLinks(new Set());
         }
     }, [graphData.links, hoverNode, highlightNodes, activeLayer]);
+
+    const handleLinkHover = useCallback((link) => {
+        if (activeLayer) return;
+
+        if (link) {
+            setHighlightLinks(new Set([link]));
+            const s = typeof link.source === 'object' ? link.source.id : link.source;
+            const t = typeof link.target === 'object' ? link.target.id : link.target;
+            setHighlightNodes(new Set([s, t]));
+
+            setTooltip({
+                visible: true,
+                x: mousePos.current.x,
+                y: mousePos.current.y,
+                type: 'link',
+                content: {
+                    title: link.type || 'Relation',
+                    subtitle: `${link.source.name || s} -> ${link.target.name || t}`,
+                    details: 'Link'
+                }
+            });
+        } else {
+            setHighlightLinks(new Set());
+            setHighlightNodes(new Set());
+            setTooltip(prev => ({ ...prev, visible: false }));
+        }
+    }, [activeLayer]);
 
     // -- CAMERA CONTROL --
     const moveCamera = useCallback((viewType) => {
@@ -894,6 +951,7 @@ const SingularityGraph = ({ rootId }) => {
 
                     // Interactions
                     onNodeHover={handleNodeHover}
+                    onLinkHover={handleLinkHover}
                     onNodeClick={node => {
                         if (settings.activeView === 'BLOCK_HIERARCHY') {
                             // Focus on Node logic (Fly camera to 2.5D front view of node)
@@ -917,6 +975,48 @@ const SingularityGraph = ({ rootId }) => {
                 }}>
                     <div style={{ fontSize: '24px', marginBottom: '10px' }}>INITIALIZING SINGULARITY FIELD</div>
                     <div style={{ fontSize: '14px', opacity: 0.7 }}>Calibrating Dimensions...</div>
+                </div>
+            )}
+
+            {/* CUSTOM CURSOR TOOLTIP */}
+            {tooltip.visible && tooltip.content && (
+                <div style={{
+                    position: 'fixed',
+                    top: tooltip.y + 20,
+                    left: tooltip.x + 20,
+                    backgroundColor: 'rgba(0, 5, 10, 0.9)',
+                    border: '1px solid #00FFFF',
+                    borderRadius: '4px',
+                    padding: '10px',
+                    zIndex: 9999,
+                    pointerEvents: 'none',
+                    backdropFilter: 'blur(5px)',
+                    boxShadow: '0 0 15px rgba(0, 255, 255, 0.3)',
+                    maxWidth: '300px',
+                    color: '#FFF',
+                    fontFamily: 'Orbitron, monospace' // Assuming font is available per theme
+                }}>
+                    <div style={{
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                        color: tooltip.type === 'node' ? '#00FFFF' : '#FFD700',
+                        borderBottom: '1px solid rgba(255,255,255,0.2)',
+                        paddingBottom: '5px',
+                        marginBottom: '5px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                    }}>
+                        {tooltip.type === 'node' && <span>⬢</span>}
+                        {tooltip.type === 'link' && <span>🔗</span>}
+                        {tooltip.content.title}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#AAAAAA', marginBottom: '3px' }}>
+                        {tooltip.content.subtitle}
+                    </div>
+                    <div style={{ fontSize: '10px', color: '#666', fontStyle: 'italic' }}>
+                        {tooltip.content.details}
+                    </div>
                 </div>
             )}
         </div>

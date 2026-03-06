@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, Server, Database, Cpu, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Activity, Server, Database, Cpu, Cloud, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { getHealth } from '../../services/api';
 import { Box, Paper, Typography, Stack, CircularProgress } from '@mui/material';
 
@@ -61,7 +61,7 @@ const ServiceStatusWidget = () => {
                 <Typography variant="subtitle2" fontWeight="bold">System Status</Typography>
             </Stack>
 
-            <StatusItem label="ADO" icon={Server} state={status.ado} />
+            <StatusItem label="DevOps Server" icon={Cloud} state={status.ado} />
             <StatusItem label="Redis" icon={Database} state={status.redis} />
             <StatusItem label="Worker" icon={Cpu} state={status.worker} />
 

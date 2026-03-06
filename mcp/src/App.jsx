@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useParams } from 'react-router-dom';
 import { ThemeProvider, createTheme, CssBaseline, Box } from '@mui/material';
 import { ChatProvider } from './context/ChatContext';
 import Sidebar from './components/Layout/Sidebar';
@@ -11,9 +11,14 @@ import RabbitHolePage from './pages/RabbitHolePage';
 import WorkItemNexusPage from './pages/WorkItemNexusPage';
 import TfvcBrowserPage from './pages/TfvcBrowserPage';
 import AgentPage from './pages/AgentPage';
-import SingularityPage from './pages/SingularityPage';
-import ExperimentalPage from './pages/ExperimentalPage';
+import SingularityGraph from './components/Singularity/SingularityGraph';
+
 // import './index.css'; // Removing in favor of CssBaseline and MUI styles
+
+const SingularityWrapper = () => {
+    const { id } = useParams();
+    return <SingularityGraph rootId={id} />;
+};
 
 function App() {
     const [mode, setMode] = useState('dark');
@@ -70,7 +75,7 @@ function App() {
                                 <Route path="/knowledge/rabbit-hole" element={<RabbitHolePage />} />
                                 <Route path="/workitems" element={<WorkItemsListPage />} />
                                 <Route path="/workitem/:id" element={<WorkItemPage />} />
-                                {/* Duplicate removed */}
+                                <Route path="/workitem/:id" element={<WorkItemPage />} />
 
                                 {/* Nexus Routes */}
                                 <Route path="/nexus/workitem/:id" element={<WorkItemNexusPage />} />
@@ -79,10 +84,11 @@ function App() {
                                 {/* Fallback/Legacy */}
                                 <Route path="/nexus/:id" element={<WorkItemNexusPage />} />
                                 <Route path="/knowledge/tfvc" element={<TfvcBrowserPage />} />
+
+                                {/* Singularity Test Route */}
+                                <Route path="/singularity/workitem/:id" element={<SingularityWrapper />} />
+
                                 <Route path="/agent" element={<AgentPage />} />
-                                <Route path="/singularity" element={<SingularityPage />} />
-                                <Route path="/singularity/workitem/:id" element={<SingularityPage />} />
-                                <Route path="/experimental" element={<ExperimentalPage />} />
                             </Routes>
                         </Box>
                     </Box>

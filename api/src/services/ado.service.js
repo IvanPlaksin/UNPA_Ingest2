@@ -331,8 +331,12 @@ async function getWorkItemById(id) {
 async function checkHealth() {
     if (!witApi) return false;
     try {
-        return true;
+        // Make a lightweight API call to verify connectivity
+        const coreApi = await authHandler.getCoreApi();
+        const projects = await coreApi.getProjects(undefined, 1); // Get just 1 project
+        return projects && projects.length >= 0; // Return true if we got a response
     } catch (e) {
+        console.error("ADO health check failed:", e.message);
         return false;
     }
 }
