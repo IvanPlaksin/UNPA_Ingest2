@@ -172,36 +172,41 @@ class GxeIntegrationService {
     // Note: Memgraph uses // for line comments in Cypher; avoid them inside node literals.
     // Using ISO string directly (no datetime() wrapper — Memgraph stores as string).
     const query = `
-      CREATE (g:DomainGraph:BehavioralProcess {
-        id: $graphId,
-        globalId: $globalId,
-        domain: $domain,
-        domainVersion: 1,
-        status: $status,
-        statusChangedAt: $now,
-        statusChangedBy: 'system',
-        statusReason: 'Auto-extracted from SQL',
-        extractionSessionId: $sessionId,
-        sourceSystem: 'MSSQL',
-        sourceReference: $sourceRef,
-        confidence: $confidence,
-        humanValidated: false,
-        title: $title,
-        description: $description,
+      MERGE (g:DomainGraph:BehavioralProcess {
         procedureName: $procedureName,
-        procedureSchema: $procedureSchema,
-        isExecutable: true,
-        executionCount: 0,
-        sqlComplexity: $complexity,
-        translationConfidence: $confidence,
-        nodesJson: $nodesJson,
-        edgesJson: $edgesJson,
-        inputSchemaJson: $inputSchemaJson,
-        outputSchemaJson: $outputSchemaJson,
-        metadataJson: $metadataJson,
-        createdAt: $now,
-        updatedAt: $now
+        procedureSchema: $procedureSchema
       })
+      ON CREATE SET
+        g.id = $graphId,
+        g.globalId = $globalId,
+        g.domain = $domain,
+        g.domainVersion = 1,
+        g.status = $status,
+        g.statusChangedAt = $now,
+        g.statusChangedBy = 'system',
+        g.statusReason = 'Auto-extracted from SQL',
+        g.sourceSystem = 'MSSQL',
+        g.isExecutable = true,
+        g.executionCount = 0,
+        g.humanValidated = false,
+        g.createdAt = $now
+      ON MATCH SET
+        g.id = $graphId
+      SET
+        g.extractionSessionId = $sessionId,
+        g.sourceReference = $sourceRef,
+        g.confidence = $confidence,
+        g.title = $title,
+        g.description = $description,
+        g.sqlComplexity = $complexity,
+        g.translationConfidence = $confidence,
+        g.nodesJson = $nodesJson,
+        g.edgesJson = $edgesJson,
+        g.inputSchemaJson = $inputSchemaJson,
+        g.outputSchemaJson = $outputSchemaJson,
+        g.metadataJson = $metadataJson,
+        g.originalSql = $originalSql,
+        g.updatedAt = $now
       RETURN g.id as id
     `;
 
@@ -224,6 +229,7 @@ class GxeIntegrationService {
       inputSchemaJson: JSON.stringify(translation.inputSchema),
       outputSchemaJson: JSON.stringify(translation.outputSchema),
       metadataJson: JSON.stringify(translation.metadata),
+      originalSql: procedure.sql || translation.originalSql || '',
     };
 
     await this.memgraphService.runQuery(query, params);
@@ -240,7 +246,12 @@ class GxeIntegrationService {
   async _createBehavioralNodes(graphId, nodes) {
     if (!nodes || nodes.length === 0) return;
 
-    // Create nodes one at a time — Memgraph UNWIND + CREATE can be tricky
+    // Delete existing behavioral nodes for this graph before re-creating
+    await this.memgraphService.runQuery(
+      'MATCH (g:DomainGraph {id: $graphId})-[:CONTAINS_NODE]->(n:BehavioralNode) DETACH DELETE n',
+      { graphId }
+    ).catch(() => {});
+
     for (const node of nodes) {
       const query = `
         MATCH (g:DomainGraph {id: $graphId})
@@ -324,6 +335,12 @@ class GxeIntegrationService {
    */
   async _createCrossDomainEdges(graphId, translation, context) {
     const edges = [];
+
+    // Remove existing cross-domain edges for this graph before re-creating
+    await this.memgraphService.runQuery(
+      'MATCH (g:DomainGraph {id: $graphId})-[e:CROSS_DOMAIN]->() DELETE e',
+      { graphId }
+    ).catch(() => {});
 
     // OPERATES_ON edges to structural entities (tables)
     const referencedTables = translation.metadata.referencedTables || [];

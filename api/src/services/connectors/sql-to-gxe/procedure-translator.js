@@ -141,6 +141,16 @@ class SqlProcedureTranslator {
       // 8. Validate result
       this._validateGraph(result);
 
+      // Post-process: extract referenced tables from SQL if AST missed them
+      if (sql && result.metadata.referencedTables.length === 0) {
+        const sqlTables = this._extractTablesFromSql(sql);
+        for (const t of sqlTables) {
+          if (!result.metadata.referencedTables.includes(t)) {
+            result.metadata.referencedTables.push(t);
+          }
+        }
+      }
+
       result.success = result.errors.length === 0;
     } catch (error) {
       result.addError(`Translation failed: ${error.message}`);
@@ -176,6 +186,17 @@ class SqlProcedureTranslator {
       }
 
       this._validateGraph(result);
+
+      // Post-process: extract referenced tables from SQL if AST missed them
+      if (procedureInfo.sql && result.metadata.referencedTables.length === 0) {
+        const sqlTables = this._extractTablesFromSql(procedureInfo.sql);
+        for (const t of sqlTables) {
+          if (!result.metadata.referencedTables.includes(t)) {
+            result.metadata.referencedTables.push(t);
+          }
+        }
+      }
+
       result.success = result.errors.length === 0;
     } catch (error) {
       result.addError(`Translation failed: ${error.message}`);
@@ -183,6 +204,65 @@ class SqlProcedureTranslator {
     }
 
     return result;
+  }
+
+  /**
+   * Extract table names from raw SQL using regex patterns.
+   * Fallback for when AST parsing doesn't populate entity data.
+   */
+  _extractTablesFromSql(sql) {
+    const tables = new Set();
+    const cleaned = sql
+      .replace(/--[^\n]*/g, '')            // remove single-line comments
+      .replace(/\/\*[\s\S]*?\*\//g, '');   // remove block comments
+
+    // FROM <table>, JOIN <table>
+    const fromPattern = /(?:FROM|JOIN)\s+(?:\[?dbo\]?\.)?\[?(\w+)\]?/gi;
+    let m;
+    while ((m = fromPattern.exec(cleaned)) !== null) {
+      const t = m[1];
+      if (!this._isSqlKeyword(t)) tables.add(t);
+    }
+
+    // INSERT INTO <table>
+    const insertPattern = /INSERT\s+(?:INTO\s+)?(?:\[?dbo\]?\.)?\[?(\w+)\]?/gi;
+    while ((m = insertPattern.exec(cleaned)) !== null) {
+      const t = m[1];
+      if (!this._isSqlKeyword(t)) tables.add(t);
+    }
+
+    // UPDATE <table>
+    const updatePattern = /UPDATE\s+(?:\[?dbo\]?\.)?\[?(\w+)\]?/gi;
+    while ((m = updatePattern.exec(cleaned)) !== null) {
+      const t = m[1];
+      if (!this._isSqlKeyword(t)) tables.add(t);
+    }
+
+    // DELETE FROM <table>
+    const deletePattern = /DELETE\s+(?:FROM\s+)?(?:\[?dbo\]?\.)?\[?(\w+)\]?/gi;
+    while ((m = deletePattern.exec(cleaned)) !== null) {
+      const t = m[1];
+      if (!this._isSqlKeyword(t)) tables.add(t);
+    }
+
+    // Filter out SQL pseudo-tables
+    tables.delete('inserted');
+    tables.delete('deleted');
+    tables.delete('INSERTED');
+    tables.delete('DELETED');
+
+    return [...tables];
+  }
+
+  _isSqlKeyword(word) {
+    const keywords = new Set([
+      'SELECT', 'FROM', 'WHERE', 'SET', 'VALUES', 'INTO',
+      'TABLE', 'INDEX', 'VIEW', 'PROCEDURE', 'FUNCTION',
+      'BEGIN', 'END', 'IF', 'ELSE', 'WHILE', 'RETURN',
+      'DECLARE', 'EXEC', 'EXECUTE', 'OUTPUT', 'AS',
+      'inserted', 'deleted', 'INSERTED', 'DELETED',
+    ]);
+    return keywords.has(word) || keywords.has(word.toUpperCase());
   }
 
   // ============================================================
@@ -566,12 +646,13 @@ class SqlProcedureTranslator {
       }
     }
 
-    // Track referenced tables
+    // Track referenced tables (exclude SQL pseudo-tables)
+    const pseudoTables = new Set(['inserted', 'deleted', 'INSERTED', 'DELETED']);
     const tables = [];
     if (gxeNode.data?.entity) tables.push(gxeNode.data.entity);
     if (gxeNode.data?.entities) tables.push(...gxeNode.data.entities);
     for (const t of tables) {
-      if (t && !result.metadata.referencedTables.includes(t)) {
+      if (t && !pseudoTables.has(t) && !result.metadata.referencedTables.includes(t)) {
         result.metadata.referencedTables.push(t);
       }
     }
