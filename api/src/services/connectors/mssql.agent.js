@@ -30,6 +30,7 @@ const { MssqlTableClassifier } = require('./mssql.classifier');
 const { MssqlStratifiedSampler } = require('./mssql.sampler');
 const { MssqlAstParser } = require('./mssql.ast-parser');
 const { GxeIntegrationService } = require('./sql-to-gxe');
+const { SemanticDomainService } = require('../semantic');
 
 // ═══════════════════════════════════════════════════════════════════
 // Phase definitions
@@ -69,6 +70,10 @@ class MssqlAgent {
     this.gxeIntegration = new GxeIntegrationService({
       memgraphService: ingestionGraph?.memgraphService || null,
       catalogService: ingestionGraph?.catalogService || null,
+    });
+    this.semanticService = new SemanticDomainService({
+      memgraphService: ingestionGraph?.memgraphService || null,
+      llmService,
     });
 
     // Session state — grows across phases
@@ -946,6 +951,10 @@ class MssqlAgent {
       // Multi-domain: BEHAVIORAL graphs created via GxeIntegrationService
       behavioralGraphs: [],
       gxeStats: { translated: 0, failed: 0 },
+      // Multi-domain: D3 SEMANTIC content
+      semanticRules: [],
+      semanticCalculations: [],
+      semanticStats: { rulesCreated: 0, rulesFailed: 0, calcsCreated: 0, calcsFailed: 0, vocabCreated: 0 },
     };
 
     let procedures = [];
@@ -1087,8 +1096,91 @@ class MssqlAgent {
           }
         }
 
+        // Phase 6D: Collect semantic content (rules & calculations) for D3
+        // Extract from LLM-analyzed rules
+        if (merged.rules && Array.isArray(merged.rules)) {
+          for (const rule of merged.rules) {
+            businessRules.semanticRules.push({
+              name: typeof rule === 'string' ? rule.substring(0, 60) : rule.name || 'Rule',
+              expression: typeof rule === 'string' ? rule : rule.expression || '',
+              naturalLanguage: typeof rule === 'string' ? rule : rule.naturalLanguage || null,
+              ruleType: 'validation',
+              sourceProcedure: procName,
+              sourceSchema: proc.schema_name || 'dbo',
+              confidence: 0.7,
+            });
+          }
+        }
+        // Extract from AST-parsed rules
+        if (merged.astRules && Array.isArray(merged.astRules)) {
+          for (const rule of merged.astRules) {
+            businessRules.semanticRules.push({
+              name: typeof rule === 'string' ? rule.substring(0, 60) : rule.name || 'AST Rule',
+              expression: typeof rule === 'string' ? rule : rule.expression || '',
+              ruleType: 'validation',
+              sourceProcedure: procName,
+              sourceSchema: proc.schema_name || 'dbo',
+              confidence: 0.85,
+            });
+          }
+        }
+        // Extract from AST-parsed calculations
+        if (merged.calculations && Array.isArray(merged.calculations)) {
+          for (const calc of merged.calculations) {
+            businessRules.semanticCalculations.push({
+              name: typeof calc === 'string' ? calc : calc.variable || calc.name || 'Calculation',
+              formula: typeof calc === 'string' ? calc : calc.expression || calc.formula || '',
+              outputVariable: typeof calc === 'object' ? calc.variable : null,
+              dataType: typeof calc === 'object' ? calc.dataType : null,
+              sourceProcedure: procName,
+              sourceSchema: proc.schema_name || 'dbo',
+              confidence: 0.85,
+            });
+          }
+        }
+
       } catch (err) {
         this.emit('log', { level: 'warning', message: `Procedure analysis failed for ${procName}: ${err.message}` });
+      }
+    }
+
+    // Phase 6E: Persist semantic content to D3 domain in Memgraph
+    if (this.semanticService.memgraphService) {
+      this.emit('log', { level: 'info', message: 'Persisting semantic content to D3 domain...' });
+
+      if (businessRules.semanticRules.length > 0) {
+        const rulesResult = await this.semanticService.createRules(
+          businessRules.semanticRules,
+          { sessionId: this.session.id }
+        );
+        businessRules.semanticStats.rulesCreated = rulesResult.created.length;
+        businessRules.semanticStats.rulesFailed = rulesResult.failed.length;
+      }
+
+      if (businessRules.semanticCalculations.length > 0) {
+        const calcsResult = await this.semanticService.createCalculations(
+          businessRules.semanticCalculations,
+          { sessionId: this.session.id }
+        );
+        businessRules.semanticStats.calcsCreated = calcsResult.created.length;
+        businessRules.semanticStats.calcsFailed = calcsResult.failed.length;
+      }
+
+      // Generate vocabulary from procedure names
+      if (procedures.length > 0 && this.llm) {
+        try {
+          const procNames = procedures.map(p => ({
+            name: `${p.schema_name || 'dbo'}.${p.object_name || p.name}`,
+            type: 'procedure',
+          }));
+          const vocabResult = await this.semanticService.generateVocabulary(
+            procNames,
+            { sessionId: this.session.id }
+          );
+          businessRules.semanticStats.vocabCreated = vocabResult.created;
+        } catch (vocabErr) {
+          this.emit('log', { level: 'warning', message: `Vocabulary generation failed: ${vocabErr.message}` });
+        }
       }
     }
 
@@ -1102,7 +1194,8 @@ class MssqlAgent {
         `${businessRules.workflows.length} workflows, ` +
         `${businessRules.validations.length} validations, ` +
         `${businessRules.calculations.length} calculations, ` +
-        `${businessRules.gxeStats.translated} GXE-translated, ${businessRules.gxeStats.failed} GXE-failed`,
+        `${businessRules.gxeStats.translated} GXE-translated, ${businessRules.gxeStats.failed} GXE-failed, ` +
+        `D3: ${businessRules.semanticStats.rulesCreated} rules, ${businessRules.semanticStats.calcsCreated} calcs, ${businessRules.semanticStats.vocabCreated} vocab`,
     });
   }
 
@@ -1244,6 +1337,50 @@ class MssqlAgent {
         edges: 0,
         message: `${behavioralSummary.count} GXE-executable behavioral graphs stored in Memgraph`,
       });
+    }
+
+    // G4c: SEMANTIC GRAPH (D3) — rules, calculations from SemanticDomainService
+    if (this.semanticService.memgraphService) {
+      try {
+        const semanticContent = await this.semanticService.getSemanticContentForSession(this.session.id);
+        const semanticNodeCount = semanticContent.rules.length + semanticContent.calculations.length + semanticContent.concepts.length;
+
+        if (semanticNodeCount > 0) {
+          const semanticGraph = {
+            type: 'semantic',
+            title: 'Semantic Knowledge',
+            domain: 'SEMANTIC',
+            stats: {
+              rules: semanticContent.rules.length,
+              calculations: semanticContent.calculations.length,
+              concepts: semanticContent.concepts.length,
+            },
+            nodes: [
+              ...semanticContent.rules.map(r => ({
+                id: r.id,
+                type: 'rule',
+                data: { label: r.name, expression: r.expression, naturalLanguage: r.naturalLanguage, ruleType: r.ruleType },
+              })),
+              ...semanticContent.calculations.map(c => ({
+                id: c.id,
+                type: 'calculation',
+                data: { label: c.name, formula: c.formula, naturalLanguage: c.naturalLanguage, outputVariable: c.outputVariable },
+              })),
+              ...semanticContent.concepts.map(c => ({
+                id: c.id,
+                type: 'concept',
+                data: { label: c.name, description: c.description, businessContext: c.businessContext },
+              })),
+            ],
+            edges: [],
+          };
+
+          graphs.push(semanticGraph);
+          this.emit('graph_ready', { type: 'semantic', nodes: semanticNodeCount, stats: semanticGraph.stats });
+        }
+      } catch (semanticErr) {
+        this.emit('log', { level: 'warning', message: `Semantic graph synthesis failed: ${semanticErr.message}` });
+      }
     }
 
     // G5: LIFECYCLE GRAPH (if detected)
