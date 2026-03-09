@@ -29,6 +29,7 @@ const { v4: uuidv4 } = require('uuid');
 const { MssqlTableClassifier } = require('./mssql.classifier');
 const { MssqlStratifiedSampler } = require('./mssql.sampler');
 const { MssqlAstParser } = require('./mssql.ast-parser');
+const { GxeIntegrationService } = require('./sql-to-gxe');
 
 // ═══════════════════════════════════════════════════════════════════
 // Phase definitions
@@ -65,6 +66,10 @@ class MssqlAgent {
     this.classifier = new MssqlTableClassifier();
     this.sampler = new MssqlStratifiedSampler(connector);
     this.astParser = new MssqlAstParser();
+    this.gxeIntegration = new GxeIntegrationService({
+      memgraphService: ingestionGraph?.memgraphService || null,
+      catalogService: ingestionGraph?.catalogService || null,
+    });
 
     // Session state — grows across phases
     this.session = {
@@ -212,13 +217,7 @@ class MssqlAgent {
         }
       }
 
-      this.emit('agent_complete', {
-        sessionId: this.session.id,
-        phases: this.session.phases.length,
-        graphs: this.session.context.graphs?.length || 0,
-        duration: Date.now() - new Date(this.session.startedAt).getTime(),
-      });
-
+      // agent_complete is emitted by the controller with full summary data
       return {
         session: this.session,
         graphs: this.session.context.graphs || [],
@@ -228,10 +227,27 @@ class MssqlAgent {
     } catch (error) {
       this.session.status = 'failed';
       this.session.error = error.message;
+      this.session.completedAt = new Date().toISOString();
+
+      // Persist failure
+      if (this.ingestionGraph) {
+        try {
+          await this.ingestionGraph.completeSession(this.session.id, {
+            status: 'failed',
+            error: error.message,
+            durationMs: Date.now() - new Date(this.session.startedAt).getTime(),
+          });
+        } catch (_) {}
+      }
+
       this.emit('agent_error', {
         sessionId: this.session.id,
-        phase: this.session.phases[this.session.phases.length - 1]?.id,
-        error: error.message,
+        phase: error.phaseId || this.session.phases[this.session.phases.length - 1]?.phaseId,
+        phaseName: error.phaseName || 'Unknown',
+        phaseStep: error.phaseStep,
+        message: error.message,
+        stack: (error.originalStack || error.stack || '').split('\n').slice(0, 5).join('\n'),
+        recoverable: false,
       });
       throw error;
 
@@ -260,10 +276,9 @@ class MssqlAgent {
     this.session.phases.push(phaseRecord);
 
     this.emit('phase_start', {
-      sessionId: this.session.id,
-      phaseId: phase.id,
-      phaseName: phase.name,
-      step: phase.step,
+      phase: phase.id,
+      phaseNumber: phase.step,
+      description: phase.name,
       totalPhases: PHASES.length,
     });
 
@@ -312,12 +327,12 @@ class MssqlAgent {
       }
 
       this.emit('phase_complete', {
-        sessionId: this.session.id,
-        phaseId: phase.id,
-        step: phase.step,
-        durationMs: phaseRecord.durationMs,
-        toolCalls: phaseRecord.toolCalls,
-        llmCalls: phaseRecord.llmCalls,
+        phase: phase.id,
+        duration: phaseRecord.durationMs,
+        metrics: {
+          toolCalls: phaseRecord.toolCalls,
+          llmCalls: phaseRecord.llmCalls,
+        },
       });
 
     } catch (error) {
@@ -326,15 +341,25 @@ class MssqlAgent {
       phaseRecord.completedAt = new Date().toISOString();
       phaseRecord.durationMs = Date.now() - new Date(phaseRecord.startedAt).getTime();
 
+      // Persist failed phase
+      if (this.ingestionGraph) {
+        try { await this.ingestionGraph.recordPhase(this.session.id, phaseRecord); } catch (_) {}
+      }
+
       this.emit('phase_error', {
-        sessionId: this.session.id,
-        phaseId: phase.id,
+        phase: phase.id,
         error: error.message,
-        recoverable: true,
+        stack: error.stack,
+        recoverable: false,
       });
 
-      // Don't throw — allow pipeline to continue with partial results
-      console.warn(`[Agent] Phase ${phase.id} failed: ${error.message}`);
+      // Re-throw to stop the pipeline — caller handles agent_error
+      const pipelineError = new Error(`Phase ${phase.id} (${phase.name}) failed: ${error.message}`);
+      pipelineError.phaseId = phase.id;
+      pipelineError.phaseName = phase.name;
+      pipelineError.phaseStep = phase.step;
+      pipelineError.originalStack = error.stack;
+      throw pipelineError;
     }
   }
 
@@ -398,7 +423,7 @@ class MssqlAgent {
       ? allSchemas.filter(s => targetSchemas.includes(s.schema_name))
       : allSchemas.filter(s => !systemSchemas.includes(s.schema_name));
 
-    this.emit('schemas_found', { count: schemas.length, names: schemas.map(s => s.schema_name) });
+    this.emit('schemas_discovered', { count: schemas.length, schemas: schemas.map(s => s.schema_name) });
 
     // 1.2 Discover tables with row counts
     const allTables = [];
@@ -415,7 +440,7 @@ class MssqlAgent {
       }
     }
 
-    this.emit('tables_found', { total: allTables.length });
+    this.emit('tables_discovered', { count: allTables.length });
 
     // 1.3 Get columns, constraints and classify each table
     const classificationInputs = [];
@@ -436,7 +461,7 @@ class MssqlAgent {
           tableInfo: t,
           columns,
           constraints,
-          allColumns,
+          allColumns: Object.values(allColumns).flat(),
         });
 
         classificationInputs.push({ schema, table, tableInfo, columns, constraints });
@@ -485,12 +510,13 @@ class MssqlAgent {
 
     this.session.context.databaseMap = databaseMap;
 
-    this.emit('log', {
-      level: 'info',
-      message: `Classified ${allTables.length} tables: ` +
-        `${databaseMap.reference.length} ref, ${databaseMap.master.length} master, ` +
-        `${databaseMap.transaction.length} transaction, ${databaseMap.log.length} log, ` +
-        `${databaseMap.junction.length} junction, ${databaseMap.unknown.length} unknown`,
+    this.emit('tables_classified', {
+      reference: databaseMap.reference.length,
+      master: databaseMap.master.length,
+      transaction: databaseMap.transaction.length,
+      log: databaseMap.log.length,
+      junction: databaseMap.junction.length,
+      unknown: databaseMap.unknown.length,
     });
 
     // 1.7 LLM reflection on database structure
@@ -917,6 +943,9 @@ class MssqlAgent {
       validations: [],
       calculations: [],
       astStats: { parsed: 0, fallback: 0 },
+      // Multi-domain: BEHAVIORAL graphs created via GxeIntegrationService
+      behavioralGraphs: [],
+      gxeStats: { translated: 0, failed: 0 },
     };
 
     let procedures = [];
@@ -1022,6 +1051,42 @@ class MssqlAgent {
           businessRules: merged.rules?.length || merged.astRules?.length || 0,
         });
 
+        // Phase 6C: GXE Translation — create BEHAVIORAL domain graph
+        if (definition && this.gxeIntegration.memgraphService) {
+          try {
+            const gxeResult = await this.gxeIntegration.processProcedure(
+              {
+                name: procName,
+                schema: proc.schema_name || 'dbo',
+                sql: definition,
+                ast: astResult?.parsed ? astResult.ast : null,
+              },
+              {
+                sessionId: this.session.id,
+                sourceDatabase: this.session.context.databaseMap?.databaseName,
+                sourceServer: this.connector?.config?.server,
+              }
+            );
+
+            if (gxeResult.success) {
+              businessRules.behavioralGraphs.push({
+                procedureName: procName,
+                procedureSchema: proc.schema_name || 'dbo',
+                domainGraphId: gxeResult.domainGraphId,
+                catalogEntryId: gxeResult.catalogEntryId,
+                crossDomainEdges: gxeResult.crossDomainEdges.length,
+                confidence: gxeResult.translation?.confidence || 0,
+              });
+              businessRules.gxeStats.translated++;
+            } else {
+              businessRules.gxeStats.failed++;
+            }
+          } catch (gxeErr) {
+            businessRules.gxeStats.failed++;
+            this.emit('log', { level: 'warning', message: `GXE translation failed for ${procName}: ${gxeErr.message}` });
+          }
+        }
+
       } catch (err) {
         this.emit('log', { level: 'warning', message: `Procedure analysis failed for ${procName}: ${err.message}` });
       }
@@ -1036,7 +1101,8 @@ class MssqlAgent {
         `${businessRules.astStats.parsed} AST-parsed, ${businessRules.astStats.fallback} regex-fallback, ` +
         `${businessRules.workflows.length} workflows, ` +
         `${businessRules.validations.length} validations, ` +
-        `${businessRules.calculations.length} calculations`,
+        `${businessRules.calculations.length} calculations, ` +
+        `${businessRules.gxeStats.translated} GXE-translated, ${businessRules.gxeStats.failed} GXE-failed`,
     });
   }
 
@@ -1139,12 +1205,45 @@ class MssqlAgent {
       }
     }
 
-    // G4: BUSINESS PROCESS GRAPH
+    // G4: BUSINESS PROCESS GRAPH (legacy flat format)
     if (ctx.businessRules?.procedures?.length > 0) {
       this.emit('generating_graphs', { type: 'businessLogic', message: 'Building business logic graph...' });
       const blGraph = this._buildBusinessLogicGraph(ctx);
       graphs.push({ type: 'businessLogic', title: 'Business Logic', ...blGraph });
       this.emit('graph_ready', { type: 'businessLogic', nodes: blGraph.nodes.length, edges: blGraph.edges.length });
+    }
+
+    // G4b: BEHAVIORAL DOMAIN SUMMARY (multi-domain: DomainGraph refs from Phase 6 GXE translation)
+    if (ctx.businessRules?.behavioralGraphs?.length > 0) {
+      const behavioralSummary = {
+        type: 'behavioral',
+        title: 'Behavioral Processes (GXE)',
+        domain: 'BEHAVIORAL',
+        count: ctx.businessRules.behavioralGraphs.length,
+        graphIds: ctx.businessRules.behavioralGraphs.map(g => g.domainGraphId),
+        nodes: [],
+        edges: [],
+      };
+      // Create summary nodes for each translated procedure
+      for (const bg of ctx.businessRules.behavioralGraphs) {
+        behavioralSummary.nodes.push({
+          id: bg.domainGraphId,
+          type: 'procedure',
+          data: {
+            label: `${bg.procedureSchema}.${bg.procedureName}`,
+            domainGraphId: bg.domainGraphId,
+            catalogEntryId: bg.catalogEntryId,
+            confidence: bg.confidence,
+          },
+        });
+      }
+      graphs.push(behavioralSummary);
+      this.emit('graph_ready', {
+        type: 'behavioral',
+        nodes: behavioralSummary.nodes.length,
+        edges: 0,
+        message: `${behavioralSummary.count} GXE-executable behavioral graphs stored in Memgraph`,
+      });
     }
 
     // G5: LIFECYCLE GRAPH (if detected)
@@ -1567,11 +1666,12 @@ class MssqlAgent {
   // ═══════════════════════════════════════════════════════════════════
 
   async _connect(config) {
-    this.emit('log', { level: 'info', message: `Connecting to ${config.server}/${config.database}...` });
+    const resolvedPort = parseInt(config.port) || 1433;
+    this.emit('log', { level: 'info', message: `Connecting to ${config.server}:${resolvedPort}/${config.database}...` });
 
     const result = await this.connector.connect({
       server: config.server,
-      port: config.port || 1433,
+      port: resolvedPort,
       database: config.database,
       username: config.username,
       password: config.password,

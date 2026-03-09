@@ -76,6 +76,7 @@ const domainRoutes = require('./src/routes/domain.route');
 const mssqlRoutes = require('./src/routes/mssql.route');
 const anomalyTasksRoutes = require('./src/routes/anomaly-tasks.route');
 const advisorRoutes = require('./src/routes/advisor.route');
+const graphStatusRoutes = require('./src/routes/graph-status.route');
 
 // ═══════════════════════════════════════════════════════════════════
 // App Setup
@@ -161,6 +162,7 @@ app.use('/api/v1/domains', domainRoutes);
 app.use('/api/v1/mssql', mssqlRoutes);
 app.use('/api/v1/anomaly-tasks', anomalyTasksRoutes);
 app.use('/api/v1/advisor', advisorRoutes);
+app.use('/api/v1/graph-status', graphStatusRoutes);
 
 // ═══════════════════════════════════════════════════════════════════
 // Post-route Middleware (error handling)
