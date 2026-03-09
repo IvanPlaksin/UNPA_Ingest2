@@ -31,6 +31,7 @@ const { MssqlStratifiedSampler } = require('./mssql.sampler');
 const { MssqlAstParser } = require('./mssql.ast-parser');
 const { GxeIntegrationService } = require('./sql-to-gxe');
 const { SemanticDomainService } = require('../semantic');
+const { TemporalDomainService } = require('../temporal');
 
 // ═══════════════════════════════════════════════════════════════════
 // Phase definitions
@@ -72,6 +73,10 @@ class MssqlAgent {
       catalogService: ingestionGraph?.catalogService || null,
     });
     this.semanticService = new SemanticDomainService({
+      memgraphService: ingestionGraph?.memgraphService || null,
+      llmService,
+    });
+    this.temporalService = new TemporalDomainService({
       memgraphService: ingestionGraph?.memgraphService || null,
       llmService,
     });
@@ -734,6 +739,29 @@ class MssqlAgent {
     this.session.context.entityRegistry = entityRegistry;
     phaseRecord.tablesProcessed = masterTables.length;
 
+    // Phase 3D: Discover state machines from entity metadata
+    if (this.temporalService.memgraphService) {
+      try {
+        const tablesWithColumns = Object.entries(entityRegistry.entities || {}).map(([name, entity]) => ({
+          name: entity.entityName || name,
+          fullName: name,
+          columns: entity.attributes || [],
+        }));
+
+        const discoveredMachines = this.temporalService.discoverStateMachines(tablesWithColumns);
+        this.session.context.discoveredStateMachines = discoveredMachines;
+
+        if (discoveredMachines.length > 0) {
+          this.emit('log', {
+            level: 'info',
+            message: `Discovered ${discoveredMachines.length} potential state machines: ${discoveredMachines.map(m => m.entityName).join(', ')}`,
+          });
+        }
+      } catch (err) {
+        this.emit('log', { level: 'warning', message: `State machine discovery failed: ${err.message}` });
+      }
+    }
+
     this.emit('log', {
       level: 'info',
       message: `Entity discovery: ${entityRegistry.totalAnalyzed} entities from ${masterTables.length} master tables`,
@@ -1184,6 +1212,60 @@ class MssqlAgent {
       }
     }
 
+    // Phase 6F: Create state machines and infer transitions from procedures
+    if (this.temporalService.memgraphService && this.session.context.discoveredStateMachines?.length > 0) {
+      this.emit('log', { level: 'info', message: 'Creating state machines and inferring transitions...' });
+
+      const createdMachines = [];
+      for (const machineData of this.session.context.discoveredStateMachines) {
+        try {
+          // Link to entity if found
+          const entityId = this._findEntityId(machineData.entityName);
+          if (entityId) machineData.entityId = entityId;
+
+          const machine = await this.temporalService.createStateMachine(machineData, {
+            sessionId: this.session.id,
+            sourceDatabase: this.session.context.databaseMap?.databaseName,
+          });
+
+          // Find procedures that reference this entity's table
+          const relevantProcs = (businessRules.procedures || []).filter(p => {
+            const tables = p.affectedTables || [];
+            return tables.some(t =>
+              t.toLowerCase().includes(machineData.entityName.toLowerCase())
+            );
+          });
+
+          if (relevantProcs.length > 0) {
+            const procsWithDef = relevantProcs.map(p => ({
+              name: p.name,
+              schema: p.schema || 'dbo',
+              definition: p.definition || '',
+              domainGraphId: businessRules.behavioralGraphs?.find(
+                bg => bg.procedureName === p.name
+              )?.domainGraphId || null,
+            }));
+
+            const inferred = await this.temporalService.inferTransitionsFromProcedures(
+              machine.id, procsWithDef
+            );
+            machine.inferredTransitions = inferred.length;
+          }
+
+          createdMachines.push(machine);
+        } catch (err) {
+          this.emit('log', { level: 'warning', message: `State machine creation failed for ${machineData.entityName}: ${err.message}` });
+        }
+      }
+
+      this.session.context.stateMachines = createdMachines;
+      businessRules.temporalStats = {
+        machinesCreated: createdMachines.length,
+        totalStates: createdMachines.reduce((s, m) => s + (m.stateCount || 0), 0),
+        totalTransitions: createdMachines.reduce((s, m) => s + (m.transitionCount || 0) + (m.inferredTransitions || 0), 0),
+      };
+    }
+
     this.session.context.businessRules = businessRules;
     phaseRecord.tablesProcessed = procedures.length;
 
@@ -1195,7 +1277,8 @@ class MssqlAgent {
         `${businessRules.validations.length} validations, ` +
         `${businessRules.calculations.length} calculations, ` +
         `${businessRules.gxeStats.translated} GXE-translated, ${businessRules.gxeStats.failed} GXE-failed, ` +
-        `D3: ${businessRules.semanticStats.rulesCreated} rules, ${businessRules.semanticStats.calcsCreated} calcs, ${businessRules.semanticStats.vocabCreated} vocab`,
+        `D3: ${businessRules.semanticStats.rulesCreated} rules, ${businessRules.semanticStats.calcsCreated} calcs, ${businessRules.semanticStats.vocabCreated} vocab` +
+        (businessRules.temporalStats ? `, D4: ${businessRules.temporalStats.machinesCreated} machines, ${businessRules.temporalStats.totalTransitions} transitions` : ''),
     });
   }
 
@@ -1383,7 +1466,44 @@ class MssqlAgent {
       }
     }
 
-    // G5: LIFECYCLE GRAPH (if detected)
+    // G4d: TEMPORAL GRAPH (D4) — state machines from TemporalDomainService
+    if (this.temporalService.memgraphService) {
+      try {
+        const stateMachines = await this.temporalService.getStateMachinesForSession(this.session.id);
+
+        if (stateMachines.length > 0) {
+          const temporalGraph = {
+            type: 'temporal',
+            title: 'Lifecycle State Machines',
+            domain: 'TEMPORAL',
+            stats: { machines: stateMachines.length },
+            nodes: stateMachines.map(m => ({
+              id: m.id,
+              type: 'stateMachine',
+              data: {
+                label: m.name,
+                entityName: m.entityName,
+                stateColumn: m.stateColumn,
+                stateCount: m.stateCount,
+                transitionCount: m.transitionCount,
+              },
+            })),
+            edges: [],
+          };
+
+          graphs.push(temporalGraph);
+          this.emit('graph_ready', {
+            type: 'temporal',
+            nodes: temporalGraph.nodes.length,
+            stats: temporalGraph.stats,
+          });
+        }
+      } catch (temporalErr) {
+        this.emit('log', { level: 'warning', message: `Temporal graph synthesis failed: ${temporalErr.message}` });
+      }
+    }
+
+    // G5: LIFECYCLE GRAPH (if detected — legacy from Phase 5 transaction analysis)
     if (ctx.transactionPatterns?.lifecycles?.length > 0) {
       this.emit('generating_graphs', { type: 'lifecycle', message: 'Building lifecycle graph...' });
       const lcGraph = this._buildLifecycleGraph(ctx);
@@ -1412,6 +1532,27 @@ class MssqlAgent {
         `${graphs.reduce((s, g) => s + g.nodes.length, 0)} total nodes, ` +
         `${graphs.reduce((s, g) => s + g.edges.length, 0)} total edges`,
     });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // Cross-domain Helpers
+  // ═══════════════════════════════════════════════════════════════════
+
+  /**
+   * Find entity ID by name for cross-domain linking.
+   */
+  _findEntityId(entityName) {
+    const entities = this.session.context.entityRegistry?.entities || {};
+
+    // Exact match
+    if (entities[entityName]?.id) return entities[entityName].id;
+
+    // Case-insensitive match
+    const key = Object.keys(entities).find(k =>
+      k.toLowerCase() === entityName.toLowerCase() ||
+      (entities[k].entityName || '').toLowerCase() === entityName.toLowerCase()
+    );
+    return key ? entities[key]?.id : null;
   }
 
   // ═══════════════════════════════════════════════════════════════════
