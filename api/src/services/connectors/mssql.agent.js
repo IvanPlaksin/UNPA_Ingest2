@@ -30,6 +30,7 @@ const { MssqlTableClassifier } = require('./mssql.classifier');
 const { MssqlStratifiedSampler } = require('./mssql.sampler');
 const { MssqlAstParser } = require('./mssql.ast-parser');
 const { GxeIntegrationService } = require('./sql-to-gxe');
+const { StructuralDomainService } = require('../structural');
 const { SemanticDomainService } = require('../semantic');
 const { TemporalDomainService } = require('../temporal');
 
@@ -68,17 +69,22 @@ class MssqlAgent {
     this.classifier = new MssqlTableClassifier();
     this.sampler = new MssqlStratifiedSampler(connector);
     this.astParser = new MssqlAstParser();
+    // IngestionGraphService stores memgraph as .mg, not .memgraphService
+    const mgService = ingestionGraph?.mg || ingestionGraph?.memgraphService || null;
     this.gxeIntegration = new GxeIntegrationService({
-      memgraphService: ingestionGraph?.memgraphService || null,
+      memgraphService: mgService,
       catalogService: ingestionGraph?.catalogService || null,
     });
     this.semanticService = new SemanticDomainService({
-      memgraphService: ingestionGraph?.memgraphService || null,
+      memgraphService: mgService,
       llmService,
     });
     this.temporalService = new TemporalDomainService({
-      memgraphService: ingestionGraph?.memgraphService || null,
+      memgraphService: mgService,
       llmService,
+    });
+    this.structuralService = new StructuralDomainService({
+      memgraphService: mgService,
     });
 
     // Session state — grows across phases
@@ -762,6 +768,31 @@ class MssqlAgent {
       }
     }
 
+    // Phase 3E: Persist structural entities to D1 domain
+    if (this.structuralService.memgraphService) {
+      try {
+        this.emit('log', { level: 'info', message: 'Persisting structural entities to D1 domain...' });
+
+        const d1Result = await this.structuralService.createEntitiesFromDatabaseMap(
+          map,
+          {
+            sessionId: this.session.id,
+            sourceDatabase: map.databaseName || this.connector?.config?.database,
+          }
+        );
+
+        this.emit('log', {
+          level: 'info',
+          message: `D1: Created ${d1Result.created} StructuralEntity nodes (${d1Result.failed} failed)`,
+        });
+
+        // Store entity index for cross-domain linking
+        this.session.context.structuralEntityIndex = d1Result.entityIndex || {};
+      } catch (err) {
+        this.emit('log', { level: 'warning', message: `D1 entity persistence failed: ${err.message}` });
+      }
+    }
+
     this.emit('log', {
       level: 'info',
       message: `Entity discovery: ${entityRegistry.totalAnalyzed} entities from ${masterTables.length} master tables`,
@@ -877,6 +908,22 @@ class MssqlAgent {
     }
 
     this.session.context.relationshipMap = relationshipMap;
+
+    // Phase 4B: Persist FK relationships to D1
+    if (this.structuralService.memgraphService && fkGraph.edges.length > 0) {
+      try {
+        const fkResult = await this.structuralService.createForeignKeys(
+          fkGraph.edges,
+          { sessionId: this.session.id }
+        );
+        this.emit('log', {
+          level: 'info',
+          message: `D1: Created ${fkResult.created} FK relationships`,
+        });
+      } catch (err) {
+        this.emit('log', { level: 'warning', message: `D1 FK persistence failed: ${err.message}` });
+      }
+    }
 
     this.emit('log', {
       level: 'info',
@@ -1542,15 +1589,30 @@ class MssqlAgent {
    * Find entity ID by name for cross-domain linking.
    */
   _findEntityId(entityName) {
-    const entities = this.session.context.entityRegistry?.entities || {};
+    if (!entityName) return null;
+    const normalized = entityName.toLowerCase().trim();
+
+    // Check structural entity index first (D1 nodes in Memgraph)
+    const structIdx = this.session.context.structuralEntityIndex || {};
 
     // Exact match
+    if (structIdx[entityName]) return structIdx[entityName];
+
+    // Case-insensitive + table-name-part match (strip schema prefix)
+    for (const [key, id] of Object.entries(structIdx)) {
+      if (key.toLowerCase() === normalized) return id;
+      // Match just the table name part after the dot (e.g., "dbo.Users" → "users")
+      const tablePart = key.includes('.') ? key.split('.').pop().toLowerCase() : null;
+      if (tablePart && tablePart === normalized) return id;
+    }
+
+    // Fallback to LLM entity registry
+    const entities = this.session.context.entityRegistry?.entities || {};
     if (entities[entityName]?.id) return entities[entityName].id;
 
-    // Case-insensitive match
     const key = Object.keys(entities).find(k =>
-      k.toLowerCase() === entityName.toLowerCase() ||
-      (entities[k].entityName || '').toLowerCase() === entityName.toLowerCase()
+      k.toLowerCase() === normalized ||
+      (entities[k].entityName || '').toLowerCase() === normalized
     );
     return key ? entities[key]?.id : null;
   }

@@ -20,6 +20,51 @@ const MEMGRAPH_USER = process.env.MEMGRAPH_USER || process.env.NEO4J_USERNAME ||
 const MEMGRAPH_PASS = process.env.MEMGRAPH_PASSWORD || process.env.NEO4J_PASSWORD || '';
 const SCHEMA_FILE = path.join(__dirname, '../src/db/schemas/multi-domain-schema.cypher');
 
+/**
+ * Translate Neo4j 4.x constraint/index syntax to Memgraph syntax.
+ *
+ * Neo4j 4.x:
+ *   CREATE CONSTRAINT name IF NOT EXISTS FOR (v:Label) REQUIRE v.prop IS UNIQUE
+ *   CREATE INDEX name IF NOT EXISTS FOR (v:Label) ON (v.prop)
+ *   CREATE INDEX name IF NOT EXISTS FOR ()-[r:REL]-() ON (r.prop)
+ *
+ * Memgraph:
+ *   CREATE CONSTRAINT ON (v:Label) ASSERT v.prop IS UNIQUE
+ *   CREATE INDEX ON :Label(prop)
+ *   CREATE INDEX ON :REL(prop)
+ */
+function translateToMemgraph(stmt) {
+  // Constraint: CREATE CONSTRAINT <name> IF NOT EXISTS FOR (v:Label) REQUIRE v.prop IS UNIQUE
+  const constraintMatch = stmt.match(
+    /CREATE\s+CONSTRAINT\s+\w+\s+IF\s+NOT\s+EXISTS\s+FOR\s+\((\w+):(\w+)\)\s+REQUIRE\s+\1\.(\w+)\s+IS\s+UNIQUE/i
+  );
+  if (constraintMatch) {
+    const [, varName, label, prop] = constraintMatch;
+    return `CREATE CONSTRAINT ON (${varName}:${label}) ASSERT ${varName}.${prop} IS UNIQUE`;
+  }
+
+  // Node index: CREATE INDEX <name> IF NOT EXISTS FOR (v:Label) ON (v.prop)
+  const nodeIndexMatch = stmt.match(
+    /CREATE\s+INDEX\s+\w+\s+IF\s+NOT\s+EXISTS\s+FOR\s+\(\w+:(\w+)\)\s+ON\s+\(\w+\.(\w+)\)/i
+  );
+  if (nodeIndexMatch) {
+    const [, label, prop] = nodeIndexMatch;
+    return `CREATE INDEX ON :${label}(${prop})`;
+  }
+
+  // Edge index: CREATE INDEX <name> IF NOT EXISTS FOR ()-[r:REL]-() ON (r.prop)
+  const edgeIndexMatch = stmt.match(
+    /CREATE\s+INDEX\s+\w+\s+IF\s+NOT\s+EXISTS\s+FOR\s+\(\)-\[\w+:(\w+)\]-\(\)\s+ON\s+\(\w+\.(\w+)\)/i
+  );
+  if (edgeIndexMatch) {
+    const [, relType, prop] = edgeIndexMatch;
+    return `CREATE INDEX ON :${relType}(${prop})`;
+  }
+
+  // Return as-is if no pattern matches
+  return stmt;
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const dryRun = args.includes('--dry-run');
@@ -35,10 +80,13 @@ async function main() {
   const schemaContent = fs.readFileSync(SCHEMA_FILE, 'utf-8');
 
   // Parse into individual statements (split by semicolon, filter comments/empty)
-  const statements = schemaContent
+  const rawStatements = schemaContent
     .split(';')
     .map(s => s.replace(/\/\/.*$/gm, '').trim())
     .filter(s => s.length > 0 && !s.startsWith('//'));
+
+  // Translate Neo4j 4.x syntax → Memgraph syntax
+  const statements = rawStatements.map(stmt => translateToMemgraph(stmt));
 
   console.log(`   Found ${statements.length} statements to execute`);
   console.log();
