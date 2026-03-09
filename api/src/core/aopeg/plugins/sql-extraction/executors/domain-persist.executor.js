@@ -110,7 +110,7 @@ class DomainPersistExecutor extends BaseExecutor {
   }
 
   async _persistSemantic(action, data, ctx, memgraph) {
-    const { SemanticDomainService } = require('../../../../../services/connectors/semantic-domain.service');
+    const { SemanticDomainService } = require('../../../../../services/semantic/semantic-domain.service');
     const svc = new SemanticDomainService({ memgraphService: memgraph });
 
     switch (action) {
@@ -124,7 +124,7 @@ class DomainPersistExecutor extends BaseExecutor {
   }
 
   async _persistTemporal(action, data, ctx, memgraph) {
-    const { TemporalDomainService } = require('../../../../../services/connectors/temporal-domain.service');
+    const { TemporalDomainService } = require('../../../../../services/temporal/temporal-domain.service');
     const svc = new TemporalDomainService({ memgraphService: memgraph });
 
     switch (action) {
