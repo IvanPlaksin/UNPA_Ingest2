@@ -46,8 +46,8 @@ import GnnSummaryPanel from '../components/GXE/GnnSummaryPanel';
 import { buildPredictedEdges } from '../components/GXE/GnnInsightsOverlay';
 import useImportSqlStore from '../stores/importSqlStore';
 import { useCatalogStore } from '../stores/catalogStore';
-import FloatingToolCatalog from '../components/GXE/FloatingToolCatalog';
-import UnifiedToolCatalog from '../components/Catalog/UnifiedToolCatalog';
+// Legacy FloatingToolCatalog replaced by UnifiedToolCatalog wrapped in GXE chrome
+import GXEToolCatalogWrapper from '../components/Catalog/GXEToolCatalogWrapper';
 import ToolSettingsDialog from '../components/GXE/ToolSettingsDialog';
 import InsightsBar from '../components/GXE/panels/InsightsBar';
 import SearchPanel from '../components/GXE/panels/SearchPanel';
@@ -4027,7 +4027,7 @@ const GraphView = ({
       />
 
       {/* Tool Catalog — floating window */}
-      <FloatingToolCatalog
+      <GXEToolCatalogWrapper
         onAddNodeToCanvas={handleAddNodeToCanvas}
       />
 
