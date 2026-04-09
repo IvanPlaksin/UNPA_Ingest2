@@ -55,13 +55,15 @@ class Logger {
   _log(level, message, data) {
     if (LEVELS[level] < LEVELS[this.level]) return;
 
+    const safeData = data && typeof data === 'object' ? this._redact(data) : (data != null ? { data } : {});
+
     const entry = {
       level,
       message,
       ...(this.module && { module: this.module }),
       ...(this.includeTimestamp && { timestamp: new Date().toISOString() }),
       ...this.context,
-      ...(data && typeof data === 'object' ? data : data != null ? { data } : {})
+      ...safeData
     };
 
     const output = this.format === 'json' ? this._formatJson(entry) : this._formatPretty(entry);
@@ -91,9 +93,47 @@ class Logger {
 
     return parts.join(' ');
   }
+
+  /**
+   * Log with automatic redaction of sensitive fields.
+   */
+  _redact(data) {
+    if (!data || typeof data !== 'object') return data;
+    const SENSITIVE = /password|secret|token|apiKey|authorization|cookie|credential/i;
+    const redacted = {};
+    for (const [key, value] of Object.entries(data)) {
+      if (SENSITIVE.test(key)) {
+        redacted[key] = '[REDACTED]';
+      } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        redacted[key] = this._redact(value);
+      } else {
+        redacted[key] = value;
+      }
+    }
+    return redacted;
+  }
+
+  /**
+   * Log with request context (requestId, userId, workspaceId).
+   */
+  withRequest(req) {
+    return this.child({
+      requestId: req?.requestId || req?.headers?.['x-request-id'] || undefined,
+      userId: req?.user?.id || req?.headers?.['x-user-id'] || undefined,
+      workspaceId: req?.params?.id || req?.body?.workspaceId || undefined
+    });
+  }
 }
 
 // Singleton instance
 const logger = new Logger();
+
+// Domain-specific child loggers (PH-005)
+logger.workspace = logger.child('Workspace');
+logger.catalog = logger.child('Catalog');
+logger.agent = logger.child('Agent');
+logger.security = logger.child('Security');
+logger.extraction = logger.child('Extraction');
+logger.promotion = logger.child('Promotion');
 
 module.exports = logger;

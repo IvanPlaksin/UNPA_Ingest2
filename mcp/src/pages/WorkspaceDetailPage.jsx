@@ -13,6 +13,7 @@ import WorkspaceCanvas from '../components/Workspace/WorkspaceCanvas';
 import WorkspaceWorkbench from '../components/Workspace/WorkspaceWorkbench';
 import WorkspaceFormBuilder from '../components/Workspace/WorkspaceFormBuilder';
 import { useWorkspaceStore } from '../stores/workspaceStore';
+import ErrorBoundary from '../components/common/ErrorBoundary';
 
 const STATUS_TRANSITIONS = {
   CREATED:    ['PROFILING', 'ARCHIVED'],
@@ -161,4 +162,10 @@ const WorkspaceDetailPage = () => {
   );
 };
 
-export default WorkspaceDetailPage;
+const WorkspaceDetailPageWrapped = () => (
+  <ErrorBoundary name="WorkSpace" level="page" onReset={() => window.location.reload()}>
+    <WorkspaceDetailPage />
+  </ErrorBoundary>
+);
+
+export default WorkspaceDetailPageWrapped;

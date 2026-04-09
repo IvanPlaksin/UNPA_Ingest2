@@ -37,6 +37,24 @@ const STRUCTURAL_WEIGHT = 0.45;
 const TEXT_WEIGHT = 0.35;
 const TOPOLOGY_WEIGHT = 0.20;
 
+// Operation timeouts (PH-006)
+const TIMEOUTS = {
+  analyzePatterns: 30000,       // 30s full workspace analysis
+  findMatches: 15000,           // 15s per-subgraph matching
+  embedSubgraph: 10000,         // 10s embedding
+  executeReplacement: 20000     // 20s replacement
+};
+
+/** Wrap a promise with a timeout. Rejects with TimeoutError. */
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)
+    )
+  ]);
+}
+
 // Lazy deps
 let _memgraph = null;
 let _draftService = null;
@@ -333,6 +351,14 @@ class PatternMatcherService {
    * @returns {Promise<Object>}
    */
   async analyzeWorkspacePatterns(workspaceId, options = {}) {
+    return withTimeout(
+      this._analyzeImpl(workspaceId, options),
+      TIMEOUTS.analyzePatterns,
+      'analyzeWorkspacePatterns'
+    );
+  }
+
+  async _analyzeImpl(workspaceId, options = {}) {
     const startMs = Date.now();
     const subgraphs = await this.extractSubgraphs(workspaceId, options);
 

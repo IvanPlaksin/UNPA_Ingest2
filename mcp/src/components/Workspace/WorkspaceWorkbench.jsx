@@ -11,6 +11,7 @@
 
 import React, { useCallback, useRef, useState } from 'react';
 import { Box, IconButton, Tooltip } from '@mui/material';
+import ErrorBoundary from '../common/ErrorBoundary';
 import {
   ChevronLeft as CollapseLeftIcon,
   ChevronRight as ExpandRightIcon
@@ -171,11 +172,13 @@ const WorkspaceWorkbench = ({ workspaceId }) => {
                 </IconButton>
               </Tooltip>
             </Box>
-            <WorkspaceSidePanel
-              workspaceId={workspaceId}
-              onAnalyzeClick={handleAnalyze}
-              onPromoteClick={handlePromote}
-            />
+            <ErrorBoundary name="SidePanel" level="component">
+              <WorkspaceSidePanel
+                workspaceId={workspaceId}
+                onAnalyzeClick={handleAnalyze}
+                onPromoteClick={handlePromote}
+              />
+            </ErrorBoundary>
           </>
         )}
       </Box>
@@ -184,7 +187,9 @@ const WorkspaceWorkbench = ({ workspaceId }) => {
 
       {/* CENTER (Canvas) */}
       <Box sx={{ flex: 1, minWidth: 0, position: 'relative' }}>
-        <WorkspaceCanvas workspaceId={workspaceId} />
+        <ErrorBoundary name="Canvas" level="component">
+          <WorkspaceCanvas workspaceId={workspaceId} />
+        </ErrorBoundary>
       </Box>
 
       {!rightCollapsed && <Resizer side="right" onResize={rightResizeApi.current} />}
@@ -215,7 +220,9 @@ const WorkspaceWorkbench = ({ workspaceId }) => {
                 </IconButton>
               </Tooltip>
             </Box>
-            <WorkspaceAgentPanel workspaceId={workspaceId} />
+            <ErrorBoundary name="AgentPanel" level="component">
+              <WorkspaceAgentPanel workspaceId={workspaceId} />
+            </ErrorBoundary>
           </>
         )}
       </Box>

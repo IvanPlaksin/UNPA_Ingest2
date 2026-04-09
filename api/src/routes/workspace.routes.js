@@ -13,6 +13,9 @@ const express = require('express');
 const multer = require('multer');
 const router = express.Router();
 const controller = require('../controllers/workspace.controller');
+const { validate } = require('../middleware/input-validator.middleware');
+const { sanitizeInput } = require('../middleware/sanitizer.middleware');
+const { rateLimit } = require('../middleware/rate-limiter.middleware');
 
 // Multer config for file uploads (in-memory buffer, max 50MB)
 const upload = multer({
@@ -83,7 +86,7 @@ router.post('/:id/datasources/register-source',         (req, res, next) => cont
 // ==================== STRUCTURAL IMPORT ====================
 
 router.get('/:id/structural-import/preview',   (req, res, next) => controller.previewStructuralImport(req, res, next));
-router.post('/:id/structural-import',          (req, res, next) => controller.importStructuralGraph(req, res, next));
+router.post('/:id/structural-import',          sanitizeInput, validate('structuralImport'), (req, res, next) => controller.importStructuralGraph(req, res, next));
 
 // ==================== AUDIT ====================
 
@@ -92,7 +95,7 @@ router.get('/:id/audit',                   (req, res, next) => controller.getAud
 // ==================== AGENT (PERSISTENT CHAT) ====================
 
 router.get('/:id/agent/session',           (req, res, next) => controller.getAgentSession(req, res, next));
-router.post('/:id/agent/message',          (req, res, next) => controller.sendAgentMessage(req, res, next));
+router.post('/:id/agent/message',          rateLimit('workspaceAgent'), sanitizeInput, validate('workspaceAgentMessage'), (req, res, next) => controller.sendAgentMessage(req, res, next));
 router.delete('/:id/agent/session',        (req, res, next) => controller.clearAgentSession(req, res, next));
 router.get('/:id/agent/actions',           (req, res, next) => controller.getAgentActions(req, res, next));
 
@@ -114,7 +117,7 @@ router.get('/:id/analysis/report',                                   (req, res, 
 
 // ==================== CONTRADICTIONS ====================
 
-router.post('/:id/contradictions/detect',                            (req, res, next) => controller.detectContradictions(req, res, next));
+router.post('/:id/contradictions/detect',  sanitizeInput, validate('detectContradictions'), (req, res, next) => controller.detectContradictions(req, res, next));
 router.get('/:id/contradictions/stats',                              (req, res, next) => controller.contradictionStats(req, res, next));
 router.get('/:id/contradictions',                                    (req, res, next) => controller.listContradictions(req, res, next));
 router.get('/:id/contradictions/:contradictionId',                   (req, res, next) => controller.getContradiction(req, res, next));

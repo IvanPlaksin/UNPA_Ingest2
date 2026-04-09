@@ -27,6 +27,7 @@ import {
   getAgentActions,
   streamAgentMessage
 } from '../../services/workspace.service';
+import { ResilientSSEClient } from '../../utils/sse-client';
 
 const ACTION_TYPE_COLORS = {
   CREATE_NODE: '#4CAF50',
@@ -168,6 +169,8 @@ const WorkspaceAgentPanel = ({ workspaceId }) => {
     return () => window.removeEventListener('workspace:agent:prefill', handler);
   }, [workspaceId]);
 
+  const sseClientRef = useRef(null);
+
   const handleSend = useCallback(async () => {
     const text = input.trim();
     if (!text || streaming) return;
@@ -182,28 +185,47 @@ const WorkspaceAgentPanel = ({ workspaceId }) => {
     setMessages(prev => [...prev, userMsg]);
 
     let buffer = '';
-    try {
-      await streamAgentMessage(workspaceId, text, (eventName, data) => {
+
+    const client = new ResilientSSEClient({
+      maxRetries: 2,
+      timeout: 120000,
+      onEvent: (eventName, data) => {
         if (eventName === 'text' && data?.content) {
           buffer += data.content;
           setStreamingText(buffer);
         }
-        if (eventName === 'tool_call') {
-          // Could show tool usage indicator
-        }
         if (eventName === 'error' && data?.error) {
           setError(data.error);
         }
-      });
-    } catch (err) {
-      setError(err.message || 'Stream failed');
-    } finally {
-      setStreaming(false);
-      setStreamingText('');
-      // Reload to get the final persisted assistant message + new actions
-      await loadAll();
-    }
+      },
+      onReconnect: (attempt) => {
+        setError(`Reconnecting... (attempt ${attempt})`);
+      },
+      onTimeout: () => {
+        setError('Request timed out. Please try a simpler query.');
+      },
+      onError: (err) => {
+        setError(err.message || 'Connection failed');
+      }
+    });
+
+    sseClientRef.current = client;
+
+    await client.connect(
+      `/api/v1/workspaces/${workspaceId}/agent/message`,
+      { message: text }
+    );
+
+    setStreaming(false);
+    setStreamingText('');
+    // Reload to get the final persisted assistant message + new actions
+    await loadAll();
   }, [workspaceId, input, streaming, loadAll]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => sseClientRef.current?.abort();
+  }, []);
 
   const handleClear = useCallback(async () => {
     if (!confirm('Clear chat history?')) return;

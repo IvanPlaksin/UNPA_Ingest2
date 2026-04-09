@@ -7,6 +7,9 @@ const express = require('express');
 const router = express.Router();
 const { graphCatalogService, GRAPH_TYPES } = require('../services/graphCatalog.service');
 const redisService = require('../services/redis.service');
+const { validate } = require('../middleware/input-validator.middleware');
+const { sanitizeInput } = require('../middleware/sanitizer.middleware');
+const { rateLimit } = require('../middleware/rate-limiter.middleware');
 
 // Cache TTL for labels (5 minutes)
 const LABELS_CACHE_TTL = 300;
@@ -446,11 +449,8 @@ router.get('/:id/paths', async (req, res) => {
  *   language?: string
  * }
  */
-router.post('/assistant/chat', async (req, res) => {
+router.post('/assistant/chat', rateLimit('aiChat'), sanitizeInput, validate('catalogAssistantChat'), async (req, res) => {
   const { query } = req.body || {};
-  if (!query || typeof query !== 'string') {
-    return res.status(400).json({ success: false, error: 'query (string) is required' });
-  }
 
   // SSE headers
   res.setHeader('Content-Type', 'text/event-stream');
@@ -500,13 +500,10 @@ router.post('/assistant/chat', async (req, res) => {
  * Full workspace pattern analysis — extracts subgraphs, finds catalog matches.
  * Body: { workspaceId, threshold?, minNodes?, maxNodes?, matchLimit? }
  */
-router.post('/patterns/analyze', async (req, res) => {
+router.post('/patterns/analyze', rateLimit('patternAnalysis'), sanitizeInput, validate('patternAnalyze'), async (req, res) => {
   try {
     const patternMatcher = require('../services/catalog/pattern-matcher.service');
     const { workspaceId, threshold, minNodes, maxNodes, matchLimit } = req.body;
-    if (!workspaceId) {
-      return res.status(400).json({ success: false, error: 'workspaceId is required' });
-    }
     const result = await patternMatcher.analyzeWorkspacePatterns(workspaceId, {
       threshold, minNodes, maxNodes, matchLimit
     });
@@ -559,13 +556,10 @@ router.post('/patterns/preview-replacement', async (req, res) => {
  * Execute a pattern replacement (destructive — requires confirm: true).
  * Body: { workspaceId, subgraphId, catalogEntryId, confirm: true }
  */
-router.post('/patterns/execute-replacement', async (req, res) => {
+router.post('/patterns/execute-replacement', rateLimit('patternReplace'), sanitizeInput, validate('patternExecuteReplacement'), async (req, res) => {
   try {
     const patternMatcher = require('../services/catalog/pattern-matcher.service');
     const { workspaceId, subgraphId, catalogEntryId, confirm } = req.body;
-    if (!workspaceId || !subgraphId || !catalogEntryId) {
-      return res.status(400).json({ success: false, error: 'workspaceId, subgraphId, and catalogEntryId are required' });
-    }
     const result = await patternMatcher.executeReplacement(workspaceId, subgraphId, catalogEntryId, {
       confirm: confirm === true
     });
