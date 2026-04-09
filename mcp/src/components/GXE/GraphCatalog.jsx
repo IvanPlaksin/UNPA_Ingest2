@@ -1,8 +1,8 @@
 /**
  * GraphCatalog Component
  * Tree view of ALL graphs in the knowledge DB, grouped by namespace.
- * Namespace multiselect filter to show/hide namespaces.
- * Click a graph → loads into GraphView.
+ * Versioned graphs show a collapsible tree: top-level = Production (or latest),
+ * children = previous versions sorted descending.
  */
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
@@ -10,7 +10,8 @@ import {
   ChevronRight, ChevronDown, Search, Trash2, Copy,
   Folder, FolderOpen, X, RefreshCw, AlertTriangle,
   Atom, Wrench, Briefcase, Layers, FileCode, Save,
-  PanelLeftClose, PanelLeftOpen, Database, Check, ChevronsUpDown
+  PanelLeftClose, PanelLeftOpen, Database, Check, ChevronsUpDown,
+  GitBranch, Shield
 } from 'lucide-react';
 import {
   listGraphs,
@@ -61,7 +62,6 @@ const NamespaceFilter = ({
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  // Close dropdown on click outside
   useEffect(() => {
     if (!open) return;
     const handler = (e) => {
@@ -78,7 +78,6 @@ const NamespaceFilter = ({
 
   return (
     <div className="relative" ref={dropdownRef}>
-      {/* Toggle button */}
       <button
         onClick={() => setOpen(!open)}
         className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 bg-[#161b22] border rounded-lg text-sm transition-colors ${
@@ -87,9 +86,7 @@ const NamespaceFilter = ({
       >
         <div className="flex items-center gap-2 min-w-0">
           <Folder className="w-4 h-4 text-gray-500 shrink-0" />
-          <span className="truncate">
-            Namespaces
-          </span>
+          <span className="truncate">Namespaces</span>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           <span className="text-xs px-1.5 py-0.5 bg-[#21262d] rounded text-gray-400">
@@ -99,31 +96,19 @@ const NamespaceFilter = ({
         </div>
       </button>
 
-      {/* Dropdown */}
       {open && (
         <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-[#161b22] border border-[#30363d] rounded-lg shadow-xl overflow-hidden">
-          {/* Actions */}
           <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-[#30363d]">
-            <button
-              onClick={onSelectAll}
-              className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
-            >
+            <button onClick={onSelectAll} className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
               Select All
             </button>
-            <button
-              onClick={onClearAll}
-              className="text-xs text-gray-500 hover:text-gray-400 transition-colors"
-            >
+            <button onClick={onClearAll} className="text-xs text-gray-500 hover:text-gray-400 transition-colors">
               Clear All
             </button>
           </div>
-
-          {/* Namespace list */}
           <div className="max-h-48 overflow-y-auto">
             {namespaces.length === 0 ? (
-              <div className="px-3 py-4 text-center text-xs text-gray-500">
-                No namespaces found
-              </div>
+              <div className="px-3 py-4 text-center text-xs text-gray-500">No namespaces found</div>
             ) : (
               namespaces.map(ns => {
                 const isSelected = selectedNamespaces.has(ns.namespace);
@@ -132,15 +117,11 @@ const NamespaceFilter = ({
                     key={ns.namespace}
                     onClick={() => onToggleNamespace(ns.namespace)}
                     className={`w-full flex items-center gap-2.5 px-2.5 py-2 text-sm transition-colors ${
-                      isSelected
-                        ? 'bg-blue-500/10 text-white'
-                        : 'text-gray-400 hover:bg-[#21262d] hover:text-gray-200'
+                      isSelected ? 'bg-blue-500/10 text-white' : 'text-gray-400 hover:bg-[#21262d] hover:text-gray-200'
                     }`}
                   >
                     <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-                      isSelected
-                        ? 'bg-blue-500 border-blue-500'
-                        : 'border-[#484f58]'
+                      isSelected ? 'bg-blue-500 border-blue-500' : 'border-[#484f58]'
                     }`}>
                       {isSelected && <Check className="w-3 h-3 text-white" />}
                     </div>
@@ -158,49 +139,135 @@ const NamespaceFilter = ({
 };
 
 /**
- * Single graph item in the tree
+ * Version family child item — a sibling CatalogEntry shown indented under the head entry.
  */
-const GraphItem = ({ graph, isSelected, onSelect, onDoubleClick, onClone, onDelete }) => {
-  const Icon = TYPE_ICONS[graph.type] || FileCode;
-  const color = TYPE_COLORS[graph.type] || 'text-gray-400';
-  const badgeCls = TYPE_BG[graph.type] || 'bg-gray-500/15 text-gray-400';
+const VersionFamilyItem = ({ entry, isSelected, onSelect, onDoubleClick }) => {
+  const nodeCount = Array.isArray(entry.nodes) ? entry.nodes.length : (entry.nodeCount || 0);
+  const edgeCount = Array.isArray(entry.edges) ? entry.edges.length : (entry.edgeCount || 0);
+  const dateStr = (entry.createdAt || '').substring(0, 10);
 
   return (
     <div
-      className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer group transition-colors ${
+      className={`flex items-center gap-1.5 py-1 cursor-pointer group transition-colors ${
         isSelected
           ? 'bg-blue-500/15 border-l-2 border-blue-500'
           : 'hover:bg-[#21262d] border-l-2 border-transparent'
       }`}
-      style={{ paddingLeft: 28 }}
-      onClick={() => onSelect(graph)}
-      onDoubleClick={() => onDoubleClick(graph)}
+      style={{ paddingLeft: 52 }}
+      onClick={() => onSelect(entry)}
+      onDoubleClick={() => onDoubleClick(entry)}
     >
-      <Icon className={`w-4 h-4 ${color} shrink-0`} />
-      <span className="flex-1 text-sm text-gray-200 truncate" title={graph.name}>
-        {graph.name}
+      <GitBranch className="w-3 h-3 text-gray-600 shrink-0" />
+      <span className="text-xs text-gray-400 truncate">
+        v{entry.currentVersion || 1}
       </span>
-      <span className={`text-[10px] px-1.5 py-0.5 rounded ${badgeCls} shrink-0`}>
-        {graph.type}
+      <span className="text-[10px] text-gray-600 shrink-0">
+        {nodeCount}N/{edgeCount}E
       </span>
+      {dateStr && (
+        <span className="text-[10px] text-gray-600 shrink-0">
+          {dateStr}
+        </span>
+      )}
+    </div>
+  );
+};
 
-      {/* Hover actions */}
-      <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
-        <button
-          onClick={(e) => { e.stopPropagation(); onClone(graph); }}
-          className="p-1 hover:bg-[#30363d] rounded"
-          title="Clone"
-        >
-          <Copy className="w-3 h-3 text-gray-500" />
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); onDelete(graph); }}
-          className="p-1 hover:bg-red-500/20 rounded"
-          title="Delete"
-        >
-          <Trash2 className="w-3 h-3 text-red-400" />
-        </button>
+/**
+ * Single graph item in the tree — version-family-aware.
+ * If graph._versionFamily has entries, shows a collapsible chevron with sibling versions.
+ */
+const GraphItem = ({
+  graph, isSelected, onSelect, onDoubleClick, onClone, onDelete,
+  isVersionExpanded, onToggleVersions,
+  selectedGraphId, onSelectFamilyChild, onDoubleClickFamilyChild
+}) => {
+  const Icon = TYPE_ICONS[graph.type] || FileCode;
+  const color = TYPE_COLORS[graph.type] || 'text-gray-400';
+  const badgeCls = TYPE_BG[graph.type] || 'bg-gray-500/15 text-gray-400';
+  const family = graph._versionFamily || [];
+  const hasVersions = family.length > 0;
+  const totalVersions = hasVersions ? family.length + 1 : 1;
+
+  return (
+    <div>
+      <div
+        className={`flex items-center gap-1.5 px-2 py-1.5 cursor-pointer group transition-colors ${
+          isSelected
+            ? 'bg-blue-500/15 border-l-2 border-blue-500'
+            : 'hover:bg-[#21262d] border-l-2 border-transparent'
+        }`}
+        style={{ paddingLeft: hasVersions ? 20 : 28 }}
+        onClick={() => onSelect(graph)}
+        onDoubleClick={() => onDoubleClick(graph)}
+      >
+        {/* Version expand chevron */}
+        {hasVersions && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleVersions(graph._familyKey); }}
+            className="p-0.5 shrink-0"
+          >
+            {isVersionExpanded ? (
+              <ChevronDown className="w-3 h-3 text-gray-500" />
+            ) : (
+              <ChevronRight className="w-3 h-3 text-gray-500" />
+            )}
+          </button>
+        )}
+
+        <Icon className={`w-4 h-4 ${color} shrink-0`} />
+        <span className="flex-1 text-sm text-gray-200 truncate" title={graph.name}>
+          {graph.name}
+        </span>
+
+        {/* Version count badge */}
+        {hasVersions && (
+          <span className="text-[10px] px-1 py-0.5 rounded bg-gray-500/15 text-gray-400 shrink-0" title={`${totalVersions} versions`}>
+            {totalVersions}v
+          </span>
+        )}
+
+        {/* Latest badge on head entry */}
+        {hasVersions && (
+          <Shield className="w-3 h-3 text-green-400 shrink-0" title="Latest version" />
+        )}
+
+        {/* Type badge */}
+        <span className={`text-[10px] px-1.5 py-0.5 rounded ${badgeCls} shrink-0`}>
+          {graph.type}
+        </span>
+
+        {/* Hover actions */}
+        <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
+          <button
+            onClick={(e) => { e.stopPropagation(); onClone(graph); }}
+            className="p-1 hover:bg-[#30363d] rounded" title="Clone"
+          >
+            <Copy className="w-3 h-3 text-gray-500" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(graph); }}
+            className="p-1 hover:bg-red-500/20 rounded" title="Delete"
+          >
+            <Trash2 className="w-3 h-3 text-red-400" />
+          </button>
+        </div>
       </div>
+
+      {/* Expanded version family list */}
+      {hasVersions && isVersionExpanded && (
+        <div>
+          {family.map(entry => (
+            <VersionFamilyItem
+              key={entry.id}
+              entry={entry}
+              isSelected={selectedGraphId === entry.id}
+              onSelect={onSelectFamilyChild}
+              onDoubleClick={onDoubleClickFamilyChild}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -209,19 +276,13 @@ const GraphItem = ({ graph, isSelected, onSelect, onDoubleClick, onClone, onDele
  * Namespace group in the tree (collapsible header + graph list)
  */
 const NamespaceGroup = ({
-  namespace,
-  graphs,
-  isExpanded,
-  onToggle,
-  selectedGraphId,
-  onSelectGraph,
-  onDoubleClickGraph,
-  onCloneGraph,
-  onDeleteGraph
+  namespace, graphs, isExpanded, onToggle,
+  selectedGraphId, onSelectGraph, onDoubleClickGraph, onCloneGraph, onDeleteGraph,
+  expandedVersionGraphs, onToggleVersions,
+  onSelectFamilyChild, onDoubleClickFamilyChild
 }) => {
   return (
     <div>
-      {/* Namespace header */}
       <button
         onClick={onToggle}
         className="w-full flex items-center gap-2 px-2 py-2 hover:bg-[#21262d] transition-colors"
@@ -244,7 +305,6 @@ const NamespaceGroup = ({
         </span>
       </button>
 
-      {/* Graph items */}
       {isExpanded && (
         <div>
           {graphs.map(graph => (
@@ -256,6 +316,11 @@ const NamespaceGroup = ({
               onDoubleClick={onDoubleClickGraph}
               onClone={onCloneGraph}
               onDelete={onDeleteGraph}
+              isVersionExpanded={expandedVersionGraphs.has(graph._familyKey)}
+              onToggleVersions={onToggleVersions}
+              selectedGraphId={selectedGraphId}
+              onSelectFamilyChild={onSelectFamilyChild}
+              onDoubleClickFamilyChild={onDoubleClickFamilyChild}
             />
           ))}
         </div>
@@ -276,26 +341,19 @@ const GraphCatalog = ({
   onSaveCurrentGraph,
   currentGraphData
 }) => {
-  // Catalog data
   const [graphs, setGraphs] = useState([]);
   const [namespaces, setNamespaces] = useState([]);
-
-  // Namespace filter
   const [selectedNamespaces, setSelectedNamespaces] = useState(new Set());
-
-  // Tree state
   const [expandedNamespaces, setExpandedNamespaces] = useState(new Set());
   const [selectedGraphId, setSelectedGraphId] = useState(null);
-
-  // Search
   const [search, setSearch] = useState('');
-
-  // UI state
   const [loading, setLoading] = useState(false);
   const [connectionWarning, setConnectionWarning] = useState(null);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
 
-  // Resize
+  // Version family tree state (keyed by familyKey = normalized name+namespace+type)
+  const [expandedVersionGraphs, setExpandedVersionGraphs] = useState(new Set());
+
   const isResizing = useRef(false);
 
   // Load data
@@ -303,7 +361,6 @@ const GraphCatalog = ({
     setLoading(true);
     setConnectionWarning(null);
     try {
-      // Load namespaces and graphs in parallel
       const [nsResult, graphResult] = await Promise.all([
         getNamespaces(),
         listGraphs({ limit: 500 })
@@ -316,7 +373,6 @@ const GraphCatalog = ({
         setConnectionWarning(graphResult.warning);
       }
 
-      // If first load, select all namespaces and expand them
       setSelectedNamespaces(prev => {
         if (prev.size === 0 && nsResult?.length > 0) {
           return new Set(nsResult.map(n => n.namespace));
@@ -338,18 +394,13 @@ const GraphCatalog = ({
     }
   }, []);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  useEffect(() => { loadData(); }, [loadData]);
 
-  // Filter & group graphs
+  // Filter & group graphs with version family detection.
+  // Separate CatalogEntry nodes with the same normalized name + namespace + type
+  // are treated as different versions of the same graph.
   const groupedGraphs = useMemo(() => {
-    // Filter by selected namespaces
-    let filtered = graphs.filter(g =>
-      g.namespace && selectedNamespaces.has(g.namespace)
-    );
-
-    // Filter by search
+    let filtered = graphs.filter(g => g.namespace && selectedNamespaces.has(g.namespace));
     if (search) {
       const searchLower = search.toLowerCase();
       filtered = filtered.filter(g =>
@@ -358,26 +409,50 @@ const GraphCatalog = ({
       );
     }
 
-    // Group by namespace
-    const groups = {};
+    // 1. Build version families by normalized name + namespace + type
+    const familyMap = {}; // familyKey -> [entry, entry, ...]
     for (const graph of filtered) {
+      const baseName = (graph.name || '')
+        .replace(/\s*\(Copy\)\s*/g, '')
+        .replace(/\s+v\d+$/i, '')
+        .trim();
+      const familyKey = `${baseName}||${graph.namespace || ''}||${graph.type || ''}`;
+      if (!familyMap[familyKey]) familyMap[familyKey] = [];
+      familyMap[familyKey].push(graph);
+    }
+
+    // 2. For each family, pick the head (newest by createdAt) and assign children
+    const headEntries = [];
+    for (const [familyKey, members] of Object.entries(familyMap)) {
+      // Sort by createdAt descending — newest first
+      members.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+
+      const head = members[0];
+      const children = members.slice(1);
+
+      // Attach family metadata to head entry
+      head._familyKey = familyKey;
+      head._versionFamily = children;
+
+      headEntries.push(head);
+    }
+
+    // 3. Group head entries by namespace
+    const groups = {};
+    for (const graph of headEntries) {
       const ns = graph.namespace || 'default';
       if (!groups[ns]) groups[ns] = [];
       groups[ns].push(graph);
     }
 
-    // Sort namespaces alphabetically, sort graphs within each group by name
-    const sorted = Object.entries(groups)
+    return Object.entries(groups)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([ns, gList]) => ({
         namespace: ns,
         graphs: gList.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
       }));
-
-    return sorted;
   }, [graphs, selectedNamespaces, search]);
 
-  // Total visible graph count
   const visibleCount = useMemo(
     () => groupedGraphs.reduce((sum, g) => sum + g.graphs.length, 0),
     [groupedGraphs]
@@ -387,11 +462,7 @@ const GraphCatalog = ({
   const handleToggleNamespace = useCallback((ns) => {
     setSelectedNamespaces(prev => {
       const next = new Set(prev);
-      if (next.has(ns)) {
-        next.delete(ns);
-      } else {
-        next.add(ns);
-      }
+      next.has(ns) ? next.delete(ns) : next.add(ns);
       return next;
     });
   }, []);
@@ -404,20 +475,15 @@ const GraphCatalog = ({
     setSelectedNamespaces(new Set());
   }, []);
 
-  // Tree expand/collapse
   const handleToggleNamespaceExpand = useCallback((ns) => {
     setExpandedNamespaces(prev => {
       const next = new Set(prev);
-      if (next.has(ns)) {
-        next.delete(ns);
-      } else {
-        next.add(ns);
-      }
+      next.has(ns) ? next.delete(ns) : next.add(ns);
       return next;
     });
   }, []);
 
-  // Graph selection — click selects, double-click loads into GraphView
+  // Graph selection
   const handleSelectGraph = useCallback((graph) => {
     setSelectedGraphId(graph.id);
   }, []);
@@ -432,6 +498,34 @@ const GraphCatalog = ({
       });
     } catch (error) {
       console.error('Failed to load graph:', error);
+    }
+  }, [onSelectGraph]);
+
+  // Version family tree: toggle expand (keyed by familyKey)
+  const handleToggleVersions = useCallback((familyKey) => {
+    setExpandedVersionGraphs(prev => {
+      const next = new Set(prev);
+      next.has(familyKey) ? next.delete(familyKey) : next.add(familyKey);
+      return next;
+    });
+  }, []);
+
+  // Select a family child entry
+  const handleSelectFamilyChild = useCallback((entry) => {
+    setSelectedGraphId(entry.id);
+  }, []);
+
+  // Double-click a family child → load that CatalogEntry into the editor
+  const handleDoubleClickFamilyChild = useCallback(async (entry) => {
+    try {
+      const fullGraph = await getGraphById(entry.id);
+      onSelectGraph?.({
+        nodes: fullGraph.nodes || [],
+        edges: fullGraph.edges || [],
+        sourceGraph: fullGraph,
+      });
+    } catch (error) {
+      console.error('Failed to load version entry:', error);
     }
   }, [onSelectGraph]);
 
@@ -456,7 +550,7 @@ const GraphCatalog = ({
     }
   }, [selectedGraphId, loadData]);
 
-  // Save current graph
+  // Save
   const handleSave = useCallback(() => {
     if (!currentGraphData?.nodes?.length) {
       alert('No graph to save');
@@ -469,19 +563,16 @@ const GraphCatalog = ({
     loadData();
   }, [loadData]);
 
-  // Resize drag handling
+  // Resize
   const handleMouseDown = useCallback((e) => {
     e.preventDefault();
     isResizing.current = true;
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
-
     const handleMouseMove = (e) => {
       if (!isResizing.current) return;
-      const newWidth = Math.max(200, Math.min(500, e.clientX));
-      onWidthChange?.(newWidth);
+      onWidthChange?.(Math.max(200, Math.min(500, e.clientX)));
     };
-
     const handleMouseUp = () => {
       isResizing.current = false;
       document.body.style.cursor = '';
@@ -489,7 +580,6 @@ const GraphCatalog = ({
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
   }, [onWidthChange]);
@@ -558,7 +648,6 @@ const GraphCatalog = ({
 
       {/* Namespace Filter + Search */}
       <div className="px-3 py-2 border-b border-[#30363d] space-y-2" style={{ width: '100%' }}>
-        {/* Namespace multiselect */}
         <NamespaceFilter
           namespaces={namespaces}
           selectedNamespaces={selectedNamespaces}
@@ -566,8 +655,6 @@ const GraphCatalog = ({
           onSelectAll={handleSelectAllNamespaces}
           onClearAll={handleClearAllNamespaces}
         />
-
-        {/* Search */}
         <div className="flex items-center gap-2 px-2 py-1.5 bg-[#161b22] border border-[#30363d] rounded-lg" style={{ width: '100%' }}>
           <Search className="w-4 h-4 text-gray-500" />
           <input
@@ -583,8 +670,6 @@ const GraphCatalog = ({
             </button>
           )}
         </div>
-
-        {/* Graph count */}
         <div className="text-xs text-gray-500">
           {visibleCount} graph{visibleCount !== 1 ? 's' : ''} in {groupedGraphs.length} namespace{groupedGraphs.length !== 1 ? 's' : ''}
         </div>
@@ -632,6 +717,10 @@ const GraphCatalog = ({
                 onDoubleClickGraph={handleDoubleClickGraph}
                 onCloneGraph={handleCloneGraph}
                 onDeleteGraph={handleDeleteGraph}
+                expandedVersionGraphs={expandedVersionGraphs}
+                onToggleVersions={handleToggleVersions}
+                onSelectFamilyChild={handleSelectFamilyChild}
+                onDoubleClickFamilyChild={handleDoubleClickFamilyChild}
               />
             ))}
           </div>
@@ -640,10 +729,7 @@ const GraphCatalog = ({
 
       {/* Right border with resize handle */}
       <div className="absolute right-0 top-0 bottom-0 w-[3px] bg-[#30363d] group/resize">
-        <div
-          onMouseDown={handleMouseDown}
-          className="absolute -left-2 top-0 bottom-0 w-6 cursor-col-resize z-10"
-        />
+        <div onMouseDown={handleMouseDown} className="absolute -left-2 top-0 bottom-0 w-6 cursor-col-resize z-10" />
         <div className="absolute inset-0 bg-blue-500 opacity-0 group-hover/resize:opacity-100 transition-opacity" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col gap-1 opacity-0 group-hover/resize:opacity-100 transition-opacity">
           <div className="w-1 h-1 rounded-full bg-blue-400" />

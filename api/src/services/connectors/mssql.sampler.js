@@ -62,8 +62,8 @@ class MssqlStratifiedSampler {
    * FULL_READ — read all rows from small reference/lookup tables.
    */
   async _fullRead(schema, tableName, fqn, columns, params) {
-    const limit = params.limit || 10000; // safety cap
-    const query = `SELECT TOP ${limit} * FROM ${fqn}`;
+    const limit = parseInt(params.limit) || 10000; // safety cap
+    const query = `SELECT TOP (${limit}) * FROM ${fqn}`;
     const rows = await this._executeQuery(query);
 
     const distinctValues = await this._getDistinctValues(fqn, columns);
@@ -87,11 +87,11 @@ class MssqlStratifiedSampler {
     const { topN = 100, randomN = 100, recentN = 50, distinctEnums = true } = params;
 
     // Top N rows (by PK or first column)
-    const topRows = await this._executeQuery(`SELECT TOP ${topN} * FROM ${fqn}`);
+    const topRows = await this._executeQuery(`SELECT TOP (${topN}) * FROM ${fqn}`);
 
     // Random N rows
     const randomRows = await this._executeQuery(
-      `SELECT TOP ${randomN} * FROM ${fqn} ORDER BY NEWID()`,
+      `SELECT TOP (${randomN}) * FROM ${fqn} ORDER BY NEWID()`,
     );
 
     // Recent N rows (if a date column exists)
@@ -99,7 +99,7 @@ class MssqlStratifiedSampler {
     let recentRows = [];
     if (dateCol) {
       recentRows = await this._executeQuery(
-        `SELECT TOP ${recentN} * FROM ${fqn} ORDER BY [${dateCol}] DESC`,
+        `SELECT TOP (${recentN}) * FROM ${fqn} ORDER BY [${dateCol}] DESC`,
       );
     }
 
@@ -142,17 +142,17 @@ class MssqlStratifiedSampler {
     if (dateCol) {
       // Recent data (last N days)
       recentRows = await this._executeQuery(
-        `SELECT TOP ${recentSample} * FROM ${fqn} WHERE [${dateCol}] >= DATEADD(DAY, -${recentDays}, GETDATE()) ORDER BY [${dateCol}] DESC`,
+        `SELECT TOP (${recentSample}) * FROM ${fqn} WHERE [${dateCol}] >= DATEADD(DAY, -${recentDays}, GETDATE()) ORDER BY [${dateCol}] DESC`,
       );
 
       // Historical sample (older data, random)
       historicalRows = await this._executeQuery(
-        `SELECT TOP ${historicalSample} * FROM ${fqn} WHERE [${dateCol}] < DATEADD(DAY, -${recentDays}, GETDATE()) ORDER BY NEWID()`,
+        `SELECT TOP (${historicalSample}) * FROM ${fqn} WHERE [${dateCol}] < DATEADD(DAY, -${recentDays}, GETDATE()) ORDER BY NEWID()`,
       );
     } else {
       // No date column — fallback to random sample
       recentRows = await this._executeQuery(
-        `SELECT TOP ${recentSample} * FROM ${fqn} ORDER BY NEWID()`,
+        `SELECT TOP (${recentSample}) * FROM ${fqn} ORDER BY NEWID()`,
       );
     }
 
@@ -190,10 +190,10 @@ class MssqlStratifiedSampler {
     let rows = [];
     if (dateCol) {
       rows = await this._executeQuery(
-        `SELECT TOP ${sample} * FROM ${fqn} WHERE [${dateCol}] >= DATEADD(DAY, -${recentDays}, GETDATE()) ORDER BY [${dateCol}] DESC`,
+        `SELECT TOP (${sample}) * FROM ${fqn} WHERE [${dateCol}] >= DATEADD(DAY, -${recentDays}, GETDATE()) ORDER BY [${dateCol}] DESC`,
       );
     } else {
-      rows = await this._executeQuery(`SELECT TOP ${sample} * FROM ${fqn}`);
+      rows = await this._executeQuery(`SELECT TOP (${sample}) * FROM ${fqn}`);
     }
 
     const countResult = await this._executeQuery(`SELECT COUNT(*) AS cnt FROM ${fqn}`);
@@ -220,7 +220,7 @@ class MssqlStratifiedSampler {
   async _structureOnly(schema, tableName, fqn, columns, params) {
     const { sample = 50 } = params;
 
-    const rows = await this._executeQuery(`SELECT TOP ${sample} * FROM ${fqn}`);
+    const rows = await this._executeQuery(`SELECT TOP (${sample}) * FROM ${fqn}`);
 
     const countResult = await this._executeQuery(`SELECT COUNT(*) AS cnt FROM ${fqn}`);
     const totalRows = countResult[0]?.cnt || 0;
@@ -262,7 +262,7 @@ class MssqlStratifiedSampler {
   async _exploratory(schema, tableName, fqn, columns, params) {
     const { sample = 100, analyzeDistribution = true } = params;
 
-    const rows = await this._executeQuery(`SELECT TOP ${sample} * FROM ${fqn} ORDER BY NEWID()`);
+    const rows = await this._executeQuery(`SELECT TOP (${sample}) * FROM ${fqn} ORDER BY NEWID()`);
 
     const countResult = await this._executeQuery(`SELECT COUNT(*) AS cnt FROM ${fqn}`);
     const totalRows = countResult[0]?.cnt || 0;
@@ -292,9 +292,11 @@ class MssqlStratifiedSampler {
 
   async _executeQuery(query) {
     try {
-      return await this.connector.executeReadOnlyQuery(query);
+      const result = await this.connector.executeReadOnlyQuery(query);
+      // executeReadOnlyQuery returns {columns, rows, rowCount, truncated}
+      return result.rows || result || [];
     } catch (err) {
-      console.warn(`[Sampler] Query failed: ${err.message}`);
+      console.warn(`[Sampler] Query failed: ${err.message}\n  SQL: ${query.substring(0, 200)}`);
       return [];
     }
   }
@@ -342,7 +344,7 @@ class MssqlStratifiedSampler {
       const colName = col.column_name || col.name;
       try {
         const rows = await this._executeQuery(
-          `SELECT TOP ${maxDistinct} [${colName}] AS val, COUNT(*) AS frequency FROM ${fqn} GROUP BY [${colName}] ORDER BY COUNT(*) DESC`,
+          `SELECT TOP (${maxDistinct}) [${colName}] AS val, COUNT(*) AS frequency FROM ${fqn} GROUP BY [${colName}] ORDER BY COUNT(*) DESC`,
         );
         // Only include if truly low cardinality (enum-like)
         if (rows.length > 0 && rows.length <= maxDistinct) {

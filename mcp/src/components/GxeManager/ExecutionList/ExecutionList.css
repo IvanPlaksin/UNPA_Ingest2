@@ -1,0 +1,26 @@
+.gxe-list { flex: 1; overflow: hidden; }
+
+.gxe-list__group-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 16px;
+  background: var(--nexus-bg-primary, #0a0a0f);
+  border-bottom: 1px solid var(--nexus-border, #27272a);
+  position: sticky; top: 0; z-index: 1;
+}
+.gxe-list__group-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--nexus-text-secondary, #a1a1aa); }
+.gxe-list__group-count { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--nexus-bg-tertiary, #18181b); color: var(--nexus-text-muted, #71717a); }
+
+.gxe-list__empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100%; padding: 48px; text-align: center;
+}
+.gxe-list__empty-icon { color: var(--nexus-text-muted, #71717a); margin-bottom: 16px; opacity: 0.5; }
+.gxe-list__empty h3 { margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: var(--nexus-text-primary, #e4e4e7); }
+.gxe-list__empty p { margin: 0; font-size: 14px; color: var(--nexus-text-secondary, #a1a1aa); max-width: 300px; }
+
+.gxe-list__loading {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; height: 100%; color: var(--nexus-text-secondary, #a1a1aa);
+}
+.gxe-list__loading .spinning { animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

@@ -1,0 +1,10 @@
+[
+  { "id": "GVA", "name": "Geneva", "country": "Switzerland", "region": "Europe", "population": 203000 },
+  { "id": "NYC", "name": "New York", "country": "United States", "region": "Americas", "population": 8336000 },
+  { "id": "NBO", "name": "Nairobi", "country": "Kenya", "region": "Africa", "population": 4397000 },
+  { "id": "VIE", "name": "Vienna", "country": "Austria", "region": "Europe", "population": 1912000 },
+  { "id": "BKK", "name": "Bangkok", "country": "Thailand", "region": "Asia", "population": 10539000 },
+  { "id": "ADD", "name": "Addis Ababa", "country": "Ethiopia", "region": "Africa", "population": 3352000 },
+  { "id": "SCL", "name": "Santiago", "country": "Chile", "region": "Americas", "population": 6269000 },
+  { "id": "BEY", "name": "Beirut", "country": "Lebanon", "region": "Asia", "population": 2424000 }
+]

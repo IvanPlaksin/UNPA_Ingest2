@@ -1,11 +1,41 @@
 // mcp/src/pages/WorkItemPage.jsx
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import ReactFlow, { Background, Controls } from 'reactflow';
+import ReactFlow, { Background, Controls, MarkerType } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { getWorkItemGraph, ingestWorkItems } from '../services/api';
 import { Database, Search } from 'lucide-react';
 import { Box, AppBar, Toolbar, Typography, Button, IconButton, Paper, Stack } from '@mui/material';
+import dagre from 'dagre';
+
+/** Apply dagre TB layout for work-item graphs */
+const layoutWorkItemGraph = (rawNodes, rawEdges) => {
+    if (!rawNodes || rawNodes.length === 0) return { nodes: rawNodes || [], edges: rawEdges || [] };
+
+    const g = new dagre.graphlib.Graph();
+    g.setDefaultEdgeLabel(() => ({}));
+    g.setGraph({ rankdir: 'TB', ranksep: 60, nodesep: 40 });
+    rawNodes.forEach(n => g.setNode(n.id, { width: 180, height: 60 }));
+    (rawEdges || []).forEach(e => {
+        const src = e.source?.id || e.source;
+        const tgt = e.target?.id || e.target;
+        if (g.hasNode(src) && g.hasNode(tgt)) g.setEdge(src, tgt);
+    });
+    dagre.layout(g);
+
+    const nodes = rawNodes.map(n => {
+        const pos = g.node(n.id);
+        return { ...n, position: n.position && (n.position.x || n.position.y) ? n.position : { x: pos.x - 90, y: pos.y - 30 } };
+    });
+
+    const edges = (rawEdges || []).map(e => ({
+        ...e,
+        type: 'smoothstep',
+        markerEnd: e.markerEnd || { type: MarkerType.ArrowClosed },
+    }));
+
+    return { nodes, edges };
+};
 
 const WorkItemPage = () => {
     const { id } = useParams();
@@ -15,8 +45,9 @@ const WorkItemPage = () => {
 
     useEffect(() => {
         getWorkItemGraph(id).then(data => {
-            setNodes(data.nodes);
-            setEdges(data.edges);
+            const { nodes: ln, edges: le } = layoutWorkItemGraph(data.nodes, data.edges);
+            setNodes(ln);
+            setEdges(le);
         });
     }, [id]);
 

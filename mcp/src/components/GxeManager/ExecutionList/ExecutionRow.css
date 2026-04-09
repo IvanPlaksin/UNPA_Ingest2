@@ -1,0 +1,84 @@
+.gxe-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px; margin: 4px 8px; border-radius: 8px;
+  background: var(--nexus-bg-secondary, #111118);
+  cursor: pointer; transition: all 0.15s ease;
+  position: relative; overflow: hidden;
+}
+.gxe-row:hover { background: var(--nexus-bg-hover, #1a1a24); }
+.gxe-row.selected { background: var(--nexus-bg-hover, #1a1a24); box-shadow: inset 0 0 0 1px var(--nexus-accent-cyan, #22d3ee); }
+.gxe-row.new { animation: flashHighlight 1.5s ease; }
+@keyframes flashHighlight {
+  0% { box-shadow: inset 0 0 0 2px var(--nexus-accent-cyan, #22d3ee), 0 0 20px rgba(34, 211, 238, 0.3); }
+  100% { box-shadow: none; }
+}
+.gxe-row.terminal { opacity: 0.7; }
+.gxe-row.terminal:hover { opacity: 1; }
+
+/* Status Bar */
+.gxe-row__status-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 4px 0 0 4px; }
+.gxe-row--running .gxe-row__status-bar { background: var(--nexus-accent-cyan, #22d3ee); }
+.gxe-row--paused .gxe-row__status-bar { background: var(--nexus-warning, #f59e0b); }
+.gxe-row--queued .gxe-row__status-bar { background: var(--nexus-text-muted, #71717a); }
+.gxe-row--initializing .gxe-row__status-bar { background: var(--nexus-accent-cyan, #22d3ee); }
+.gxe-row--completed .gxe-row__status-bar { background: var(--nexus-success, #22c55e); }
+.gxe-row--failed .gxe-row__status-bar { background: var(--nexus-error, #ef4444); }
+.gxe-row--cancelled .gxe-row__status-bar { background: var(--nexus-text-muted, #71717a); }
+
+.gxe-row__pulse { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: inherit; animation: pulsing 1.5s ease-in-out infinite; }
+@keyframes pulsing { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+/* Content */
+.gxe-row__content { flex: 1; min-width: 0; padding-left: 8px; }
+
+.gxe-row__line1 { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.gxe-row__status-icon { flex-shrink: 0; color: var(--nexus-text-secondary, #a1a1aa); }
+.gxe-row--running .gxe-row__status-icon { color: var(--nexus-accent-cyan, #22d3ee); }
+.gxe-row--paused .gxe-row__status-icon { color: var(--nexus-warning, #f59e0b); }
+.gxe-row--completed .gxe-row__status-icon { color: var(--nexus-success, #22c55e); }
+.gxe-row--failed .gxe-row__status-icon { color: var(--nexus-error, #ef4444); }
+.gxe-row__status-icon.spinning { animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.gxe-row__graph-name { font-weight: 600; color: var(--nexus-text-primary, #e4e4e7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gxe-row__exec-id { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--nexus-text-muted, #71717a); background: var(--nexus-bg-tertiary, #18181b); padding: 2px 6px; border-radius: 4px; }
+
+.gxe-row__line2 { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--nexus-text-secondary, #a1a1aa); margin-bottom: 6px; }
+
+.gxe-row__priority { font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.gxe-row__priority--critical { background: rgba(239, 68, 68, 0.2); color: var(--nexus-error, #ef4444); }
+.gxe-row__priority--high { background: rgba(245, 158, 11, 0.2); color: var(--nexus-warning, #f59e0b); }
+.gxe-row__priority--normal { background: var(--nexus-bg-tertiary, #18181b); color: var(--nexus-text-secondary, #a1a1aa); }
+.gxe-row__priority--low { background: var(--nexus-bg-tertiary, #18181b); color: var(--nexus-text-muted, #71717a); }
+.gxe-row__priority--background { background: var(--nexus-bg-tertiary, #18181b); color: var(--nexus-text-muted, #71717a); opacity: 0.7; }
+
+.gxe-row__trigger { display: flex; align-items: center; gap: 4px; }
+.gxe-row__time, .gxe-row__duration { font-variant-numeric: tabular-nums; }
+.gxe-row__duration { color: var(--nexus-text-muted, #71717a); }
+
+.gxe-row__line3 { display: flex; align-items: center; gap: 12px; }
+.gxe-row__nodes { font-size: 12px; color: var(--nexus-text-secondary, #a1a1aa); white-space: nowrap; }
+.gxe-row__nodes-failed { color: var(--nexus-error, #ef4444); }
+
+/* Progress Bar */
+.gxe-row__progress { flex: 1; height: 6px; background: var(--nexus-bg-tertiary, #18181b); border-radius: 3px; overflow: hidden; position: relative; }
+.gxe-row__progress-bar { height: 100%; background: var(--nexus-accent-cyan, #22d3ee); border-radius: 3px; transition: width 0.3s ease; }
+.gxe-row__progress-bar.paused { background: var(--nexus-warning, #f59e0b); }
+.gxe-row__progress-bar.failed { background: var(--nexus-error, #ef4444); }
+.gxe-row__progress-text { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); font-size: 9px; font-weight: 600; color: var(--nexus-text-primary, #e4e4e7); text-shadow: 0 0 4px rgba(0,0,0,0.8); }
+
+/* Quick Actions */
+.gxe-row__actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.15s; }
+.gxe-row:hover .gxe-row__actions { opacity: 1; }
+
+.gxe-row__action-btn { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: none; border-radius: 6px; background: var(--nexus-bg-tertiary, #18181b); color: var(--nexus-text-secondary, #a1a1aa); cursor: pointer; transition: all 0.15s; }
+.gxe-row__action-btn:hover:not(:disabled) { background: var(--nexus-bg-hover, #27272a); color: var(--nexus-text-primary, #e4e4e7); }
+.gxe-row__action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.gxe-row__action-btn--pause:hover:not(:disabled) { background: rgba(245, 158, 11, 0.2); color: var(--nexus-warning, #f59e0b); }
+.gxe-row__action-btn--resume:hover:not(:disabled) { background: rgba(34, 211, 238, 0.2); color: var(--nexus-accent-cyan, #22d3ee); }
+.gxe-row__action-btn--cancel:hover:not(:disabled) { background: rgba(239, 68, 68, 0.2); color: var(--nexus-error, #ef4444); }
+.gxe-row__action-btn .spinning { animation: spin 1s linear infinite; }
+
+/* Chevron */
+.gxe-row__chevron { flex-shrink: 0; color: var(--nexus-text-muted, #71717a); opacity: 0; transition: opacity 0.15s; }
+.gxe-row:hover .gxe-row__chevron, .gxe-row.selected .gxe-row__chevron { opacity: 1; }

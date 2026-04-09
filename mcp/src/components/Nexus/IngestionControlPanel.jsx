@@ -166,7 +166,8 @@ const IngestionControlPanel = ({ nexusModel, onIngest, isProcessing, ingestionRe
         }
 
         setNodes(newNodes);
-        setEdges(newEdges);
+        // Apply smoothstep routing to minimise edge crossings
+        setEdges(newEdges.map(e => ({ ...e, type: e.type || 'smoothstep' })));
     };
 
     if (!nexusModel || !nexusModel.core) return null;

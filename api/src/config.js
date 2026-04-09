@@ -6,14 +6,19 @@ const CONFIG = {
     },
     neo4j: {
         uri: process.env.NEO4J_URI || 'bolt://localhost:7687',
-        user: process.env.NEO4J_USER || 'neo4j',
-        password: process.env.NEO4J_PASSWORD || 'password'
-    },
-    chroma: {
-        url: process.env.CHROMA_URL || 'http://localhost:8000'
+        user: process.env.NEO4J_USERNAME || process.env.NEO4J_USER || 'memgraph',
+        password: process.env.NEO4J_PASSWORD || 'secret_password_123'
     },
     ollama: {
         baseUrl: process.env.OLLAMA_URL || 'http://localhost:11434'
+    },
+    tei: {
+        url: process.env.TEI_URL || 'http://tei:80',
+        batchSize: parseInt(process.env.TEI_BATCH_SIZE) || 50,
+        maxRetries: parseInt(process.env.TEI_MAX_RETRIES) || 3,
+        retryDelayMs: parseInt(process.env.TEI_RETRY_DELAY_MS) || 1000,
+        batchDelayMs: parseInt(process.env.TEI_BATCH_DELAY_MS) || 100,
+        timeout: parseInt(process.env.TEI_TIMEOUT_MS) || 30000
     },
     gemini: {
         apiKey: process.env.GEMINI_API_KEY

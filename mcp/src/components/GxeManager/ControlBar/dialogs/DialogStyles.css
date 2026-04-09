@@ -1,0 +1,514 @@
+/* ─── Dialog Overlay ──────────────────────────────────────────────────────── */
+
+.gxe-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ─── Dialog ──────────────────────────────────────────────────────────────── */
+
+.gxe-dialog {
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--nexus-bg-primary, #0a0a0f);
+  border: 1px solid var(--nexus-border, #27272a);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  animation: slideUp 0.2s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Header */
+.gxe-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--nexus-border, #27272a);
+}
+
+.gxe-dialog__header h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--nexus-text-primary, #e4e4e7);
+}
+
+.gxe-dialog__close {
+  display: flex;
+  padding: 6px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--nexus-text-muted, #71717a);
+  cursor: pointer;
+}
+
+.gxe-dialog__close:hover {
+  background: var(--nexus-bg-tertiary, #18181b);
+  color: var(--nexus-text-primary, #e4e4e7);
+}
+
+/* Body */
+.gxe-dialog__body {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Info box */
+.gxe-dialog__info {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--nexus-text-secondary, #a1a1aa);
+}
+
+.gxe-dialog__info svg {
+  flex-shrink: 0;
+  color: #3b82f6;
+  margin-top: 2px;
+}
+
+.gxe-dialog__info strong {
+  color: var(--nexus-text-primary, #e4e4e7);
+}
+
+/* Warning box */
+.gxe-dialog__warning {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--nexus-warning, #f59e0b);
+}
+
+.gxe-dialog__warning svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* Danger box */
+.gxe-dialog__danger {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--nexus-error, #ef4444);
+}
+
+.gxe-dialog__danger svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* Field */
+.gxe-dialog__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gxe-dialog__field label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--nexus-text-primary, #e4e4e7);
+}
+
+.gxe-dialog__hint {
+  font-size: 12px;
+  color: var(--nexus-text-muted, #71717a);
+}
+
+.gxe-dialog__error-hint {
+  font-size: 12px;
+  color: var(--nexus-error, #ef4444);
+}
+
+/* Input */
+.gxe-dialog__input {
+  padding: 10px 12px;
+  background: var(--nexus-bg-tertiary, #18181b);
+  border: 1px solid var(--nexus-border, #27272a);
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--nexus-text-primary, #e4e4e7);
+  outline: none;
+}
+
+.gxe-dialog__input:focus {
+  border-color: var(--nexus-accent-cyan, #22d3ee);
+}
+
+.gxe-dialog__input.error {
+  border-color: var(--nexus-error, #ef4444);
+}
+
+/* Textarea */
+.gxe-dialog__textarea {
+  padding: 10px 12px;
+  background: var(--nexus-bg-tertiary, #18181b);
+  border: 1px solid var(--nexus-border, #27272a);
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--nexus-text-primary, #e4e4e7);
+  resize: vertical;
+  outline: none;
+}
+
+.gxe-dialog__textarea:focus {
+  border-color: var(--nexus-accent-cyan, #22d3ee);
+}
+
+.gxe-dialog__textarea.error {
+  border-color: var(--nexus-error, #ef4444);
+}
+
+/* Select */
+.gxe-dialog__select {
+  padding: 10px 12px;
+  background: var(--nexus-bg-tertiary, #18181b);
+  border: 1px solid var(--nexus-border, #27272a);
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--nexus-text-primary, #e4e4e7);
+  cursor: pointer;
+}
+
+/* Checkbox */
+.gxe-dialog__checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.gxe-dialog__checkbox input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--nexus-accent-cyan, #22d3ee);
+}
+
+.gxe-dialog__checkbox span {
+  font-size: 14px;
+  color: var(--nexus-text-primary, #e4e4e7);
+}
+
+/* Schema preview */
+.gxe-dialog__schema {
+  margin-top: 8px;
+  padding: 10px;
+  background: var(--nexus-bg-primary, #0a0a0f);
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.gxe-dialog__schema strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--nexus-text-muted, #71717a);
+}
+
+.gxe-dialog__schema pre {
+  margin: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--nexus-text-secondary, #a1a1aa);
+  max-height: 100px;
+  overflow-y: auto;
+}
+
+/* Error */
+.gxe-dialog__error {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--nexus-error, #ef4444);
+}
+
+.gxe-dialog__error svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* Radio group */
+.gxe-dialog__radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gxe-dialog__radio {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  background: var(--nexus-bg-tertiary, #18181b);
+  border: 1px solid var(--nexus-border, #27272a);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.gxe-dialog__radio:hover {
+  border-color: var(--nexus-text-muted, #71717a);
+}
+
+.gxe-dialog__radio.selected {
+  border-color: var(--nexus-accent-cyan, #22d3ee);
+  background: rgba(34, 211, 238, 0.05);
+}
+
+.gxe-dialog__radio input {
+  margin-top: 2px;
+  accent-color: var(--nexus-accent-cyan, #22d3ee);
+}
+
+.gxe-dialog__radio-content {
+  flex: 1;
+}
+
+.gxe-dialog__radio-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--nexus-text-primary, #e4e4e7);
+  display: block;
+}
+
+.gxe-dialog__radio-desc {
+  font-size: 12px;
+  color: var(--nexus-text-muted, #71717a);
+  margin-top: 4px;
+}
+
+/* Node list */
+.gxe-dialog__node-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.gxe-dialog__node-tag {
+  padding: 4px 8px;
+  background: var(--nexus-bg-tertiary, #18181b);
+  border: 1px solid var(--nexus-border, #27272a);
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--nexus-text-secondary, #a1a1aa);
+}
+
+.gxe-dialog__loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  color: var(--nexus-text-secondary, #a1a1aa);
+  font-size: 13px;
+}
+
+.gxe-dialog__radio.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Footer */
+.gxe-dialog__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--nexus-border, #27272a);
+}
+
+.gxe-dialog__btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border: 1px solid var(--nexus-border, #27272a);
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.gxe-dialog__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.gxe-dialog__btn--secondary {
+  background: var(--nexus-bg-tertiary, #18181b);
+  color: var(--nexus-text-secondary, #a1a1aa);
+}
+
+.gxe-dialog__btn--secondary:hover:not(:disabled) {
+  background: var(--nexus-bg-hover, #27272a);
+  color: var(--nexus-text-primary, #e4e4e7);
+}
+
+.gxe-dialog__btn--primary {
+  background: var(--nexus-accent-cyan, #22d3ee);
+  border-color: var(--nexus-accent-cyan, #22d3ee);
+  color: #000;
+}
+
+.gxe-dialog__btn--primary:hover:not(:disabled) {
+  background: #06b6d4;
+  border-color: #06b6d4;
+}
+
+.gxe-dialog__btn--danger {
+  background: var(--nexus-error, #ef4444);
+  border-color: var(--nexus-error, #ef4444);
+  color: #fff;
+}
+
+.gxe-dialog__btn--danger:hover:not(:disabled) {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+.gxe-dialog__btn .spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Wide dialog variant */
+.gxe-dialog--wide {
+  max-width: 640px;
+}
+
+/* Search input */
+.gxe-dialog__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--nexus-bg-tertiary, #18181b);
+  border: 1px solid var(--nexus-border, #27272a);
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.gxe-dialog__search svg {
+  color: var(--nexus-text-muted, #71717a);
+  flex-shrink: 0;
+}
+
+.gxe-dialog__search-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--nexus-text-primary, #e4e4e7);
+  font-size: 14px;
+}
+
+/* Graph list */
+.gxe-dialog__graph-list {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--nexus-border, #27272a);
+  border-radius: 6px;
+}
+
+.gxe-dialog__graph-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--nexus-border, #27272a);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.gxe-dialog__graph-item:last-child {
+  border-bottom: none;
+}
+
+.gxe-dialog__graph-item:hover {
+  background: var(--nexus-bg-tertiary, #18181b);
+}
+
+.gxe-dialog__graph-item.selected {
+  background: rgba(34, 211, 238, 0.1);
+}
+
+.gxe-dialog__graph-item input {
+  accent-color: var(--nexus-accent-cyan, #22d3ee);
+}
+
+.gxe-dialog__graph-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gxe-dialog__graph-name {
+  font-weight: 500;
+  color: var(--nexus-text-primary, #e4e4e7);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+}
+
+.gxe-dialog__graph-desc {
+  font-size: 12px;
+  color: var(--nexus-text-muted, #71717a);
+}
+
+.gxe-dialog__graph-version {
+  font-size: 11px;
+  padding: 2px 6px;
+  background: var(--nexus-bg-primary, #0a0a0f);
+  border-radius: 4px;
+  color: var(--nexus-text-muted, #71717a);
+}

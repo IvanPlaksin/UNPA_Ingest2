@@ -1,0 +1,189 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   CHEATSHEET OVERLAY
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.cheatsheet-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(4px);
+  animation: cheatsheetFadeIn 0.15s ease-out;
+}
+
+@keyframes cheatsheetFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.cheatsheet {
+  background: var(--nexus-bg, #0d1117);
+  border: 1px solid var(--nexus-border, #30363d);
+  border-radius: 12px;
+  width: 90%;
+  max-width: 700px;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  animation: cheatsheetSlideUp 0.2s ease-out;
+}
+
+@keyframes cheatsheetSlideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HEADER
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.cheatsheet__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--nexus-border, #30363d);
+  background: var(--nexus-bg-secondary, #161b22);
+}
+
+.cheatsheet__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--nexus-text, #f0f6fc);
+  margin: 0;
+}
+
+.cheatsheet__close {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--nexus-text-muted, #484f58);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: all 0.15s ease;
+}
+
+.cheatsheet__close:hover {
+  background: var(--nexus-bg-tertiary, #21262d);
+  color: var(--nexus-text, #f0f6fc);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CONTENT
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.cheatsheet__content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 24px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CATEGORY
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.cheatsheet__category {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cheatsheet__category-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--nexus-primary, #6366f1);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--nexus-border, #30363d);
+}
+
+.cheatsheet__shortcuts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SHORTCUT
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.cheatsheet__shortcut {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cheatsheet__key {
+  min-width: 50px;
+  padding: 4px 8px;
+  background: var(--nexus-bg-tertiary, #21262d);
+  border: 1px solid var(--nexus-border, #30363d);
+  border-radius: 4px;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Consolas', monospace;
+  font-size: 11px;
+  color: var(--nexus-text, #f0f6fc);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.cheatsheet__description {
+  font-size: 12px;
+  color: var(--nexus-text-secondary, #8b949e);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FOOTER
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.cheatsheet__footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--nexus-border, #30363d);
+  background: var(--nexus-bg-secondary, #161b22);
+  font-size: 11px;
+  color: var(--nexus-text-muted, #484f58);
+  text-align: center;
+}
+
+.cheatsheet__footer kbd {
+  padding: 2px 6px;
+  background: var(--nexus-bg-tertiary, #21262d);
+  border-radius: 3px;
+  font-family: inherit;
+  font-size: 10px;
+  color: var(--nexus-text, #f0f6fc);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SCROLLBAR
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.cheatsheet__content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.cheatsheet__content::-webkit-scrollbar-track {
+  background: var(--nexus-bg, #0d1117);
+}
+
+.cheatsheet__content::-webkit-scrollbar-thumb {
+  background: var(--nexus-bg-tertiary, #21262d);
+  border-radius: 3px;
+}

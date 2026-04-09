@@ -30,6 +30,9 @@ class MetaLearningRetriever {
       tableCount,
     } = criteria;
 
+    const neo4j = require('neo4j-driver');
+    const intLimit = neo4j.int(parseInt(limit) || 5);
+
     // First: exact database match
     let result = await this.mg.runQuery(`
       MATCH (s:IngestionSession)
@@ -39,7 +42,7 @@ class MetaLearningRetriever {
       RETURN s
       ORDER BY s.qualityScore DESC, s.startedAt DESC
       LIMIT $limit
-    `, { database: database || '', limit });
+    `, { database: database || '', limit: intLimit });
 
     if (result && result.length > 0) {
       return result.map(r => this._props(r.s || r));
@@ -54,7 +57,7 @@ class MetaLearningRetriever {
       RETURN s
       ORDER BY s.qualityScore DESC
       LIMIT $limit
-    `, { sourceType, limit });
+    `, { sourceType, limit: intLimit });
 
     return (result || []).map(r => this._props(r.s || r));
   }

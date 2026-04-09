@@ -145,7 +145,7 @@ const streamImportAnalysis = async (req, res) => {
 
       connectionConfig = {
         server: config.connectionParams?.server,
-        port: config.connectionParams?.port || 1433,
+        port: parseInt(config.connectionParams?.port) || 1433,
         database: config.connectionParams?.database,
         username: effectiveUser,
         password: effectivePass || '',
@@ -155,7 +155,7 @@ const streamImportAnalysis = async (req, res) => {
       };
     }
 
-    console.log('[MSSQL Import] Using connection:', connectionConfig.server, connectionConfig.username);
+    console.log('[MSSQL Import] Using connection:', connectionConfig.server, `:${connectionConfig.port}`, connectionConfig.username);
 
     // ── Create orchestrator ──
     const connector = new MSSQLConnector();
@@ -247,9 +247,12 @@ async function resolveConnectionConfig(req, emit) {
     throw new Error('No credentials found. Re-save the connection or use direct connection mode.');
   }
 
+  const resolvedPort = parseInt(config.connectionParams?.port) || 1433;
+  console.log(`[resolveConnectionConfig] Saved source: server=${config.connectionParams?.server}, port=${resolvedPort} (raw: ${config.connectionParams?.port}), db=${config.connectionParams?.database}, user=${effectiveUser}`);
+
   return {
     server: config.connectionParams?.server,
-    port: config.connectionParams?.port || 1433,
+    port: resolvedPort,
     database: config.connectionParams?.database,
     username: effectiveUser,
     password: effectivePass || '',
@@ -352,26 +355,42 @@ const streamAgentImport = async (req, res) => {
 
     // ── Final event ──
     if (!aborted) {
+      const ctx = result.context || {};
+      const durationMs = Date.now() - new Date(result.session?.startedAt || Date.now()).getTime();
+      const qualityScore = ctx.validationResults?.coveragePercent
+        ? ctx.validationResults.coveragePercent / 100 : 0;
+
       emit('agent_complete', {
         sessionId: result.session?.id,
-        summary: result.summary || {},
-        graphs: result.graphs
-          ? Object.entries(result.graphs).map(([type, g]) => ({
-              type,
-              nodeCount: g.nodes?.length || 0,
-              edgeCount: g.edges?.length || 0,
-            }))
-          : [],
-        qualityScore: result.qualityScore || 0,
-        duration: result.duration || 0,
+        summary: {
+          tablesProcessed: ctx.databaseMap?.totalTables || 0,
+          entitiesDiscovered: ctx.entityRegistry?.totalAnalyzed || 0,
+          relationshipsFound: ctx.relationships
+            ? (ctx.relationships.explicit?.length || 0) + (ctx.relationships.semantic?.length || 0) : 0,
+          rulesExtracted: ctx.businessRules?.procedures?.length || 0,
+          calculationsFound: ctx.businessRules?.calculations?.length || 0,
+          lifecyclesDetected: ctx.transactionPatterns?.lifecycles?.length || 0,
+          anomalies: ctx.validationResults?.anomalies || [],
+          durationMs,
+          tokensUsed: result.session?.phases?.reduce((s, p) => s + (p.tokensUsed || 0), 0) || 0,
+        },
+        graphs: (ctx.graphs || []).reduce((map, g) => {
+          map[g.type] = { nodes: g.nodes || [], edges: g.edges || [] };
+          return map;
+        }, {}),
+        qualityScore,
+        duration: durationMs,
       });
     }
   } catch (error) {
-    console.error('[Agent Import] Pipeline error:', error);
-    if (!aborted) {
+    console.error('[Agent Import] Pipeline error:', error.message);
+    // agent.run() already emits agent_error — only emit if it's a controller-level error
+    if (!aborted && !error.phaseId) {
       emit('agent_error', {
         message: error.message,
-        phase: error.phase || 'unknown',
+        phase: 'controller',
+        phaseName: 'Controller',
+        stack: (error.stack || '').split('\n').slice(0, 5).join('\n'),
         recoverable: false,
       });
     }

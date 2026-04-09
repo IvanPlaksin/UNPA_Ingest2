@@ -1,0 +1,89 @@
+{
+  "id": "flowdesk.process.sla-escalation",
+  "name": "SLA Escalation Workflow",
+  "version": "1.0.0",
+  "namespace": "FLOWDESK",
+  "metadata": {
+    "domain": "ITSM",
+    "businessProcess": "SLA Management",
+    "description": "Scheduled SLA check and automatic escalation for breached tickets",
+    "trigger": "scheduled",
+    "schedule": "*/15 * * * *"
+  },
+  "nodes": [
+    {
+      "id": "WF-START",
+      "type": "start",
+      "executor": "workflow.start",
+      "config": {
+        "inputs": []
+      }
+    },
+    {
+      "id": "N1-CHECK-ALL",
+      "type": "executor",
+      "executor": "flowdesk.check_sla",
+      "config": {
+        "operation": "checkAll",
+        "autoEscalate": true
+      },
+      "transitions": [
+        { "target": "N2-HAS-BREACHES", "condition": "always" }
+      ]
+    },
+    {
+      "id": "N2-HAS-BREACHES",
+      "type": "decision",
+      "executor": "common.branch",
+      "config": {
+        "field": "branch",
+        "branches": {
+          "has_breaches": "N3-NOTIFY-MANAGERS",
+          "all_ok": "N4-LOG"
+        },
+        "default": "N4-LOG"
+      }
+    },
+    {
+      "id": "N3-NOTIFY-MANAGERS",
+      "type": "executor",
+      "executor": "flowdesk.send_notification",
+      "config": {
+        "template": "sla_breach_alert",
+        "channels": ["email", "slack"],
+        "recipients": ["service-desk-managers"]
+      },
+      "transitions": [
+        { "target": "N4-LOG", "condition": "always" }
+      ]
+    },
+    {
+      "id": "N4-LOG",
+      "type": "executor",
+      "executor": "common.log",
+      "config": {
+        "level": "info",
+        "message": "SLA check completed"
+      },
+      "transitions": [
+        { "target": "WF-END", "condition": "always" }
+      ]
+    },
+    {
+      "id": "WF-END",
+      "type": "end",
+      "executor": "workflow.end",
+      "config": {
+        "outputs": ["checked", "breached"]
+      }
+    }
+  ],
+  "edges": [
+    { "id": "e01", "source": "WF-START", "target": "N1-CHECK-ALL" },
+    { "id": "e02", "source": "N1-CHECK-ALL", "target": "N2-HAS-BREACHES" },
+    { "id": "e03", "source": "N2-HAS-BREACHES", "target": "N3-NOTIFY-MANAGERS", "label": "breaches found" },
+    { "id": "e04", "source": "N2-HAS-BREACHES", "target": "N4-LOG", "label": "all ok" },
+    { "id": "e05", "source": "N3-NOTIFY-MANAGERS", "target": "N4-LOG" },
+    { "id": "e06", "source": "N4-LOG", "target": "WF-END" }
+  ]
+}

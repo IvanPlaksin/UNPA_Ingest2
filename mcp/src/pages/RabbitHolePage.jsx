@@ -6,6 +6,7 @@ import ColumnSelector from '../components/RabbitHole/ColumnSelector';
 import RabbitHoleCommandBar from '../components/RabbitHole/RabbitHoleCommandBar';
 import { Storage } from '../utils/storage';
 import { Box, Paper, AppBar, Toolbar, Typography, Stack, Alert, CircularProgress } from '@mui/material';
+import { API_ENDPOINTS } from '../config/api.config';
 
 const FIELD_DEFINITIONS = {
     // 'HasLinks' is a virtual field for UI, mapped to System.RelatedLinkCount in fetchWorkItems
@@ -68,7 +69,7 @@ const RabbitHolePage = () => {
                 return f;
             });
 
-            const response = await fetch('http://localhost:3000/api/v1/rabbithole/search', {
+            const response = await fetch(API_ENDPOINTS.RABBITHOLE_SEARCH, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

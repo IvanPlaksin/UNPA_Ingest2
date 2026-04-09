@@ -1,7 +1,8 @@
 import axios from 'axios';
+import { API_BASE_URL } from '../config/api.config';
 
-// Configurable API URL via .env
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
+// Configurable API URL via centralized config
+const API_URL = API_BASE_URL;
 
 const api = axios.create({
     baseURL: API_URL,
@@ -99,6 +100,28 @@ export const getHealth = async () => {
     }
 };
 
+// --- Connectors Methods ---
+
+export const fetchConnectors = async () => {
+    try {
+        const response = await api.get('/connectors');
+        return response.data.connectors || [];
+    } catch (error) {
+        console.error('Failed to fetch connectors:', error);
+        return [];
+    }
+};
+
+export const fetchConnectorStatus = async (name) => {
+    try {
+        const response = await api.get(`/connectors/${name}/status`);
+        return response.data.status || null;
+    } catch (error) {
+        console.error(`Failed to fetch connector status for ${name}:`, error);
+        return null;
+    }
+};
+
 // --- TFVC Methods ---
 
 export const fetchTfvcTree = async (path) => {
@@ -140,7 +163,6 @@ export const simulateIngestion = async (formData) => {
 // Fetch basic entity details for initial graph
 export const fetchEntityDetails = async (type, id) => {
     // Call the real backend endpoint
-    // Assuming backend is at http://localhost:3000/api/v1
     const response = await api.get(`/nexus/entity/${type}/${id}`);
 
     // The backend should return the structured object we need
@@ -159,6 +181,141 @@ export const fetchRepositories = async () => {
             ]);
         }, 500);
     });
+};
+
+// ────────────────────────────────────────────────────────────────────────────
+// AI USAGE MONITORING API
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Get AI API usage statistics
+ * @returns {Promise<Object>} Usage stats by provider
+ */
+export const getAIUsageStats = async () => {
+    try {
+        const response = await api.get('/ai-agent/usage');
+        return response.data;
+    } catch (error) {
+        console.error('Failed to fetch AI usage stats:', error);
+        return { success: false, error: error.message };
+    }
+};
+
+/**
+ * Get AI API health status
+ * @returns {Promise<Object>} Health status
+ */
+export const getAIAgentHealth = async () => {
+    try {
+        const response = await api.get('/ai-agent/health');
+        return response.data;
+    } catch (error) {
+        console.error('Failed to fetch AI agent health:', error);
+        return { success: false, error: error.message };
+    }
+};
+
+/**
+ * Get available AI models
+ * @returns {Promise<Array>} List of available models
+ */
+export const getAIModels = async () => {
+    try {
+        const response = await api.get('/ai-agent/models');
+        return response.data;
+    } catch (error) {
+        console.error('Failed to fetch AI models:', error);
+        return { success: false, data: [] };
+    }
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// STRUCTURAL FORM API
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * List all STRUCTURAL graphs with their linked CONSTRAINT graphs.
+ * @returns {Promise<Array<{graphId, name, namespace, nodeCount, constraint}>>}
+ */
+export const listStructuralGraphs = async () => {
+    const response = await api.get('/forms/structural-graphs');
+    return response.data.data;
+};
+
+/**
+ * Get compiled form specification from STRUCTURAL + CONSTRAINT graphs.
+ * @param {string} structuralGraphId
+ * @param {object} [options] - { constraintGraphId, locale }
+ * @returns {Promise<FormSpecification>}
+ */
+export const getFormSpecification = async (structuralGraphId, options = {}) => {
+    const params = new URLSearchParams({ locale: options.locale || 'en' });
+    if (options.constraintGraphId) params.append('constraintGraphId', options.constraintGraphId);
+
+    const response = await api.get(`/forms/specification/${structuralGraphId}?${params}`);
+    return response.data.data;
+};
+
+/**
+ * Validate form data against STRUCTURAL + CONSTRAINT on the server.
+ * @param {string} structuralGraphId
+ * @param {object} formData
+ * @param {object} [options] - { constraintGraphId, locale }
+ * @returns {Promise<{ valid: boolean, errors: Array }>}
+ */
+export const validateFormData = async (structuralGraphId, formData, options = {}) => {
+    const response = await api.post('/forms/validate', {
+        structuralGraphId,
+        constraintGraphId: options.constraintGraphId,
+        data: formData,
+        locale: options.locale || 'en',
+    });
+    return response.data;
+};
+
+// ─── DataSource API ──────────────────────────────────────────────────────────
+
+/**
+ * Load items from a DataSource.
+ * @param {string} dataSourceId
+ * @param {object} [params] - Query params (filters, limit, offset)
+ * @param {object} [options] - { signal }
+ */
+export const getDataSourceItems = async (dataSourceId, params = {}, options = {}) => {
+    const response = await api.get(`/datasources/${dataSourceId}/load`, {
+        params,
+        signal: options.signal,
+    });
+    return response.data;
+};
+
+/**
+ * Search DataSource items (autocomplete).
+ * @param {string} dataSourceId
+ * @param {string} query - Search text
+ * @param {object} [options] - { limit, signal, ...filters }
+ */
+export const searchDataSource = async (dataSourceId, query, options = {}) => {
+    const { limit = 20, signal, ...filters } = options;
+    const response = await api.get(`/datasources/${dataSourceId}/search`, {
+        params: { q: query, limit, ...filters },
+        signal,
+    });
+    return response.data;
+};
+
+/**
+ * Validate a value exists in a DataSource.
+ * @param {string} dataSourceId
+ * @param {*} value
+ * @param {string} [field]
+ */
+export const validateDataSourceValue = async (dataSourceId, value, field) => {
+    const response = await api.post(`/datasources/${dataSourceId}/validate-value`, {
+        value,
+        field,
+    });
+    return response.data;
 };
 
 export default api;

@@ -1,0 +1,9 @@
+code,name,category,active
+LAPTOP,Laptop,Computing,true
+DESKTOP,Desktop Computer,Computing,true
+MONITOR,Monitor,Display,true
+KEYBOARD,Keyboard,Peripherals,true
+MOUSE,Mouse,Peripherals,true
+HEADSET,Headset,Audio,true
+WEBCAM,Webcam,Video,true
+DOCK,Docking Station,Peripherals,true

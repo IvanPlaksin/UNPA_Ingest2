@@ -166,6 +166,8 @@ export default function ImportSqlSelector() {
     store.updateConnectionForm('_nameConflict', false);
 
     const domainId = dataSources[0]?.domainId || null;
+    // Only send credentials if user filled them in (don't overwrite with empty when editing)
+    const credentials = (f.user && f.password) ? { username: f.user, password: f.password } : null;
     try {
       await saveDataSource(domainId, connName, {
         server: f.server,
@@ -175,10 +177,7 @@ export default function ImportSqlSelector() {
         trustServerCertificate: f.trustServerCertificate,
         protocol: f.protocol || 'tcp',
         instanceName: f.instanceName || undefined,
-      }, {
-        username: f.user,
-        password: f.password,
-      });
+      }, credentials);
       store.addLog('success', `Connection "${connName}" saved`);
       store.resetConnectionForm();
       await loadSources();
@@ -315,7 +314,8 @@ export default function ImportSqlSelector() {
     const serverLabel = source?.connectionParams?.server || form.server;
     const dbLabel = source?.connectionParams?.database || form.database;
     if (source) localStorage.setItem('importSql.lastSourceId', source.connectionName);
-    store.addLog('info', `Starting agentic extraction from ${serverLabel}/${dbLabel}...`);
+    const portLabel = source?.connectionParams?.port || form.port || 1433;
+    store.addLog('info', `Starting agentic extraction from ${serverLabel}:${portLabel}/${dbLabel}...`);
 
     const credentials = buildCredentials();
 
@@ -346,7 +346,14 @@ export default function ImportSqlSelector() {
               break;
             case 'phase_error':
               s.agentPhaseError(payload);
-              s.addLog('error', `Phase ${payload.phase} failed: ${payload.error}`);
+              s.addLog('error', `Phase ${payload.phase} FAILED: ${payload.error}`);
+              if (payload.stack) s.addLog('error', `Stack trace:\n${payload.stack}`);
+              break;
+            case 'schemas_discovered':
+              s.addLog('info', `Found ${payload.count} schema(s): ${(payload.schemas || []).join(', ')}`);
+              break;
+            case 'tables_discovered':
+              s.addLog('info', `Discovered ${payload.count} table(s)/view(s)`);
               break;
             case 'tables_classified':
               s.addLog('info', `Tables: ${payload.master || 0} master, ${payload.reference || 0} ref, ${payload.transaction || 0} txn, ${payload.junction || 0} jct`);
@@ -391,7 +398,11 @@ export default function ImportSqlSelector() {
         onError: (payload) => {
           const s = useImportSqlStore.getState();
           s.setAgentError(payload);
-          s.addLog('error', `Agent error: ${payload.message}`);
+          const phase = payload.phaseName ? ` in phase "${payload.phaseName}"` : '';
+          s.addLog('error', `Agent FAILED${phase}: ${payload.message || 'Unknown error'}`);
+          if (payload.stack) {
+            s.addLog('error', `Stack: ${payload.stack}`);
+          }
         },
       }
     );
@@ -408,7 +419,22 @@ export default function ImportSqlSelector() {
   // ── Handle Open Graphs in GXE ──
   const handleOpenGraphsInGXE = useCallback((graphs) => {
     if (!graphs) return;
-    store.setImportComplete(graphs, store.agentSummary || {});
+
+    // Convert object format { type: {nodes,edges} } to array [{ type, nodes, edges }]
+    // GXE consumer expects pendingGraphs.graphs to be an array
+    let graphsArray;
+    if (Array.isArray(graphs)) {
+      graphsArray = graphs;
+    } else {
+      graphsArray = Object.entries(graphs).map(([type, data]) => ({
+        type,
+        title: data.title || type.replace(/([A-Z])/g, ' $1').trim(),
+        nodes: data.nodes || [],
+        edges: data.edges || [],
+      }));
+    }
+
+    store.setImportComplete(graphsArray, store.agentSummary || {});
     store.closeDialog();
   }, []);
 
@@ -675,10 +701,16 @@ export default function ImportSqlSelector() {
                     value={store.connectionForm.password}
                     onChange={(e) => store.updateConnectionForm('password', e.target.value)}
                     type="password"
+                    placeholder={store.connectionForm._hasCredentials ? '(saved)' : ''}
                     style={inputStyle}
                   />
                 </div>
               </div>
+              {store.connectionForm._hasCredentials && !store.connectionForm.user && !store.connectionForm.password && (
+                <div style={{ color: '#238636', fontSize: 11, marginBottom: 8 }}>
+                  ✓ Credentials saved. Leave blank to keep existing, or enter new values to update.
+                </div>
+              )}
 
               <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#8b949e', fontSize: 12, cursor: 'pointer' }}>

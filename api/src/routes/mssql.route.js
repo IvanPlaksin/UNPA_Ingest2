@@ -110,12 +110,13 @@ router.get('/schemas', async (req, res) => {
  */
 router.get('/tables', async (req, res) => {
   try {
-    const { schema, includeViews, includeRowCounts } = req.query;
+    const { schema, includeViews, includeRowCounts, includeColumns } = req.query;
 
     const tables = await getConnector().getTables({
       schema,
       includeViews: includeViews !== 'false',
       includeRowCounts: includeRowCounts === 'true',
+      includeColumns: includeColumns === 'true',
     });
 
     res.json({ success: true, tables, count: tables.length });

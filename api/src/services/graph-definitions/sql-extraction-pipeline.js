@@ -178,12 +178,13 @@ const SQL_EXTRACTION_META = {
       position: { x: 1250, y: 200 },
       data: {
         label: 'Parse Procedure ASTs',
-        tool: 'common.loop',
+        tool: 'workflow.spawn_graph',
         config: {
-          items: '{{META-N08.procedures}}',
-          subgraph: 'CORE-SQL-PROCEDURE-ANALYSIS-V1',
-          itemVariable: 'procedure',
-          collectResults: true,
+          graph_id: 'CORE-SQL-PROCEDURE-ANALYSIS-V1',
+          params: {
+            procedures: '{{META-N08.procedures}}',
+          },
+          mode: 'sync',
         },
       },
     },

@@ -18,7 +18,7 @@ class SqlProcedureListExecutor extends BaseExecutor {
       type: 'object',
       properties: {
         connectionId: { type: 'string', description: 'Connection ID from sql.connect' },
-        schemas: { type: 'array', default: ['dbo'], description: 'Schemas to scan' },
+        schemas: { type: ['array', 'string'], default: ['dbo'], description: 'Schemas to scan (array or comma-separated string)' },
         includeTriggers: { type: 'boolean', default: true },
       },
       required: ['connectionId'],
@@ -27,7 +27,10 @@ class SqlProcedureListExecutor extends BaseExecutor {
 
   async execute(parameters, context) {
     const connectionId = this.getRequiredParam(parameters, 'connectionId');
-    const schemas = this.getParam(parameters, 'schemas', ['dbo']);
+    let schemas = this.getParam(parameters, 'schemas', ['dbo']);
+    if (typeof schemas === 'string') {
+      schemas = schemas.includes(',') ? schemas.split(',').map(s => s.trim()) : [schemas];
+    }
     const includeTriggers = this.getParam(parameters, 'includeTriggers', true);
 
     const pool = context.sharedState?.get(`sql:pool:${connectionId}`);

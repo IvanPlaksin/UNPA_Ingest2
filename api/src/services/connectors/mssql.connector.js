@@ -79,9 +79,12 @@ class MSSQLConnector {
     }
 
     // ── TCP (default) ────────────────────────────────────────────────
+    const resolvedPort = parseInt(params.port) || DEFAULTS.PORT;
+    console.log(`[MSSQLConnector] Connecting to ${params.server}:${resolvedPort}/${params.database} as ${params.username || params.user}`);
+
     const config = {
       server: params.server,
-      port: params.port || DEFAULTS.PORT,
+      port: resolvedPort,
       database: params.database,
       user: params.username || params.user,
       password: params.password,
@@ -145,10 +148,12 @@ class MSSQLConnector {
         version: this.serverInfo.version,
       };
     } catch (error) {
-      console.error(`[MSSQLConnector] Connection failed:`, error.message);
+      console.error(`[MSSQLConnector] Connection FAILED → ${config.server}:${config.port}/${config.database} user=${config.user} encrypt=${config.options?.encrypt} trustCert=${config.options?.trustServerCertificate}`);
+      console.error(`[MSSQLConnector] Error: ${error.message} (code: ${error.code || error.number || 'N/A'})`);
+      if (error.stack) console.error(`[MSSQLConnector] Stack: ${error.stack.split('\n').slice(0, 3).join(' | ')}`);
       return {
         success: false,
-        error: error.message,
+        error: `${error.message} [server=${config.server}:${config.port}, db=${config.database}, user=${config.user}]`,
         code: error.code || error.number,
       };
     }
@@ -362,7 +367,36 @@ class MSSQLConnector {
     query += ' ORDER BY schema_name, table_name';
 
     const result = await request.query(query);
-    return result.recordset;
+    const tables = result.recordset;
+
+    // Optionally bulk-fetch column names for all tables in a single query
+    if (options.includeColumns) {
+      const colsResult = await this.pool.request().query(`
+        SELECT
+          s.name AS schema_name,
+          t.name AS table_name,
+          c.name AS column_name,
+          TYPE_NAME(c.user_type_id) AS data_type
+        FROM sys.columns c
+        INNER JOIN sys.tables t ON t.object_id = c.object_id
+        INNER JOIN sys.schemas s ON s.schema_id = t.schema_id
+        WHERE t.is_ms_shipped = 0
+          AND s.name NOT IN (${this._quotedList(SYSTEM_SCHEMAS)})
+        ORDER BY s.name, t.name, c.column_id
+      `);
+
+      const colsByTable = new Map();
+      for (const c of colsResult.recordset) {
+        const key = `${c.schema_name}.${c.table_name}`;
+        if (!colsByTable.has(key)) colsByTable.set(key, []);
+        colsByTable.get(key).push({ name: c.column_name, type: c.data_type });
+      }
+      for (const t of tables) {
+        t.columns = colsByTable.get(`${t.schema_name}.${t.table_name}`) || [];
+      }
+    }
+
+    return tables;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -862,8 +896,9 @@ class MSSQLConnector {
   }
 
   _excludeTableNamesCondition(alias) {
+    // Escape SQL LIKE wildcards: _ → [_], % → [%]
     const prefixConditions = SYSTEM_TABLE_PREFIXES
-      .map(p => `${alias}.name NOT LIKE '${p}%'`)
+      .map(p => `${alias}.name NOT LIKE '${p.replace(/%/g, '[%]').replace(/_/g, '[_]')}%'`)
       .join(' AND ');
 
     const nameConditions = EXCLUDED_TABLES.length > 0

@@ -3,6 +3,7 @@
  *
  * Tab 1: Execution Results (ResultPanel)
  * Tab 2: Generation Log (real-time generation events)
+ * Tab 6: AI Assistant (GXE graph builder)
  */
 
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
@@ -10,12 +11,13 @@ import {
   CheckCircle, AlertCircle, Terminal, ChevronDown, ChevronUp,
   GripVertical, X, Clock, Activity, Zap, Brain, FileCode,
   Layers, Database, Search, Code, Settings, Loader2, Sparkles,
-  MessageSquare
+  MessageSquare, Bot
 } from 'lucide-react';
 import ExecutionResultPanel from './ExecutionResultPanel';
 import AnalysisLogTab from './AnalysisLogTab';
 import GraphAnalystChat from './GraphAnalystChat';
 import LiveExecutionTab from './LiveExecutionTab';
+import GXEAssistantTab from './panels/GXEAssistantTab';
 
 const STORAGE_KEY = 'gxe-bottom-panel-state';
 
@@ -113,6 +115,12 @@ const BottomPanel = ({
   assistantWidth,
   onAssistantWidthChange,
   onAssistantStreamingComplete,
+  // GXE AI Assistant tab props
+  selectedNodes,
+  selectedEdges,
+  setNodes,
+  setEdges,
+  catalogGraphId,
 }) => {
   const savedState = loadSavedState();
 
@@ -338,6 +346,18 @@ const BottomPanel = ({
           Graph Analyst
         </button>
 
+        <button
+          onClick={() => { setActiveTab('aiAssistant'); setIsCollapsed(false); }}
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-medium transition-colors border-b-2 ${
+            activeTab === 'aiAssistant'
+              ? 'text-indigo-400 border-indigo-400 bg-[#161b22]'
+              : 'text-gray-400 border-transparent hover:text-white hover:bg-[#21262d]'
+          }`}
+        >
+          <Bot className="w-3.5 h-3.5" />
+          AI Assistant
+        </button>
+
         <div className="flex-1" />
 
         {/* Stats */}
@@ -420,6 +440,16 @@ const BottomPanel = ({
               nodes={graphNodes}
               edges={graphEdges}
               namespace={namespace}
+            />
+          ) : activeTab === 'aiAssistant' ? (
+            <GXEAssistantTab
+              nodes={graphNodes}
+              edges={graphEdges}
+              selectedNodes={selectedNodes || []}
+              selectedEdges={selectedEdges || []}
+              setNodes={setNodes}
+              setEdges={setEdges}
+              catalogGraphId={catalogGraphId}
             />
           ) : (
             <ExecutionResultPanel

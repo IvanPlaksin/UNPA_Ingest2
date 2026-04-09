@@ -1,0 +1,303 @@
+{
+  "version": "1.0.0",
+  "sanitization": {
+    "enabled": true,
+    "piiDetection": {
+      "enabled": true,
+      "patterns": [
+        "email",
+        "phone",
+        "ssn",
+        "creditcard"
+      ],
+      "redactWith": "[REDACTED]"
+    },
+    "htmlProcessing": {
+      "stripTags": true,
+      "preserveStructure": true,
+      "decodeEntities": true
+    },
+    "maxLength": 100000,
+    "trimWhitespace": true,
+    "normalizeLineEndings": true
+  },
+  "languageDetection": {
+    "enabled": true,
+    "minConfidence": 0.5,
+    "fallbackLanguage": "en",
+    "codeDetection": {
+      "enabled": true,
+      "minCodeRatio": 0.3,
+      "indicators": [
+        "function",
+        "class",
+        "const",
+        "let",
+        "var",
+        "import",
+        "export",
+        "return"
+      ]
+    },
+    "supportedLanguages": [
+      "en",
+      "fr",
+      "es",
+      "ar",
+      "zh",
+      "ru"
+    ]
+  },
+  "chunking": {
+    "enabled": true,
+    "strategy": "semantic",
+    "maxTokens": 512,
+    "overlapTokens": 50,
+    "minChunkSize": 100,
+    "respectBoundaries": true,
+    "sentenceSplitPattern": {},
+    "paragraphSplitPattern": {}
+  },
+  "entityExtraction": {
+    "enabled": true,
+    "regex": {
+      "enabled": true,
+      "minConfidence": 0.8454944786586158,
+      "patterns": {
+        "systems": {
+          "enabled": true,
+          "confidence": 0.95
+        },
+        "documents": {
+          "enabled": true,
+          "confidence": 0.97
+        },
+        "organizations": {
+          "enabled": true,
+          "confidence": 0.93
+        },
+        "workItems": {
+          "enabled": true,
+          "confidence": 0.99
+        },
+        "technical": {
+          "enabled": true,
+          "confidence": 0.85
+        },
+        "technologies": {
+          "enabled": true,
+          "confidence": 0.9
+        },
+        "camelCase": {
+          "enabled": true,
+          "minLength": 6,
+          "confidence": 0.7,
+          "excludeList": [
+            "JavaScript",
+            "TypeScript",
+            "Microsoft",
+            "GitHub"
+          ]
+        }
+      }
+    },
+    "llm": {
+      "enabled": true,
+      "provider": "ollama",
+      "model": "llama3",
+      "fallbackChain": [
+        "ollama",
+        "gemini"
+      ],
+      "temperature": 0.6048998786091503,
+      "maxTokens": 2000,
+      "timeout": 30000,
+      "retries": 2,
+      "minContentLength": 50,
+      "confidenceCap": 0.95
+    },
+    "merge": {
+      "strategy": "confidence",
+      "sourcePriority": [
+        "regex",
+        "llm"
+      ],
+      "boostMultiSource": 0.05,
+      "maxBoost": 0.99
+    },
+    "minConfidence": 0.340200612464076,
+    "maxEntities": 100,
+    "deduplication": {
+      "enabled": true,
+      "normalizeCase": true,
+      "removeSpecialChars": true
+    }
+  },
+  "relationshipExtraction": {
+    "enabled": true,
+    "minEntities": 2,
+    "patterns": {
+      "enabled": true,
+      "minConfidence": 0.5,
+      "types": {
+        "USES": {
+          "enabled": true,
+          "confidence": 0.85
+        },
+        "DEPENDS_ON": {
+          "enabled": true,
+          "confidence": 0.85
+        },
+        "INTEGRATES_WITH": {
+          "enabled": true,
+          "confidence": 0.75
+        },
+        "CONNECTS_TO": {
+          "enabled": true,
+          "confidence": 0.85
+        },
+        "IS_A": {
+          "enabled": true,
+          "confidence": 0.7
+        },
+        "PROVIDES": {
+          "enabled": true,
+          "confidence": 0.8
+        },
+        "HANDLES": {
+          "enabled": true,
+          "confidence": 0.8
+        },
+        "STORES_IN": {
+          "enabled": true,
+          "confidence": 0.8
+        },
+        "STORED_IN": {
+          "enabled": true,
+          "confidence": 0.8
+        },
+        "WRITES_TO": {
+          "enabled": true,
+          "confidence": 0.75
+        },
+        "READS_FROM": {
+          "enabled": true,
+          "confidence": 0.75
+        },
+        "CONTAINS": {
+          "enabled": true,
+          "confidence": 0.7
+        },
+        "PART_OF": {
+          "enabled": true,
+          "confidence": 0.75
+        },
+        "GENERATES": {
+          "enabled": true,
+          "confidence": 0.8
+        },
+        "CALLS": {
+          "enabled": true,
+          "confidence": 0.8
+        }
+      }
+    },
+    "coOccurrence": {
+      "enabled": true,
+      "windowType": "sentence",
+      "fixedWindowSize": 200,
+      "baseConfidence": 0.55,
+      "maxConfidence": 0.7,
+      "distanceBonus": 0.15
+    },
+    "preposition": {
+      "enabled": true,
+      "minConfidence": 0.65
+    },
+    "llm": {
+      "enabled": true,
+      "onlyWhenNoPatterns": true,
+      "minEntities": 3
+    },
+    "maxRelationships": 50,
+    "deduplication": true
+  },
+  "queryExpansion": {
+    "enabled": true,
+    "maxTerms": 10,
+    "includesSynonyms": true,
+    "includesHyponyms": false,
+    "includesHypernyms": false,
+    "domainSpecific": {
+      "enabled": true,
+      "domains": [
+        "UN",
+        "software",
+        "business"
+      ]
+    }
+  },
+  "embedding": {
+    "enabled": true,
+    "model": "nomic-embed-text",
+    "dimension": 1024,
+    "batchSize": 32,
+    "normalize": true,
+    "timeout": 30000,
+    "retries": 2
+  },
+  "classification": {
+    "enabled": true,
+    "minConfidence": 0.5,
+    "layers": {
+      "enabled": true,
+      "mapping": {
+        "SYSTEM": "Infrastructure",
+        "DATABASE": "Infrastructure",
+        "API": "Integration",
+        "MODULE": "Business",
+        "PROCESS": "Business",
+        "BUSINESS_RULE": "Business",
+        "CONCEPT": "Business",
+        "DOCUMENT": "Application",
+        "ORGANIZATION": "Business",
+        "PERSON": "Application",
+        "TECHNOLOGY": "Infrastructure",
+        "WORK_ITEM_REF": "Application",
+        "FILE_PATH": "Infrastructure",
+        "UNKNOWN": "Unknown"
+      },
+      "defaultLayer": "Unknown"
+    },
+    "domains": {
+      "enabled": true,
+      "categories": [
+        "technical",
+        "business",
+        "organizational",
+        "procedural"
+      ]
+    }
+  },
+  "graphBuild": {
+    "enabled": true,
+    "nodes": {
+      "minConfidence": 0.6,
+      "includeMetadata": true,
+      "idGeneration": "uuid"
+    },
+    "edges": {
+      "minConfidence": 0.5,
+      "includeEvidence": true,
+      "bidirectional": [
+        "RELATED_TO"
+      ]
+    },
+    "outputFormat": "cytoscape"
+  },
+  "_meta": {
+    "profile": "tuned_tuning_1769088453610",
+    "savedAt": "2026-01-22T13:27:33.612Z",
+    "version": "1.0.0"
+  }
+}

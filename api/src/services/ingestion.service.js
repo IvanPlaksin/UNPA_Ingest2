@@ -1,5 +1,5 @@
 const neo4jService = require('./neo4j.service');
-const chromaService = require('./chroma.service');
+const qdrantService = require('./qdrant.service');
 const adoService = require('./ado.service');
 const graphExtractor = require('./graph.extractor');
 const msgProcessor = require('../processors/msg.structure.processor');
@@ -35,12 +35,12 @@ class IngestionService {
         const status = await neo4jService.checkDocumentStatus(attachmentUrl);
         if (status.processed) {
             console.log(`[Ingestion] Document already processed. Returning existing graph.`);
-            // TODO: Fetch existing chunks from Chroma if needed for the UI inspector
-            // For now, we'll return the graph and empty chunks (or fetch from Chroma if we implement that)
+            // TODO: Fetch existing chunks from Qdrant if needed for the UI inspector
+            // For now, we'll return the graph and empty chunks (or fetch from Qdrant if we implement that)
             const graphData = await neo4jService.getDocumentGraph(attachmentUrl);
             return {
                 graphData: this._formatGraphData(graphData),
-                chunks: [], // We could fetch these from Chroma if we want to show them again
+                chunks: [], // We could fetch these from Qdrant if we want to show them again
                 status: 'cached'
             };
         }
@@ -104,8 +104,16 @@ class IngestionService {
             if (atom.content.includes('Neo4j')) entities.push({ name: 'Neo4j', type: 'Technology' });
         }
 
-        // 5. Save to Chroma
-        await chromaService.saveVectors(chunks);
+        // 5. Save to Qdrant
+        const points = chunks.map(chunk => ({
+            id: chunk.id,
+            vector: chunk.vector,
+            payload: {
+                text: chunk.text,
+                ...chunk.metadata
+            }
+        }));
+        await qdrantService.upsertPoints(points);
 
         // 6. Save to Neo4j (Graph)
         const docData = {
@@ -344,7 +352,7 @@ class IngestionService {
             atoms = [{ content: item.content, type: 'text', context: item.context }];
         }
 
-        // 3. Vectorize & Save (Entities, Chroma, Graph)
+        // 3. Vectorize & Save (Entities, Qdrant, Graph)
         // Reuse logic from processAttachment, but simpler for now
 
         const chunks = [];
@@ -378,9 +386,17 @@ class IngestionService {
             // Entity Extraction (Heuristic/LLM could be added here)
         }
 
-        // Save to Chroma
+        // Save to Qdrant
         if (chunks.length > 0) {
-            await chromaService.saveVectors(chunks);
+            const points = chunks.map(chunk => ({
+                id: chunk.id,
+                vector: chunk.vector,
+                payload: {
+                    text: chunk.text,
+                    ...chunk.metadata
+                }
+            }));
+            await qdrantService.upsertPoints(points);
         }
 
         // Save to Neo4j

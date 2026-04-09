@@ -1,4 +1,20 @@
+@import "tailwindcss";
+
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
+/* Tailwind v4 theme customization */
+@theme {
+  --color-gh-bg: #0d1117;
+  --color-gh-sidebar: #161b22;
+  --color-gh-panel: #1c2128;
+  --color-gh-card: #21262d;
+  --color-gh-border: #30363d;
+  --color-gh-border-light: #3d444d;
+  --color-gh-text: #f0f6fc;
+  --color-gh-text-secondary: #8b949e;
+  --color-gh-text-muted: #6e7681;
+  --color-gh-link: #388bfd;
+}
 
 :root {
   /* --- UN PALETTE (High Contrast) --- */
@@ -26,6 +42,13 @@
 
   --bg-app: #F8F9FA;
   --bg-surface: #FFFFFF;
+
+  /* --- SIGNAL / WAITING NODES --- */
+  --nexus-node-waiting-bg: #FFF8E1;
+  --nexus-node-waiting-border: #FFB300;
+  --nexus-node-waiting-urgent: #FF9800;
+  --nexus-node-contradiction: #F44336;
+  --nexus-accent: #1976d2;
   --bg-header: #FFFFFF;
 
   /* Status Colors */
@@ -357,4 +380,9 @@ h3 {
 
 .flex-row {
   flex-direction: row;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }

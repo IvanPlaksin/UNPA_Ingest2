@@ -12,6 +12,26 @@ import WorkItemNexusPage from './pages/WorkItemNexusPage';
 import TfvcBrowserPage from './pages/TfvcBrowserPage';
 import AgentPage from './pages/AgentPage';
 import SingularityGraph from './components/Singularity/SingularityGraph';
+import KnowledgeGraphPage from './pages/KnowledgeGraphPage';
+import KnowledgePlanesPage from './pages/KnowledgePlanesPage';
+import PipelineLabPage from './pages/PipelineLabPage';
+import AOPEGEditorPage from './pages/AOPEGEditorPage';
+import GXEVisualizerPage from './pages/GXEVisualizerPage';
+import GNNDashboardPage from './pages/GNNDashboardPage';
+import SingularityPage from './pages/SingularityPage';
+import ExperimentalPage from './pages/ExperimentalPage';
+import GraphCRUDPage from './pages/GraphCRUDPage';
+import TensorDashboardPage from './pages/TensorDashboardPage';
+import GxeManagerPage from './pages/GxeManagerPage';
+import FlowDeskPage from './pages/FlowDeskPage';
+import FlowDeskConfigPage from './pages/FlowDeskConfigPage';
+import BackLogPage from './pages/BackLogPage';
+import CodexViewerPage from './pages/CodexViewerPage';
+import ObservabilityPage from './pages/ObservabilityPage';
+import WorkspacesPage from './pages/WorkspacesPage';
+import WorkspaceDetailPage from './pages/WorkspaceDetailPage';
+import StructuralFormDemoPage from './pages/StructuralFormDemoPage';
+import StructuralEditorPage from './pages/StructuralEditorPage';
 
 // import './index.css'; // Removing in favor of CssBaseline and MUI styles
 
@@ -88,7 +108,58 @@ function App() {
                                 {/* Singularity Test Route */}
                                 <Route path="/singularity/workitem/:id" element={<SingularityWrapper />} />
 
+                                {/* Knowledge Graph Route */}
+                                <Route path="/knowledge/graph" element={<KnowledgeGraphPage />} />
+
+                                {/* Knowledge Planes Route */}
+                                <Route path="/knowledge/planes" element={<KnowledgePlanesPage />} />
+
+                                {/* Graph Database Manager */}
+                                <Route path="/knowledge/crud" element={<GraphCRUDPage />} />
+
                                 <Route path="/agent" element={<AgentPage />} />
+
+                                {/* Pipeline Lab - Consolidated extraction tools */}
+                                <Route path="/pipeline-lab" element={<PipelineLabPage />} />
+
+                                {/* AOPEG Graph Editor */}
+                                <Route path="/aopeg" element={<AOPEGEditorPage />} />
+                                <Route path="/aopeg/:graphId" element={<AOPEGEditorPage />} />
+
+                                {/* GXE Visualizer - AI Tool Orchestration */}
+                                <Route path="/gxe" element={<GXEVisualizerPage />} />
+
+                                {/* GNN Dashboard - Graph Neural Networks */}
+                                <Route path="/gnn" element={<GNNDashboardPage />} />
+
+                                {/* Singularity - 3D Graph Explorer */}
+                                <Route path="/singularity" element={<SingularityPage />} />
+
+                                {/* Experimental Features */}
+                                <Route path="/experimental" element={<ExperimentalPage />} />
+
+                                {/* Tensor Dashboard - Real-time Performance Monitoring */}
+                                <Route path="/tensor-dashboard" element={<TensorDashboardPage />} />
+
+                                {/* GxeManager - Execution Orchestrator Monitor */}
+                                <Route path="/gxe-manager" element={<GxeManagerPage />} />
+
+                                {/* FlowDesk AI Intake Demo */}
+                                <Route path="/flowdesk" element={<FlowDeskPage />} />
+                                <Route path="/forms-demo" element={<StructuralFormDemoPage />} />
+                                <Route path="/structural-editor" element={<StructuralEditorPage />} />
+                                <Route path="/flowdesk/config" element={<FlowDeskConfigPage />} />
+
+                                {/* BackLog — AI-generated code modification tasks */}
+                                <Route path="/backlog" element={<BackLogPage />} />
+                                <Route path="/codex" element={<CodexViewerPage />} />
+
+                                {/* WorkSpace — Isolated knowledge extraction sandbox */}
+                                <Route path="/workspaces" element={<WorkspacesPage />} />
+                                <Route path="/workspaces/:workspaceId" element={<WorkspaceDetailPage />} />
+
+                                {/* Observability Dashboard */}
+                                <Route path="/observability" element={<ObservabilityPage />} />
                             </Routes>
                         </Box>
                     </Box>

@@ -16,6 +16,10 @@
         "@mui/material": "^7.3.6",
         "axios": "^1.13.2",
         "d3-force-3d": "^3.0.6",
+        "d3-hierarchy": "^3.1.2",
+        "dagre": "^0.8.5",
+        "elkjs": "^0.11.0",
+        "gsap": "^3.14.2",
         "lucide-react": "^0.554.0",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
@@ -24,13 +28,23 @@
         "react-resizable-panels": "^3.0.6",
         "react-resize-detector": "^12.3.0",
         "react-router-dom": "^7.9.6",
+        "react-virtualized-auto-sizer": "^2.0.3",
+        "react-window": "^2.2.7",
         "reactflow": "^11.11.4",
-        "three": "^0.181.2"
+        "recharts": "^3.7.0",
+        "three": "^0.181.2",
+        "uuid": "^13.0.0",
+        "zustand": "^5.0.11"
     },
     "devDependencies": {
+        "@tailwindcss/postcss": "^4.1.18",
         "@types/react": "^18.2.15",
         "@types/react-dom": "^18.2.7",
+        "@types/uuid": "^10.0.0",
         "@vitejs/plugin-react": "^4.0.3",
+        "autoprefixer": "^10.4.23",
+        "postcss": "^8.5.6",
+        "tailwindcss": "^4.1.18",
         "vite": "^4.4.5"
     }
 }

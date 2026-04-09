@@ -1,0 +1,728 @@
+openapi: 3.0.3
+info:
+  title: UN ProjectAdvisor API
+  description: |
+    Knowledge Graph-powered AI system for legacy code documentation and institutional knowledge preservation.
+
+    ## Architecture
+    - **Graph Database**: Memgraph/Neo4j for knowledge storage
+    - **Vector Store**: Qdrant for semantic search
+    - **LLM Integration**: Ollama, Gemini, Anthropic for entity extraction
+    - **Runtime Engine**: GXE DAG execution with AOPEG plugins
+    - **Real-time**: SSE streaming and WebSocket support
+
+    ## Authentication
+    Currently no authentication required (internal use).
+
+    ## Rate Limits
+    No enforced rate limits. Batch endpoints have per-request limits.
+
+    ## API Groups
+    | Group | Endpoints | Description |
+    |-------|-----------|-------------|
+    | Query | 12 | Natural language query with hybrid retrieval |
+    | Patterns | 11 | Entity & relation pattern management |
+    | Graph-RAG | 13 | Knowledge graph CRUD and GNN-RAG |
+    | Ingestion | 6 | Document upload and extraction pipeline |
+    | Connectors | 12 | Source connector management |
+    | Jobs | 9 | Background job queue management |
+    | Visualization | 7 | Graph visualization data |
+    | Dashboard | 10 | Metrics, analytics, activity |
+    | Export | 4 | Graph export (6 formats) |
+    | Reports | 8 | Report generation |
+    | Runtime | 10 | GXE DAG execution engine |
+    | AOPEG | 22 | AOPEG graph management |
+    | AI Agent | 16 | AI Graph Builder agent |
+    | GXE | 15 | Graph Execution Engine |
+    | Graph Catalog | 12 | GXE graph catalog CRUD |
+    | Immutable Graph | 22 | Bi-temporal versioned graph |
+    | Tensor | 13 | Performance monitoring |
+    | Tuning | 26 | Pipeline tuning |
+    | Namespaces | 10 | Namespace separation |
+    | Incremental KG | 20 | Incremental extraction |
+    | Graph Types | 8 | Node/edge type definitions |
+    | AI Infrastructure | 10 | AI provider configuration |
+    | Pipeline Lab | 7 | Interactive pipeline processing |
+    | Health | 5 | Health checks and probes |
+  version: 1.0.0
+  contact:
+    name: UN ProjectAdvisor
+  license:
+    name: MIT
+
+servers:
+  - url: /api/v1
+    description: API v1
+  - url: http://localhost:3010/api/v1
+    description: Development
+
+tags:
+  - name: Query
+    description: Natural language query with hybrid retrieval (vector + graph)
+  - name: Patterns
+    description: Entity & relation pattern management for extraction
+  - name: Graph-RAG
+    description: Knowledge graph CRUD and GNN-RAG retrieval
+  - name: Ingestion
+    description: Document upload, parsing, and extraction pipeline
+  - name: Connectors
+    description: Source connector management (filesystem, TFS, SharePoint)
+  - name: Jobs
+    description: Background job queue management
+  - name: Visualization
+    description: Graph visualization data (D3, Three.js, Cytoscape)
+  - name: Dashboard
+    description: Metrics, analytics, activity, and system overview
+  - name: Export
+    description: "Graph export (Cypher, GraphML, JSON-LD, GEXF, CSV, JSON)"
+  - name: Reports
+    description: Knowledge graph report generation
+  - name: Runtime
+    description: GXE DAG execution engine with SSE streaming
+  - name: AOPEG
+    description: "AOPEG graph management, execution, and pattern library"
+  - name: AI Agent
+    description: AI Graph Builder agent sessions and chat
+  - name: GXE
+    description: Graph Execution Engine - tool orchestration and scenarios
+  - name: Graph Catalog
+    description: "GXE graph catalog CRUD (atomic, tool, business, composite)"
+  - name: Immutable Graph
+    description: Bi-temporal versioned graph with God Mode
+  - name: Tensor
+    description: Real-time performance monitoring and causal graphs
+  - name: Tuning
+    description: "Pipeline tuning sessions, configs, metrics, and LLM providers"
+  - name: Namespaces
+    description: CoreKnowledge / ProjectKnowledge namespace separation
+  - name: Incremental KG
+    description: Incremental knowledge graph extraction pipeline
+  - name: Knowledge
+    description: Legacy knowledge routes
+  - name: Graph Types
+    description: Node/edge type definitions from Core KB
+  - name: AI Infrastructure
+    description: AI provider configuration and usage tracking
+  - name: Pipeline Lab
+    description: Interactive pipeline processing with SSE streaming
+  - name: Health
+    description: "Health checks, liveness, readiness probes"
+
+paths:
+  # ═══════════════════════════════════════════════════════════════════
+  # QUERY (12 endpoints)
+  # ═══════════════════════════════════════════════════════════════════
+  /query:
+    post:
+      tags: [Query]
+      summary: Execute natural language query
+      description: "Hybrid retrieval: vector search + graph traversal + LLM reranking"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [query]
+              properties:
+                query:
+                  type: string
+                  maxLength: 1000
+                  example: "What is IMIS?"
+                mode:
+                  type: string
+                  enum: [quick, full, explain]
+                  default: full
+                format:
+                  type: string
+                  enum: [brief, detailed, structured]
+                  default: detailed
+                noCache:
+                  type: boolean
+                  default: false
+      responses:
+        "200":
+          description: Query result with sources and confidence
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QueryResult"
+        "400":
+          description: Invalid input
+
+  /query/quick:
+    post:
+      tags: [Query]
+      summary: Quick entity lookup (graph-only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [query]
+              properties:
+                query:
+                  type: string
+      responses:
+        "200":
+          description: Quick result
+
+  /query/explain:
+    post:
+      tags: [Query]
+      summary: Query with step-by-step explanation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [query]
+              properties:
+                query:
+                  type: string
+                format:
+                  type: string
+      responses:
+        "200":
+          description: Result with explanation
+
+  /query/batch:
+    post:
+      tags: [Query]
+      summary: Batch queries (max 10)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [queries]
+              properties:
+                queries:
+                  type: array
+                  items:
+                    type: string
+                  maxItems: 10
+                mode:
+                  type: string
+                format:
+                  type: string
+      responses:
+        "200":
+          description: Batch results
+
+  /query/lookup/{entity}:
+    get:
+      tags: [Query]
+      summary: Lookup entity by name
+      parameters:
+        - name: entity
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Entity data
+
+  /query/path:
+    get:
+      tags: [Query]
+      summary: Find shortest path between entities
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Path
+
+  /query/count/{type}:
+    get:
+      tags: [Query]
+      summary: Count entities of type
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Count
+
+  /query/list/{type}:
+    get:
+      tags: [Query]
+      summary: List entities of type
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Entity list
+
+  /query/relations/{entity}:
+    get:
+      tags: [Query]
+      summary: Get entity relationships
+      parameters:
+        - name: entity
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Relations
+
+  /query/compare:
+    get:
+      tags: [Query]
+      summary: Compare two entities
+      parameters:
+        - name: entity1
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: entity2
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Comparison
+
+  /query/stats:
+    get:
+      tags: [Query]
+      summary: Query engine statistics
+      responses:
+        "200":
+          description: Stats
+
+  /query/cache/clear:
+    post:
+      tags: [Query]
+      summary: Clear query cache
+      responses:
+        "200":
+          description: Cleared
+
+  # ═══════════════════════════════════════════════════════════════════
+  # PATTERNS (11 endpoints)
+  # ═══════════════════════════════════════════════════════════════════
+  /patterns/entity:
+    get:
+      tags: [Patterns]
+      summary: List entity patterns
+      parameters:
+        - name: domain
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Patterns
+    post:
+      tags: [Patterns]
+      summary: Create entity pattern
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EntityPatternInput"
+      responses:
+        "201":
+          description: Created
+
+  /patterns/entity/{id}:
+    get:
+      tags: [Patterns]
+      summary: Get pattern
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Pattern
+        "404":
+          description: Not found
+    put:
+      tags: [Patterns]
+      summary: Update pattern
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EntityPatternInput"
+      responses:
+        "200":
+          description: Updated
+    delete:
+      tags: [Patterns]
+      summary: Delete pattern
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+
+  /patterns/relation:
+    get:
+      tags: [Patterns]
+      summary: List relation patterns
+      responses:
+        "200":
+          description: Patterns
+    post:
+      tags: [Patterns]
+      summary: Create relation pattern
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RelationPatternInput"
+      responses:
+        "201":
+          description: Created
+
+  /patterns/subgraph:
+    get:
+      tags: [Patterns]
+      summary: List subgraph patterns
+      responses:
+        "200":
+          description: Patterns
+    post:
+      tags: [Patterns]
+      summary: Create subgraph pattern
+      responses:
+        "201":
+          description: Created
+
+  /patterns/match:
+    post:
+      tags: [Patterns]
+      summary: Match patterns against text
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text:
+                  type: string
+                domain:
+                  type: string
+      responses:
+        "200":
+          description: Matches
+
+  /patterns/extract:
+    post:
+      tags: [Patterns]
+      summary: Pattern-based extraction
+      responses:
+        "200":
+          description: Extracted entities
+
+  /patterns/learn:
+    post:
+      tags: [Patterns]
+      summary: Learn from feedback
+      responses:
+        "200":
+          description: Learning result
+
+  /patterns/export:
+    get:
+      tags: [Patterns]
+      summary: Export all patterns
+      responses:
+        "200":
+          description: All patterns JSON
+
+  /patterns/import:
+    post:
+      tags: [Patterns]
+      summary: Import patterns
+      responses:
+        "200":
+          description: Import result
+
+  /patterns/stats:
+    get:
+      tags: [Patterns]
+      summary: Pattern library stats
+      responses:
+        "200":
+          description: Stats
+
+  # ═══════════════════════════════════════════════════════════════════
+  # SYSTEM HEALTH (5 endpoints)
+  # ═══════════════════════════════════════════════════════════════════
+  /system/health:
+    get:
+      tags: [Health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+
+  /system/live:
+    get:
+      tags: [Health]
+      summary: Liveness probe
+      responses:
+        "200":
+          description: Alive
+
+  /system/ready:
+    get:
+      tags: [Health]
+      summary: Readiness probe
+      responses:
+        "200":
+          description: Ready
+        "503":
+          description: Not ready
+
+  /system/status:
+    get:
+      tags: [Health]
+      summary: Full system status
+      responses:
+        "200":
+          description: Status
+
+  /system/stats:
+    get:
+      tags: [Health]
+      summary: Aggregated stats
+      responses:
+        "200":
+          description: Stats
+
+# ═══════════════════════════════════════════════════════════════════════
+# COMPONENT SCHEMAS
+# ═══════════════════════════════════════════════════════════════════════
+components:
+  schemas:
+    QueryResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        answer:
+          type: string
+        sources:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              type:
+                type: string
+              score:
+                type: number
+        confidence:
+          type: number
+        cached:
+          type: boolean
+        latencyMs:
+          type: number
+
+    EntityPatternInput:
+      type: object
+      required: [name, entityType, namePatterns]
+      properties:
+        name:
+          type: string
+        entityType:
+          type: string
+        namePatterns:
+          type: array
+          items:
+            type: string
+        contextKeywords:
+          type: array
+          items:
+            type: string
+        domain:
+          type: string
+          default: general
+        priority:
+          type: integer
+          default: 5
+        confidence:
+          type: number
+          default: 0.8
+
+    RelationPatternInput:
+      type: object
+      required: [name, relationType, verbPatterns]
+      properties:
+        name:
+          type: string
+        relationType:
+          type: string
+        verbPatterns:
+          type: array
+          items:
+            type: string
+        subjectTypes:
+          type: array
+          items:
+            type: string
+        objectTypes:
+          type: array
+          items:
+            type: string
+
+    NodeInput:
+      type: object
+      required: [name]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        attributes:
+          type: object
+
+    ExecuteRequest:
+      type: object
+      required: [dag]
+      properties:
+        dag:
+          type: object
+          required: [nodes]
+          properties:
+            nodes:
+              type: array
+              items:
+                type: object
+            edges:
+              type: array
+              items:
+                type: object
+        inputData:
+          type: object
+        config:
+          type: object
+
+    JobResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        job:
+          type: object
+          properties:
+            id:
+              type: string
+            queue:
+              type: string
+            status:
+              type: string
+              enum: [waiting, active, completed, failed]
+
+    AOPEGGraphInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        nodes:
+          type: array
+          items:
+            type: object
+        edges:
+          type: array
+          items:
+            type: object
+
+    GraphCatalogInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        namespace:
+          type: string
+        type:
+          type: string
+          enum: [atomic, tool, business, composite, template]
+        description:
+          type: string
+        version:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        nodes:
+          type: array
+          items:
+            type: object
+        edges:
+          type: array
+          items:
+            type: object
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        statusCode:
+          type: integer

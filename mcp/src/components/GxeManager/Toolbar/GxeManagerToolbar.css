@@ -1,0 +1,71 @@
+.gxe-toolbar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px;
+  background: var(--nexus-bg-secondary, #111118);
+  border-bottom: 1px solid var(--nexus-border, #27272a);
+}
+
+/* Live Indicator */
+.gxe-toolbar__live { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 9999px; font-size: 12px; font-weight: 500; }
+.gxe-toolbar__live.connected { background: rgba(34, 197, 94, 0.15); color: var(--nexus-success, #22c55e); }
+.gxe-toolbar__live.disconnected { background: rgba(239, 68, 68, 0.15); color: var(--nexus-error, #ef4444); }
+.gxe-toolbar__live--reconnecting { background: rgba(245, 158, 11, 0.15); color: var(--nexus-warning, #f59e0b); }
+.gxe-toolbar__live .spinning { animation: spin 1s linear infinite; }
+
+/* Search */
+.gxe-toolbar__search {
+  display: flex; align-items: center; gap: 8px; padding: 6px 12px;
+  background: var(--nexus-bg-tertiary, #18181b); border: 1px solid var(--nexus-border, #27272a);
+  border-radius: 6px; color: var(--nexus-text-secondary, #a1a1aa); min-width: 200px;
+}
+.gxe-toolbar__search:focus-within { border-color: var(--nexus-accent-cyan, #22d3ee); }
+.gxe-toolbar__search input { flex: 1; background: none; border: none; outline: none; color: var(--nexus-text-primary, #e4e4e7); font-size: 13px; }
+.gxe-toolbar__search input::placeholder { color: var(--nexus-text-muted, #71717a); }
+
+/* Buttons */
+.gxe-toolbar__btn {
+  display: flex; align-items: center; gap: 6px; padding: 6px 12px;
+  border: 1px solid var(--nexus-border, #27272a); border-radius: 6px;
+  background: var(--nexus-bg-tertiary, #18181b); color: var(--nexus-text-secondary, #a1a1aa);
+  font-size: 13px; cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.gxe-toolbar__btn:hover { background: var(--nexus-bg-hover, #27272a); color: var(--nexus-text-primary, #e4e4e7); }
+.gxe-toolbar__btn.active { border-color: var(--nexus-accent-cyan, #22d3ee); color: var(--nexus-accent-cyan, #22d3ee); }
+.gxe-toolbar__btn--icon { padding: 6px; }
+.gxe-toolbar__btn--primary { background: var(--nexus-accent-cyan, #22d3ee); border-color: var(--nexus-accent-cyan, #22d3ee); color: #000; font-weight: 500; }
+.gxe-toolbar__btn--primary:hover { background: #06b6d4; border-color: #06b6d4; color: #000; }
+
+.gxe-toolbar__badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 18px; padding: 0 5px; font-size: 11px; font-weight: 600;
+  background: var(--nexus-accent-cyan, #22d3ee); color: #000; border-radius: 9px;
+}
+.gxe-toolbar__spacer { flex: 1; }
+
+/* Dropdown */
+.gxe-toolbar__dropdown-wrapper { position: relative; }
+.gxe-toolbar__dropdown {
+  position: absolute; top: calc(100% + 4px); left: 0; min-width: 220px; padding: 8px;
+  background: var(--nexus-bg-secondary, #111118); border: 1px solid var(--nexus-border, #27272a);
+  border-radius: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); z-index: 100;
+}
+.gxe-toolbar__dropdown--narrow { min-width: 160px; }
+
+.gxe-toolbar__dropdown-section { margin-bottom: 12px; }
+.gxe-toolbar__dropdown-section:last-child { margin-bottom: 0; }
+.gxe-toolbar__dropdown-section h4 { margin: 0 0 8px 0; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--nexus-text-muted, #71717a); }
+
+.gxe-toolbar__checkbox-group { display: flex; flex-direction: column; gap: 4px; }
+.gxe-toolbar__checkbox { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 13px; color: var(--nexus-text-secondary, #a1a1aa); }
+.gxe-toolbar__checkbox:hover { background: var(--nexus-bg-hover, #27272a); }
+.gxe-toolbar__checkbox input { accent-color: var(--nexus-accent-cyan, #22d3ee); }
+
+.gxe-toolbar__input { width: 100%; padding: 8px 12px; background: var(--nexus-bg-tertiary, #18181b); border: 1px solid var(--nexus-border, #27272a); border-radius: 6px; color: var(--nexus-text-primary, #e4e4e7); font-size: 13px; outline: none; }
+.gxe-toolbar__input:focus { border-color: var(--nexus-accent-cyan, #22d3ee); }
+
+.gxe-toolbar__dropdown-item { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 8px 12px; border: none; border-radius: 4px; background: none; color: var(--nexus-text-secondary, #a1a1aa); font-size: 13px; cursor: pointer; text-align: left; }
+.gxe-toolbar__dropdown-item:hover { background: var(--nexus-bg-hover, #27272a); color: var(--nexus-text-primary, #e4e4e7); }
+.gxe-toolbar__dropdown-item.active { background: rgba(34, 211, 238, 0.1); color: var(--nexus-accent-cyan, #22d3ee); }
+.gxe-toolbar__dropdown-divider { height: 1px; background: var(--nexus-border, #27272a); margin: 4px 0; }
+
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

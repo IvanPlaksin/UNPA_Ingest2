@@ -1,0 +1,88 @@
+/* GxeManagerMonitor layout */
+
+.gxe-manager-monitor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--nexus-bg-primary, #0a0a0f);
+  color: var(--nexus-text-primary, #e4e4e7);
+  font-family: 'Inter', sans-serif;
+}
+
+.gxe-manager-monitor__main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.gxe-manager-monitor__list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid var(--nexus-border, #27272a);
+  transition: flex 0.2s ease;
+}
+
+.gxe-manager-monitor__list--narrow {
+  flex: 0 0 420px;
+  max-width: 420px;
+}
+
+.gxe-manager-monitor__detail {
+  flex: 1;
+  overflow: hidden;
+  min-width: 300px;
+}
+
+/* Dialog overlay */
+.gxe-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.gxe-dialog {
+  background: var(--nexus-bg-secondary, #111118);
+  border: 1px solid var(--nexus-border, #27272a);
+  border-radius: 12px;
+  padding: 24px;
+  min-width: 400px;
+  max-width: 600px;
+}
+
+.gxe-dialog h3 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  color: var(--nexus-text-primary, #e4e4e7);
+}
+
+.gxe-dialog p {
+  margin: 0 0 16px 0;
+  font-size: 14px;
+  color: var(--nexus-text-secondary, #a1a1aa);
+}
+
+.gxe-dialog button {
+  padding: 8px 16px;
+  border: 1px solid var(--nexus-border, #27272a);
+  border-radius: 6px;
+  background: var(--nexus-bg-tertiary, #18181b);
+  color: var(--nexus-text-secondary, #a1a1aa);
+  cursor: pointer;
+}
+.gxe-dialog button:hover {
+  background: var(--nexus-bg-hover, #27272a);
+  color: var(--nexus-text-primary, #e4e4e7);
+}
+
+/* Scrollbar styling */
+.gxe-manager-monitor ::-webkit-scrollbar { width: 6px; }
+.gxe-manager-monitor ::-webkit-scrollbar-track { background: transparent; }
+.gxe-manager-monitor ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.3); border-radius: 3px; }
+.gxe-manager-monitor ::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.5); }

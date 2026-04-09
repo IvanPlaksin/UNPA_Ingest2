@@ -1,0 +1,55 @@
+# Dependencies
+node_modules
+*/node_modules
+
+# Build artifacts
+dist
+build
+coverage
+*.tsbuildinfo
+
+# Development
+.git
+.gitignore
+.vscode
+.claude
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+debug.log
+
+# Documentation (not needed in container)
+docs/
+*.md
+!README.md
+
+# Tests
+tests/
+__tests__/
+*.test.js
+*.spec.js
+jest.config.js
+
+# IDE
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp
+tmp/
+temp/
+nul
+
+# Docker
+docker-compose*.yml
+Dockerfile
+.dockerignore
+Makefile

@@ -24,6 +24,7 @@ import LayeredGraph3D from '../components/Nexus/LayeredGraph3D';
 import WorkItemDetails from '../components/Nexus/WorkItemDetails';
 import DraggableWindow from '../components/Nexus/DraggableWindow';
 import * as api from '../services/api';
+import { API_ENDPOINTS } from '../config/api.config';
 
 const WorkItemNexusPage = () => {
     // 1. Dynamic Route Params
@@ -177,7 +178,7 @@ const WorkItemNexusPage = () => {
 
         const targetId = entityId || sourceConfig.workItemId || 'demo';
         const sourcesParam = activeSources.join(',');
-        const url = `http://localhost:3000/api/v1/nexus/stream/analyze?entityType=${entityType}&entityId=${targetId}&sources=${sourcesParam}`;
+        const url = API_ENDPOINTS.NEXUS_STREAM_ANALYZE(entityType, targetId, sourcesParam);
         const eventSource = new EventSource(url);
 
         eventSource.addEventListener('progress', (e) => {

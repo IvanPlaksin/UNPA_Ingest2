@@ -6,7 +6,7 @@ async function simulateIngestionPipeline(contextBundle) {
 
     const prompt = `
     ROLE: Ты - Backend ETL процессор и Архитектор Баз Данных.
-    TASK: Твоя задача - принять "Context Bundle" (сырые данные о задаче и связях), проанализировать их и СИМУЛИРОВАТЬ процесс сохранения в Граф (Neo4j) и Векторную БД (ChromaDB).
+    TASK: Твоя задача - принять "Context Bundle" (сырые данные о задаче и связях), проанализировать их и СИМУЛИРОВАТЬ процесс сохранения в Граф (Neo4j) и Векторную БД (Qdrant).
     
     INPUT DATA:
     ${JSON.stringify(contextBundle, null, 2)}
@@ -24,7 +24,7 @@ async function simulateIngestionPipeline(contextBundle) {
     ### 2. Graph Construction (Neo4j)
     * Creating Node: (Task #${contextBundle.core.id})
     * Linking: (Task)-[:IMPLEMENTED_BY]->(Commit ...)
-    ### 3. Vectorization (ChromaDB)
+    ### 3. Vectorization (Qdrant)
     * Embedding generated for Description (Length: X)
     ### 4. Summary
     * Итог операции.

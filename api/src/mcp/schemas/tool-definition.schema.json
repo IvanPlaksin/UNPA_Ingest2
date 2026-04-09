@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "gxe-tool-definition",
+  "type": "object",
+  "required": ["id", "name", "version", "level", "category", "description", "inputSchema", "outputSchema", "safetyLevel", "sideEffects"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z]+\\.[a-z_]+$" },
+    "name": { "type": "string" },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "level": { "type": "integer", "enum": [1, 2, 3, 4] },
+    "category": { "type": "string", "enum": ["primitive", "text", "extraction", "vector", "graph", "ai", "control", "pattern", "meta", "data", "catalog", "backlog"] },
+    "description": { "type": "string" },
+    "inputSchema": { "type": "object" },
+    "outputSchema": { "type": "object" },
+    "wrapsService": { "type": "string" },
+    "composedOf": { "type": "array", "items": { "type": "string" } },
+    "safetyLevel": { "type": "string", "enum": ["AUTO", "REQUIRES_APPROVAL", "GOD_MODE"] },
+    "sideEffects": { "type": "array", "items": { "type": "string", "enum": ["READ", "WRITE", "DELETE", "EXTERNAL_CALL"] } },
+    "toolNamespace": {
+      "type": "string",
+      "enum": ["CODEX", "CORE", "PROJECT"],
+      "description": "Knowledge domain this tool belongs to: CODEX (standards/governance), CORE (platform infrastructure), PROJECT (target project tools)"
+    },
+    "resourceEstimate": {
+      "type": "object",
+      "properties": {
+        "maxDurationMs": { "type": "integer" },
+        "maxMemoryMb": { "type": "integer" },
+        "apiCalls": { "type": "integer" }
+      }
+    }
+  }
+}

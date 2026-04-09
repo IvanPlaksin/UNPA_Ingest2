@@ -1,0 +1,115 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   NEXUS NODE HIGHLIGHTING
+   CSS-based visual effects for highlighted nodes on ReactFlow canvas.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.nexus-highlight {
+  --nexus-highlight-color: #6366f1;
+  position: relative;
+  z-index: 10;
+}
+
+/* GLOW EFFECT */
+
+.nexus-highlight--glow {
+  filter: drop-shadow(0 0 8px var(--nexus-highlight-color))
+          drop-shadow(0 0 16px var(--nexus-highlight-color));
+  animation: nexus-glow-breathe 2s ease-in-out infinite;
+}
+
+@keyframes nexus-glow-breathe {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px var(--nexus-highlight-color))
+            drop-shadow(0 0 16px var(--nexus-highlight-color));
+  }
+  50% {
+    filter: drop-shadow(0 0 12px var(--nexus-highlight-color))
+            drop-shadow(0 0 24px var(--nexus-highlight-color));
+  }
+}
+
+/* PULSE EFFECT */
+
+.nexus-highlight--pulse {
+  animation: nexus-pulse-ring 1.5s ease-out infinite;
+}
+
+@keyframes nexus-pulse-ring {
+  0%, 100% {
+    box-shadow: 0 0 0 0 var(--nexus-highlight-color);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(99, 102, 241, 0.3);
+  }
+}
+
+/* OUTLINE EFFECT */
+
+.nexus-highlight--outline {
+  outline: 3px solid var(--nexus-highlight-color);
+  outline-offset: 2px;
+  border-radius: 8px;
+  animation: nexus-outline-flash 0.5s ease-out;
+}
+
+@keyframes nexus-outline-flash {
+  0% { outline-width: 6px; outline-offset: 0px; }
+  100% { outline-width: 3px; outline-offset: 2px; }
+}
+
+/* EDGE HIGHLIGHTING */
+
+.nexus-edge-highlight {
+  stroke: var(--nexus-highlight-color) !important;
+  stroke-width: 3px !important;
+  filter: drop-shadow(0 0 4px var(--nexus-highlight-color));
+}
+
+/* ANNOTATION BADGES */
+
+.nexus-annotation {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: white;
+  z-index: 100;
+  animation: nexus-badge-pop 0.3s ease-out;
+}
+
+.nexus-annotation--warning { background: #f59e0b; }
+.nexus-annotation--suggestion { background: #6366f1; }
+.nexus-annotation--info { background: #3b82f6; }
+
+@keyframes nexus-badge-pop {
+  0% { transform: scale(0); }
+  70% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+/* DIMMING (focus on highlighted nodes) */
+
+.nexus-dim-others .react-flow__node:not(.nexus-highlight) {
+  opacity: 0.4;
+  transition: opacity 0.3s ease;
+}
+
+.nexus-dim-others .react-flow__edge:not(.nexus-edge-highlight) {
+  opacity: 0.2;
+  transition: opacity 0.3s ease;
+}
+
+/* COLOR PRESETS */
+
+.nexus-highlight--primary { --nexus-highlight-color: #6366f1; }
+.nexus-highlight--success { --nexus-highlight-color: #22c55e; }
+.nexus-highlight--warning { --nexus-highlight-color: #f59e0b; }
+.nexus-highlight--error { --nexus-highlight-color: #ef4444; }
+.nexus-highlight--info { --nexus-highlight-color: #3b82f6; }
+.nexus-highlight--cyan { --nexus-highlight-color: #06b6d4; }

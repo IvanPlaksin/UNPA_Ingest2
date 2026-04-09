@@ -14,6 +14,7 @@ import {
     CircularProgress,
     alpha
 } from '@mui/material';
+import { API_ENDPOINTS } from '../../config/api.config';
 
 const ChatInterface = () => {
     const [messages, setMessages] = useState([
@@ -44,7 +45,7 @@ const ChatInterface = () => {
         setMessages(prev => [...prev, assistantMessage]);
 
         try {
-            const response = await fetch('http://localhost:3000/api/v1/chat/stream', {
+            const response = await fetch(API_ENDPOINTS.CHAT_STREAM, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

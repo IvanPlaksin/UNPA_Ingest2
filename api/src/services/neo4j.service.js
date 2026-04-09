@@ -1,30 +1,69 @@
-const neo4j = require('neo4j-driver');
-const CONFIG = require('../config');
+/**
+ * Neo4j Service (Legacy wrapper)
+ *
+ * IMPORTANT: Uses shared memgraph.service driver to avoid connection pool exhaustion.
+ * Do NOT create separate neo4j.driver() instances!
+ *
+ * This service wraps the shared memgraph driver for backwards compatibility
+ * with code that expects a Neo4jService interface.
+ */
+
+const { withSession, withWriteTransaction } = require('../core/aopeg/utils/cypher.utils');
+
+// Use shared memgraph service (singleton) to avoid multiple driver instances
+const memgraphService = require('./memgraph.service');
+
+/**
+ * Safely convert Neo4j Integer to string without creating many Integer objects.
+ * Uses toNumber() which is more memory-efficient than toString() for identities.
+ * @param {*} value - Neo4j Integer or regular number
+ * @returns {string} String representation
+ */
+function safeIdToString(value) {
+    if (value === null || value === undefined) return '';
+    // Check if it's a Neo4j Integer (has low/high properties)
+    if (typeof value === 'object' && 'low' in value && 'high' in value) {
+        // Use toNumber for small values, toString only when necessary
+        if (value.high === 0 || value.high === -1) {
+            return String(value.toNumber());
+        }
+        return value.toString();
+    }
+    return String(value);
+}
 
 class Neo4jService {
     constructor() {
-        this.driver = neo4j.driver(
-            CONFIG.neo4j.uri,
-            neo4j.auth.basic(CONFIG.neo4j.user, CONFIG.neo4j.password)
-        );
+        // Use shared driver from memgraph.service singleton
+        this.driver = memgraphService.driver;
+
+        if (!this.driver) {
+            console.error('[Neo4jService] Memgraph driver not available from shared service');
+        } else {
+            console.log('[Neo4jService] Using shared Memgraph driver');
+        }
     }
 
     getSession() {
+        if (!this.driver) {
+            throw new Error('Memgraph driver not initialized');
+        }
         return this.driver.session();
     }
 
+    // Note: Don't close the driver here - it's shared with memgraph.service
     async close() {
-        await this.driver.close();
+        // No-op: driver is managed by memgraph.service singleton
+        console.log('[Neo4jService] close() called - driver is shared, not closing');
     }
 
     /**
      * Checks if a document with the given URL has already been processed.
-     * @param {string} url 
+     * @param {string} url
      * @returns {Promise<{processed: boolean, node: object|null}>}
      */
     async checkDocumentStatus(url) {
-        const session = this.getSession();
-        try {
+        return withSession(this.driver, async (session) => {
             const result = await session.run(
                 `MATCH (d:Document {url: $url}) RETURN d`,
                 { url }
@@ -33,79 +72,73 @@ class Neo4jService {
                 return { processed: true, node: result.records[0].get('d').properties };
             }
             return { processed: false, node: null };
-        } finally {
-            await session.close();
-        }
+        });
     }
 
     /**
      * Creates or updates a Document node and links it to a Work Item.
      * @param {object} docData { url, name, size, hash, processedAt }
-     * @param {string} workItemId 
+     * @param {string} workItemId
      */
     async saveDocument(docData, workItemId) {
-        const session = this.getSession();
-        try {
-            await session.writeTransaction(tx =>
-                tx.run(
-                    `
-                    MERGE (w:WorkItem {id: $workItemId})
-                    MERGE (d:Document {url: $url})
-                    SET d += $props
-                    MERGE (w)-[:HAS_ATTACHMENT]->(d)
-                    RETURN d
-                    `,
-                    {
-                        workItemId: String(workItemId),
-                        url: docData.url,
-                        props: docData
-                    }
-                )
-            );
-        } finally {
-            await session.close();
-        }
+        return withWriteTransaction(this.driver, tx =>
+            tx.run(
+                `
+                MERGE (w:WorkItem {id: $workItemId})
+                MERGE (d:Document {url: $url})
+                SET d += $props
+                MERGE (w)-[:HAS_ATTACHMENT]->(d)
+                RETURN d
+                `,
+                {
+                    workItemId: String(workItemId),
+                    url: docData.url,
+                    props: docData
+                }
+            )
+        );
     }
 
     /**
      * Creates entities extracted from the document and links them.
-     * @param {string} docUrl 
+     * Uses UNWIND for batch processing instead of per-entity transactions.
+     * @param {string} docUrl
      * @param {Array} entities [{ type, name, relation }]
      */
     async saveExtractedEntities(docUrl, entities) {
-        const session = this.getSession();
-        try {
-            for (const entity of entities) {
-                await session.writeTransaction(tx =>
-                    tx.run(
-                        `
-                        MATCH (d:Document {url: $docUrl})
-                        MERGE (e:Entity {name: $name})
-                        SET e.type = $type
-                        MERGE (d)-[r:MENTIONS]->(e)
-                        SET r.type = $relation
-                        `,
-                        {
-                            docUrl,
-                            name: entity.name,
-                            type: entity.type,
-                            relation: entity.relation || 'MENTIONS'
-                        }
-                    )
-                );
-            }
-        } finally {
-            await session.close();
-        }
+        if (!entities || entities.length === 0) return;
+
+        // Normalize entities for UNWIND
+        const normalizedEntities = entities.map(e => ({
+            name: e.name,
+            type: e.type,
+            relation: e.relation || 'MENTIONS'
+        }));
+
+        return withWriteTransaction(this.driver, tx =>
+            tx.run(
+                `
+                MATCH (d:Document {url: $docUrl})
+                UNWIND $entities AS entity
+                MERGE (e:Entity {name: entity.name})
+                SET e.type = entity.type
+                MERGE (d)-[r:MENTIONS]->(e)
+                SET r.type = entity.relation
+                `,
+                {
+                    docUrl,
+                    entities: normalizedEntities
+                }
+            )
+        );
     }
 
     /**
      * Retrieves the graph for a specific document.
-     * @param {string} docUrl 
+     * @param {string} docUrl
      */
     async getDocumentGraph(docUrl) {
-        const session = this.getSession();
-        try {
+        return withSession(this.driver, async (session) => {
             const result = await session.run(
                 `
                 MATCH (d:Document {url: $docUrl})-[r]-(n)
@@ -123,24 +156,26 @@ class Neo4jService {
                 const rel = record.get('r');
                 const node = record.get('n');
 
-                nodes.set(doc.identity.toString(), {
-                    id: doc.identity.toString(),
+                const docId = safeIdToString(doc.identity);
+                nodes.set(docId, {
+                    id: docId,
                     label: doc.properties.name || 'Document',
                     type: 'Document',
                     properties: doc.properties
                 });
 
-                nodes.set(node.identity.toString(), {
-                    id: node.identity.toString(),
+                const nodeId = safeIdToString(node.identity);
+                nodes.set(nodeId, {
+                    id: nodeId,
                     label: node.properties.name || node.labels[0],
                     type: node.labels[0],
                     properties: node.properties
                 });
 
                 edges.push({
-                    id: rel.identity.toString(),
-                    source: rel.start.toString(),
-                    target: rel.end.toString(),
+                    id: safeIdToString(rel.identity),
+                    source: safeIdToString(rel.start),
+                    target: safeIdToString(rel.end),
                     label: rel.type
                 });
             });
@@ -149,9 +184,7 @@ class Neo4jService {
                 nodes: Array.from(nodes.values()),
                 edges: edges
             };
-        } finally {
-            await session.close();
-        }
+        });
     }
 }
 

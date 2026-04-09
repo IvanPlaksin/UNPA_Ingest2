@@ -33,33 +33,87 @@ const ParallelEdge = ({
   style,
 }) => {
   // ── Mode A: ELK-routed polyline ──────────────────────────────
+  // Only use ELK route if endpoints still match current node positions
+  // (within tolerance). If nodes have moved (drag, repulsion, AI layout),
+  // the absolute ELK coordinates are stale — fall through to Mode B/C.
   if (data?.elkRoute?.length >= 2) {
     const points = data.elkRoute;
-    const d = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
+    const first = points[0];
+    const last = points[points.length - 1];
+    const tolerance = 30; // px — allows minor rounding but catches real moves
 
-    // Label at midpoint of route
-    const mid = points[Math.floor(points.length / 2)];
+    const sourceMatch =
+      Math.abs(first.x - sourceX) < tolerance &&
+      Math.abs(first.y - sourceY) < tolerance;
+    const targetMatch =
+      Math.abs(last.x - targetX) < tolerance &&
+      Math.abs(last.y - targetY) < tolerance;
 
-    return (
-      <>
-        <BaseEdge id={id} path={d} markerEnd={markerEnd} style={style} />
-        {label && (
-          <EdgeLabelRenderer>
-            <div
-              style={{
-                position: 'absolute',
-                transform: `translate(-50%, -50%) translate(${mid.x}px,${mid.y}px)`,
-                fontSize: 10,
-                pointerEvents: 'all',
-              }}
-              className="bg-[#161b22] px-1 rounded text-gray-400 border border-[#30363d]"
-            >
-              {label}
-            </div>
-          </EdgeLabelRenderer>
-        )}
-      </>
-    );
+    if (sourceMatch && targetMatch) {
+      const d = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
+      const mid = points[Math.floor(points.length / 2)];
+
+      return (
+        <>
+          <BaseEdge id={id} path={d} markerEnd={markerEnd} style={style} />
+          {label && (
+            <EdgeLabelRenderer>
+              <div
+                style={{
+                  position: 'absolute',
+                  transform: `translate(-50%, -50%) translate(${mid.x}px,${mid.y}px)`,
+                  fontSize: 10,
+                  pointerEvents: 'all',
+                }}
+                className="bg-[#161b22] px-1 rounded text-gray-400 border border-[#30363d]"
+              >
+                {label}
+              </div>
+            </EdgeLabelRenderer>
+          )}
+        </>
+      );
+    }
+    // Stale elkRoute — fall through to smoothstep routing
+  }
+
+  // ── Mode A2: Obstacle-avoiding route (computed reactively) ────
+  // Only use if endpoints still match current positions (route becomes stale during drag)
+  if (data?.obstacleRoute?.length >= 2) {
+    const points = data.obstacleRoute;
+    const first = points[0];
+    const last = points[points.length - 1];
+    const tol = 50;
+
+    const srcOk = Math.abs(first.x - sourceX) < tol && Math.abs(first.y - sourceY) < tol;
+    const tgtOk = Math.abs(last.x - targetX) < tol && Math.abs(last.y - targetY) < tol;
+
+    if (srcOk && tgtOk) {
+      const d = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
+      const mid = points[Math.floor(points.length / 2)];
+
+      return (
+        <>
+          <BaseEdge id={id} path={d} markerEnd={markerEnd} style={style} />
+          {label && (
+            <EdgeLabelRenderer>
+              <div
+                style={{
+                  position: 'absolute',
+                  transform: `translate(-50%, -50%) translate(${mid.x}px,${mid.y}px)`,
+                  fontSize: 10,
+                  pointerEvents: 'all',
+                }}
+                className="bg-[#161b22] px-1 rounded text-gray-400 border border-[#30363d]"
+              >
+                {label}
+              </div>
+            </EdgeLabelRenderer>
+          )}
+        </>
+      );
+    }
+    // Stale obstacleRoute — fall through to smoothstep
   }
 
   // ── Mode B/C: Offset or standard ─────────────────────────────

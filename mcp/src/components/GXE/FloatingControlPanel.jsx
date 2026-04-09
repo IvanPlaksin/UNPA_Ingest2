@@ -13,7 +13,7 @@ import {
   GripVertical, Maximize2, Minimize2, Move, FileCode, Tag, Folder,
   Atom, Wrench, Briefcase, Layers, Plus, RotateCcw, Sparkles,
   Settings2, Thermometer, Hash, FileText, Database, HardDrive,
-  Server, Globe, Type
+  Server, Globe, Type, Copy, Check
 } from 'lucide-react';
 
 // Graph type definitions (matching SaveGraphDialog)
@@ -99,6 +99,7 @@ const FloatingControlPanel = ({
   onSelectedSourcesChange,
   // Graph Info tab props
   graphMetadata,
+  catalogGraphId,
   onGraphMetadataChange,
   nodesCount,
   edgesCount,
@@ -361,6 +362,7 @@ const FloatingControlPanel = ({
             ) : activeTab === 'graphInfo' ? (
               <GraphInfoTab
                 graphMetadata={graphMetadata}
+                catalogGraphId={catalogGraphId}
                 onGraphMetadataChange={onGraphMetadataChange}
                 parentContext={parentContext}
                 nodesCount={nodesCount}
@@ -1140,8 +1142,42 @@ const GeneratorTab = ({
    GRAPH INFO TAB
    ═══════════════════════════════════════════════════════════════════════════ */
 
+const GraphIdField = ({ graphId }) => {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(graphId).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+  return (
+    <div className="mb-3">
+      <label className="text-xs text-gray-400 mb-1.5 block flex items-center gap-1.5">
+        <Database className="w-3 h-3" />
+        Graph ID
+      </label>
+      <div className="flex gap-1.5">
+        <input
+          type="text"
+          value={graphId}
+          readOnly
+          className="flex-1 px-3 py-2 bg-[#0d1117] border border-[#30363d] rounded text-xs text-gray-400 font-mono cursor-default select-all"
+        />
+        <button
+          onClick={handleCopy}
+          title="Copy Graph ID"
+          className="px-2.5 py-2 bg-[#21262d] border border-[#30363d] rounded text-gray-400 hover:bg-[#30363d] hover:text-white transition-colors"
+        >
+          {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const GraphInfoTab = ({
   graphMetadata,
+  catalogGraphId,
   onGraphMetadataChange,
   parentContext,
   nodesCount,
@@ -1186,6 +1222,11 @@ const GraphInfoTab = ({
           <Layers className="w-3.5 h-3.5" />
           Sub-graph of: {parentContext.nodeLabel}
         </div>
+      )}
+
+      {/* Graph ID (readonly + copy) */}
+      {(catalogGraphId || metadata.id) && (
+        <GraphIdField graphId={catalogGraphId || metadata.id} />
       )}
 
       {/* Graph Name */}

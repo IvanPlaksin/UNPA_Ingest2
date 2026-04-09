@@ -42,6 +42,30 @@ const EXECUTOR_TO_TOOL_MAP = {
 };
 
 /**
+ * Alias map: MCP tool IDs → AOPEG executor types.
+ * GXE graphs may use MCP tool IDs (from Tool Catalog) that need
+ * resolution to AOPEG executors for Live Execution.
+ */
+const MCP_TOOL_ALIAS_MAP = {
+  'primitive.get_value':          'workflow.start',
+  'primitive.set_value':          'workflow.end',
+  'ai.complete':                  'ai.generate',
+  'runtime.execute_subgraph':     'workflow.spawn_graph',
+  'primitive.transform':          'workflow.set_variable',
+  'primitive.filter':             'workflow.condition',
+  'text.parse':                   'ingestion.parse_document',
+  'text.sanitize':                'ingestion.sanitize',
+  'text.detect_language':         'ingestion.detect_language',
+  'text.chunk':                   'ingestion.chunk_text',
+  'extraction.entities':          'ingestion.extract_entities',
+  'extraction.relations':         'ingestion.extract_relations',
+  'ai.classify':                  'ingestion.classify_content',
+  'vector.write':                 'ingestion.write_vector',
+  'ai.rerank':                    'rag.rerank',
+  'ai.chat':                      'rag.chat',
+};
+
+/**
  * Reverse mapping: Tool ID → Executor Type
  */
 const TOOL_TO_EXECUTOR_MAP = Object.fromEntries(
@@ -500,6 +524,18 @@ class AOPEGAdapter {
           // Map it to toolId (e.g., 'text.parse') and look up
           const mappedToolId = adapter.mapExecutorTypeToToolId(toolIdOrExecutorType);
           wrapped = wrappedExecutors.get(mappedToolId);
+        }
+
+        if (!wrapped) {
+          // Try MCP tool alias → AOPEG executor type (e.g., 'primitive.get_value' → 'workflow.start')
+          const aliasedExecutorType = MCP_TOOL_ALIAS_MAP[toolIdOrExecutorType];
+          if (aliasedExecutorType) {
+            wrapped = wrappedExecutors.get(aliasedExecutorType)
+              || wrappedExecutors.get(adapter.mapExecutorTypeToToolId(aliasedExecutorType));
+            if (!wrapped) {
+              wrapped = adapter.wrapExecutor(aliasedExecutorType);
+            }
+          }
         }
 
         if (!wrapped) {

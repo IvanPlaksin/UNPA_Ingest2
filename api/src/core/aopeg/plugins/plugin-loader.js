@@ -162,6 +162,9 @@ async function loadDomainPlugins() {
     const { workflowPlugin } = require('./workflow');
     const { notificationPlugin } = require('./notification');
     const { SqlExtractionPlugin } = require('./sql-extraction/sql-extraction.plugin');
+    const { flowdeskPlugin } = require('./flowdesk');
+    const { validationPlugin } = require('./validation');
+    const { extractionPlugin } = require('./extraction');
 
     const sqlExtractionPlugin = new SqlExtractionPlugin();
 
@@ -173,6 +176,9 @@ async function loadDomainPlugins() {
       workflowPlugin,
       notificationPlugin,
       sqlExtractionPlugin,
+      flowdeskPlugin,
+      validationPlugin,
+      extractionPlugin,
     ]);
 
     console.log('[PluginLoader] Domain plugins loaded');

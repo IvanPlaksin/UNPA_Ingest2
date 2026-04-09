@@ -113,6 +113,7 @@ const useImportSqlStore = create(
             trustServerCertificate: source.connectionParams?.trustServerCertificate ?? true,
             protocol: source.connectionParams?.protocol || 'tcp',
             instanceName: source.connectionParams?.instanceName || '',
+            _hasCredentials: source.hasCredentials || false,
           } : initialState.connectionForm,
         }, false, 'selectSource');
       },
@@ -293,7 +294,8 @@ const useImportSqlStore = create(
       setAgentError: (error) => set({
         agentStatus: 'failed',
         importStatus: 'error',
-        importError: error.message || error,
+        importError: typeof error === 'string' ? error : (error.message || JSON.stringify(error)),
+        agentCurrentPhase: error.phase || error.phaseName || null,
       }, false, 'setAgentError'),
 
       toggleAgentResults: (show) => set(state => ({

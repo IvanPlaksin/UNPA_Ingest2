@@ -1,0 +1,262 @@
+{
+  "version": "1.0.0",
+  "description": "Golden dataset for pipeline tuning evaluation",
+  "createdAt": "2026-01-22",
+  "samples": [
+    {
+      "id": "sample_001",
+      "category": "technical_architecture",
+      "text": "The UN ProjectAdvisor uses Memgraph for graph storage and Qdrant for vector embeddings. Redis handles caching through BullMQ job queues.",
+      "groundTruth": {
+        "entities": [
+          {"name": "UN ProjectAdvisor", "type": "SYSTEM", "confidence": 0.95},
+          {"name": "Memgraph", "type": "DATABASE", "confidence": 0.95},
+          {"name": "Qdrant", "type": "DATABASE", "confidence": 0.95},
+          {"name": "Redis", "type": "DATABASE", "confidence": 0.95},
+          {"name": "BullMQ", "type": "TECHNOLOGY", "confidence": 0.90}
+        ],
+        "relationships": [
+          {"source": "UN ProjectAdvisor", "target": "Memgraph", "type": "USES"},
+          {"source": "UN ProjectAdvisor", "target": "Qdrant", "type": "USES"},
+          {"source": "Redis", "target": "BullMQ", "type": "INTEGRATES_WITH"}
+        ]
+      }
+    },
+    {
+      "id": "sample_002",
+      "category": "un_systems",
+      "text": "IMIS (Integrated Management Information System) was replaced by Umoja as the new ERP system for the United Nations Secretariat. Inspira handles recruitment and talent management.",
+      "groundTruth": {
+        "entities": [
+          {"name": "IMIS", "type": "SYSTEM", "confidence": 0.97},
+          {"name": "Umoja", "type": "SYSTEM", "confidence": 0.97},
+          {"name": "Inspira", "type": "SYSTEM", "confidence": 0.97},
+          {"name": "United Nations Secretariat", "type": "ORGANIZATION", "confidence": 0.95}
+        ],
+        "relationships": [
+          {"source": "Umoja", "target": "IMIS", "type": "REPLACES"},
+          {"source": "Umoja", "target": "United Nations Secretariat", "type": "SERVES"},
+          {"source": "Inspira", "target": "recruitment", "type": "HANDLES"}
+        ]
+      }
+    },
+    {
+      "id": "sample_003",
+      "category": "work_items",
+      "text": "Work item #12345 depends on completing task #12340 first. Bug #12350 was fixed by the same developer who implemented feature #12355.",
+      "groundTruth": {
+        "entities": [
+          {"name": "#12345", "type": "WORK_ITEM_REF", "confidence": 0.99},
+          {"name": "#12340", "type": "WORK_ITEM_REF", "confidence": 0.99},
+          {"name": "#12350", "type": "WORK_ITEM_REF", "confidence": 0.99},
+          {"name": "#12355", "type": "WORK_ITEM_REF", "confidence": 0.99}
+        ],
+        "relationships": [
+          {"source": "#12345", "target": "#12340", "type": "DEPENDS_ON"},
+          {"source": "#12350", "target": "#12355", "type": "RELATED_TO"}
+        ]
+      }
+    },
+    {
+      "id": "sample_004",
+      "category": "api_integration",
+      "text": "The REST API endpoint /api/v1/knowledge connects to GraphQL gateway. Authentication uses OAuth 2.0 with JWT tokens validated by the identity service.",
+      "groundTruth": {
+        "entities": [
+          {"name": "/api/v1/knowledge", "type": "API", "confidence": 0.95},
+          {"name": "GraphQL", "type": "TECHNOLOGY", "confidence": 0.90},
+          {"name": "OAuth 2.0", "type": "TECHNOLOGY", "confidence": 0.90},
+          {"name": "JWT", "type": "TECHNOLOGY", "confidence": 0.90},
+          {"name": "identity service", "type": "MODULE", "confidence": 0.85}
+        ],
+        "relationships": [
+          {"source": "/api/v1/knowledge", "target": "GraphQL", "type": "CONNECTS_TO"},
+          {"source": "OAuth 2.0", "target": "JWT", "type": "USES"},
+          {"source": "identity service", "target": "JWT", "type": "VALIDATES"}
+        ]
+      }
+    },
+    {
+      "id": "sample_005",
+      "category": "business_rules",
+      "text": "Staff members must complete mandatory training within 90 days of onboarding. Leave requests require manager approval if exceeding 5 consecutive days. Performance reviews are conducted annually.",
+      "groundTruth": {
+        "entities": [
+          {"name": "Staff members", "type": "CONCEPT", "confidence": 0.85},
+          {"name": "mandatory training", "type": "PROCESS", "confidence": 0.85},
+          {"name": "Leave requests", "type": "PROCESS", "confidence": 0.85},
+          {"name": "Performance reviews", "type": "PROCESS", "confidence": 0.85}
+        ],
+        "relationships": [
+          {"source": "Staff members", "target": "mandatory training", "type": "REQUIRES"},
+          {"source": "Leave requests", "target": "manager approval", "type": "REQUIRES"}
+        ]
+      }
+    },
+    {
+      "id": "sample_006",
+      "category": "document_references",
+      "text": "According to document ST/AI/2023/1, all departments must follow the guidelines in A/RES/77/123. The Secretary-General's bulletin ST/SGB/2022/5 provides additional clarification.",
+      "groundTruth": {
+        "entities": [
+          {"name": "ST/AI/2023/1", "type": "DOCUMENT", "confidence": 0.97},
+          {"name": "A/RES/77/123", "type": "DOCUMENT", "confidence": 0.97},
+          {"name": "ST/SGB/2022/5", "type": "DOCUMENT", "confidence": 0.97},
+          {"name": "Secretary-General", "type": "ORGANIZATION", "confidence": 0.93}
+        ],
+        "relationships": [
+          {"source": "ST/AI/2023/1", "target": "A/RES/77/123", "type": "REFERENCES"},
+          {"source": "ST/SGB/2022/5", "target": "ST/AI/2023/1", "type": "RELATES_TO"}
+        ]
+      }
+    },
+    {
+      "id": "sample_007",
+      "category": "code_modules",
+      "text": "The EntityExtractor class uses LLMProvider for AI-based extraction. The RelationshipExtractor depends on EntityExtractor results. Both services are managed by PipelineOrchestrator.",
+      "groundTruth": {
+        "entities": [
+          {"name": "EntityExtractor", "type": "MODULE", "confidence": 0.95},
+          {"name": "LLMProvider", "type": "MODULE", "confidence": 0.95},
+          {"name": "RelationshipExtractor", "type": "MODULE", "confidence": 0.95},
+          {"name": "PipelineOrchestrator", "type": "MODULE", "confidence": 0.95}
+        ],
+        "relationships": [
+          {"source": "EntityExtractor", "target": "LLMProvider", "type": "USES"},
+          {"source": "RelationshipExtractor", "target": "EntityExtractor", "type": "DEPENDS_ON"},
+          {"source": "PipelineOrchestrator", "target": "EntityExtractor", "type": "MANAGES"},
+          {"source": "PipelineOrchestrator", "target": "RelationshipExtractor", "type": "MANAGES"}
+        ]
+      }
+    },
+    {
+      "id": "sample_008",
+      "category": "organizational",
+      "text": "UNICEF works closely with WHO on child health initiatives. UNDP coordinates development programs with support from the World Bank. UNHCR handles refugee assistance.",
+      "groundTruth": {
+        "entities": [
+          {"name": "UNICEF", "type": "ORGANIZATION", "confidence": 0.97},
+          {"name": "WHO", "type": "ORGANIZATION", "confidence": 0.97},
+          {"name": "UNDP", "type": "ORGANIZATION", "confidence": 0.97},
+          {"name": "World Bank", "type": "ORGANIZATION", "confidence": 0.93},
+          {"name": "UNHCR", "type": "ORGANIZATION", "confidence": 0.97}
+        ],
+        "relationships": [
+          {"source": "UNICEF", "target": "WHO", "type": "COLLABORATES_WITH"},
+          {"source": "UNDP", "target": "World Bank", "type": "COLLABORATES_WITH"},
+          {"source": "UNHCR", "target": "refugee assistance", "type": "HANDLES"}
+        ]
+      }
+    },
+    {
+      "id": "sample_009",
+      "category": "data_flow",
+      "text": "The TEI service generates embeddings that are stored in Qdrant. The chunking module processes documents before sending them to TEI. Query expansion uses synonyms from WordNet.",
+      "groundTruth": {
+        "entities": [
+          {"name": "TEI", "type": "TECHNOLOGY", "confidence": 0.90},
+          {"name": "Qdrant", "type": "DATABASE", "confidence": 0.95},
+          {"name": "chunking module", "type": "MODULE", "confidence": 0.85},
+          {"name": "Query expansion", "type": "MODULE", "confidence": 0.85},
+          {"name": "WordNet", "type": "TECHNOLOGY", "confidence": 0.90}
+        ],
+        "relationships": [
+          {"source": "TEI", "target": "embeddings", "type": "GENERATES"},
+          {"source": "embeddings", "target": "Qdrant", "type": "STORED_IN"},
+          {"source": "chunking module", "target": "TEI", "type": "SENDS_TO"},
+          {"source": "Query expansion", "target": "WordNet", "type": "USES"}
+        ]
+      }
+    },
+    {
+      "id": "sample_010",
+      "category": "mixed_technical",
+      "text": "ProjectAdvisor version 2.1.0 introduces graph neural networks for knowledge extraction. The GNN service runs on port 5000 and connects to Neo4j for training data. Ollama provides LLM capabilities via the llama3 model.",
+      "groundTruth": {
+        "entities": [
+          {"name": "ProjectAdvisor", "type": "SYSTEM", "confidence": 0.95},
+          {"name": "2.1.0", "type": "VERSION", "confidence": 0.85},
+          {"name": "graph neural networks", "type": "CONCEPT", "confidence": 0.85},
+          {"name": "GNN service", "type": "MODULE", "confidence": 0.90},
+          {"name": "Neo4j", "type": "DATABASE", "confidence": 0.95},
+          {"name": "Ollama", "type": "TECHNOLOGY", "confidence": 0.90},
+          {"name": "llama3", "type": "TECHNOLOGY", "confidence": 0.90}
+        ],
+        "relationships": [
+          {"source": "ProjectAdvisor", "target": "graph neural networks", "type": "USES"},
+          {"source": "GNN service", "target": "Neo4j", "type": "CONNECTS_TO"},
+          {"source": "Ollama", "target": "llama3", "type": "PROVIDES"}
+        ]
+      }
+    },
+    {
+      "id": "sample_011",
+      "category": "process_flow",
+      "text": "The sanitization stage removes PII data before processing. Language detection identifies the source language for proper chunking. Entity extraction runs after chunking completes.",
+      "groundTruth": {
+        "entities": [
+          {"name": "sanitization stage", "type": "PROCESS", "confidence": 0.85},
+          {"name": "PII data", "type": "CONCEPT", "confidence": 0.85},
+          {"name": "Language detection", "type": "PROCESS", "confidence": 0.85},
+          {"name": "chunking", "type": "PROCESS", "confidence": 0.85},
+          {"name": "Entity extraction", "type": "PROCESS", "confidence": 0.85}
+        ],
+        "relationships": [
+          {"source": "sanitization stage", "target": "PII data", "type": "HANDLES"},
+          {"source": "Language detection", "target": "chunking", "type": "PRECEDES"},
+          {"source": "Entity extraction", "target": "chunking", "type": "DEPENDS_ON"}
+        ]
+      }
+    },
+    {
+      "id": "sample_012",
+      "category": "hybrid",
+      "text": "The MCP server exposes project-knowledge tools for Claude Code integration. Vector search through Qdrant enables semantic queries. The knowledge graph in Memgraph stores entity relationships extracted by the pipeline.",
+      "groundTruth": {
+        "entities": [
+          {"name": "MCP server", "type": "MODULE", "confidence": 0.90},
+          {"name": "Claude Code", "type": "TECHNOLOGY", "confidence": 0.90},
+          {"name": "Vector search", "type": "CONCEPT", "confidence": 0.85},
+          {"name": "Qdrant", "type": "DATABASE", "confidence": 0.95},
+          {"name": "knowledge graph", "type": "CONCEPT", "confidence": 0.85},
+          {"name": "Memgraph", "type": "DATABASE", "confidence": 0.95},
+          {"name": "pipeline", "type": "MODULE", "confidence": 0.85}
+        ],
+        "relationships": [
+          {"source": "MCP server", "target": "Claude Code", "type": "INTEGRATES_WITH"},
+          {"source": "Vector search", "target": "Qdrant", "type": "USES"},
+          {"source": "knowledge graph", "target": "Memgraph", "type": "STORED_IN"},
+          {"source": "pipeline", "target": "entity relationships", "type": "GENERATES"}
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "totalSamples": 12,
+    "categories": [
+      "technical_architecture",
+      "un_systems",
+      "work_items",
+      "api_integration",
+      "business_rules",
+      "document_references",
+      "code_modules",
+      "organizational",
+      "data_flow",
+      "mixed_technical",
+      "process_flow",
+      "hybrid"
+    ],
+    "expectedEntityTypes": [
+      "SYSTEM", "DATABASE", "TECHNOLOGY", "MODULE", "API",
+      "ORGANIZATION", "WORK_ITEM_REF", "DOCUMENT", "PROCESS",
+      "CONCEPT", "VERSION"
+    ],
+    "expectedRelationshipTypes": [
+      "USES", "DEPENDS_ON", "INTEGRATES_WITH", "CONNECTS_TO",
+      "REPLACES", "SERVES", "HANDLES", "REFERENCES", "RELATES_TO",
+      "MANAGES", "COLLABORATES_WITH", "GENERATES", "STORED_IN",
+      "SENDS_TO", "PROVIDES", "PRECEDES"
+    ]
+  }
+}

@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { MessageSquare, Database, GitGraph, Settings, Search, LayoutDashboard, ListTodo, FolderTree, Bot, FlaskConical } from 'lucide-react';
+import { MessageSquare, Database, GitGraph, Settings, Search, LayoutDashboard, ListTodo, FolderTree, Bot, FlaskConical, Layers, Microscope, Workflow, Brain, Network, Globe, DatabaseZap, Activity, ClipboardList, BookOpen, BarChart3, FolderKanban, PenTool, FormInput, ChevronDown, ChevronRight } from 'lucide-react';
 import {
     Box,
     Drawer,
@@ -12,19 +12,38 @@ import {
     Typography,
     Divider,
     Stack,
-    Avatar
+    Avatar,
+    Collapse
 } from '@mui/material';
 import ServiceStatusWidget from './ServiceStatusWidget';
+import AIUsageWidget from './AIUsageWidget';
+import TensorMonitorWidget from './TensorMonitorWidget';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
 
 const DRAWER_WIDTH = 240;
 
 const Sidebar = () => {
     const location = useLocation();
 
+    const workspaces = useWorkspaceStore(s => s.workspaces);
+    const fetchWorkspaces = useWorkspaceStore(s => s.fetchWorkspaces);
+    const [workspacesExpanded, setWorkspacesExpanded] = useState(
+        () => location.pathname.startsWith('/workspaces')
+    );
+
+    useEffect(() => {
+        // Fetch once on mount; WorkspacesPage may also refresh later
+        if (workspaces.length === 0) {
+            fetchWorkspaces().catch(() => {});
+        }
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
     const isActive = (path) => {
         if (path === '/') return location.pathname === '/';
         return location.pathname.startsWith(path);
     };
+
+    const isExactActive = (path) => location.pathname === path;
 
     const NavItem = ({ to, icon: Icon, label, exact = false }) => {
         const active = isActive(to);
@@ -95,24 +114,133 @@ const Sidebar = () => {
 
                     <SectionHeader title="Knowledge" />
                     <NavItem to="/knowledge" icon={Database} label="Overview" />
+                    <NavItem to="/knowledge/graph" icon={GitGraph} label="Knowledge Graph" />
+                    <NavItem to="/knowledge/planes" icon={Layers} label="Knowledge Planes" />
+                    <NavItem to="/knowledge/crud" icon={DatabaseZap} label="Graph Manager" />
                     <NavItem to="/knowledge/tfvc" icon={FolderTree} label="TFVC Browser" />
                     <NavItem to="/knowledge/rabbit-hole" icon={Search} label="Rabbit Hole" />
 
+                    {/* WorkSpaces — expandable list of all workspaces */}
+                    <ListItem disablePadding sx={{ mb: 0.5 }}>
+                        <ListItemButton
+                            component={Link}
+                            to="/workspaces"
+                            selected={isExactActive('/workspaces')}
+                            sx={{
+                                borderRadius: 2,
+                                mx: 1,
+                                pr: 0.5,
+                                '&.Mui-selected': {
+                                    bgcolor: 'primary.main',
+                                    color: 'primary.contrastText',
+                                    '&:hover': { bgcolor: 'primary.dark' },
+                                    '& .MuiListItemIcon-root': { color: 'primary.contrastText' }
+                                }
+                            }}
+                        >
+                            <ListItemIcon sx={{ minWidth: 40, color: isExactActive('/workspaces') ? 'inherit' : 'text.secondary' }}>
+                                <FolderKanban size={20} />
+                            </ListItemIcon>
+                            <ListItemText
+                                primary="WorkSpaces"
+                                primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: isExactActive('/workspaces') ? 600 : 400 }}
+                            />
+                            <Box
+                                component="span"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setWorkspacesExpanded(v => !v);
+                                }}
+                                sx={{ display: 'flex', alignItems: 'center', p: 0.5, borderRadius: 1, '&:hover': { bgcolor: 'action.hover' } }}
+                            >
+                                {workspacesExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                            </Box>
+                        </ListItemButton>
+                    </ListItem>
+                    <Collapse in={workspacesExpanded} timeout="auto" unmountOnExit>
+                        <List disablePadding>
+                            {workspaces.length === 0 && (
+                                <Typography variant="caption" sx={{ display: 'block', pl: 6, py: 0.5, color: 'text.disabled', fontStyle: 'italic' }}>
+                                    No workspaces
+                                </Typography>
+                            )}
+                            {workspaces.map(ws => {
+                                const wsPath = `/workspaces/${ws.id}`;
+                                const wsActive = location.pathname === wsPath;
+                                return (
+                                    <ListItem key={ws.id} disablePadding sx={{ mb: 0.25 }}>
+                                        <ListItemButton
+                                            component={Link}
+                                            to={wsPath}
+                                            selected={wsActive}
+                                            sx={{
+                                                borderRadius: 2,
+                                                mx: 1,
+                                                pl: 5,
+                                                py: 0.5,
+                                                '&.Mui-selected': {
+                                                    bgcolor: 'primary.main',
+                                                    color: 'primary.contrastText',
+                                                    '&:hover': { bgcolor: 'primary.dark' }
+                                                }
+                                            }}
+                                        >
+                                            <ListItemText
+                                                primary={ws.name || ws.id}
+                                                primaryTypographyProps={{
+                                                    fontSize: '0.8rem',
+                                                    fontWeight: wsActive ? 600 : 400,
+                                                    noWrap: true,
+                                                    title: ws.name || ws.id,
+                                                }}
+                                            />
+                                        </ListItemButton>
+                                    </ListItem>
+                                );
+                            })}
+                        </List>
+                    </Collapse>
+
+                    <SectionHeader title="Pipeline" />
+                    <NavItem to="/pipeline-lab" icon={Microscope} label="Pipeline Lab" />
+                    <NavItem to="/aopeg" icon={Workflow} label="AOPEG Editor" />
+                    <NavItem to="/gxe" icon={Brain} label="GXE Visualizer" />
+                    <NavItem to="/gxe-manager" icon={Activity} label="GXE Manager" />
+
+                    <SectionHeader title="Structural" />
+                    <NavItem to="/structural-editor" icon={PenTool} label="Structural Editor" />
+                    <NavItem to="/forms-demo" icon={FormInput} label="Forms Demo" />
+
+                    <SectionHeader title="Advanced" />
+                    <NavItem to="/gnn" icon={Network} label="GNN Dashboard" />
+                    <NavItem to="/singularity" icon={Globe} label="Singularity 3D" />
+
                     <SectionHeader title="Assistant" />
                     <NavItem to="/agent" icon={Bot} label="Chat Agent" />
+                    <NavItem to="/backlog" icon={ClipboardList} label="BackLog" />
+                    <NavItem to="/codex" icon={BookOpen} label="Codex Viewer" />
+
+                    <SectionHeader title="Monitoring" />
+                    <NavItem to="/observability" icon={BarChart3} label="Observability" />
                 </List>
             </Box>
 
             {/* Bottom Section */}
             <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
                 <ServiceStatusWidget />
+             {/*    <Box sx={{ mt: 1.5 }}>
+                    <AIUsageWidget />
+                </Box> */}
+                <Box sx={{ mt: 1.5 }}>
+                    <TensorMonitorWidget />
+                </Box>
                 <ListItemButton sx={{ mt: 1, borderRadius: 2, color: 'text.secondary' }}>
                     <ListItemIcon sx={{ minWidth: 40, color: 'text.secondary' }}>
                         <Settings size={20} />
                     </ListItemIcon>
                     <ListItemText primary="Settings" primaryTypographyProps={{ fontSize: '0.875rem' }} />
                 </ListItemButton>
-                <NavItem to="/experimental" icon={FlaskConical} label="Experimental" />
             </Box>
         </Drawer>
     );

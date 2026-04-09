@@ -483,7 +483,7 @@ class IngestionGraphService {
       RETURN s
       ORDER BY s.qualityScore DESC
       LIMIT $limit
-    `, { limit });
+    `, { limit: require('neo4j-driver').int(parseInt(limit) || 20) });
 
     return (result || []).map(r => this._nodeProps(r.s || r));
   }

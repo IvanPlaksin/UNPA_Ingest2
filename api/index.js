@@ -35,6 +35,7 @@ const { destroy: destroyRedis } = require('./src/services/redis.service');
 const { stopCleanup: stopSessionCleanup } = require('./src/services/sessionStore');
 const { getTensorService } = require('./src/services/tensor.service');
 const { getQueryCache } = require('./src/core/aopeg/utils/query-cache');
+const { getStartupManager } = require('./src/services/startup/StartupManager');
 
 // ═══════════════════════════════════════════════════════════════════
 // Routes
@@ -73,10 +74,27 @@ const exportRoutes = require('./src/routes/export.routes');
 const reportRoutes = require('./src/routes/report.routes');
 const subgraphRoutes = require('./src/routes/subgraph.route');
 const domainRoutes = require('./src/routes/domain.route');
+const datasourceRoutes = require('./src/routes/datasource.route');
+require('./src/datasource'); // Register all DataSource executors (SQL, KB, API, FILE, COMPOSITE)
 const mssqlRoutes = require('./src/routes/mssql.route');
 const anomalyTasksRoutes = require('./src/routes/anomaly-tasks.route');
 const advisorRoutes = require('./src/routes/advisor.route');
 const graphStatusRoutes = require('./src/routes/graph-status.route');
+const toolCatalogRoutes = require('./src/routes/toolCatalog.route');
+const gxeManagerRoutes = require('./src/routes/gxeManager.route');
+const approvalRoutes = require('./src/routes/approval.route');
+const assistantRoutes = require('./src/routes/assistant.route');
+const flowdeskRoutes = require('./src/routes/flowdesk.route');
+const codexRoutes = require('./src/routes/codex.route');
+const backlogRoutes = require('./src/routes/backlog.route');
+const backlogExecutionRoutes = require('./src/routes/backlog-execution.route');
+const notificationsRoutes = require('./src/routes/notifications.route');
+const monitorRoutes = require('./src/routes/monitor.route');
+const kbHealthRoutes = require('./src/routes/kb-health.route');
+const metacognitionRoutes = require('./src/routes/metacognition.route');
+const workspaceRoutes = require('./src/routes/workspace.routes');
+const { initFormRoutes } = require('./src/routes/structural-form.route');
+const { initStructuralRoutes } = require('./src/routes/structural.route');
 
 // ═══════════════════════════════════════════════════════════════════
 // App Setup
@@ -125,6 +143,7 @@ app.get('/test', (_req, res) => res.send('TEST OK'));
 // ═══════════════════════════════════════════════════════════════════
 // API Routes
 // ═══════════════════════════════════════════════════════════════════
+app.use('/api/v1/health/kb', kbHealthRoutes);
 app.use('/api/v1/health', healthRoutes);
 app.get('/api/v1/health-test', (_req, res) => res.json({ status: 'inline-ok' }));
 app.use('/api/v1/rabbithole', rabbitholeRoutes);
@@ -142,6 +161,7 @@ app.use('/api/v1/graph-types', graphTypesRoutes);
 app.use('/api/v1/ainfra', ainfraRoutes);
 app.use('/api/v1/graph', immutableGraphRoutes);
 app.use('/api/v1/gxe', gxeRoutes);
+app.use('/api/v1/gxe-manager', gxeManagerRoutes);
 app.use('/api/v1/graph-catalog', graphCatalogRoutes);
 app.use('/api/v1/tensors', tensorRoutes);
 app.use('/api/v1/runtime', runtimeRoutes);
@@ -159,10 +179,33 @@ app.use('/api/v1/export', exportRoutes);
 app.use('/api/v1/reports', reportRoutes);
 app.use('/api/v1/subgraph', subgraphRoutes);
 app.use('/api/v1/domains', domainRoutes);
+app.use('/api/v1/datasources', datasourceRoutes);
 app.use('/api/v1/mssql', mssqlRoutes);
 app.use('/api/v1/anomaly-tasks', anomalyTasksRoutes);
 app.use('/api/v1/advisor', advisorRoutes);
 app.use('/api/v1/graph-status', graphStatusRoutes);
+app.use('/api/v1/tool-catalog', toolCatalogRoutes);
+app.use('/api/v1/approval', approvalRoutes);
+app.use('/api/v1/assistant', assistantRoutes);
+app.use('/api/v1/flowdesk', flowdeskRoutes);
+app.use('/api/v1/codex', codexRoutes);
+app.use('/api/v1/backlog', backlogRoutes);
+app.use('/api/v1/backlog', backlogExecutionRoutes);
+app.use('/api/v1', notificationsRoutes);
+app.use('/api/v1/monitor', monitorRoutes);
+
+// Initialize notification event handlers
+try {
+  const { setupBacklogEventHandlers } = require('./src/services/notifications/backlog-events');
+  setupBacklogEventHandlers();
+} catch (err) { console.warn('[Notifications] Event setup failed:', err.message); }
+app.use('/api/v1/metrics', require('./src/routes/metrics.route'));
+app.use('/api/v1/metacognition', metacognitionRoutes);
+app.use('/api/v1/workspaces', workspaceRoutes);
+const _mg = require('./src/services/memgraph.service');
+app.use('/api/v1/forms', initFormRoutes(_mg));
+const { getFormService } = require('./src/routes/structural-form.route');
+app.use('/api/v1/structural', initStructuralRoutes(_mg, getFormService()));
 
 // ═══════════════════════════════════════════════════════════════════
 // Post-route Middleware (error handling)
@@ -177,8 +220,12 @@ async function startServer() {
   try {
     logger.info(`Starting UN ProjectAdvisor API [${envConfig.env}]...`);
 
-    await connectToAdo();
-    logger.info('Connected to Azure DevOps');
+    try {
+      await connectToAdo();
+      logger.info('Connected to Azure DevOps');
+    } catch (adoError) {
+      logger.warn('Azure DevOps connection failed — continuing without ADO features', { error: adoError.message });
+    }
 
     // Initialize storage layer (Graph + Vector)
     await initializeStorage().catch(err => {
@@ -192,6 +239,12 @@ async function startServer() {
       });
     }
 
+    // CC-031: Initialize background jobs (OrphanDetector, TombstoneExpirer)
+    const startupManager = getStartupManager(logger);
+    await startupManager.initialize().catch(err => {
+      logger.warn('StartupManager initialization warning', { error: err.message });
+    });
+
     const server = http.createServer(app);
 
     // Initialize WebSocket
@@ -203,6 +256,7 @@ async function startServer() {
 
     // Graceful shutdown — close all services holding the event loop open
     createShutdownHandler(server, [
+      () => startupManager.shutdown(),
       () => websocketService.close?.(),
       () => jobQueueService.close?.(),
       () => memgraphService.close?.(),

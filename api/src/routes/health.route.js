@@ -2,9 +2,13 @@ const express = require('express');
 const router = express.Router();
 const adoService = require('../services/ado.service');
 const queueService = require('../services/queue.service');
+const { getCachedHealthCheck } = require('../services/redis.service');
 
-router.get('/', async (req, res) => {
-    console.log("[Health Route] Hit!");
+/**
+ * Compute health status for all services
+ * @returns {Promise<Object>} Health status object
+ */
+async function computeHealthStatus() {
     const status = {
         ado: 'unknown',
         redis: 'unknown',
@@ -15,38 +19,160 @@ router.get('/', async (req, res) => {
 
     // Check ADO
     try {
-        console.log("Checking ADO health...");
         const adoHealth = await adoService.checkHealth();
-        console.log("ADO health:", adoHealth);
         status.ado = adoHealth ? 'connected' : 'disconnected';
     } catch (e) {
-        console.error("ADO check failed:", e);
+        console.error("ADO check failed:", e.message);
         status.ado = 'error';
     }
 
     // Check Redis
     try {
-        console.log("Checking Redis health...");
         const redisHealth = await queueService.checkRedisHealth();
-        console.log("Redis health:", redisHealth);
         status.redis = redisHealth ? 'connected' : 'disconnected';
     } catch (e) {
-        console.error("Redis check failed:", e);
+        console.error("Redis check failed:", e.message);
         status.redis = 'error';
     }
 
     // Check Worker
     try {
-        console.log("Checking Worker health...");
         const workerHealth = await queueService.checkWorkerHealth();
-        console.log("Worker health:", workerHealth);
         status.worker = workerHealth ? 'active' : 'inactive';
     } catch (e) {
-        console.error("Worker check failed:", e);
+        console.error("Worker check failed:", e.message);
         status.worker = 'error';
     }
 
-    res.json(status);
+    return status;
+}
+
+/**
+ * GET /health
+ * Main health check endpoint - cached for 1 minute in Redis
+ */
+router.get('/', async (req, res) => {
+    const { data, cached } = await getCachedHealthCheck('main', computeHealthStatus);
+
+    // Add cache info to response
+    res.json({
+        ...data,
+        cached,
+        cacheInfo: cached ? 'Result from Redis cache (TTL: 60s)' : 'Fresh result'
+    });
+});
+
+/**
+ * GET /health/fresh
+ * Force fresh health check (bypasses cache)
+ */
+router.get('/fresh', async (req, res) => {
+    const status = await computeHealthStatus();
+    res.json({
+        ...status,
+        cached: false,
+        cacheInfo: 'Fresh result (cache bypassed)'
+    });
+});
+
+/**
+ * GET /health/embeddings
+ * Check if embedding service (TEI / Ollama) is available
+ */
+router.get('/embeddings', async (req, res) => {
+    const result = {
+        available: false,
+        provider: 'none',
+        model: null,
+        dimensions: null,
+        url: null,
+        timestamp: new Date().toISOString()
+    };
+
+    // 1. Try TEI (primary)
+    try {
+        const teiService = require('../services/tei.service');
+        const healthy = await teiService.isHealthy();
+        if (healthy) {
+            const info = await teiService.getInfo();
+            result.available = true;
+            result.provider = 'tei';
+            result.model = info.model_id || info.model || 'unknown';
+            result.dimensions = info.max_input_length || null;
+            result.url = teiService.getConfig().url;
+            return res.json(result);
+        }
+    } catch (e) {
+        // TEI not available
+    }
+
+    // 2. Try Ollama embeddings (fallback)
+    try {
+        const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
+        const ollamaAxios = require('axios');
+        const resp = await ollamaAxios.get(`${OLLAMA_URL}/api/tags`, { timeout: 3000 });
+        const models = resp.data?.models || [];
+        const embedModel = models.find(m =>
+            m.name.includes('nomic-embed') || m.name.includes('embed') || m.name.includes('bge')
+        );
+        if (embedModel) {
+            result.available = true;
+            result.provider = 'ollama';
+            result.model = embedModel.name;
+            result.url = OLLAMA_URL;
+            return res.json(result);
+        }
+    } catch (e) {
+        // Ollama not available
+    }
+
+    res.json(result);
+});
+
+/**
+ * GET /health/codex
+ * CC-031: Codex compliance status + background jobs
+ */
+router.get('/codex', async (req, res) => {
+    try {
+        const memgraphService = require('../services/memgraph.service');
+        const { getStartupManager } = require('../services/startup/StartupManager');
+
+        let namespaceViolations = 0;
+        try {
+            const result = await memgraphService.executeQuery(
+                'MATCH (n) WHERE n.namespace IS NULL RETURN count(n) as c'
+            );
+            namespaceViolations = result.records?.[0]?.get('c')?.low ?? 0;
+        } catch (e) {
+            namespaceViolations = -1;
+        }
+
+        let executionRecords = 0;
+        try {
+            const result = await memgraphService.executeQuery(
+                'MATCH (e:ExecutionRecord) RETURN count(e) as c'
+            );
+            executionRecords = result.records?.[0]?.get('c')?.low ?? 0;
+        } catch (e) {
+            executionRecords = -1;
+        }
+
+        const startupManager = getStartupManager();
+
+        res.json({
+            codexVersion: '0.1.1',
+            compliance: {
+                namespaceViolations,
+                executionRecords,
+                strictValidation: process.env.CODEX_STRICT_VALIDATION === 'true'
+            },
+            backgroundServices: startupManager.getHealthStatus(),
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        res.status(500).json({ status: 'error', error: error.message });
+    }
 });
 
 module.exports = router;

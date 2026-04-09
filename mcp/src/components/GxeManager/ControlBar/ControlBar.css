@@ -1,0 +1,167 @@
+/* ─── Control Bar ─────────────────────────────────────────────────────────── */
+
+.gxe-control-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--nexus-bg-secondary, #111118);
+  border-top: 1px solid var(--nexus-border, #27272a);
+  flex-wrap: wrap;
+}
+
+.gxe-control-bar__left {
+  display: flex;
+  align-items: center;
+}
+
+.gxe-control-bar__label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--nexus-text-muted, #71717a);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.gxe-control-bar__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Buttons */
+.gxe-control-bar__btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid var(--nexus-border, #27272a);
+  border-radius: 6px;
+  background: var(--nexus-bg-tertiary, #18181b);
+  color: var(--nexus-text-secondary, #a1a1aa);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.gxe-control-bar__btn:hover:not(:disabled) {
+  background: var(--nexus-bg-hover, #27272a);
+  color: var(--nexus-text-primary, #e4e4e7);
+}
+
+.gxe-control-bar__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.gxe-control-bar__btn--icon {
+  padding: 8px;
+}
+
+.gxe-control-bar__btn--primary {
+  background: var(--nexus-accent-cyan, #22d3ee);
+  border-color: var(--nexus-accent-cyan, #22d3ee);
+  color: #000;
+}
+
+.gxe-control-bar__btn--primary:hover:not(:disabled) {
+  background: #06b6d4;
+  border-color: #06b6d4;
+  color: #000;
+}
+
+.gxe-control-bar__btn--warning {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: var(--nexus-warning, #f59e0b);
+  color: var(--nexus-warning, #f59e0b);
+}
+
+.gxe-control-bar__btn--warning:hover:not(:disabled) {
+  background: rgba(245, 158, 11, 0.25);
+}
+
+.gxe-control-bar__btn--danger {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: var(--nexus-error, #ef4444);
+  color: var(--nexus-error, #ef4444);
+}
+
+.gxe-control-bar__btn--danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.25);
+}
+
+.gxe-control-bar__btn .spinning {
+  animation: spin 1s linear infinite;
+}
+
+/* More menu */
+.gxe-control-bar__more-wrapper {
+  position: relative;
+}
+
+.gxe-control-bar__more-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  min-width: 180px;
+  padding: 6px;
+  background: var(--nexus-bg-secondary, #111118);
+  border: 1px solid var(--nexus-border, #27272a);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+}
+
+.gxe-control-bar__more-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--nexus-text-secondary, #a1a1aa);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gxe-control-bar__more-menu button:hover {
+  background: var(--nexus-bg-hover, #27272a);
+  color: var(--nexus-text-primary, #e4e4e7);
+}
+
+.gxe-control-bar__more-divider {
+  height: 1px;
+  background: var(--nexus-border, #27272a);
+  margin: 6px 0;
+}
+
+/* Warning */
+.gxe-control-bar__warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  padding: 6px 12px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--nexus-warning, #f59e0b);
+}
+
+.gxe-control-bar__warning code {
+  font-family: 'JetBrains Mono', monospace;
+  background: rgba(245, 158, 11, 0.2);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

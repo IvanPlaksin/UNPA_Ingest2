@@ -9,6 +9,7 @@ import {
     IconButton,
     Stack
 } from '@mui/material';
+import { API_ENDPOINTS } from '../../config/api.config';
 
 const ContextualChat = ({ filters, visibleItems, visibleColumns, fieldDefinitions, onAIAction, pendingCommand, onCommandHandled }) => {
     const [messages, setMessages] = useState([
@@ -43,7 +44,7 @@ const ContextualChat = ({ filters, visibleItems, visibleColumns, fieldDefinition
         setLoading(true);
 
         try {
-            const response = await fetch('http://localhost:3000/api/v1/rabbithole/chat', {
+            const response = await fetch(API_ENDPOINTS.RABBITHOLE_CHAT, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

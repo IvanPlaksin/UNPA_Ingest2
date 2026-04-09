@@ -1,0 +1,50 @@
+{
+  "id": "approval-form",
+  "name": "Purchase Approval",
+  "description": "Form for approving or rejecting purchase requests",
+  "version": "1.0.0",
+  "status": "ACTIVE",
+  "namespace": "CORE",
+  "sections": [
+    {
+      "id": "section-decision",
+      "title": "Approval Decision",
+      "order": 0,
+      "fields": [
+        {
+          "id": "field-decision",
+          "name": "decision",
+          "type": "select",
+          "label": "Decision",
+          "required": true,
+          "order": 0,
+          "options": [
+            { "value": "APPROVE", "label": "Approve" },
+            { "value": "REJECT", "label": "Reject" },
+            { "value": "REQUEST_INFO", "label": "Request More Information" }
+          ]
+        },
+        {
+          "id": "field-comments",
+          "name": "comments",
+          "type": "textarea",
+          "label": "Comments",
+          "required": false,
+          "placeholder": "Add any notes",
+          "order": 1
+        },
+        {
+          "id": "field-rejection-reason",
+          "name": "rejection_reason",
+          "type": "textarea",
+          "label": "Rejection Reason",
+          "required": true,
+          "order": 2,
+          "conditions": [
+            { "expression": "decision == 'REJECT'", "effect": "SHOW" }
+          ]
+        }
+      ]
+    }
+  ]
+}

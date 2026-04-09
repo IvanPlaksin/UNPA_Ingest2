@@ -217,20 +217,68 @@ class NodeRunner {
       metrics.phases.executeMs = Date.now() - executeStart;
 
       // ═══════════════════════════════════════════════════════════════════════
-      // CHECK: WAIT_FOR_INPUT signal from executor
+      // CHECK: WAIT_FOR_SIGNAL — new AsyncSignalContract format
+      // Executors return { __type: 'WAIT_FOR_SIGNAL', contract: {...} }
+      // to trigger async signal waiting with full resolution policy support
       // ═══════════════════════════════════════════════════════════════════════
-      if (result && result.status === 'WAIT_FOR_INPUT') {
+      if (result && result.__type === 'WAIT_FOR_SIGNAL') {
+        const { AsyncSignalContract } = require('../signals/async-signal-contract');
+        const contract = new AsyncSignalContract({
+          ...result.contract,
+          contextRef: {
+            execution_id: ctx.executionId,
+            node_id: nodeId,
+            ...(result.contract?.contextRef || {}),
+          },
+        });
+
+        const validation = contract.validate();
+        if (!validation.valid) {
+          return this._failure(
+            'INVALID_SIGNAL_CONTRACT',
+            FailurePhase.EXECUTE,
+            metrics,
+            { errors: validation.errors }
+          );
+        }
+
         metrics.wallTimeMs = Date.now() - startTime;
         return {
           status: RunStatus.WAIT_FOR_INPUT,
-          waitContext: {
-            resume_token: result.resume_token,
-            expected_inputs: result.expected_inputs,
-            recipients: result.recipients,
-            timeout_at: result.timeout_at,
-            timeout_action: result.timeout_action,
-            prompt: result.prompt
-          },
+          waitContext: contract.toLegacyWaitContext(),
+          contract,
+          metrics
+        };
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // CHECK: WAIT_FOR_INPUT — legacy signal from executor
+      // ═══════════════════════════════════════════════════════════════════════
+      if (result && result.status === 'WAIT_FOR_INPUT') {
+        const { AsyncSignalContract } = require('../signals/async-signal-contract');
+        const legacyWaitContext = {
+          resume_token: result.resume_token,
+          expected_inputs: result.expected_inputs,
+          recipients: result.recipients,
+          timeout_at: result.timeout_at,
+          timeout_action: result.timeout_action,
+          prompt: result.prompt,
+          choices: result.choices || null,
+          response: result.response || result.prompt,
+        };
+        // Wrap legacy format in AsyncSignalContract for SignalOrchestrator
+        const contract = AsyncSignalContract.fromLegacyWaitContext(
+          legacyWaitContext,
+          ctx.executionId,
+          nodeId
+        );
+        legacyWaitContext._contract = contract;
+
+        metrics.wallTimeMs = Date.now() - startTime;
+        return {
+          status: RunStatus.WAIT_FOR_INPUT,
+          waitContext: legacyWaitContext,
+          contract,
           metrics
         };
       }
@@ -325,10 +373,11 @@ class NodeRunner {
       for (const [field, propSchema] of Object.entries(schema.properties)) {
         if (input[field] !== undefined && propSchema.type) {
           const actualType = Array.isArray(input[field]) ? 'array' : typeof input[field];
-          if (propSchema.type !== actualType && propSchema.type !== 'any') {
+          const allowedTypes = Array.isArray(propSchema.type) ? propSchema.type : [propSchema.type];
+          if (!allowedTypes.includes(actualType) && !allowedTypes.includes('any')) {
             // Allow 'object' to accept arrays (common pattern)
-            if (!(propSchema.type === 'object' && actualType === 'object')) {
-              errors.push(`Field ${field}: expected ${propSchema.type}, got ${actualType}`);
+            if (!(allowedTypes.includes('object') && actualType === 'object')) {
+              errors.push(`Field ${field}: expected ${allowedTypes.join('|')}, got ${actualType}`);
             }
           }
         }
