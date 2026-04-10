@@ -5117,4 +5117,13 @@ const GXEVisualizerPage = () => {
   );
 };
 
-export default GXEVisualizerPage;
+// PH-004: Page-level error boundary
+import ErrorBoundary from '../components/common/ErrorBoundary';
+
+const GXEVisualizerPageWithBoundary = () => (
+  <ErrorBoundary name="GXE Visualizer" level="page" onReset={() => window.location.reload()}>
+    <GXEVisualizerPage />
+  </ErrorBoundary>
+);
+
+export default GXEVisualizerPageWithBoundary;

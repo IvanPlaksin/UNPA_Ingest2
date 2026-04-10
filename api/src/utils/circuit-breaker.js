@@ -116,4 +116,31 @@ class CircuitBreaker {
   }
 }
 
-module.exports = { CircuitBreaker };
+// ──────────────────────────────────────────────────────────────────
+// Registry — named singletons for each service
+// ──────────────────────────────────────────────────────────────────
+
+const _registry = new Map();
+
+/**
+ * Get or create a named circuit breaker (singleton per name).
+ */
+function getCircuitBreaker(name, options = {}) {
+  if (!_registry.has(name)) {
+    _registry.set(name, new CircuitBreaker({ name, ...options }));
+  }
+  return _registry.get(name);
+}
+
+/**
+ * Get all circuit breaker states.
+ */
+function getAllStates() {
+  const states = {};
+  for (const [name, breaker] of _registry) {
+    states[name] = breaker.getState();
+  }
+  return states;
+}
+
+module.exports = { CircuitBreaker, getCircuitBreaker, getAllStates };

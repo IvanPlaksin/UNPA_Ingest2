@@ -123,6 +123,10 @@ app.use(express.json({ limit: '10mb' }));
 app.use(security.sanitizer);
 app.use(security.apiKeyValidator);
 
+// PH-005: HTTP endpoint metrics collection
+const { metricsMiddleware } = require('./src/middleware/metrics.middleware');
+app.use(metricsMiddleware);
+
 // ═══════════════════════════════════════════════════════════════════
 // Error handling for uncaught exceptions
 // ═══════════════════════════════════════════════════════════════════
@@ -244,6 +248,17 @@ async function startServer() {
     await startupManager.initialize().catch(err => {
       logger.warn('StartupManager initialization warning', { error: err.message });
     });
+
+    // PH-001: Audit agent tool whitelists at startup
+    try {
+      const { auditAllWhitelists } = require('./src/middleware/whitelist-audit');
+      const auditResult = auditAllWhitelists();
+      if (!auditResult.allSafe) {
+        logger.error('Whitelist audit FAILED — check logs for violations');
+      }
+    } catch (err) {
+      logger.warn('Whitelist audit skipped', { error: err.message });
+    }
 
     const server = http.createServer(app);
 

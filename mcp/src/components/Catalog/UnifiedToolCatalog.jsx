@@ -30,6 +30,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { useCatalogStore, LEVEL_META } from '../../stores/catalogStore';
+import { useDebounce } from '../../hooks/useDebounce';
 import CatalogAIPanel from './CatalogAIPanel';
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -246,6 +247,7 @@ const UnifiedToolCatalog = ({
 
   // Local UI state
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearch = useDebounce(searchQuery, 200);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
   const [showDetail, setShowDetail] = useState(false);
@@ -283,9 +285,9 @@ const UnifiedToolCatalog = ({
     return gxeTools;
   }, [mode, gxeTools]);
 
-  // Filtered items
+  // Filtered items — uses debounced search to avoid recomputing on every keystroke
   const filteredItems = useMemo(() => {
-    const q = searchQuery.toLowerCase();
+    const q = debouncedSearch.toLowerCase();
     let items = allItems;
 
     if (selectedCategory === '_recent') {
@@ -311,7 +313,7 @@ const UnifiedToolCatalog = ({
     }
 
     return items;
-  }, [allItems, searchQuery, selectedCategory, recentTools, pinnedTools]);
+  }, [allItems, debouncedSearch, selectedCategory, recentTools, pinnedTools]);
 
   // Category counts
   const categoryCounts = useMemo(() => {

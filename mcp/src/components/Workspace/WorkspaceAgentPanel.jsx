@@ -129,6 +129,7 @@ const WorkspaceAgentPanel = ({ workspaceId }) => {
   const [streaming, setStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState('');
   const [error, setError] = useState(null);
+  const [isReconnecting, setIsReconnecting] = useState(false);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = useCallback(() => {
@@ -199,6 +200,7 @@ const WorkspaceAgentPanel = ({ workspaceId }) => {
         }
       },
       onReconnect: (attempt) => {
+        setIsReconnecting(true);
         setError(`Reconnecting... (attempt ${attempt})`);
       },
       onTimeout: () => {
@@ -218,6 +220,7 @@ const WorkspaceAgentPanel = ({ workspaceId }) => {
 
     setStreaming(false);
     setStreamingText('');
+    setIsReconnecting(false);
     // Reload to get the final persisted assistant message + new actions
     await loadAll();
   }, [workspaceId, input, streaming, loadAll]);
@@ -268,7 +271,12 @@ const WorkspaceAgentPanel = ({ workspaceId }) => {
         </Stack>
       </Box>
 
-      {error && (
+      {isReconnecting && (
+        <Alert severity="warning" sx={{ borderRadius: 0, py: 0.25 }} icon={false}>
+          <Typography variant="caption">Reconnecting...</Typography>
+        </Alert>
+      )}
+      {error && !isReconnecting && (
         <Alert severity="error" onClose={() => setError(null)} sx={{ borderRadius: 0 }}>
           {error}
         </Alert>

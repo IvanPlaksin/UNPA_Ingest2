@@ -175,4 +175,24 @@ router.get('/codex', async (req, res) => {
     }
 });
 
+/**
+ * GET /health/circuits
+ * PH-007: Circuit breaker states for all resilient DB wrappers
+ */
+router.get('/circuits', (_req, res) => {
+  try {
+    const { getAllStates } = require('../utils/circuit-breaker');
+    const states = getAllStates();
+    const allClosed = Object.values(states).every(s => s.state === 'CLOSED');
+
+    res.status(allClosed ? 200 : 503).json({
+      status: allClosed ? 'healthy' : 'degraded',
+      circuits: states,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({ status: 'error', error: error.message });
+  }
+});
+
 module.exports = router;

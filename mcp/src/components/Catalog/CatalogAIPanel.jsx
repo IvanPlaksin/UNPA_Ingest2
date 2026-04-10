@@ -18,8 +18,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Search, Send, RefreshCw, Layers, MessageSquare, Sparkles,
-  Replace, Eye, ChevronDown, ChevronUp
+  Replace, Eye, ChevronDown, ChevronUp, WifiOff
 } from 'lucide-react';
+import { useSSEStream } from '../../hooks/useSSEStream';
 
 const API_BASE = '/api/v1';
 
@@ -65,15 +66,38 @@ const CatalogAIPanel = ({ workspaceId, workspaceName, selectedNodes = [], mode =
   const [activeTab, setActiveTab] = useState('chat');
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
-  const [streaming, setStreaming] = useState(false);
   const [streamBuffer, setStreamBuffer] = useState('');
   const [patterns, setPatterns] = useState([]);
   const [patternsLoading, setPatternsLoading] = useState(false);
   const [patternsError, setPatternsError] = useState(null);
   const messagesEndRef = useRef(null);
+  const bufferRef = useRef('');
 
   const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   useEffect(scrollToBottom, [messages, streamBuffer]);
+
+  // ── SSE Stream with reconnection ──────────────────────────────
+
+  const {
+    stream, abort, isStreaming: streaming, isReconnecting, reconnectInfo,
+    error: streamError, clearError
+  } = useSSEStream({
+    maxRetries: 3,
+    timeout: 120000,
+    onEvent: (eventName, data) => {
+      if (eventName === 'text' && data?.content) {
+        bufferRef.current += data.content;
+        setStreamBuffer(bufferRef.current);
+      }
+    },
+    onComplete: () => {
+      setStreamBuffer('');
+      if (bufferRef.current) {
+        setMessages(prev => [...prev, { role: 'assistant', content: bufferRef.current }]);
+      }
+      bufferRef.current = '';
+    }
+  });
 
   // ── AI Chat ────────────────────────────────────────────────────
 
@@ -82,70 +106,22 @@ const CatalogAIPanel = ({ workspaceId, workspaceName, selectedNodes = [], mode =
     if (!text || streaming) return;
 
     setInput('');
-    setStreaming(true);
     setStreamBuffer('');
+    bufferRef.current = '';
+    clearError();
 
     const userMsg = { role: 'user', content: text };
     setMessages(prev => [...prev, userMsg]);
 
-    let buffer = '';
-    try {
-      const resp = await fetch(`${API_BASE}/graph-catalog/assistant/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: text,
-          sessionHistory: messages,
-          workspaceId: workspaceId || undefined,
-          workspaceName: workspaceName || undefined,
-          currentSelection: selectedNodes?.length > 0 ? selectedNodes : undefined,
-          mode
-        })
-      });
-
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      if (!resp.body) throw new Error('No response body');
-
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let sseBuffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        sseBuffer += decoder.decode(value, { stream: true });
-        const parts = sseBuffer.split('\n\n');
-        sseBuffer = parts.pop() || '';
-
-        for (const part of parts) {
-          const lines = part.split('\n');
-          let eventName = 'message';
-          let dataStr = '';
-          for (const line of lines) {
-            if (line.startsWith(':')) continue;
-            if (line.startsWith('event: ')) eventName = line.slice(7).trim();
-            else if (line.startsWith('data: ')) dataStr += line.slice(6);
-          }
-          if (!dataStr) continue;
-          try {
-            const parsed = JSON.parse(dataStr);
-            if (eventName === 'text' && parsed.content) {
-              buffer += parsed.content;
-              setStreamBuffer(buffer);
-            }
-          } catch { /* skip unparseable */ }
-        }
-      }
-    } catch (err) {
-      buffer += `\n\n⚠️ Error: ${err.message}`;
-    } finally {
-      setStreaming(false);
-      setStreamBuffer('');
-      if (buffer) {
-        setMessages(prev => [...prev, { role: 'assistant', content: buffer }]);
-      }
-    }
-  }, [input, streaming, messages, workspaceId, workspaceName, selectedNodes, mode]);
+    await stream(`${API_BASE}/graph-catalog/assistant/chat`, {
+      query: text,
+      sessionHistory: messages,
+      workspaceId: workspaceId || undefined,
+      workspaceName: workspaceName || undefined,
+      currentSelection: selectedNodes?.length > 0 ? selectedNodes : undefined,
+      mode
+    });
+  }, [input, streaming, messages, workspaceId, workspaceName, selectedNodes, mode, stream, clearError]);
 
   // ── Pattern Scanning ───────────────────────────────────────────
 
@@ -195,6 +171,18 @@ const CatalogAIPanel = ({ workspaceId, workspaceName, selectedNodes = [], mode =
 
       {activeTab === 'chat' ? (
         <>
+          {isReconnecting && (
+            <div style={{ padding: '4px 8px', background: '#3a2a00', borderBottom: '1px solid #30363d', fontSize: 10, color: '#fbbf24', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <WifiOff size={10} />
+              Reconnecting... (attempt {reconnectInfo?.attempt}/{reconnectInfo?.maxRetries})
+            </div>
+          )}
+          {streamError && (
+            <div style={{ padding: '4px 8px', background: '#3a1d1d', borderBottom: '1px solid #30363d', fontSize: 10, color: '#fca5a5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>{streamError}</span>
+              <button style={{ background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer', fontSize: 10 }} onClick={clearError}>dismiss</button>
+            </div>
+          )}
           <div style={S.messages}>
             {messages.length === 0 && !streaming && (
               <div style={{ textAlign: 'center', color: '#484f58', padding: 16 }}>
