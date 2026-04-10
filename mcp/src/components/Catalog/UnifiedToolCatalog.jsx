@@ -251,32 +251,36 @@ const UnifiedToolCatalog = ({
   const [showDetail, setShowDetail] = useState(false);
   const [activeView, setActiveView] = useState('browse'); // 'browse' | 'ai'
 
-  // Load GXE tools on mount if in gxe mode
+  // Load GXE tools on mount — needed for both modes (workspace shows all tools too)
   useEffect(() => {
-    if (mode === 'gxe' && gxeTools.length === 0 && !gxeLoading) {
+    if (gxeTools.length === 0 && !gxeLoading) {
       loadCatalog();
     }
-  }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Unified categories
+  // Unified categories — workspace shows BOTH draft types AND GXE tool categories
   const categories = useMemo(() => {
-    if (mode === 'workspace') {
-      return [
-        ...WORKSPACE_CATEGORIES,
-        { id: '_recent', name: 'Recent', emoji: '🕒', color: '#9CA3AF' },
-        { id: '_pinned', name: 'Pinned', emoji: '⭐', color: '#FBBF24' }
-      ];
-    }
-    return [
-      ...gxeCategories,
+    const shared = [
       { id: '_recent', name: 'Recent', emoji: '🕒', color: '#9CA3AF' },
       { id: '_pinned', name: 'Pinned', emoji: '⭐', color: '#FBBF24' }
     ];
+    if (mode === 'workspace') {
+      return [
+        ...WORKSPACE_CATEGORIES,
+        { id: '_divider', name: '── GXE Tools ──', emoji: '', color: '#30363d', isDivider: true },
+        ...gxeCategories,
+        ...shared
+      ];
+    }
+    return [...gxeCategories, ...shared];
   }, [mode, gxeCategories]);
 
-  // Unified items
+  // Unified items — workspace includes BOTH draft types AND all GXE tools
   const allItems = useMemo(() => {
-    return mode === 'workspace' ? WORKSPACE_DRAFT_ITEMS : gxeTools;
+    if (mode === 'workspace') {
+      return [...WORKSPACE_DRAFT_ITEMS, ...gxeTools];
+    }
+    return gxeTools;
   }, [mode, gxeTools]);
 
   // Filtered items
@@ -414,7 +418,11 @@ const UnifiedToolCatalog = ({
               <span style={{ flex: 1 }}>All</span>
               <span style={{ color: '#484f58', fontSize: 9 }}>{allItems.length}</span>
             </div>
-            {categories.map(cat => (
+            {categories.map(cat => cat.isDivider ? (
+              <div key={cat.id} style={{ padding: '6px 8px', fontSize: 9, color: '#484f58', fontWeight: 600, borderTop: '1px solid #21262d', marginTop: 4 }}>
+                {cat.name}
+              </div>
+            ) : (
               <CategoryItem
                 key={cat.id}
                 cat={cat}

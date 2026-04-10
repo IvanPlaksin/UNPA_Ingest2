@@ -384,41 +384,92 @@ const CanvasInner = ({ workspaceId }) => {
     });
 
     // Try unified format first (application/json from UnifiedToolCatalog)
-    let draftType = null;
-    let label = null;
+    let handled = false;
     try {
       const json = event.dataTransfer.getData('application/json');
       if (json) {
         const data = JSON.parse(json);
         if (data.source === 'workspace' && data.draftType) {
-          draftType = data.draftType;
-          label = data.label || `New ${draftType}`;
+          // Workspace draft type → create draft node
+          const tempId = `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+          setNodes(nds => nds.concat({
+            id: tempId,
+            type: 'workspaceDraft',
+            position,
+            data: {
+              label: data.label || `New ${data.draftType}`,
+              draftType: data.draftType,
+              status: 'DRAFT',
+              confidence: 0.5,
+              description: data.description || ''
+            }
+          }));
+          handled = true;
+        } else if (data.source === 'gxe' && data.toolId) {
+          // GXE tool → create executor/tool node (same shape as GXE canvas)
+          const kindMap = { ai: 'ai', patterns: 'subgraph', meta: 'tool' };
+          setNodes(nds => nds.concat({
+            id: `${data.toolId}-${Date.now()}`,
+            type: 'workspaceDraft',
+            position,
+            data: {
+              label: data.label || data.toolId,
+              draftType: 'executor',
+              executorType: data.toolId,
+              kind: kindMap[data.category] || 'executor',
+              description: data.description || '',
+              status: 'DRAFT',
+              confidence: 0.9
+            }
+          }));
+          handled = true;
         }
       }
-    } catch { /* not JSON — try legacy format */ }
+    } catch { /* not JSON */ }
 
-    // Fallback: legacy NodePalette format
-    if (!draftType) {
-      draftType = event.dataTransfer.getData('application/workspace-draft-type');
-      label = draftType ? `New ${draftType}` : null;
+    // Fallback: legacy GXE tool format (application/gxe-tool)
+    if (!handled) {
+      const toolJson = event.dataTransfer.getData('application/gxe-tool');
+      if (toolJson) {
+        try {
+          const toolData = JSON.parse(toolJson);
+          setNodes(nds => nds.concat({
+            id: `${toolData.executorId}-${Date.now()}`,
+            type: 'workspaceDraft',
+            position,
+            data: {
+              label: toolData.name,
+              draftType: 'executor',
+              executorType: toolData.executorId,
+              description: toolData.description || '',
+              status: 'DRAFT',
+              confidence: 0.9
+            }
+          }));
+          handled = true;
+        } catch { /* ignore */ }
+      }
     }
 
-    if (!draftType) return;
-
-    const tempId = `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const newNode = {
-      id: tempId,
-      type: 'workspaceDraft',
-      position,
-      data: {
-        label,
-        draftType,
-        status: 'DRAFT',
-        confidence: 0.5,
-        description: ''
+    // Fallback: legacy NodePalette format
+    if (!handled) {
+      const draftType = event.dataTransfer.getData('application/workspace-draft-type');
+      if (draftType) {
+        const tempId = `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        setNodes(nds => nds.concat({
+          id: tempId,
+          type: 'workspaceDraft',
+          position,
+          data: {
+            label: `New ${draftType}`,
+            draftType,
+            status: 'DRAFT',
+            confidence: 0.5,
+            description: ''
+          }
+        }));
       }
-    };
-    setNodes(nds => nds.concat(newNode));
+    }
   }, [setNodes]);
 
   // Click → select
