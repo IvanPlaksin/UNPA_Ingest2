@@ -20,6 +20,7 @@ class MatchSubgraphTool extends BaseTool {
           limit: { type: 'number', description: 'Max results (default 5)' }
         }
       },
+      outputSchema: { type: 'object' },
       safetyLevel: 'AUTO',
       sideEffects: []
     };

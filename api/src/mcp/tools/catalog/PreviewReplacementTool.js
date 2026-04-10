@@ -19,6 +19,7 @@ class PreviewReplacementTool extends BaseTool {
           catalogEntryId: { type: 'string', description: 'Catalog entry ID to replace with' }
         }
       },
+      outputSchema: { type: 'object' },
       safetyLevel: 'AUTO',
       sideEffects: []
     };

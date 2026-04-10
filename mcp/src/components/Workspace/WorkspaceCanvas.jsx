@@ -72,6 +72,22 @@ const TYPE_COLORS = Object.fromEntries(DRAFT_TYPE_OPTIONS.map(o => [o.type, o.co
 
 const WorkspaceDraftNode = ({ data, selected }) => {
   const color = TYPE_COLORS[data?.draftType] || '#9E9E9E';
+  // Coerce all renderable fields to safe strings/numbers — Memgraph can
+  // return neo4j Integer objects or nested objects that MUI Typography rejects.
+  const safeStr = (v) => (v == null ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v));
+  const safeNum = (v) => {
+    if (typeof v === 'number') return v;
+    if (v && typeof v === 'object' && typeof v.toNumber === 'function') return v.toNumber();
+    const n = parseFloat(v);
+    return isNaN(n) ? null : n;
+  };
+
+  const label = safeStr(data?.label) || '(unnamed)';
+  const draftType = safeStr(data?.draftType) || 'node';
+  const description = safeStr(data?.description);
+  const status = safeStr(data?.status);
+  const confidence = safeNum(data?.confidence);
+
   return (
     <Box
       sx={{
@@ -88,28 +104,28 @@ const WorkspaceDraftNode = ({ data, selected }) => {
       <Handle type="target" position={Position.Top} style={{ background: color }} />
       <Box sx={{ bgcolor: color, color: 'white', px: 1, py: 0.5 }}>
         <Typography variant="caption" sx={{ fontWeight: 600, textTransform: 'uppercase' }}>
-          {data?.draftType || 'node'}
+          {draftType}
         </Typography>
       </Box>
       <Box sx={{ px: 1, py: 0.75 }}>
         <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.2 }}>
-          {data?.label || '(unnamed)'}
+          {label}
         </Typography>
-        {data?.description && (
+        {description && (
           <Typography variant="caption" color="text.secondary" sx={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', mt: 0.25 }}>
-            {data.description}
+            {description}
           </Typography>
         )}
         <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }}>
-          {data?.status && (
-            <Chip size="small" label={data.status} sx={{ height: 16, fontSize: '0.6rem' }} />
+          {status && (
+            <Chip size="small" label={status} sx={{ height: 16, fontSize: '0.6rem' }} />
           )}
-          {typeof data?.confidence === 'number' && (
+          {confidence !== null && (
             <Chip
               size="small"
-              label={`${Math.round(data.confidence * 100)}%`}
+              label={`${Math.round(confidence * 100)}%`}
               sx={{ height: 16, fontSize: '0.6rem' }}
-              color={data.confidence > 0.7 ? 'success' : data.confidence > 0.4 ? 'warning' : 'default'}
+              color={confidence > 0.7 ? 'success' : confidence > 0.4 ? 'warning' : 'default'}
             />
           )}
         </Stack>

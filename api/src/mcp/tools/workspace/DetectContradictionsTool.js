@@ -22,7 +22,7 @@ class DetectContradictionsTool extends BaseTool {
         }
       },
       safetyLevel: 'AUTO',
-      sideEffects: ['create:ContradictionNode']
+      sideEffects: ['WRITE']
     };
   }
 

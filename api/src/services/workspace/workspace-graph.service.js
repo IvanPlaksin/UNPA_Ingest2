@@ -94,14 +94,14 @@ class WorkspaceGraphService {
        MATCH (w)-[:CONTAINS_DRAFT]->(t)
        MATCH (s)-[r]->(t)
        WHERE type(r) <> 'CONTAINS_DRAFT' AND type(r) <> 'EXTRACTED_FROM'
-       RETURN s.id as sourceId, t.id as targetId, type(r) as relType, properties(r) as props`,
+       RETURN s.id as sourceId, t.id as targetId, type(r) as relType, properties(r) as props, id(r) as internalId`,
       { wsId: workspaceId }
     );
 
     const edges = (edgeRows || []).map(row => {
       const props = row.props || {};
       return {
-        id: props.id || `${row.sourceId}->${row.targetId}:${row.relType}`,
+        id: props.id || `${row.sourceId}->${row.targetId}:${row.relType}:${row.internalId}`,
         source: row.sourceId,
         target: row.targetId,
         type: 'smoothstep',

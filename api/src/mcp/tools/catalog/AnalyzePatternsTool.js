@@ -21,6 +21,7 @@ class AnalyzePatternsTool extends BaseTool {
           matchLimit: { type: 'number', description: 'Max matches per subgraph (default 5)' }
         }
       },
+      outputSchema: { type: 'object' },
       safetyLevel: 'AUTO',
       sideEffects: []
     };
