@@ -13,5 +13,19 @@ export default defineConfig({
                 changeOrigin: true,
             }
         }
+    },
+    test: {
+        environment: 'jsdom',
+        globals: true,
+        setupFiles: ['./src/test/setup.js'],
+        include: ['src/**/*.{test,spec}.{js,jsx,ts,tsx}'],
+        exclude: ['node_modules', 'dist', 'src/components/Forms/__tests__/**'],
+        coverage: {
+            provider: 'v8',
+            reporter: ['text', 'json-summary'],
+            include: ['src/hooks/**', 'src/utils/**', 'src/components/common/**']
+        },
+        testTimeout: 10000,
+        reporters: ['verbose']
     }
 })
