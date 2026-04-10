@@ -50,6 +50,7 @@ import {
 import VersionsDropdown from './canvas/VersionsDropdown';
 import VersionDiffDialog from './canvas/VersionDiffDialog';
 import EdgeInspector from './canvas/EdgeInspector';
+import ErrorBoundary from '../common/ErrorBoundary';
 
 /* ───────── Draft type palette ───────── */
 
@@ -377,10 +378,11 @@ const CanvasInner = ({ workspaceId }) => {
   const onDrop = useCallback((event) => {
     event.preventDefault();
     if (!reactFlowInstance.current) return;
-    const bounds = reactFlowWrapper.current.getBoundingClientRect();
-    const position = reactFlowInstance.current.project({
-      x: event.clientX - bounds.left,
-      y: event.clientY - bounds.top
+    // screenToFlowPosition is the correct API for ReactFlow v11+
+    // (replaces deprecated .project() which needed bounds subtraction)
+    const position = reactFlowInstance.current.screenToFlowPosition({
+      x: event.clientX,
+      y: event.clientY
     });
 
     // Try unified format first (application/json from UnifiedToolCatalog)
@@ -548,6 +550,7 @@ const CanvasInner = ({ workspaceId }) => {
           width: 320, flexShrink: 0, borderRight: 1, borderColor: 'divider',
           display: 'flex', flexDirection: 'column', overflow: 'hidden'
         }}>
+          <ErrorBoundary name="ToolCatalog" level="component">
           <UnifiedToolCatalog
             mode="workspace"
             workspaceId={workspaceId}
@@ -579,6 +582,7 @@ const CanvasInner = ({ workspaceId }) => {
               }
             }}
           />
+          </ErrorBoundary>
         </Box>
       )}
 
@@ -644,37 +648,39 @@ const CanvasInner = ({ workspaceId }) => {
           </Stack>
         </Paper>
 
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={nodeTypes}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onDrop={onDrop}
-          onDragOver={onDragOver}
-          onNodeClick={onNodeClick}
-          onEdgeClick={onEdgeClick}
-          onInit={(instance) => { reactFlowInstance.current = instance; }}
-          deleteKeyCode={['Delete', 'Backspace']}
-          onNodesDelete={(deleted) => {
-            // Cascade: also remove edges connected to deleted nodes
-            const ids = new Set(deleted.map(n => n.id));
-            setEdges(eds => eds.filter(e => !ids.has(e.source) && !ids.has(e.target)));
-            if (selectedNode && ids.has(selectedNode.id)) setSelectedNode(null);
-          }}
-          onEdgesDelete={(deleted) => {
-            const ids = new Set(deleted.map(e => e.id));
-            if (selectedEdge && ids.has(selectedEdge.id)) setSelectedEdge(null);
-          }}
-          fitView
-          minZoom={0.2}
-          maxZoom={2}
-        >
-          <Background />
-          <Controls />
-          <MiniMap pannable zoomable />
-        </ReactFlow>
+        <ErrorBoundary name="ReactFlow" level="component">
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={nodeTypes}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onDrop={onDrop}
+            onDragOver={onDragOver}
+            onNodeClick={onNodeClick}
+            onEdgeClick={onEdgeClick}
+            onInit={(instance) => { reactFlowInstance.current = instance; }}
+            deleteKeyCode={['Delete', 'Backspace']}
+            onNodesDelete={(deleted) => {
+              // Cascade: also remove edges connected to deleted nodes
+              const ids = new Set(deleted.map(n => n.id));
+              setEdges(eds => eds.filter(e => !ids.has(e.source) && !ids.has(e.target)));
+              if (selectedNode && ids.has(selectedNode.id)) setSelectedNode(null);
+            }}
+            onEdgesDelete={(deleted) => {
+              const ids = new Set(deleted.map(e => e.id));
+              if (selectedEdge && ids.has(selectedEdge.id)) setSelectedEdge(null);
+            }}
+            fitView
+            minZoom={0.2}
+            maxZoom={2}
+          >
+            <Background />
+            <Controls />
+            <MiniMap pannable zoomable />
+          </ReactFlow>
+        </ErrorBoundary>
 
         <NodeInspector
           node={selectedNode}
