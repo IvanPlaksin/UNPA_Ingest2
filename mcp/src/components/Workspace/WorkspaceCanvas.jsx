@@ -372,7 +372,7 @@ const CanvasInner = ({ workspaceId }) => {
   // Drop from palette
   const onDragOver = useCallback((event) => {
     event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
+    event.dataTransfer.dropEffect = 'copy';
   }, []);
 
   const onDrop = useCallback((event) => {
