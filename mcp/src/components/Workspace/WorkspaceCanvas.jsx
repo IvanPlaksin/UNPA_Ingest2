@@ -37,7 +37,8 @@ import {
   Refresh as RefreshIcon,
   AutoFixHigh as LayoutIcon,
   PhotoCamera as CheckpointIcon,
-  Delete as DeleteIcon
+  Delete as DeleteIcon,
+  MenuBook as CatalogIcon
 } from '@mui/icons-material';
 import dagre from 'dagre';
 import UnifiedToolCatalog from '../Catalog/UnifiedToolCatalog';
@@ -278,6 +279,7 @@ const CanvasInner = ({ workspaceId }) => {
   const [error, setError] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
   const [selectedEdge, setSelectedEdge] = useState(null);
+  const [catalogOpen, setCatalogOpen] = useState(true);
   const [stats, setStats] = useState(null);
   const [diffDialogOpen, setDiffDialogOpen] = useState(false);
   const [diffVersions, setDiffVersions] = useState([]);
@@ -489,42 +491,45 @@ const CanvasInner = ({ workspaceId }) => {
       display: 'flex',
       overflow: 'hidden'
     }}>
-      {/* Unified Catalog (replaces NodePalette) */}
-      <Box sx={{
-        width: 320, flexShrink: 0, borderRight: 1, borderColor: 'divider',
-        display: 'flex', flexDirection: 'column', overflow: 'hidden'
-      }}>
-        <UnifiedToolCatalog
-          mode="workspace"
-          workspaceId={workspaceId}
-          floating={false}
-          showAI={true}
-          selectedNodes={nodes.filter(n => n.selected).map(n => ({ id: n.id, name: n.data?.label, type: n.data?.draftType }))}
-          onToolDragStart={(item, e) => {
-            // No-op — drag is handled by the unified catalog internally
-          }}
-          onPatternReplace={async (match) => {
-            if (!window.confirm(`Replace subgraph with catalog entry "${match.catalogName}" (${Math.round(match.score * 100)}% match)?`)) return;
-            try {
-              const resp = await fetch('/api/v1/graph-catalog/patterns/execute-replacement', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  workspaceId,
-                  subgraphId: match.subgraphId,
-                  catalogEntryId: match.catalogEntryId,
-                  confirm: true
-                })
-              });
-              if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-              await load();
-              setToast({ message: `Replaced with "${match.catalogName}"`, severity: 'success' });
-            } catch (err) {
-              setToast({ message: `Replace failed: ${err.message}`, severity: 'error' });
-            }
-          }}
-        />
-      </Box>
+      {/* Unified Catalog sidebar — collapsible */}
+      {catalogOpen && (
+        <Box sx={{
+          width: 320, flexShrink: 0, borderRight: 1, borderColor: 'divider',
+          display: 'flex', flexDirection: 'column', overflow: 'hidden'
+        }}>
+          <UnifiedToolCatalog
+            mode="workspace"
+            workspaceId={workspaceId}
+            floating={false}
+            showAI={true}
+            onClose={() => setCatalogOpen(false)}
+            selectedNodes={nodes.filter(n => n.selected).map(n => ({ id: n.id, name: n.data?.label, type: n.data?.draftType }))}
+            onToolDragStart={(item, e) => {
+              // No-op — drag is handled by the unified catalog internally
+            }}
+            onPatternReplace={async (match) => {
+              if (!window.confirm(`Replace subgraph with catalog entry "${match.catalogName}" (${Math.round(match.score * 100)}% match)?`)) return;
+              try {
+                const resp = await fetch('/api/v1/graph-catalog/patterns/execute-replacement', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    workspaceId,
+                    subgraphId: match.subgraphId,
+                    catalogEntryId: match.catalogEntryId,
+                    confirm: true
+                  })
+                });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                await load();
+                setToast({ message: `Replaced with "${match.catalogName}"`, severity: 'success' });
+              } catch (err) {
+                setToast({ message: `Replace failed: ${err.message}`, severity: 'error' });
+              }
+            }}
+          />
+        </Box>
+      )}
 
       {/* Canvas */}
       <Box sx={{ flex: 1, position: 'relative', minWidth: 0, minHeight: 0, height: '100%' }} ref={reactFlowWrapper}>
@@ -559,6 +564,15 @@ const CanvasInner = ({ workspaceId }) => {
             <Tooltip title="Auto-layout">
               <IconButton size="small" onClick={autoLayout}>
                 <LayoutIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title={catalogOpen ? 'Hide catalog' : 'Show catalog (drag nodes to canvas)'}>
+              <IconButton
+                size="small"
+                onClick={() => setCatalogOpen(v => !v)}
+                sx={{ color: catalogOpen ? 'primary.main' : 'text.secondary' }}
+              >
+                <CatalogIcon fontSize="small" />
               </IconButton>
             </Tooltip>
             <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />

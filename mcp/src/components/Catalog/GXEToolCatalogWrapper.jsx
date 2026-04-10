@@ -21,6 +21,12 @@ const GXEToolCatalogWrapper = ({ onAddNodeToCanvas }) => {
   const isPinned = useCatalogStore(s => s.isPinned);
   const close = useCatalogStore(s => s.close);
   const toggle = useCatalogStore(s => s.toggle);
+  const loadCatalog = useCatalogStore(s => s.loadCatalog);
+
+  // Load tools on first mount so the catalog has content when opened
+  useEffect(() => {
+    loadCatalog();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Ctrl+K / Cmd+K keyboard shortcut (same as original)
   useEffect(() => {
@@ -36,13 +42,17 @@ const GXEToolCatalogWrapper = ({ onAddNodeToCanvas }) => {
 
   if (!isOpen) return null;
 
+  // Ensure sane defaults even if store has zeros
+  const safePosition = (position && position.x >= 0) ? position : { x: 100, y: 80 };
+  const safeSize = (size && size.width > 100 && size.height > 100) ? size : { width: 420, height: 600 };
+
   return (
     <FloatingWindow
       storageKey="gxe-tool-catalog"
       title="Tool Catalog"
       icon={<BookOpen className="w-4 h-4" />}
-      defaultPosition={position}
-      defaultSize={size}
+      defaultPosition={safePosition}
+      defaultSize={safeSize}
       minSize={{ width: 360, height: 450 }}
       zIndex={isPinned ? 60 : 50}
       onClose={close}
