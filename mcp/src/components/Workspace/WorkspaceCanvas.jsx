@@ -159,13 +159,132 @@ function applyDagreLayout(nodes, edges, direction = 'TB') {
 
 /* ───────── Node Inspector ───────── */
 
+/* ───────── Property value renderer / editor ───────── */
+
+const PropertyField = ({ name, value, onChange }) => {
+  if (value === null || value === undefined) return null;
+
+  // Array → show as comma-separated chips or JSON
+  if (Array.isArray(value)) {
+    // Array of objects → JSON editor
+    if (value.length > 0 && typeof value[0] === 'object') {
+      return (
+        <Box sx={{ mb: 1 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', display: 'block', mb: 0.25 }}>
+            {name} ({value.length} items)
+          </Typography>
+          <TextField
+            size="small"
+            fullWidth
+            multiline
+            rows={Math.min(value.length + 1, 4)}
+            value={JSON.stringify(value, null, 1)}
+            onChange={e => {
+              try { onChange(name, JSON.parse(e.target.value)); } catch { /* invalid JSON — wait for user */ }
+            }}
+            sx={{ '& .MuiInputBase-root': { fontFamily: 'monospace', fontSize: '0.7rem' } }}
+          />
+        </Box>
+      );
+    }
+    // Array of primitives → comma-separated
+    return (
+      <Box sx={{ mb: 1 }}>
+        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', display: 'block', mb: 0.25 }}>
+          {name}
+        </Typography>
+        <TextField
+          size="small"
+          fullWidth
+          value={value.join(', ')}
+          onChange={e => onChange(name, e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+          sx={{ '& .MuiInputBase-root': { fontSize: '0.75rem' } }}
+        />
+      </Box>
+    );
+  }
+
+  // Boolean
+  if (typeof value === 'boolean') {
+    return (
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.75 }}>
+        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>{name}</Typography>
+        <Chip
+          size="small"
+          label={value ? 'true' : 'false'}
+          color={value ? 'success' : 'default'}
+          onClick={() => onChange(name, !value)}
+          sx={{ height: 18, fontSize: '0.65rem', cursor: 'pointer' }}
+        />
+      </Stack>
+    );
+  }
+
+  // Number
+  if (typeof value === 'number') {
+    return (
+      <TextField
+        label={name}
+        size="small"
+        type="number"
+        fullWidth
+        value={value}
+        onChange={e => onChange(name, parseFloat(e.target.value) || 0)}
+        sx={{ mb: 1, '& .MuiInputBase-root': { fontSize: '0.75rem' } }}
+      />
+    );
+  }
+
+  // Object → JSON
+  if (typeof value === 'object') {
+    return (
+      <Box sx={{ mb: 1 }}>
+        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', display: 'block', mb: 0.25 }}>
+          {name}
+        </Typography>
+        <TextField
+          size="small"
+          fullWidth
+          multiline
+          rows={3}
+          value={JSON.stringify(value, null, 1)}
+          onChange={e => {
+            try { onChange(name, JSON.parse(e.target.value)); } catch { /* wait */ }
+          }}
+          sx={{ '& .MuiInputBase-root': { fontFamily: 'monospace', fontSize: '0.7rem' } }}
+        />
+      </Box>
+    );
+  }
+
+  // String (default) — multiline if long
+  const isLong = typeof value === 'string' && value.length > 80;
+  return (
+    <TextField
+      label={name}
+      size="small"
+      fullWidth
+      multiline={isLong}
+      rows={isLong ? 2 : 1}
+      value={String(value)}
+      onChange={e => onChange(name, e.target.value)}
+      sx={{ mb: 1, '& .MuiInputBase-root': { fontSize: '0.75rem' } }}
+    />
+  );
+};
+
+/* ───────── Node Inspector ───────── */
+
 const NodeInspector = ({ node, onChange, onDelete, onClose }) => {
   if (!node) return null;
+
   const [draft, setDraft] = useState({
     label: node.data?.label || '',
     description: node.data?.description || '',
     confidence: node.data?.confidence ?? 0.5,
   });
+  const [properties, setProperties] = useState(node.data?.properties || {});
+  const [showRaw, setShowRaw] = useState(false);
 
   // Reset on node change
   useEffect(() => {
@@ -174,10 +293,16 @@ const NodeInspector = ({ node, onChange, onDelete, onClose }) => {
       description: node.data?.description || '',
       confidence: node.data?.confidence ?? 0.5,
     });
+    setProperties(node.data?.properties || {});
+    setShowRaw(false);
   }, [node.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const apply = () => {
-    onChange(node.id, draft);
+    onChange(node.id, { ...draft, properties });
+  };
+
+  const handlePropertyChange = (key, value) => {
+    setProperties(prev => ({ ...prev, [key]: value }));
   };
 
   const handleDelete = () => {
@@ -186,21 +311,35 @@ const NodeInspector = ({ node, onChange, onDelete, onClose }) => {
     }
   };
 
+  const propKeys = Object.keys(properties).filter(k => !['__v', '_id'].includes(k));
+  const draftType = node.data?.draftType || 'unknown';
+
   return (
-    <Paper sx={{ p: 2, width: 280, position: 'absolute', top: 12, right: 12, zIndex: 10 }}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+    <Paper sx={{
+      p: 1.5, width: 320, position: 'absolute', top: 12, right: 12, zIndex: 10,
+      maxHeight: 'calc(100% - 24px)', overflowY: 'auto'
+    }}>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.5 }}>
         <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
           Node Inspector
         </Typography>
         <IconButton size="small" onClick={onClose}>×</IconButton>
       </Stack>
       <Divider sx={{ mb: 1 }} />
-      <Typography variant="caption" color="text.secondary">
-        ID: {node.id.slice(0, 8)}…
+
+      {/* Meta info */}
+      <Stack direction="row" spacing={0.5} sx={{ mb: 1, flexWrap: 'wrap', gap: 0.5 }}>
+        <Chip size="small" label={draftType} color="primary" sx={{ height: 18, fontSize: '0.6rem' }} />
+        {node.data?.knowledgeFamily && (
+          <Chip size="small" label={node.data.knowledgeFamily} variant="outlined" sx={{ height: 18, fontSize: '0.6rem' }} />
+        )}
+        <Chip size="small" label={node.data?.status || 'DRAFT'} variant="outlined" sx={{ height: 18, fontSize: '0.6rem' }} />
+      </Stack>
+      <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.6rem', display: 'block', mb: 1 }}>
+        ID: {node.id}
       </Typography>
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-        Type: {node.data?.draftType}
-      </Typography>
+
+      {/* Common fields */}
       <TextField
         label="Label"
         size="small"
@@ -214,7 +353,7 @@ const NodeInspector = ({ node, onChange, onDelete, onClose }) => {
         size="small"
         fullWidth
         multiline
-        rows={3}
+        rows={2}
         value={draft.description}
         onChange={e => setDraft(d => ({ ...d, description: e.target.value }))}
         sx={{ mb: 1 }}
@@ -227,8 +366,52 @@ const NodeInspector = ({ node, onChange, onDelete, onClose }) => {
         fullWidth
         value={draft.confidence}
         onChange={e => setDraft(d => ({ ...d, confidence: parseFloat(e.target.value) || 0 }))}
-        sx={{ mb: 1.5 }}
+        sx={{ mb: 1 }}
       />
+
+      {/* Type-specific properties */}
+      {propKeys.length > 0 && (
+        <>
+          <Divider sx={{ my: 1 }} />
+          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.5 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, fontSize: '0.7rem' }}>
+              {draftType.toUpperCase()} PROPERTIES ({propKeys.length})
+            </Typography>
+            <Chip
+              size="small"
+              label={showRaw ? 'Fields' : 'JSON'}
+              onClick={() => setShowRaw(v => !v)}
+              sx={{ height: 16, fontSize: '0.55rem', cursor: 'pointer' }}
+            />
+          </Stack>
+
+          {showRaw ? (
+            <TextField
+              size="small"
+              fullWidth
+              multiline
+              rows={8}
+              value={JSON.stringify(properties, null, 2)}
+              onChange={e => {
+                try { setProperties(JSON.parse(e.target.value)); } catch { /* wait */ }
+              }}
+              sx={{ mb: 1, '& .MuiInputBase-root': { fontFamily: 'monospace', fontSize: '0.7rem' } }}
+            />
+          ) : (
+            propKeys.map(key => (
+              <PropertyField
+                key={key}
+                name={key}
+                value={properties[key]}
+                onChange={handlePropertyChange}
+              />
+            ))
+          )}
+        </>
+      )}
+
+      {/* Actions */}
+      <Divider sx={{ my: 1 }} />
       <Stack direction="row" spacing={0.5}>
         <Button size="small" variant="contained" fullWidth onClick={apply}>
           Apply
@@ -239,7 +422,7 @@ const NodeInspector = ({ node, onChange, onDelete, onClose }) => {
           </IconButton>
         </Tooltip>
       </Stack>
-      <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 1, fontSize: '0.65rem', textAlign: 'center' }}>
+      <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 0.5, fontSize: '0.6rem', textAlign: 'center' }}>
         Tip: select a node and press Delete
       </Typography>
     </Paper>
