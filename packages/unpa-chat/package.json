@@ -1,0 +1,36 @@
+{
+  "name": "@unpa/chat",
+  "version": "1.0.0",
+  "description": "Embeddable AI chat component for UNPA FlowDesk integration",
+  "main": "dist/index.js",
+  "module": "dist/index.esm.js",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "rollup -c",
+    "prepare": "npm run build"
+  },
+  "peerDependencies": {
+    "react": ">=17.0.0",
+    "react-dom": ">=17.0.0",
+    "@mui/material": ">=5.0.0",
+    "@mui/icons-material": ">=5.0.0",
+    "@emotion/react": ">=11.0.0",
+    "@emotion/styled": ">=11.0.0",
+    "lucide-react": ">=0.200.0"
+  },
+  "devDependencies": {
+    "rollup": "^4.9.0",
+    "@rollup/plugin-node-resolve": "^15.2.0",
+    "@rollup/plugin-commonjs": "^25.0.0",
+    "@rollup/plugin-babel": "^6.0.0",
+    "@babel/core": "^7.23.0",
+    "@babel/preset-react": "^7.23.0",
+    "rollup-plugin-postcss": "^4.0.0",
+    "rollup-plugin-peer-deps-external": "^2.2.0"
+  },
+  "license": "MIT",
+  "private": true
+}

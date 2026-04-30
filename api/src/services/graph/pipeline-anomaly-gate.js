@@ -7,6 +7,8 @@
 
 'use strict';
 
+const { getInstance: getLLMProvider } = require('../llm/LLMProviderService');
+
 // ═══════════════════════════════════════════════════════════════════════════
 // DAG GENERATION PIPELINE THRESHOLDS
 // ═══════════════════════════════════════════════════════════════════════════
@@ -215,21 +217,11 @@ const ANALYSIS_TIMEOUT_MS = 15000;
 /**
  * Analyze an anomaly with Claude to get diagnosis and suggestions.
  * @param {Object} context - { pipeline, stageName, anomalyReason, stageInput, stageOutput, taskDescription }
- * @param {Object} config - { anthropicUrl, anthropicKey, model }
+ * @param {Object} [config] - optional, { model } — provider resolved via LLMProviderService
  * @returns {Promise<Object>} { diagnosis, rootCause, suggestedFix, severity, analysisAvailable }
  */
-async function analyzeAnomalyWithClaude(context, config) {
-  const { anthropicUrl, anthropicKey, model } = config;
-
-  if (!anthropicKey) {
-    return {
-      diagnosis: 'Claude API key not configured — analysis unavailable',
-      rootCause: 'configuration',
-      suggestedFix: 'Configure ANTHROPIC_API_KEY to enable anomaly analysis',
-      severity: 'warning',
-      analysisAvailable: false
-    };
-  }
+async function analyzeAnomalyWithClaude(context, config = {}) {
+  const model = config.model || 'haiku';
 
   const systemPrompt = `You are a pipeline diagnostics expert analyzing anomalies in a graph generation pipeline.
 You receive context about a stage failure and must provide a structured diagnosis.
@@ -258,44 +250,22 @@ ${JSON.stringify(context.stageOutput, null, 2).substring(0, 2000)}
 Diagnose what went wrong and suggest a fix.`;
 
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), ANALYSIS_TIMEOUT_MS);
-
-    const anomalyBody = {
-      model,
-      max_tokens: 1024,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userMessage }]
-    };
-
-    // Log request stats
     const charToTokens = (c) => Math.ceil(c / 4);
     const sysT = charToTokens(systemPrompt.length);
     const msgT = charToTokens(userMessage.length);
     console.log(`[AnomalyGate Stats] ── Anomaly Analysis ──`);
     console.log(`[AnomalyGate Stats]   Model: ${model}, System: ${sysT} tokens, Message: ${msgT} tokens, TOTAL: ≈${sysT + msgT} input tokens`);
 
-    const response = await fetch(anthropicUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': anthropicKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify(anomalyBody),
-      signal: controller.signal
-    });
+    const llmResp = await Promise.race([
+      getLLMProvider().chat([{ role: 'user', content: userMessage }], {
+        model,
+        maxTokens: 1024,
+        system: systemPrompt,
+      }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Anomaly analysis timeout')), ANALYSIS_TIMEOUT_MS))
+    ]);
 
-    clearTimeout(timeout);
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => '');
-      console.warn(`[AnomalyGate] Claude API ${response.status} response: ${errorBody.substring(0, 500)}`);
-      throw new Error(`Claude API error ${response.status}: ${errorBody.substring(0, 200)}`);
-    }
-
-    const data = await response.json();
-    const text = data.content?.[0]?.text || '';
+    const text = llmResp.content?.[0]?.text || '';
 
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {

@@ -19,7 +19,7 @@ class SendNotificationExecutor extends BaseExecutor {
         recipient: { type: 'string', description: 'Email or userId' },
         requestId: { type: 'string' },
         workOrderId: { type: 'string' },
-        handler: { type: 'string' },
+        handler: { description: 'Handler name or object' },
         channel: { type: 'array', items: { type: 'string' }, default: ['portal'] },
       },
     };

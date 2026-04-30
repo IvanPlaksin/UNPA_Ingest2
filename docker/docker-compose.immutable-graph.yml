@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  memgraph:
+    image: memgraph/memgraph-platform:2.14.0
+    container_name: un-projectadvisor-memgraph
+    ports:
+      - "7687:7687"
+      - "7444:7444"
+      - "3000:3000"
+    volumes:
+      - memgraph_data:/var/lib/memgraph
+      - memgraph_log:/var/log/memgraph
+      - ./memgraph/init:/docker-entrypoint-initdb.d
+    environment:
+      - MEMGRAPH_USER=${MEMGRAPH_USER:-}
+      - MEMGRAPH_PASSWORD=${MEMGRAPH_PASSWORD:-}
+    command: ["--log-level=WARNING", "--memory-limit=2048", "--storage-properties-on-edges=true"]
+    healthcheck:
+      test: ["CMD", "mgconsole", "-c", "RETURN 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - un-projectadvisor
+
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    container_name: un-projectadvisor-api
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - MEMGRAPH_URI=bolt://memgraph:7687
+      - MEMGRAPH_USER=${MEMGRAPH_USER:-}
+      - MEMGRAPH_PASSWORD=${MEMGRAPH_PASSWORD:-}
+      - GOD_MODE_DURATION=30
+      - GOD_MODE_DELETE_DELAY=5
+      - TOMBSTONE_RETENTION=30
+      - AUDIT_RETENTION=365
+      - SSE_HEARTBEAT=30000
+      - SSE_MAX_CONNECTIONS=1000
+    depends_on:
+      memgraph:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - un-projectadvisor
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+    container_name: un-projectadvisor-frontend
+    ports:
+      - "5173:80"
+    environment:
+      - VITE_API_URL=http://api:3001
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - un-projectadvisor
+
+volumes:
+  memgraph_data:
+  memgraph_log:
+
+networks:
+  un-projectadvisor:
+    driver: bridge

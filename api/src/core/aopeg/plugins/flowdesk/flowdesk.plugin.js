@@ -5,7 +5,7 @@
  * Domain: flowdesk
  * Namespace: FLOWDESK
  *
- * Dialog executors: classify_intent, check_location, search_location,
+ * Dialog executors: classify_intent, clarify_intent, check_location, search_location,
  *   ask_beneficiary, find_user, confirm_request
  * Process executors: create_service_request, request_approval,
  *   create_work_order, assign_handler, send_notification
@@ -15,6 +15,7 @@ const { PluginBase } = require('../plugin-base');
 
 // Dialog executors
 const { ClassifyIntentExecutor } = require('./executors/classify-intent.executor');
+const { ClarifyIntentExecutor } = require('./executors/clarify-intent.executor');
 const { CheckLocationExecutor } = require('./executors/check-location.executor');
 const { SearchLocationExecutor } = require('./executors/search-location.executor');
 const { AskBeneficiaryExecutor } = require('./executors/ask-beneficiary.executor');
@@ -34,6 +35,9 @@ const { ManageTicketExecutor } = require('./executors/manage-ticket.executor');
 const { RouteTicketExecutor } = require('./executors/route-ticket.executor');
 const { CheckSLAExecutor } = require('./executors/check-sla.executor');
 
+// Laptop provisioning assistant
+const { LaptopAssistantExecutor } = require('./executors/laptop-assistant.executor');
+
 class FlowDeskPlugin extends PluginBase {
   constructor() {
     super({
@@ -48,6 +52,7 @@ class FlowDeskPlugin extends PluginBase {
   async initialize() {
     // Dialog executors
     this.addExecutor(new ClassifyIntentExecutor());
+    this.addExecutor(new ClarifyIntentExecutor());
     this.addExecutor(new CheckLocationExecutor());
     this.addExecutor(new SearchLocationExecutor());
     this.addExecutor(new AskBeneficiaryExecutor());
@@ -66,6 +71,9 @@ class FlowDeskPlugin extends PluginBase {
     this.addExecutor(new ManageTicketExecutor());
     this.addExecutor(new RouteTicketExecutor());
     this.addExecutor(new CheckSLAExecutor());
+
+    // Laptop provisioning assistant
+    this.addExecutor(new LaptopAssistantExecutor());
   }
 }
 

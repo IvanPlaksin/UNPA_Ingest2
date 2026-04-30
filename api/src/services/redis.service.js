@@ -1,10 +1,13 @@
 // api/src/services/redis.service.js
 const IORedis = require('ioredis');
 
+const tlsEnabled = process.env.REDIS_TLS === 'true';
 const REDIS_CONFIG = {
     host: process.env.REDIS_HOST || 'localhost',
-    port: process.env.REDIS_PORT || 6379,
-    maxRetriesPerRequest: null,
+    port: parseInt(process.env.REDIS_PORT || '6379', 10),
+    ...(tlsEnabled && { tls: {} }),
+    ...(process.env.REDIS_PASSWORD && { password: process.env.REDIS_PASSWORD }),
+    maxRetriesPerRequest: 3,
     retryStrategy(times) {
         const delay = Math.min(times * 50, 2000);
         return delay;

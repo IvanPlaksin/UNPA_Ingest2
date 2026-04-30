@@ -188,6 +188,31 @@ router.post('/execute', async (req, res) => {
       status: 'STARTING'
     });
 
+    // Listen for WAITING_FOR_INPUT events (fires on each pause, including after resume)
+    engine.on('execution:waitingForInput', (waitResult) => {
+      const entry = activeExecutions.get(executionId);
+      if (entry) {
+        entry.status = 'WAITING_FOR_INPUT';
+        entry.result = {
+          ...entry.result,
+          status: 'WAITING_FOR_INPUT',
+          waitingNodes: waitResult.waitingNodes,
+          nodeResults: waitResult.nodeResults,
+          metrics: waitResult.metrics
+        };
+      }
+    });
+
+    // Listen for completion after resume cycles
+    engine.on('execution:completed', (completionResult) => {
+      const entry = activeExecutions.get(executionId);
+      if (entry) {
+        entry.status = completionResult?.status || 'COMPLETED';
+        entry.result = { ...entry.result, ...completionResult, status: entry.status };
+        scheduleCleanup(executionId);
+      }
+    });
+
     // Fire and forget
     engine.execute(dag, inputData || {}, { executionId })
       .then(result => {
@@ -456,17 +481,21 @@ router.post('/execute/:executionId/resume-input', async (req, res) => {
       });
     }
 
-    // Validate payload against expected_inputs
+    // Validate payload against expected_inputs (legacy array format only)
+    // expected_inputs can be: string[] (field names) or object[] ({name, type, required})
     const validationErrors = [];
-    if (waitContext.expected_inputs) {
+    if (Array.isArray(waitContext.expected_inputs)) {
       for (const input of waitContext.expected_inputs) {
-        const value = payload[input.name];
-        if (input.required !== false && value === undefined) {
-          validationErrors.push(`Missing required field: ${input.name}`);
+        const fieldName = typeof input === 'string' ? input : input.name;
+        const isRequired = typeof input === 'string' ? false : (input.required !== false);
+        if (!fieldName) continue;
+        const value = payload[fieldName];
+        if (isRequired && value === undefined) {
+          validationErrors.push(`Missing required field: ${fieldName}`);
         }
-        if (value !== undefined && input.type === 'enum' && input.values) {
+        if (value !== undefined && typeof input === 'object' && input.type === 'enum' && input.values) {
           if (!input.values.includes(value)) {
-            validationErrors.push(`Invalid value for ${input.name}: must be one of ${input.values.join(', ')}`);
+            validationErrors.push(`Invalid value for ${fieldName}: must be one of ${input.values.join(', ')}`);
           }
         }
       }
@@ -480,19 +509,48 @@ router.post('/execute/:executionId/resume-input', async (req, res) => {
       });
     }
 
+    // Listen for next WAITING or completion BEFORE resuming
+    const nextState = new Promise((resolve) => {
+      const timeout = setTimeout(() => resolve({ status: 'RUNNING' }), 10000);
+
+      const onWaiting = (waitResult) => {
+        clearTimeout(timeout);
+        entry.status = 'WAITING_FOR_INPUT';
+        entry.result = waitResult;
+        engine.removeListener('execution:waitingForInput', onWaiting);
+        engine.removeListener('execution:stateChange', onComplete);
+        resolve({ status: 'WAITING_FOR_INPUT', waitingNodes: waitResult.waitingNodes });
+      };
+
+      const onComplete = (ev) => {
+        if (ev.to === 'COMPLETED' || ev.to === 'FAILED') {
+          clearTimeout(timeout);
+          engine.removeListener('execution:waitingForInput', onWaiting);
+          engine.removeListener('execution:stateChange', onComplete);
+          resolve({ status: ev.to });
+        }
+      };
+
+      engine.on('execution:waitingForInput', onWaiting);
+      engine.on('execution:stateChange', onComplete);
+    });
+
     // Resume execution
-    const result = await engine.resumeExecution(executionId, {
+    await engine.resumeExecution(executionId, {
       nodeId: targetNodeId,
       output: payload
     });
 
-    entry.status = 'RUNNING';
+    // Wait for next state (WAITING or completion)
+    const nextResult = await nextState;
+    entry.status = nextResult.status === 'WAITING_FOR_INPUT' ? 'WAITING_FOR_INPUT' : 'RUNNING';
 
     res.json({
       success: true,
       executionId,
       resumedNode: targetNodeId,
-      status: result.status,
+      status: nextResult.status || 'RUNNING',
+      waitingNodes: nextResult.waitingNodes || null,
       message: 'Execution resumed with user input'
     });
   } catch (error) {
@@ -597,6 +655,17 @@ router.get('/execute/:executionId/status', (req, res) => {
     });
   }
 
+  // Include waitingNodes when in WAITING state for resume-input flow
+  let waitingNodes = undefined;
+  if (entry.result?.waitingNodes) {
+    waitingNodes = entry.result.waitingNodes;
+  }
+  // Debug: log what entry.result looks like
+  if (entry.status === 'WAITING_FOR_INPUT') {
+    console.log('[RuntimeRoute:status] WAITING entry.result keys:', entry.result ? Object.keys(entry.result).join(',') : 'null');
+    console.log('[RuntimeRoute:status] waitingNodes:', entry.result?.waitingNodes ? 'EXISTS' : 'MISSING');
+  }
+
   res.json({
     success: true,
     executionId,
@@ -606,6 +675,7 @@ router.get('/execute/:executionId/status', (req, res) => {
     startTime: entry.startTime,
     duration: Date.now() - entry.startTime,
     hasResult: !!entry.result,
+    waitingNodes,
     error: entry.error
   });
 });

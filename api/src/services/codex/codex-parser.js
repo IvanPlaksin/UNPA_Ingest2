@@ -3,7 +3,13 @@
  * для seeding в Memgraph
  *
  * Парсит: docs/codex/standards/*.md, manifesto/, future/, adr/
- * Создаёт: CodexPart, CodexSection, CodexRule, CodexPrinciple, CodexADR
+ * Создаёт: CodexPart, CodexSection, CodexRule, CodexDefinition, CodexPrinciple, CodexADR
+ *
+ * v2.0 (2026-04-14):
+ *   - Таблицы больше НЕ взрываются в cell-level CodexRule
+ *   - Каждая таблица → ОДИН CodexDefinition с структурированным `attributes` (JSON)
+ *   - Подсекции `#### X.Y.Z TypeName` сохраняются как контекст
+ *   - Исправлено извлечение заголовка для нумерованных параграфов
  */
 
 const fs = require('fs').promises;
@@ -22,6 +28,9 @@ const PART_MAP = {
   'CODEX-DOMAINS': { order: 9, partId: 'PART-IX',   romanNum: 'IX',   title: null },
 };
 
+// Column headers that mark attribute-value tables (one-entity-per-table)
+const ATTRIBUTE_HEADERS = ['атрибут', 'поле', 'параметр', 'свойство', 'field', 'attribute', 'property', 'key'];
+
 class CodexParser {
   constructor(codexDir) {
     this.codexDir = codexDir || path.join(__dirname, '../../../../docs/codex');
@@ -35,11 +44,13 @@ class CodexParser {
       parts: [],
       sections: [],
       rules: [],
+      definitions: [],   // NEW: structured tables as CodexDefinition
       principles: [],
       adrs: [],
       metadata: {
         parsedAt: new Date().toISOString(),
-        version: null // resolved dynamically from CodexMetadata node
+        parserVersion: '2.0.0',
+        version: null
       }
     };
 
@@ -53,6 +64,7 @@ class CodexParser {
       result.parts.push(parsed.part);
       result.sections.push(...parsed.sections);
       result.rules.push(...parsed.rules);
+      result.definitions.push(...parsed.definitions);
     }
 
     // 2. Parse AI Manifesto (Part 0 — principles)
@@ -70,7 +82,6 @@ class CodexParser {
       result.parts.push(manifestoPart);
       result.principles = this._parseManifesto(manifestoContent);
 
-      // Also extract sections from manifesto
       const manifestoSections = this._extractSections(manifestoContent, 'PART-0');
       result.sections.push(...manifestoSections);
     } catch (err) {
@@ -94,8 +105,9 @@ class CodexParser {
       const futureSections = this._extractSections(futureContent, 'PART-VIII');
       result.sections.push(...futureSections);
 
-      const futureRules = this._extractRulesFromSections(futureSections);
-      result.rules.push(...futureRules);
+      const extracted = this._extractFromSections(futureSections);
+      result.rules.push(...extracted.rules);
+      result.definitions.push(...extracted.definitions);
     } catch (err) {
       console.warn('SELF-EVOLUTION not found, skipping:', err.message);
     }
@@ -117,9 +129,6 @@ class CodexParser {
     return result;
   }
 
-  /**
-   * Парсить файл стандарта (CODEX-*.md)
-   */
   _parseStandardFile(filePath, content) {
     const fileName = path.basename(filePath, '.md');
     const meta = PART_MAP[fileName] || { order: 99, partId: `PART-${fileName}` };
@@ -134,9 +143,9 @@ class CodexParser {
     };
 
     const sections = this._extractSections(content, meta.partId);
-    const rules = this._extractRulesFromSections(sections);
+    const { rules, definitions } = this._extractFromSections(sections);
 
-    return { part, sections, rules };
+    return { part, sections, rules, definitions };
   }
 
   /**
@@ -152,7 +161,6 @@ class CodexParser {
 
     for (const line of lines) {
       if (line.startsWith('## ')) {
-        // Save previous section
         if (currentSection) {
           currentSection.content = currentContent.join('\n').trim();
           sections.push(currentSection);
@@ -161,7 +169,6 @@ class CodexParser {
         sectionIndex++;
         const sectionTitle = line.replace('## ', '').trim();
 
-        // Skip TOC sections
         if (sectionTitle === 'Оглавление') {
           currentSection = null;
           currentContent = [];
@@ -180,7 +187,6 @@ class CodexParser {
       }
     }
 
-    // Save last section
     if (currentSection) {
       currentSection.content = currentContent.join('\n').trim();
       sections.push(currentSection);
@@ -190,72 +196,233 @@ class CodexParser {
   }
 
   /**
-   * Extract rules from parsed sections
+   * Extract rules AND definitions from parsed sections.
+   *
+   * Returns { rules: CodexRule[], definitions: CodexDefinition[] }
    */
-  _extractRulesFromSections(sections) {
+  _extractFromSections(sections) {
     const rules = [];
+    const definitions = [];
 
     for (const section of sections) {
       if (!section.content) continue;
 
-      // Pattern 1: Numbered paragraphs like §X.Y or X.Y.Z
-      const numbered = section.content.matchAll(/(?:§|)(\d+\.\d+(?:\.\d+)?)\s*[:\-—]\s*(.+?)(?=\n(?:§|\d+\.\d+)|$)/gs);
-      for (const match of numbered) {
-        rules.push({
-          ruleId: `${section.sectionId}-R${match[1].replace(/\./g, '')}`,
-          sectionId: section.sectionId,
-          partId: section.partId,
-          code: `§${match[1]}`,
-          title: match[2].split('\n')[0].trim(),
-          description: match[2].trim(),
-          scope: this._inferScope(section.title),
-          modality: this._inferModality(match[2]),
-          status: 'active'
-        });
-      }
+      // Split section content by subsection headings (### or ####) to preserve context
+      const subsections = this._splitBySubheadings(section.content);
 
-      // Pattern 2: Bold key-value bullets: **Name**: description
-      const boldBullets = section.content.matchAll(/^[-*]\s+\*\*(.+?)\*\*[:\s]+(.+?)(?=\n[-*]\s+\*\*|\n\n|$)/gm);
-      for (const match of boldBullets) {
-        const ruleId = `${section.sectionId}-B${rules.filter(r => r.sectionId === section.sectionId).length + 1}`;
-        rules.push({
-          ruleId,
-          sectionId: section.sectionId,
-          partId: section.partId,
-          code: null,
-          title: match[1].trim(),
-          description: match[2].trim(),
-          scope: this._inferScope(section.title),
-          modality: this._inferModality(match[1] + ' ' + match[2]),
-          status: 'active'
-        });
-      }
+      // Per-section counters for codexId generation
+      let ruleCounter = 0;
+      let defCounter = 0;
 
-      // Pattern 3: Table rows with | Name | Description | ...
-      const tableLines = section.content.split('\n').filter(l => l.startsWith('|'));
-      if (tableLines.length > 2) {
-        // Skip header + separator rows
-        for (let i = 2; i < tableLines.length; i++) {
-          const cells = tableLines[i].split('|').map(c => c.trim()).filter(Boolean);
-          if (cells.length >= 2 && cells[0] && !cells[0].startsWith('-')) {
-            const ruleId = `${section.sectionId}-T${rules.filter(r => r.sectionId === section.sectionId).length + 1}`;
-            rules.push({
-              ruleId,
-              sectionId: section.sectionId,
-              partId: section.partId,
-              code: null,
-              title: cells[0].replace(/[`*]/g, ''),
-              description: cells.slice(1).join(' — '),
-              scope: this._inferScope(section.title),
-              modality: 'mapping',
-              status: 'active'
-            });
-          }
+      for (const sub of subsections) {
+        // === EXTRACT TABLES as CodexDefinition ===
+        const tables = this._extractTables(sub.content);
+        for (const table of tables) {
+          defCounter++;
+          const defId = `${section.sectionId}-D${defCounter}`;
+          const title = sub.heading || table.firstColName || section.title;
+
+          definitions.push({
+            definitionId: defId,
+            sectionId: section.sectionId,
+            partId: section.partId,
+            title: title,
+            subsectionHeading: sub.heading || null,
+            tableType: table.type,
+            columnNames: table.columns,
+            attributes: table.rows,  // array of objects keyed by column name
+            rowCount: table.rows.length,
+            scope: this._inferScope(section.title),
+            status: 'active',
+            source: 'codex-parser'
+          });
+        }
+
+        // === EXTRACT NUMBERED PARAGRAPHS as CodexRule (§X.Y: description) ===
+        // Fixed: properly extract title from first sentence, skip code blocks
+        const contentNoTables = this._stripTables(sub.content);
+        const contentNoCode = this._stripCodeBlocks(contentNoTables);
+
+        const numbered = contentNoCode.matchAll(/(?:^|\n)(?:§|)(\d+\.\d+(?:\.\d+)?)\s*[:\-—]\s*(.+?)(?=\n(?:§|\d+\.\d+[:\-— ])|\n\n|$)/gs);
+        for (const match of numbered) {
+          const code = match[1];
+          const body = match[2].trim();
+          const title = this._extractFirstSentence(body);
+          if (!title || title.length < 5) continue;  // skip garbage
+
+          ruleCounter++;
+          rules.push({
+            ruleId: `${section.sectionId}-R${code.replace(/\./g, '')}`,
+            sectionId: section.sectionId,
+            partId: section.partId,
+            code: `§${code}`,
+            title: title,
+            description: body,
+            subsectionHeading: sub.heading || null,
+            scope: this._inferScope(section.title),
+            modality: this._inferModality(body),
+            status: 'active',
+            source: 'codex-parser'
+          });
+        }
+
+        // === EXTRACT BOLD BULLETS as CodexRule (**Name**: description) ===
+        const boldBullets = contentNoCode.matchAll(/^[-*]\s+\*\*(.+?)\*\*[:\s]+(.+?)(?=\n[-*]\s+\*\*|\n\n|$)/gms);
+        for (const match of boldBullets) {
+          const title = match[1].trim();
+          const description = match[2].trim();
+          if (!title || title.length < 2) continue;
+
+          ruleCounter++;
+          rules.push({
+            ruleId: `${section.sectionId}-B${ruleCounter}`,
+            sectionId: section.sectionId,
+            partId: section.partId,
+            code: null,
+            title: title,
+            description: description,
+            subsectionHeading: sub.heading || null,
+            scope: this._inferScope(section.title),
+            modality: this._inferModality(title + ' ' + description),
+            status: 'active',
+            source: 'codex-parser'
+          });
         }
       }
     }
 
-    return rules;
+    return { rules, definitions };
+  }
+
+  /**
+   * Split section content by H3/H4 headings to preserve subsection context.
+   * Returns [{ heading, content }, ...]
+   */
+  _splitBySubheadings(content) {
+    const parts = [];
+    const lines = content.split('\n');
+    let currentHeading = null;
+    let currentLines = [];
+
+    for (const line of lines) {
+      const h3Match = line.match(/^###\s+(.+)/);
+      const h4Match = line.match(/^####\s+(.+)/);
+      if (h3Match || h4Match) {
+        if (currentLines.length > 0) {
+          parts.push({ heading: currentHeading, content: currentLines.join('\n') });
+        }
+        currentHeading = (h3Match || h4Match)[1].trim();
+        currentLines = [];
+      } else {
+        currentLines.push(line);
+      }
+    }
+    if (currentLines.length > 0 || currentHeading) {
+      parts.push({ heading: currentHeading, content: currentLines.join('\n') });
+    }
+    // If no subheadings found, return single block
+    if (parts.length === 0) {
+      parts.push({ heading: null, content });
+    }
+    return parts;
+  }
+
+  /**
+   * Extract markdown tables from content block.
+   * Returns [{ type, columns, rows, firstColName }, ...]
+   */
+  _extractTables(content) {
+    const tables = [];
+    const lines = content.split('\n');
+
+    let inTable = false;
+    let headerLine = null;
+    let separatorSeen = false;
+    let rowLines = [];
+
+    const flushTable = () => {
+      if (!headerLine || !separatorSeen || rowLines.length === 0) return;
+
+      const columns = this._parseTableRow(headerLine);
+      const firstColLower = (columns[0] || '').toLowerCase().replace(/[^a-zа-я]/g, '');
+      const isAttrValue = ATTRIBUTE_HEADERS.includes(firstColLower);
+
+      const rows = rowLines.map(line => {
+        const cells = this._parseTableRow(line);
+        const obj = {};
+        for (let i = 0; i < columns.length; i++) {
+          obj[columns[i] || `col${i}`] = (cells[i] || '').trim();
+        }
+        return obj;
+      }).filter(r => Object.values(r).some(v => v && v.length > 0));
+
+      if (rows.length > 0) {
+        tables.push({
+          type: isAttrValue ? 'attribute-value' : 'multi-column',
+          columns,
+          rows,
+          firstColName: columns[0]
+        });
+      }
+
+      headerLine = null;
+      separatorSeen = false;
+      rowLines = [];
+    };
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith('|')) {
+        if (inTable) flushTable();
+        inTable = false;
+        continue;
+      }
+      // Separator line (|---|---|)
+      if (/^\|[\s\-:|]+\|$/.test(trimmed)) {
+        separatorSeen = true;
+        inTable = true;
+        continue;
+      }
+      // Header line
+      if (!headerLine) {
+        headerLine = trimmed;
+        inTable = true;
+        continue;
+      }
+      // Data row
+      if (separatorSeen) {
+        rowLines.push(trimmed);
+      }
+    }
+    if (inTable) flushTable();
+
+    return tables;
+  }
+
+  _parseTableRow(line) {
+    return line.split('|')
+      .slice(1, -1)  // skip leading/trailing empty parts
+      .map(c => c.trim().replace(/^\*\*|\*\*$/g, ''));  // strip bold markers
+  }
+
+  /** Remove table blocks from content so they don't get double-parsed */
+  _stripTables(content) {
+    return content.split('\n').filter(l => !l.trim().startsWith('|')).join('\n');
+  }
+
+  /** Remove fenced code blocks from content */
+  _stripCodeBlocks(content) {
+    return content.replace(/```[\s\S]*?```/g, '');
+  }
+
+  /** Extract first sentence as title (for rules) */
+  _extractFirstSentence(text) {
+    const cleaned = text.replace(/^[\s\-*—:]+/, '').trim();
+    // Skip lines that look like code (start with digit+), bracket)
+    if (/^[\d.)\];,]+$/.test(cleaned.split(/\s/)[0])) return null;
+    // First sentence: up to . ! ? or newline
+    const match = cleaned.match(/^(.{5,200}?)(?:[.!?]\s|\n|$)/);
+    return match ? match[1].trim() : cleaned.slice(0, 150).trim();
   }
 
   /**
@@ -269,7 +436,6 @@ class CodexParser {
     let order = 0;
 
     for (const line of lines) {
-      // Match ## 0.X Title pattern
       const principleMatch = line.match(/^##\s+(\d+\.\d+)\s+(.+)/);
       if (principleMatch) {
         if (currentPrinciple) {
@@ -299,9 +465,6 @@ class CodexParser {
     return principles;
   }
 
-  /**
-   * Parse ADR file
-   */
   _parseADR(filePath, content) {
     const fileName = path.basename(filePath, '.md');
     const adrMatch = fileName.match(/^(ADR-\d+)-(.+)$/);
@@ -309,11 +472,9 @@ class CodexParser {
 
     const title = this._extractTitle(content) || adrMatch[2].replace(/-/g, ' ');
 
-    // Extract status
     const statusMatch = content.match(/\*\*(?:Status|Статус)\*\*[:\s]+(.+)/i);
     const status = statusMatch ? statusMatch[1].trim() : 'ACCEPTED';
 
-    // Extract decision
     const decisionMatch = content.match(/## (?:Decision|Решение)\s*\n+([\s\S]+?)(?=\n## |$)/);
     const decision = decisionMatch ? decisionMatch[1].trim() : '';
 
@@ -334,13 +495,8 @@ class CodexParser {
   async _getFiles(dir, ext) {
     try {
       const files = await fs.readdir(dir);
-      return files
-        .filter(f => f.endsWith(ext))
-        .sort()
-        .map(f => path.join(dir, f));
-    } catch {
-      return [];
-    }
+      return files.filter(f => f.endsWith(ext)).sort().map(f => path.join(dir, f));
+    } catch { return []; }
   }
 
   _extractTitle(content) {
@@ -350,14 +506,15 @@ class CodexParser {
 
   _inferScope(sectionTitle) {
     const lower = (sectionTitle || '').toLowerCase();
-    if (lower.includes('namespace'))  return 'namespace';
+    if (lower.includes('namespace'))                              return 'namespace';
     if (lower.includes('validation') || lower.includes('валидац')) return 'validation';
-    if (lower.includes('version') || lower.includes('версион'))   return 'versioning';
-    if (lower.includes('catalog') || lower.includes('каталог'))   return 'catalog';
-    if (lower.includes('tool') || lower.includes('инструмент'))   return 'tooling';
-    if (lower.includes('crud') || lower.includes('операц'))       return 'crud';
-    if (lower.includes('meta') || lower.includes('метадан'))      return 'metadata';
-    if (lower.includes('poly') || lower.includes('транзакц'))     return 'polystore';
+    if (lower.includes('version') || lower.includes('версион'))    return 'versioning';
+    if (lower.includes('catalog') || lower.includes('каталог'))    return 'catalog';
+    if (lower.includes('tool') || lower.includes('инструмент'))    return 'tooling';
+    if (lower.includes('crud') || lower.includes('операц'))        return 'crud';
+    if (lower.includes('meta') || lower.includes('метадан'))       return 'metadata';
+    if (lower.includes('poly') || lower.includes('транзакц'))      return 'polystore';
+    if (lower.includes('information') || lower.includes('тип'))    return 'information-types';
     return 'general';
   }
 

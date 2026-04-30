@@ -9,6 +9,7 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import ReactFlow, {
   MiniMap, Controls, Background,
   useNodesState, useEdgesState, addEdge,
@@ -34,7 +35,7 @@ import ModelSelector from '../components/GXE/ModelSelector';
 import GraphToolbar from '../components/GXE/GraphToolbar';
 import SaveGraphDialog from '../components/GXE/SaveGraphDialog';
 import DetailsWatcher from '../components/GXE/DetailsWatcher';
-import { getGraphById, expandSubgraphNode, createGraph } from '../services/graphCatalog.service';
+import { getGraphById, getVersion, expandSubgraphNode, createGraph } from '../services/graphCatalog.service';
 import { loadMcpSettings, generateKnowledgeGraph, loadAiSettings, saveAiSettings, getDefaultGenerationPrompt, saveGenerationPrompt, setDefaultGenerationPrompt, analyzePromptOptimization } from '../services/gxe.service';
 import { extractSubgraph, analyzeStructure } from '../services/subgraph.service';
 import { findPaths, findSimilarNodes, predictLinks } from '../services/nexus.service';
@@ -4551,6 +4552,7 @@ const GraphView = ({
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const GXEVisualizerPage = () => {
+  const [searchParams] = useSearchParams();
   const [tabs, setTabs] = useState([
     { id: 'root', title: 'Main Graph', isRoot: true, data: {} }
   ]);
@@ -4987,6 +4989,35 @@ const GXEVisualizerPage = () => {
     setTabs(t => [...t, newTab]);
     setActiveTabId(id);
   }, []);
+
+  // ── Load graph from URL params (?graphId=xxx&version=yyy) ──────────
+  const urlGraphHandled = useRef(false);
+  useEffect(() => {
+    if (urlGraphHandled.current) return;
+    const graphId = searchParams.get('graphId');
+    if (!graphId) return;
+    urlGraphHandled.current = true;
+
+    const versionParam = searchParams.get('version');
+
+    (async () => {
+      try {
+        const graph = versionParam
+          ? await getVersion(graphId, versionParam)
+          : await getGraphById(graphId);
+        if (graph) {
+          handleSelectGraph({
+            nodes: graph.nodes || [],
+            edges: graph.edges || [],
+            sourceGraph: graph,
+            rootNode: null,
+          });
+        }
+      } catch (err) {
+        console.error('[GXE] Failed to load graph from URL params:', err);
+      }
+    })();
+  }, [searchParams, handleSelectGraph]);
 
   // Get current tab data for saving
   const getCurrentTabData = useCallback(() => {

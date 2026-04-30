@@ -1,0 +1,68 @@
+# GNN Service Configuration
+
+service:
+  name: "gnn-service"
+  version: "0.1.0"
+  port: 5000
+  debug: true
+
+memgraph:
+  uri: "bolt://localhost:7687"
+  user: "${MEMGRAPH_USER}"
+  password: "${MEMGRAPH_PASSWORD}"
+
+qdrant:
+  url: "http://localhost:6333"
+  collection: "ado_knowledge_base"
+  vector_size: 1024
+
+redis:
+  url: "redis://localhost:6379"
+  cache_ttl: 3600
+
+models:
+  link_prediction:
+    hidden_dim: 64
+    num_layers: 3
+    dropout: 0.5
+    learning_rate: 0.001
+    epochs: 100
+
+  node_classification:
+    hidden_dim: 128
+    num_layers: 2
+    dropout: 0.5
+    learning_rate: 0.01
+    epochs: 200
+
+inference:
+  batch_size: 100
+  min_confidence: 0.7
+  cache_predictions: true
+
+node_types:
+  - "WorkItem"
+  - "File"
+  - "Function"
+  - "Class"
+  - "Method"
+  - "Document"
+  - "Atom"
+
+edge_types:
+  - "IMPLEMENTS"
+  - "CALLS"
+  - "DEPENDS_ON"
+  - "CONTAINS"
+  - "MENTIONS"
+  - "MODIFIES"
+
+knowledge_types:
+  - "BUSINESS_RULE"
+  - "WORKFLOW"
+  - "ALGORITHM"
+  - "VALIDATION"
+  - "CALCULATION"
+  - "TECHNICAL_DEBT"
+  - "CODE_SMELL"
+  - "ANOMALY"

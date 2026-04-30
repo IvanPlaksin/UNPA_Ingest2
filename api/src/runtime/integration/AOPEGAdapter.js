@@ -199,6 +199,17 @@ class AOPEGAdapter {
           return result;
         }
 
+        // 4a2. WAIT_FOR_SIGNAL passthrough — new AsyncSignalContract format
+        if (result && result.__type === 'WAIT_FOR_SIGNAL') {
+          console.log('[AOPEGAdapter:inner] WAIT_FOR_SIGNAL detected for', executorType);
+          return result;
+        }
+
+        // DEBUG: log what result looks like before success check
+        if (result && !result.success && !result.status) {
+          console.log('[AOPEGAdapter:inner]', executorType, 'result has no success/status. Keys:', Object.keys(result).join(','), '__type:', result.__type);
+        }
+
         // 4b. Map AOPEG result → Runtime result
         if (!result.success) {
           const recoverable = result.errors?.some(e => e.recoverable) ?? false;
@@ -585,9 +596,27 @@ class AOPEGAdapter {
                 // Multi-key input: already merged by NodeRunner, pass as-is
               }
 
-              const output = await wrapped.execute(flatInput, ctx);
+              if (process.env.DEBUG_RUNTIME) {
+                console.log(`[AOPEGAdapter] ${wrapped.executorType || wrapped.type} flatInput:`, JSON.stringify(flatInput).substring(0, 200));
+              }
+              let output;
+              try {
+                output = await wrapped.execute(flatInput, ctx);
+              } catch(execErr) {
+                if (process.env.DEBUG_RUNTIME) {
+                  console.log(`[AOPEGAdapter] ${wrapped.executorType || wrapped.type} THREW:`, execErr.message);
+                }
+                throw execErr;
+              }
+              if (process.env.DEBUG_RUNTIME) {
+                console.log(`[AOPEGAdapter] ${wrapped.executorType || wrapped.type} output type: ${output?.__type || output?.status || 'data'}`);
+              }
               // WAIT_FOR_INPUT passthrough — return as-is for NodeRunner
               if (output && output.status === 'WAIT_FOR_INPUT') {
+                return output;
+              }
+              // WAIT_FOR_SIGNAL passthrough — new AsyncSignalContract format
+              if (output && output.__type === 'WAIT_FOR_SIGNAL') {
                 return output;
               }
               return { data: output };

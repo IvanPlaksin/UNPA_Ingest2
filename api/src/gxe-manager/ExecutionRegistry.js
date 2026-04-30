@@ -188,6 +188,14 @@ class ExecutionRegistry extends EventEmitter {
       await this.redis.zunionstore(tmpKey, sets.length, ...sets);
       executionIds = await this.redis.zrangebyscore(tmpKey, since === '-inf' ? '-inf' : since, until === '+inf' ? '+inf' : until);
       await this.redis.del(tmpKey);
+    } else if (since !== '-inf' || until !== '+inf') {
+      // Date range without status — query all status sets
+      const allStatuses = Object.values(ExecutionStatus);
+      const sets = allStatuses.map(s => STATUS_KEY(s));
+      const tmpKey = `${PREFIX}:tmp:query:${Date.now()}`;
+      await this.redis.zunionstore(tmpKey, sets.length, ...sets);
+      executionIds = await this.redis.zrangebyscore(tmpKey, since, until);
+      await this.redis.del(tmpKey);
     } else {
       // All active
       executionIds = await this.redis.smembers(ACTIVE_KEY);

@@ -18,6 +18,7 @@
 'use strict';
 
 const axios = require('axios');
+const { getInstance: getLLMProvider } = require('../llm/LLMProviderService');
 const {
     AI_PROVIDERS,
     AI_MODELS,
@@ -152,28 +153,18 @@ class StructuredOutputService {
         };
 
         try {
-            const response = await axios.post(
-                'https://api.anthropic.com/v1/messages',
+            const llmResp = await getLLMProvider().chat(
+                [{ role: 'user', content: prompt }],
                 {
                     model: modelId,
-                    max_tokens: options.maxTokens || 4096,
+                    maxTokens: options.maxTokens || 4096,
                     temperature: options.temperature ?? this.options.temperature,
                     tools: [tool],
-                    tool_choice: { type: 'tool', name: toolName },
-                    messages: [{ role: 'user', content: prompt }]
-                },
-                {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-api-key': apiKey,
-                        'anthropic-version': '2023-06-01'
-                    },
-                    timeout: options.timeout || this.options.timeout
                 }
             );
 
             // Извлечь tool use result
-            const toolUse = this._extractClaudeToolUse(response.data, toolName);
+            const toolUse = this._extractClaudeToolUse({ content: llmResp.content }, toolName);
 
             if (!toolUse) {
                 throw new Error('No tool use in Claude response');
@@ -427,28 +418,18 @@ class StructuredOutputService {
     // ═══════════════════════════════════════════════════════════════════════════
 
     async _callClaudeRaw(prompt, options = {}) {
-        const apiKey = getApiKey('anthropic');
         const modelId = options.modelId || 'claude-sonnet-4-5-20250929';
 
-        const response = await axios.post(
-            'https://api.anthropic.com/v1/messages',
+        const llmResp = await getLLMProvider().chat(
+            [{ role: 'user', content: prompt }],
             {
                 model: modelId,
-                max_tokens: options.maxTokens || 4096,
+                maxTokens: options.maxTokens || 4096,
                 temperature: options.temperature ?? this.options.temperature,
-                messages: [{ role: 'user', content: prompt }]
-            },
-            {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-api-key': apiKey,
-                    'anthropic-version': '2023-06-01'
-                },
-                timeout: options.timeout || this.options.timeout
             }
         );
 
-        return response.data.content?.[0]?.text || '';
+        return llmResp.content?.[0]?.text || '';
     }
 
     async _callGeminiRaw(prompt, options = {}) {

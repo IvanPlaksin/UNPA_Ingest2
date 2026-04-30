@@ -2,7 +2,8 @@ import React, { useMemo, useState, useCallback } from 'react';
 import {
   Play, Pause, Square, MoreHorizontal,
   Clock, Zap, GitBranch, ChevronRight,
-  AlertCircle, CheckCircle2, Loader2, Timer
+  AlertCircle, CheckCircle2, Loader2, Timer,
+  Hourglass, CircleDot
 } from 'lucide-react';
 import useGxeManagerStore from '../../../stores/gxeManagerStore';
 import {
@@ -15,6 +16,7 @@ import './ExecutionRow.css';
 
 const STATUS_ICONS = {
   RUNNING: Loader2,
+  WAITING: Hourglass,
   PAUSED: Pause,
   QUEUED: Clock,
   INITIALIZING: Loader2,
@@ -23,6 +25,19 @@ const STATUS_ICONS = {
   FAILED: AlertCircle,
   CANCELLED: Square,
   TIMED_OUT: Timer
+};
+
+const STATUS_LABELS = {
+  RUNNING: 'Running',
+  WAITING: 'Waiting',
+  PAUSED: 'Paused',
+  QUEUED: 'Queued',
+  INITIALIZING: 'Init',
+  COMPLETING: 'Completing',
+  COMPLETED: 'Completed',
+  FAILED: 'Failed',
+  CANCELLED: 'Cancelled',
+  TIMED_OUT: 'Timed Out'
 };
 
 const PRIORITY_LABELS = {
@@ -111,13 +126,17 @@ const QuickActions = ({ execution, onAction }) => {
   );
 };
 
+const getNodeStatus = (s) => typeof s === 'object' && s !== null ? s.status : s;
+
+const DONE_STATUSES = ['SUCCEEDED', 'SKIPPED', 'COMPLETED', 'CANCELLED'];
+
 const ProgressBar = ({ execution }) => {
   const progress = useMemo(() => {
     const nodeStates = execution.nodeStates || {};
     const total = Object.keys(nodeStates).length;
     if (total === 0) return 0;
     const completed = Object.values(nodeStates).filter(
-      s => ['SUCCEEDED', 'SKIPPED', 'COMPLETED'].includes(s)
+      s => DONE_STATUSES.includes(getNodeStatus(s))
     ).length;
     return Math.round((completed / total) * 100);
   }, [execution.nodeStates]);
@@ -151,14 +170,27 @@ const ExecutionRow = ({ execution, isSelected, isNew }) => {
     const states = execution.nodeStates || {};
     const total = Object.keys(states).length;
     const completed = Object.values(states).filter(
-      s => ['SUCCEEDED', 'SKIPPED', 'COMPLETED'].includes(s)
+      s => DONE_STATUSES.includes(getNodeStatus(s))
     ).length;
-    const failed = Object.values(states).filter(s => s === 'FAILED').length;
+    const failed = Object.values(states).filter(
+      s => getNodeStatus(s) === 'FAILED'
+    ).length;
     return { total, completed, failed };
   }, [execution.nodeStates]);
 
+  // Find the current active node (executing, waiting_input, or the currentNodeId field)
+  const currentNode = useMemo(() => {
+    if (execution.currentNodeId) return execution.currentNodeId;
+    const states = execution.nodeStates || {};
+    const activeEntry = Object.entries(states).find(([, s]) => {
+      const st = getNodeStatus(s);
+      return ['RUNNING', 'EXECUTING', 'WAITING_INPUT', 'WAITING'].includes(st);
+    });
+    return activeEntry ? activeEntry[0] : null;
+  }, [execution.currentNodeId, execution.nodeStates]);
+
   const isTerminal = ['COMPLETED', 'FAILED', 'CANCELLED', 'TIMED_OUT'].includes(execution.status);
-  const isActive = ['RUNNING', 'INITIALIZING'].includes(execution.status);
+  const isActive = ['RUNNING', 'INITIALIZING', 'WAITING'].includes(execution.status);
 
   return (
     <div
@@ -170,13 +202,29 @@ const ExecutionRow = ({ execution, isSelected, isNew }) => {
       </div>
 
       <div className="gxe-row__content">
-        <div className="gxe-row__line1">
+        {/* Header: graph name + status */}
+        <div className="gxe-row__header">
           <StatusIcon size={16} className={`gxe-row__status-icon ${isActive ? 'spinning' : ''}`} />
-          <span className="gxe-row__graph-name">{execution.graphId}</span>
-          <span className="gxe-row__exec-id">{execution.executionId.slice(0, 8)}</span>
+          <span className="gxe-row__graph-name">{execution.metadata?.graphName || execution.graphId}</span>
+          <span className={`gxe-row__status-badge gxe-row__status-badge--${execution.status?.toLowerCase()}`}>
+            {STATUS_LABELS[execution.status] || execution.status}
+          </span>
         </div>
 
-        <div className="gxe-row__line2">
+        {/* Body: labeled IDs */}
+        <div className="gxe-row__ids">
+          <span className="gxe-row__field">
+            <span className="gxe-row__label">Execution</span>
+            <span className="gxe-row__value-mono">{execution.executionId}</span>
+          </span>
+          <span className="gxe-row__field">
+            <span className="gxe-row__label">Graph</span>
+            <span className="gxe-row__value-mono">{execution.graphId}</span>
+          </span>
+        </div>
+
+        {/* Meta: priority, trigger, current node, time */}
+        <div className="gxe-row__meta">
           <span className={`gxe-row__priority gxe-row__priority--${priorityConfig.class}`}>
             {priorityConfig.label}
           </span>
@@ -184,6 +232,12 @@ const ExecutionRow = ({ execution, isSelected, isNew }) => {
             <TriggerIcon size={12} />
             {execution.triggerType}
           </span>
+          {currentNode && (
+            <span className="gxe-row__current-node">
+              <CircleDot size={12} />
+              {currentNode}
+            </span>
+          )}
           <span className="gxe-row__time">
             {formatRelativeTime(execution.startedAt || execution.createdAt)}
           </span>
@@ -194,7 +248,8 @@ const ExecutionRow = ({ execution, isSelected, isNew }) => {
           )}
         </div>
 
-        <div className="gxe-row__line3">
+        {/* Progress */}
+        <div className="gxe-row__progress-line">
           <span className="gxe-row__nodes">
             {nodeStats.completed}/{nodeStats.total} nodes
             {nodeStats.failed > 0 && (

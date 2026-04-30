@@ -21,7 +21,7 @@ const { randomUUID } = require('node:crypto');
 let _signalImports = null;
 function getSignalImports() {
   if (!_signalImports) {
-    _signalImports = require('../../../../runtime/signals');
+    _signalImports = require('../../../../../runtime/signals');
   }
   return _signalImports;
 }
@@ -133,6 +133,7 @@ class WaitInputExecutor extends BaseExecutor {
     return {
       __type: 'WAIT_FOR_SIGNAL',
       contract: {
+        resumeToken: randomUUID(),  // BACKLOG-0044: required by AsyncSignalContract.validate()
         signalType: SignalType.USER_INPUT,
         payloadSchema,
         timeoutAt,

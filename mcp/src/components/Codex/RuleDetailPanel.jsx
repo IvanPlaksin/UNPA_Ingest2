@@ -128,7 +128,7 @@ export default function RuleDetailPanel({ node, type, onClose }) {
   }
 
   const title = prop(node, 'title');
-  const id = prop(node, 'ruleId') || prop(node, 'sectionId') || prop(node, 'partId') || prop(node, 'principleId');
+  const id = prop(node, 'ruleId') || prop(node, 'definitionId') || prop(node, 'sectionId') || prop(node, 'partId') || prop(node, 'principleId') || prop(node, 'codexId');
   const description = prop(node, 'description');
   const content = prop(node, 'content');
   const modality = prop(node, 'modality');
@@ -140,6 +140,32 @@ export default function RuleDetailPanel({ node, type, onClose }) {
   const hash = prop(node, 'hash');
   const namespace = prop(node, 'namespace');
   const mi = modality ? MODALITY_INFO[modality] : null;
+
+  // Governance narrative fields (CodexRule from proposals)
+  const summary = prop(node, 'summary');
+  const rationale = prop(node, 'rationale');
+  const whyItExists = prop(node, 'whyItExists');
+  const examples = prop(node, 'examples');
+  const derivesFromPrinciple = prop(node, 'derivesFromPrinciple');
+
+  // CodexDefinition specific fields (structured table data)
+  const subsectionHeading = prop(node, 'subsectionHeading');
+  const tableType = prop(node, 'tableType');
+  const rowCount = prop(node, 'rowCount');
+  let tableColumns = [];
+  let tableRows = [];
+  try {
+    const cn = prop(node, 'columnNames');
+    if (cn) tableColumns = typeof cn === 'string' ? JSON.parse(cn) : cn;
+  } catch {}
+  try {
+    const att = prop(node, 'attributes');
+    if (att) tableRows = typeof att === 'string' ? JSON.parse(att) : att;
+  } catch {}
+  let exampleList = [];
+  try {
+    if (examples) exampleList = typeof examples === 'string' ? JSON.parse(examples) : examples;
+  } catch { exampleList = [examples]; }
 
   const icons = {
     part: <Book size={20} />, section: <FileText size={20} />, rule: <CheckSquare size={20} />,
@@ -177,7 +203,90 @@ export default function RuleDetailPanel({ node, type, onClose }) {
           </Card>
         )}
 
-        {description && (
+        {/* Subsection context for CodexDefinition */}
+        {subsectionHeading && subsectionHeading !== title && (
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="caption" sx={{ color: 'text.disabled', mb: 0.5, display: 'block' }}>From subsection</Typography>
+            <Typography variant="body2" sx={{ fontSize: '12.5px', fontStyle: 'italic' }}>{subsectionHeading}</Typography>
+          </Box>
+        )}
+
+        {/* Summary (governance rules) */}
+        {summary && (
+          <Box sx={{ mb: 2.5 }}>
+            <Typography variant="caption" sx={{ color: 'text.disabled', mb: 0.5, display: 'block' }}>Summary</Typography>
+            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', fontSize: '12.5px' }}>{summary}</Typography>
+          </Box>
+        )}
+
+        {/* Rationale (governance rules) */}
+        {rationale && (
+          <Box sx={{ mb: 2.5 }}>
+            <Typography variant="caption" sx={{ color: 'text.disabled', mb: 0.5, display: 'block' }}>Rationale (Why this rule exists)</Typography>
+            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', fontSize: '12.5px' }}>{rationale}</Typography>
+          </Box>
+        )}
+
+        {/* Why it exists (governance rules) */}
+        {whyItExists && whyItExists !== rationale && (
+          <Box sx={{ mb: 2.5 }}>
+            <Typography variant="caption" sx={{ color: 'text.disabled', mb: 0.5, display: 'block' }}>Origin event</Typography>
+            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', fontSize: '12.5px' }}>{whyItExists}</Typography>
+          </Box>
+        )}
+
+        {/* Examples (governance rules) */}
+        {exampleList.length > 0 && (
+          <Box sx={{ mb: 2.5 }}>
+            <Typography variant="caption" sx={{ color: 'text.disabled', mb: 0.5, display: 'block' }}>Examples</Typography>
+            {exampleList.map((ex, i) => (
+              <Box key={i} sx={{
+                mb: 0.75, p: 1, bgcolor: 'action.hover', borderRadius: 1,
+                fontFamily: 'monospace', fontSize: '11.5px', whiteSpace: 'pre-wrap'
+              }}>{ex}</Box>
+            ))}
+          </Box>
+        )}
+
+        {/* Structured table data (CodexDefinition) */}
+        {tableRows.length > 0 && (
+          <Box sx={{ mb: 2.5 }}>
+            <Typography variant="caption" sx={{ color: 'text.disabled', mb: 0.5, display: 'block' }}>
+              {tableType === 'attribute-value' ? 'Attributes' : `Table (${rowCount} rows)`}
+            </Typography>
+            <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
+              <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                <Box component="thead">
+                  <Box component="tr" sx={{ bgcolor: 'action.selected' }}>
+                    {tableColumns.map((col, i) => (
+                      <Box component="th" key={i} sx={{
+                        textAlign: 'left', p: 1, fontWeight: 600,
+                        borderBottom: 1, borderColor: 'divider'
+                      }}>{col}</Box>
+                    ))}
+                  </Box>
+                </Box>
+                <Box component="tbody">
+                  {tableRows.map((row, i) => (
+                    <Box component="tr" key={i} sx={{
+                      '&:nth-of-type(even)': { bgcolor: 'action.hover' }
+                    }}>
+                      {tableColumns.map((col, j) => (
+                        <Box component="td" key={j} sx={{
+                          p: 1, verticalAlign: 'top',
+                          borderBottom: i < tableRows.length - 1 ? 1 : 0, borderColor: 'divider',
+                          fontFamily: String(row[col] || '').startsWith('`') ? 'monospace' : 'inherit'
+                        }}>{row[col] || ''}</Box>
+                      ))}
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+            </Box>
+          </Box>
+        )}
+
+        {description && !tableRows.length && (
           <Box sx={{ mb: 2.5 }}>
             <Typography variant="caption" sx={{ color: 'text.disabled', mb: 0.5, display: 'block' }}>Description</Typography>
             <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', fontSize: '12.5px' }}>{description}</Typography>
@@ -206,6 +315,8 @@ export default function RuleDetailPanel({ node, type, onClose }) {
         <MetaRow label="Code" value={code} mono />
         <MetaRow label="Order" value={order?.toString()} />
         <MetaRow label="Namespace" value={namespace} />
+        <MetaRow label="Table type" value={tableType} />
+        <MetaRow label="Derived from" value={derivesFromPrinciple} mono />
         <MetaRow label="Hash" value={hash} mono />
 
         <Divider sx={{ my: 2 }} />

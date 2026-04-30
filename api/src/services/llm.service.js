@@ -1,5 +1,6 @@
 const axios = require('axios');
 const { getApiKey, hasValidApiKey } = require('../config/ai-models.config');
+const { getInstance: getLLMProvider } = require('./llm/LLMProviderService');
 
 // ── Provider selection ──
 // Priority: LLM_PROVIDER env → gemini (if key set) → anthropic (if key set) → ollama
@@ -81,7 +82,7 @@ class LlmService {
         if (provider === 'gemini') {
             return this._chatGemini(messages, tools, parentTensorId, options);
         }
-        if (provider === 'anthropic') {
+        if (provider === 'anthropic' || provider === 'azure') {
             return this._chatAnthropic(messages, tools, parentTensorId, options);
         }
         return this._chatOllama(messages, tools, parentTensorId, options);
@@ -131,16 +132,15 @@ class LlmService {
             if (system) payload.system = system;
             if (tools && tools.length > 0) payload.tools = tools;
 
-            let response = await axios.post(ANTHROPIC_API_URL, payload, {
-                headers: {
-                    'x-api-key': apiKey,
-                    'anthropic-version': '2023-06-01',
-                    'content-type': 'application/json',
-                },
-                timeout: 120000,
+            const llmResp = await getLLMProvider().chat(mergedMessages, {
+                model: options.model || ANTHROPIC_MODEL,
+                maxTokens: options.maxTokens || ANTHROPIC_MAX_TOKENS,
+                system: system || undefined,
+                tools: tools?.length ? tools : undefined,
+                temperature: options.temperature ?? 0.0,
             });
 
-            let data = response.data;
+            let data = { content: llmResp.content, model: llmResp.model, usage: llmResp.usage, stop_reason: llmResp.stopReason };
 
             // Handle tool_use loop: if model wants to call tools, execute and continue
             const toolExecutor = options.toolExecutor; // function(toolName, toolInput) => string
@@ -169,18 +169,14 @@ class LlmService {
                     { role: 'user', content: toolResults },
                 ];
 
-                response = await axios.post(ANTHROPIC_API_URL, {
-                    ...payload,
-                    messages: continuedMessages,
-                }, {
-                    headers: {
-                        'x-api-key': apiKey,
-                        'anthropic-version': '2023-06-01',
-                        'content-type': 'application/json',
-                    },
-                    timeout: 120000,
+                const loopResp = await getLLMProvider().chat(continuedMessages, {
+                    model: options.model || ANTHROPIC_MODEL,
+                    maxTokens: options.maxTokens || ANTHROPIC_MAX_TOKENS,
+                    system: system || undefined,
+                    tools: tools?.length ? tools : undefined,
+                    temperature: options.temperature ?? 0.0,
                 });
-                data = response.data;
+                data = { content: loopResp.content, model: loopResp.model, usage: loopResp.usage, stop_reason: loopResp.stopReason };
             }
 
             const content = data.content?.filter(b => b.type === 'text').map(b => b.text).join('') || '';
@@ -205,8 +201,14 @@ class LlmService {
 
             return result;
         } catch (error) {
-            console.error(`[LlmService] Anthropic error: ${error.message}`);
+            const detail = error.response?.data?.error?.message || error.response?.data || '';
+            console.error(`[LlmService] Anthropic error: ${error.message}${detail ? ` — ${JSON.stringify(detail)}` : ''}`);
             tensorService?.fail(tensor?.id, error);
+            if (this._isInsufficientCreditsError(error)) {
+                console.warn('[LlmService] Anthropic credit balance depleted — falling back to Ollama (LLaMA). Forcing English.');
+                const { model: _m, provider: _p, ...ollamaOptions } = options;
+                return this._chatOllama(this._forceEnglishMessages(messages), tools, parentTensorId, ollamaOptions);
+            }
             throw error;
         }
     }
@@ -528,6 +530,11 @@ class LlmService {
         } catch (error) {
             console.error('[LlmService] Anthropic stream error:', error.message);
             tensorService?.fail(tensor?.id, error);
+            if (this._isInsufficientCreditsError(error)) {
+                console.warn('[LlmService] Anthropic credit balance depleted — falling back to Ollama stream (LLaMA). Forcing English.');
+                const { model: _m, provider: _p, ...ollamaOptions } = options;
+                return this._streamOllama(this._forceEnglishMessages(messages), onChunk, parentTensorId, ollamaOptions);
+            }
             throw error;
         }
     }
@@ -648,6 +655,24 @@ class LlmService {
     getRegisteredSchemas() {
         const structuredOutput = getStructuredOutputLazy();
         return structuredOutput ? structuredOutput.getRegisteredSchemas() : [];
+    }
+
+    _isInsufficientCreditsError(error) {
+        const status = error.response?.status;
+        const message = error.response?.data?.error?.message || '';
+        return status === 400 && message.toLowerCase().includes('credit balance');
+    }
+
+    // Prepend an English-only instruction to the system message (required for LLaMA fallback).
+    _forceEnglishMessages(messages) {
+        const instruction = 'IMPORTANT: You must respond exclusively in English. Do not use any other language.';
+        const hasSystem = messages.some(m => m.role === 'system');
+        if (hasSystem) {
+            return messages.map(m =>
+                m.role === 'system' ? { ...m, content: `${instruction}\n\n${m.content}` } : m
+            );
+        }
+        return [{ role: 'system', content: instruction }, ...messages];
     }
 
     /**

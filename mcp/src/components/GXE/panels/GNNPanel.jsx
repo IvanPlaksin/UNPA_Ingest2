@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import FloatingWindow from '../FloatingWindow';
 
-const GNN_BASE = 'http://localhost:5000';
+const GNN_BASE = import.meta.env.VITE_GNN_URL || 'http://localhost:5001';
 
 /* ── Helpers ─────────────────────────────────────────────── */
 

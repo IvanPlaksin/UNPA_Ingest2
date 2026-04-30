@@ -30,10 +30,10 @@ const NewExecutionDialog = ({ onClose, onSuccess }) => {
     const loadGraphs = async () => {
       setGraphsLoading(true);
       try {
-        const response = await fetch('/api/v1/catalog/graphs?status=ACTIVE&limit=100');
+        const response = await fetch('/api/v1/graph-catalog?limit=100');
         if (response.ok) {
           const data = await response.json();
-          setAvailableGraphs(data.graphs || []);
+          setAvailableGraphs(data.data || []);
         }
       } catch (err) {
         console.error('Failed to load graphs:', err);
@@ -45,8 +45,8 @@ const NewExecutionDialog = ({ onClose, onSuccess }) => {
   }, []);
 
   const filteredGraphs = availableGraphs.filter(g =>
-    g.graphId.toLowerCase().includes(graphSearch.toLowerCase()) ||
-    g.name?.toLowerCase().includes(graphSearch.toLowerCase())
+    (g.id || '').toLowerCase().includes(graphSearch.toLowerCase()) ||
+    (g.name || '').toLowerCase().includes(graphSearch.toLowerCase())
   );
 
   const validatePayload = (value) => {
@@ -136,18 +136,18 @@ const NewExecutionDialog = ({ onClose, onSuccess }) => {
               ) : (
                 filteredGraphs.slice(0, 10).map(graph => (
                   <label
-                    key={graph.graphId}
-                    className={`gxe-dialog__graph-item ${graphId === graph.graphId ? 'selected' : ''}`}
+                    key={graph.id}
+                    className={`gxe-dialog__graph-item ${graphId === graph.id ? 'selected' : ''}`}
                   >
                     <input
                       type="radio"
                       name="graphId"
-                      value={graph.graphId}
-                      checked={graphId === graph.graphId}
-                      onChange={() => setGraphId(graph.graphId)}
+                      value={graph.id}
+                      checked={graphId === graph.id}
+                      onChange={() => setGraphId(graph.id)}
                     />
                     <div className="gxe-dialog__graph-info">
-                      <span className="gxe-dialog__graph-name">{graph.graphId}</span>
+                      <span className="gxe-dialog__graph-name">{graph.name || graph.id}</span>
                       {graph.description && (
                         <span className="gxe-dialog__graph-desc">{graph.description}</span>
                       )}

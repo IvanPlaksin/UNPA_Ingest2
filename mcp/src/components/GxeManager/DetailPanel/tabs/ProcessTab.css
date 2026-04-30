@@ -1,0 +1,85 @@
+/* Process Tree */
+.gxe-process-tree { display: flex; flex-direction: column; }
+
+.gxe-process-node { display: flex; gap: 12px; }
+
+/* Connector (vertical line + dot) */
+.gxe-process-node__connector { display: flex; flex-direction: column; align-items: center; width: 24px; flex-shrink: 0; }
+.gxe-process-node__line { width: 2px; flex: 1; background: var(--nexus-border, #27272a); min-height: 8px; }
+.gxe-process-node__line.last { background: transparent; }
+.gxe-process-node__dot {
+  display: flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 2px solid #334155; background: transparent;
+  flex-shrink: 0; z-index: 1;
+}
+.gxe-process-node__dot.current { box-shadow: 0 0 12px currentColor; }
+.gxe-process-node__dot .spinning { animation: spin 1s linear infinite; }
+
+/* Node body */
+.gxe-process-node__body {
+  flex: 1; min-width: 0; padding: 8px 12px; margin-bottom: 4px;
+  background: var(--nexus-bg-secondary, #111118);
+  border: 1px solid var(--nexus-border, #27272a);
+  border-radius: 8px; transition: all 0.15s;
+}
+.gxe-process-node__body.current {
+  border-width: 2px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.gxe-process-node__header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.gxe-process-node__id { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; color: var(--nexus-text-primary, #e4e4e7); }
+.gxe-process-node__status { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.gxe-process-node__error { font-size: 11px; color: var(--nexus-error, #ef4444); margin-top: 4px; word-break: break-word; }
+
+/* Form button */
+.gxe-process-node__form-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 10px; margin-bottom: 6px;
+  border: 1px solid #a78bfa; border-radius: 6px;
+  background: rgba(167, 139, 250, 0.12); color: #a78bfa;
+  font-size: 12px; font-weight: 500; cursor: pointer;
+  transition: all 0.15s; width: fit-content;
+}
+.gxe-process-node__form-btn:hover {
+  background: rgba(167, 139, 250, 0.25); box-shadow: 0 0 12px rgba(167, 139, 250, 0.3);
+}
+
+/* Form Dialog */
+.gxe-form-dialog-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+}
+.gxe-form-dialog {
+  width: 90%; max-width: 560px; max-height: 80vh;
+  background: var(--nexus-bg-secondary, #111118);
+  border: 1px solid var(--nexus-border, #27272a);
+  border-radius: 12px; display: flex; flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+.gxe-form-dialog__header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; border-bottom: 1px solid var(--nexus-border, #27272a);
+}
+.gxe-form-dialog__header h3 {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0; font-size: 15px; font-weight: 600; color: #a78bfa;
+}
+.gxe-form-dialog__close {
+  background: none; border: none; color: var(--nexus-text-muted, #71717a);
+  cursor: pointer; padding: 4px; border-radius: 4px;
+}
+.gxe-form-dialog__close:hover { color: var(--nexus-text-primary, #e4e4e7); background: var(--nexus-bg-hover, #27272a); }
+.gxe-form-dialog__body { padding: 16px; overflow-y: auto; flex: 1; }
+.gxe-form-dialog__success {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  padding: 32px; color: var(--nexus-success, #22c55e); font-size: 14px;
+}
+.gxe-form-dialog__error {
+  margin-top: 12px; padding: 8px 12px; border-radius: 6px;
+  background: rgba(239, 68, 68, 0.12); color: var(--nexus-error, #ef4444); font-size: 12px;
+}
+
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

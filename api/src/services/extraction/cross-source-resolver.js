@@ -46,7 +46,7 @@ const DEFAULT_CONFIG = {
 
     // Enable GNN service (optional)
     useGNN: false,
-    gnnServiceUrl: process.env.GNN_SERVICE_URL || 'http://localhost:5000'
+    gnnServiceUrl: process.env.GNN_SERVICE_URL || 'http://localhost:5001'
 };
 
 /**

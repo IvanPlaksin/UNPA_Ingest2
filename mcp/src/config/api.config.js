@@ -6,9 +6,11 @@
 // Base API URL from environment variable or default
 export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3010/api/v1';
 
-// Extract just the host:port for SSE connections
+// Extract just the host for SSE connections; fall back to current origin when URL is relative
 const urlParts = API_BASE_URL.match(/^(https?:\/\/[^/]+)/);
-export const API_HOST = urlParts ? urlParts[1] : 'http://localhost:3010';
+export const API_HOST = urlParts
+    ? urlParts[1]
+    : (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3010');
 
 // API Endpoints
 export const API_ENDPOINTS = {

@@ -1,6 +1,54 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
+// ═══════════════════════════════════════════════════════════════════
+// FILTER PERSISTENCE (localStorage)
+// ═══════════════════════════════════════════════════════════════════
+
+const STORAGE_KEY = 'gxe-manager-filters';
+
+function startOfToday() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+const DEFAULT_FILTERS = {
+  status: ['RUNNING', 'WAITING'],
+  graphId: null,
+  search: '',
+  dateFrom: startOfToday(),
+  dateTo: null,
+};
+
+function loadFilters() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return { ...DEFAULT_FILTERS };
+    const saved = JSON.parse(raw);
+    return {
+      status: Array.isArray(saved.status) ? saved.status : DEFAULT_FILTERS.status,
+      graphId: saved.graphId ?? null,
+      search: '',
+      dateFrom: saved.dateFrom ?? startOfToday(),
+      dateTo: saved.dateTo ?? null,
+    };
+  } catch {
+    return { ...DEFAULT_FILTERS };
+  }
+}
+
+function saveFilters(filters) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      status: filters.status,
+      graphId: filters.graphId,
+      dateFrom: filters.dateFrom,
+      dateTo: filters.dateTo,
+    }));
+  } catch { /* quota exceeded or private mode */ }
+}
+
 /**
  * GxeManager Zustand Store
  *
@@ -17,12 +65,8 @@ const useGxeManagerStore = create(
       /** @type {Map<string, Object>} executionId → ExecutionRecord */
       executions: new Map(),
 
-      /** Current filter/sort/group settings */
-      filters: {
-        status: [],       // e.g. ['RUNNING', 'PAUSED']
-        graphId: null,
-        search: '',
-      },
+      /** Current filter/sort/group settings (hydrated from localStorage) */
+      filters: loadFilters(),
       groupBy: 'status',  // 'status' | 'graphId' | 'priority' | 'none'
       sortBy: 'createdAt', // 'createdAt' | 'status' | 'graphId'
       sortDir: 'desc',
@@ -122,9 +166,11 @@ const useGxeManagerStore = create(
       // FILTER / SORT ACTIONS
       // ═══════════════════════════════════════════════════════════════════
 
-      setFilters: (filters) => set((state) => ({
-        filters: { ...state.filters, ...filters },
-      })),
+      setFilters: (patch) => set((state) => {
+        const next = { ...state.filters, ...patch };
+        saveFilters(next);
+        return { filters: next };
+      }),
 
       setGroupBy: (groupBy) => set({ groupBy }),
       setSortBy: (sortBy) => set({ sortBy }),
@@ -137,7 +183,15 @@ const useGxeManagerStore = create(
         const next = current.includes(status)
           ? current.filter((s) => s !== status)
           : [...current, status];
-        return { filters: { ...state.filters, status: next } };
+        const filters = { ...state.filters, status: next };
+        saveFilters(filters);
+        return { filters };
+      }),
+
+      setDateRange: (dateFrom, dateTo) => set((state) => {
+        const filters = { ...state.filters, dateFrom, dateTo };
+        saveFilters(filters);
+        return { filters };
       }),
 
       toggleSortOrder: () => set((state) => ({
@@ -204,6 +258,14 @@ const useGxeManagerStore = create(
           list = list.filter((e) => e.graphId === filters.graphId);
         }
 
+        // Filter by date range
+        if (filters.dateFrom) {
+          list = list.filter((e) => (e.createdAt || 0) >= filters.dateFrom);
+        }
+        if (filters.dateTo) {
+          list = list.filter((e) => (e.createdAt || 0) <= filters.dateTo);
+        }
+
         // Filter by search term
         if (filters.search) {
           const q = filters.search.toLowerCase();
@@ -234,6 +296,32 @@ const useGxeManagerStore = create(
        */
       executionsList: () => {
         return get().getFilteredExecutions();
+      },
+
+      /**
+       * Compute status counts from the loaded executions (respects date/search filters, ignores status filter)
+       */
+      getFilteredStats: () => {
+        const { executions, filters } = get();
+        let list = Array.from(executions.values());
+
+        // Apply date + search filters but NOT status (so all status counts are visible)
+        if (filters.dateFrom) list = list.filter((e) => (e.createdAt || 0) >= filters.dateFrom);
+        if (filters.dateTo) list = list.filter((e) => (e.createdAt || 0) <= filters.dateTo);
+        if (filters.graphId) list = list.filter((e) => e.graphId === filters.graphId);
+        if (filters.search) {
+          const q = filters.search.toLowerCase();
+          list = list.filter((e) =>
+            e.executionId?.toLowerCase().includes(q) ||
+            e.graphId?.toLowerCase().includes(q)
+          );
+        }
+
+        const byStatus = {};
+        for (const e of list) {
+          byStatus[e.status] = (byStatus[e.status] || 0) + 1;
+        }
+        return { byStatus, total: list.length };
       },
 
       getGroupedExecutions: () => {

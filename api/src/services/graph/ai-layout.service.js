@@ -14,8 +14,7 @@
  * Settings persisted in Memgraph as :Settings {type: 'ai-layout-config'}
  */
 
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
+const { getInstance: getLLMProvider } = require('../llm/LLMProviderService');
 
 const AVAILABLE_MODELS = {
   'claude-sonnet': 'claude-sonnet-4-20250514',
@@ -718,33 +717,21 @@ async function computeLayout(request, configOverrides = {}) {
   console.log(`[AILayout] Computing layout for ${request.nodes.length} nodes, ${request.edges.length} edges via ${config.selectedModel}`);
   const startTime = Date.now();
 
-  const response = await fetch(ANTHROPIC_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
+  const llmResp = await getLLMProvider().chat(
+    [
+      { role: 'user', content: userPrompt },
+      { role: 'assistant', content: '{"nodePositions":{' },
+    ],
+    {
       model: modelId,
-      max_tokens: config.maxTokens,
+      maxTokens: config.maxTokens,
       temperature: config.temperature,
       system: config.systemPrompt,
-      messages: [
-        { role: 'user', content: userPrompt },
-        { role: 'assistant', content: '{"nodePositions":{' },  // prefill to force JSON
-      ],
-    }),
-  });
+    }
+  );
 
-  if (!response.ok) {
-    const errBody = await response.json().catch(() => ({}));
-    throw new Error(`Claude API error ${response.status}: ${errBody.error?.message || response.statusText}`);
-  }
-
-  const data = await response.json();
   // Prepend the assistant prefill that the API strips from the response
-  const rawContent = '{"nodePositions":{' + (data.content?.[0]?.text || '');
+  const rawContent = '{"nodePositions":{' + (llmResp.content?.[0]?.text || '');
   const layoutTime = Date.now() - startTime;
 
   console.log(`[AILayout] Response received in ${layoutTime}ms, ${data.usage?.output_tokens || '?'} output tokens`);
@@ -938,32 +925,20 @@ async function computeHexLayout(request, configOverrides = {}) {
   console.log(`[AILayout-Hex] Computing hex layout for ${request.nodes.length} nodes via ${config.selectedModel}`);
   const startTime = Date.now();
 
-  const response = await fetch(ANTHROPIC_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
+  const llmResp = await getLLMProvider().chat(
+    [
+      { role: 'user', content: userPrompt },
+      { role: 'assistant', content: '{"nodePositions":{' },
+    ],
+    {
       model: modelId,
-      max_tokens: config.maxTokens,
+      maxTokens: config.maxTokens,
       temperature: config.temperature,
       system: systemPrompt,
-      messages: [
-        { role: 'user', content: userPrompt },
-        { role: 'assistant', content: '{"nodePositions":{' },
-      ],
-    }),
-  });
+    }
+  );
 
-  if (!response.ok) {
-    const errBody = await response.json().catch(() => ({}));
-    throw new Error(`Claude API error ${response.status}: ${errBody.error?.message || response.statusText}`);
-  }
-
-  const data = await response.json();
-  const rawContent = '{"nodePositions":{' + (data.content?.[0]?.text || '');
+  const rawContent = '{"nodePositions":{' + (llmResp.content?.[0]?.text || '');
   const layoutTime = Date.now() - startTime;
 
   console.log(`[AILayout-Hex] Response in ${layoutTime}ms, ${data.usage?.output_tokens || '?'} tokens`);

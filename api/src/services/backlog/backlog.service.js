@@ -196,11 +196,14 @@ class BackLogService extends EventEmitter {
     });
   }
 
-  async complete(backlogId, verifiedBy) {
-    return this._transition(backlogId, 'DONE', {
+  async complete(backlogId, verifiedBy, implementationNotes, implementedFiles) {
+    const extra = {
       verifiedBy: verifiedBy || 'system',
       completedAt: new Date().toISOString()
-    });
+    };
+    if (implementationNotes) extra.implementationNotes = implementationNotes;
+    if (implementedFiles) extra.implementedFiles = JSON.stringify(implementedFiles);
+    return this._transition(backlogId, 'DONE', extra);
   }
 
   async cancel(backlogId, cancelledBy, reason) {

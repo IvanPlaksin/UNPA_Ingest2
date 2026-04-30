@@ -3,7 +3,7 @@
  * Communicates with Python GNN microservice
  */
 
-const GNN_BASE_URL = import.meta.env.VITE_GNN_URL || 'http://localhost:5000';
+const GNN_BASE_URL = import.meta.env.VITE_GNN_URL || 'http://localhost:5001';
 
 class GNNService {
   constructor() {

@@ -24,6 +24,11 @@ class FindUserExecutor extends BaseExecutor {
   async execute(parameters) {
     const { randomUUID } = require('node:crypto');
 
+    // Self-request — no user lookup needed; skip straight through
+    if (parameters.beneficiary_type === 'self') {
+      return this.success({ beneficiary: null, beneficiary_type: 'self', branch: 'self_skip', response: null });
+    }
+
     // If beneficiary already resolved in previous turn, pass through
     if (parameters.beneficiary && parameters.beneficiary.id) {
       return this.success({ beneficiary: parameters.beneficiary, branch: 'found', response: null });
@@ -46,7 +51,9 @@ class FindUserExecutor extends BaseExecutor {
       }
     }
 
-    const searchTerm = this.getRequiredParam(parameters, 'searchTerm');
+    // Prefer explicit searchTerm; fall back to userInput (re-execution dialog pattern)
+    const searchTerm = parameters.searchTerm || parameters.userInput;
+    if (!searchTerm) return this.error('MISSING_SEARCH_TERM', 'searchTerm or userInput is required', true);
     const neo4j = require('neo4j-driver');
     const { MEMGRAPH_CONFIG } = require('../../../../../services/flowdesk/import-config');
     const driver = neo4j.driver(MEMGRAPH_CONFIG.uri, neo4j.auth.basic(MEMGRAPH_CONFIG.user, MEMGRAPH_CONFIG.password), { disableLosslessIntegers: true });

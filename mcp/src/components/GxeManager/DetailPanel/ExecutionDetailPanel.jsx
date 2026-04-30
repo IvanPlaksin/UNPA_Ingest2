@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import useGxeManagerStore from '../../../stores/gxeManagerStore';
 import { fetchExecution } from '../../../services/gxeManager.service';
+import { getGraphById, listGraphs } from '../../../services/graphCatalog.service';
 
 import DetailHeader from './DetailHeader';
 import DetailTabBar from './DetailTabBar';
-import ControlBar from '../ControlBar/ControlBar';
 import OverviewTab from './tabs/OverviewTab';
+import GraphTab from './tabs/GraphTab';
+import ProcessTab from './tabs/ProcessTab';
 import TimelineTab from './tabs/TimelineTab';
 import NodeMapTab from './tabs/NodeMapTab';
 import MetricsTab from './tabs/MetricsTab';
@@ -16,6 +18,8 @@ import './ExecutionDetailPanel.css';
 
 const TAB_COMPONENTS = {
   overview: OverviewTab,
+  graph: GraphTab,
+  process: ProcessTab,
   timeline: TimelineTab,
   nodemap: NodeMapTab,
   metrics: MetricsTab,
@@ -32,12 +36,14 @@ const ExecutionDetailPanel = () => {
   const clearSelection = useGxeManagerStore(state => state.clearSelection);
 
   const [detailedExecution, setDetailedExecution] = useState(null);
+  const [catalogInfo, setCatalogInfo] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Fetch detailed execution data when selection changes
+  // Fetch detailed execution data + catalog graph info
   useEffect(() => {
     if (!selectedExecutionId) {
       setDetailedExecution(null);
+      setCatalogInfo(null);
       return;
     }
 
@@ -47,6 +53,25 @@ const ExecutionDetailPanel = () => {
       try {
         const data = await fetchExecution(selectedExecutionId);
         if (!cancelled) setDetailedExecution(data);
+
+        // Fetch catalog graph info (description, version, entryId)
+        if (data?.graphId) {
+          try {
+            let graph = null;
+            try { graph = await getGraphById(data.graphId); } catch { /* not found by entryId */ }
+            if (!graph && data.metadata?.graphName) {
+              const res = await listGraphs({ search: data.metadata.graphName, limit: 1 });
+              graph = res?.data?.[0] || null;
+            }
+            if (!cancelled && graph) {
+              setCatalogInfo({
+                description: graph.description || null,
+                catalogEntryId: graph.id,
+                versionNumber: graph.currentVersion || graph.version || null,
+              });
+            }
+          } catch { /* ignore */ }
+        }
       } catch (err) {
         console.error('Failed to load execution details:', err);
       } finally {
@@ -58,10 +83,16 @@ const ExecutionDetailPanel = () => {
     return () => { cancelled = true; };
   }, [selectedExecutionId]);
 
-  // Merge SSE-updated execution with detailed data
+  // Merge SSE-updated execution with catalog info
+  const enrichment = catalogInfo ? {
+    _graphDescription: catalogInfo.description,
+    _catalogEntryId: catalogInfo.catalogEntryId,
+    _resolvedVersion: catalogInfo.versionNumber,
+  } : {};
+
   const mergedExecution = execution
-    ? { ...detailedExecution, ...execution }
-    : detailedExecution;
+    ? { ...detailedExecution, ...execution, ...enrichment }
+    : detailedExecution ? { ...detailedExecution, ...enrichment } : null;
 
   if (!mergedExecution) {
     return (
@@ -76,7 +107,6 @@ const ExecutionDetailPanel = () => {
   return (
     <div className="gxe-detail">
       <DetailHeader execution={mergedExecution} onClose={clearSelection} />
-      <ControlBar execution={mergedExecution} />
       <DetailTabBar />
       <div className="gxe-detail__content">
         <TabComponent execution={mergedExecution} loading={loading} />

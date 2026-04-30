@@ -4,6 +4,9 @@ const adoService = require('../services/ado.service');
 const queueService = require('../services/queue.service');
 const { getCachedHealthCheck } = require('../services/redis.service');
 
+const QDRANT_URL = process.env.QDRANT_URL || 'http://localhost:6333';
+const APP_VERSION = require('../../package.json').version;
+
 /**
  * Compute health status for all services
  * @returns {Promise<Object>} Health status object
@@ -13,7 +16,7 @@ async function computeHealthStatus() {
         ado: 'unknown',
         redis: 'unknown',
         worker: 'unknown',
-        vector_db: 'mocked', // Since vector.service.js is a stub
+        vector_db: 'unknown',
         timestamp: new Date().toISOString()
     };
 
@@ -44,8 +47,86 @@ async function computeHealthStatus() {
         status.worker = 'error';
     }
 
+    // Check Qdrant
+    try {
+        const resp = await Promise.race([
+            fetch(`${QDRANT_URL}/collections`),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
+        ]);
+        status.vector_db = resp.ok ? 'connected' : 'error';
+    } catch (e) {
+        console.error("Qdrant check failed:", e.message);
+        status.vector_db = 'error';
+    }
+
     return status;
 }
+
+/**
+ * GET /health/live
+ * Kubernetes liveness probe — simple 200 if process is running
+ */
+router.get('/live', (_req, res) => {
+    res.json({ status: 'alive', version: APP_VERSION, uptime: Math.floor(process.uptime()) });
+});
+
+/**
+ * GET /health/ready
+ * Kubernetes readiness probe — checks Memgraph, Qdrant, Redis connectivity
+ */
+router.get('/ready', async (_req, res) => {
+    const services = {};
+    let allOk = true;
+
+    // Check Memgraph
+    try {
+        const memgraphService = require('../services/memgraph.service');
+        await Promise.race([
+            memgraphService.executeQuery('RETURN 1'),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
+        ]);
+        services.memgraph = 'ok';
+    } catch (e) {
+        services.memgraph = `error: ${e.message}`;
+        allOk = false;
+    }
+
+    // Check Qdrant
+    try {
+        const resp = await Promise.race([
+            fetch(`${QDRANT_URL}/collections`),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
+        ]);
+        services.qdrant = resp.ok ? 'ok' : `error: HTTP ${resp.status}`;
+        if (!resp.ok) allOk = false;
+    } catch (e) {
+        services.qdrant = `error: ${e.message}`;
+        allOk = false;
+    }
+
+    // Check Redis — use main redis.service client (has retry strategy); 5s timeout survives ECONNRESET reconnect window
+    try {
+        const redisService = require('../services/redis.service');
+        const client = redisService.getClient();
+        const res = await Promise.race([
+            client ? client.ping() : Promise.reject(new Error('no client')),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+        ]);
+        services.redis = res === 'PONG' ? 'ok' : 'error: unexpected response';
+        if (services.redis !== 'ok') allOk = false;
+    } catch (e) {
+        services.redis = `error: ${e.message}`;
+        allOk = false;
+    }
+
+    res.status(allOk ? 200 : 503).json({
+        status: allOk ? 'ready' : 'not_ready',
+        services,
+        version: APP_VERSION,
+        uptime: Math.floor(process.uptime()),
+        timestamp: new Date().toISOString()
+    });
+});
 
 /**
  * GET /health
@@ -54,9 +135,10 @@ async function computeHealthStatus() {
 router.get('/', async (req, res) => {
     const { data, cached } = await getCachedHealthCheck('main', computeHealthStatus);
 
-    // Add cache info to response
     res.json({
         ...data,
+        version: APP_VERSION,
+        uptime: Math.floor(process.uptime()),
         cached,
         cacheInfo: cached ? 'Result from Redis cache (TTL: 60s)' : 'Fresh result'
     });

@@ -243,7 +243,7 @@ export default function FlowDeskDemo() {
   const [selectedVersion, setSelectedVersion] = useState(null); // null = latest
   const [versionDropdownOpen, setVersionDropdownOpen] = useState(false);
   const [graphInfo, setGraphInfo] = useState(null);
-  const [selectedGraphId, setSelectedGraphId] = useState('96092967-0088-477d-9fcb-f7d6965b8863');
+  const [selectedGraphId, setSelectedGraphId] = useState('c39d8ac5-a25f-483c-b9ee-bd01433f11f5');
   const [catalogGraphs, setCatalogGraphs] = useState([]);
   const [graphSearch, setGraphSearch] = useState('');
   const [graphDropdownOpen, setGraphDropdownOpen] = useState(false);

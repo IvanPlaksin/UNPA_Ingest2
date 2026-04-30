@@ -7,8 +7,8 @@
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-4-20250514';
-const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 const TIMEOUT = 60000;
+const { getInstance: getLLMProvider } = require('../../llm/LLMProviderService');
 
 /**
  * Check if Claude is available
@@ -43,37 +43,16 @@ async function extractEntities(text, options = {}) {
   const prompt = buildPrompt(text);
 
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT);
-
-    const res = await fetch(ANTHROPIC_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: model,
-        max_tokens: 2048,
+    const resp = await Promise.race([
+      getLLMProvider().chat([{ role: 'user', content: prompt }], {
+        model,
+        maxTokens: 2048,
         temperature: 0.1,
-        messages: [{
-          role: 'user',
-          content: prompt
-        }]
       }),
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Claude request timeout')), TIMEOUT))
+    ]);
 
-    if (!res.ok) {
-      const error = await res.json().catch(() => ({}));
-      throw new Error(`Claude returned ${res.status}: ${error.error?.message || 'Unknown error'}`);
-    }
-
-    const data = await res.json();
-    const responseText = data.content?.[0]?.text || '';
-
+    const responseText = resp.content?.[0]?.text || resp.content || '';
     return parseResponse(responseText);
   } catch (err) {
     console.error(`[Claude] Extraction failed: ${err.message}`);

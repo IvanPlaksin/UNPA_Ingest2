@@ -1,4 +1,5 @@
 const { BaseTool } = require('../primitives/BaseTool.js');
+const { getInstance: getLLMProvider } = require('../../../services/llm/LLMProviderService');
 
 class ChatTool extends BaseTool {
   getDefinition() {
@@ -91,7 +92,7 @@ class ChatTool extends BaseTool {
           result = await this.chatOpenAI(messages, model || 'gpt-4o-mini', maxTokens, temperature, aiConfig);
           break;
         case 'anthropic':
-          result = await this.chatAnthropic(messages, model || 'claude-haiku-4-5-20251001', maxTokens, temperature, aiConfig);
+          result = await this.chatAnthropic(messages, model || 'haiku', maxTokens, temperature);
           break;
         case 'ollama':
           result = await this.chatOllama(messages, model || 'llama3.2', maxTokens, temperature, aiConfig);
@@ -164,42 +165,23 @@ class ChatTool extends BaseTool {
     };
   }
 
-  async chatAnthropic(messages, model, maxTokens, temperature, config) {
-    const apiKey = config.anthropicKey || process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) throw new Error('Anthropic API key not configured');
-
-    // Extract system message
+  async chatAnthropic(messages, model, maxTokens, temperature) {
     const systemMessage = messages.find(m => m.role === 'system');
     const chatMessages = messages.filter(m => m.role !== 'system');
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': apiKey,
-        'Content-Type': 'application/json',
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: maxTokens,
-        ...(systemMessage && { system: systemMessage.content }),
-        messages: chatMessages,
-        temperature
-      })
+    const data = await getLLMProvider().chat(chatMessages, {
+      model,
+      maxTokens,
+      temperature,
+      system: systemMessage?.content || undefined,
     });
 
-    if (!response.ok) {
-      throw new Error(`Anthropic API error: ${await response.text()}`);
-    }
-
-    const data = await response.json();
-
     return {
-      response: data.content[0].text,
+      response: data.content?.[0]?.text || '',
       usage: {
         promptTokens: data.usage?.input_tokens,
-        completionTokens: data.usage?.output_tokens
-      }
+        completionTokens: data.usage?.output_tokens,
+      },
     };
   }
 

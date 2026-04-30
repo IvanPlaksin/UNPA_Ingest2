@@ -12,6 +12,7 @@ import './GxeManagerMonitor.css';
 
 const GxeManagerMonitor = () => {
   const detailPanelOpen = useGxeManagerStore(state => state.detailPanelOpen);
+  const filters = useGxeManagerStore(state => state.filters);
   const setExecutions = useGxeManagerStore(state => state.setExecutions);
   const upsertExecution = useGxeManagerStore(state => state.upsertExecution);
   const updateExecutionStatus = useGxeManagerStore(state => state.updateExecutionStatus);
@@ -22,17 +23,31 @@ const GxeManagerMonitor = () => {
 
   const [newExecDialogOpen, setNewExecDialogOpen] = useState(false);
   const sseRef = useRef(null);
+  const debounceRef = useRef(null);
 
-  // ─── Load initial data ─────────────────────────────────────────────
-  const loadData = useCallback(async () => {
+  // ─── Build query params from current filters ──────────────────────
+  const buildQueryParams = useCallback((currentFilters) => {
+    const params = { limit: 200 };
+    if (currentFilters.status?.length > 0) {
+      params.status = currentFilters.status.join(',');
+    }
+    if (currentFilters.dateFrom) params.since = currentFilters.dateFrom;
+    if (currentFilters.dateTo) params.until = currentFilters.dateTo;
+    if (currentFilters.graphId) params.graphId = currentFilters.graphId;
+    return params;
+  }, []);
+
+  // ─── Load data (respects filters) ─────────────────────────────────
+  const loadData = useCallback(async (currentFilters) => {
     setLoading('executions', true);
     setLoading('stats', true);
     try {
+      const params = buildQueryParams(currentFilters || {});
       const [execs, statsData] = await Promise.all([
-        gxeService.fetchExecutions(),
+        gxeService.fetchExecutions(params),
         gxeService.fetchStats(),
       ]);
-      console.log('[GxeManager] Loaded:', { execCount: execs?.executions?.length, statsKeys: Object.keys(statsData || {}) });
+      console.log('[GxeManager] Loaded:', { execCount: execs?.executions?.length, params });
       setExecutions(execs.executions || execs || []);
       setStats(statsData);
       setError(null);
@@ -43,7 +58,7 @@ const GxeManagerMonitor = () => {
       setLoading('executions', false);
       setLoading('stats', false);
     }
-  }, [setExecutions, setStats, setLoading, setError]);
+  }, [setExecutions, setStats, setLoading, setError, buildQueryParams]);
 
   // ─── SSE connection ────────────────────────────────────────────────
   const connectToSSE = useCallback(() => {
@@ -54,9 +69,15 @@ const GxeManagerMonitor = () => {
       onExecution: (data) => {
         if (data.executionId) upsertExecution(data);
       },
-      onStatus: (data) => {
-        if (data.executionId && data.to) {
-          updateExecutionStatus(data.executionId, data.to, data.metadata);
+      onStatus: async (data) => {
+        if (!data.executionId) return;
+        // Status events carry partial data — fetch the full record
+        try {
+          const full = await gxeService.fetchExecution(data.executionId);
+          if (full) upsertExecution(full);
+        } catch {
+          // Fallback: apply what we have
+          if (data.status) updateExecutionStatus(data.executionId, data.status);
         }
       },
       onResult: (data) => {
@@ -69,8 +90,9 @@ const GxeManagerMonitor = () => {
     });
   }, [setSseStatus, upsertExecution, updateExecutionStatus]);
 
+  // ─── Initial load + SSE ─────────────────────────────────────────────
   useEffect(() => {
-    loadData();
+    loadData(filters);
     connectToSSE();
 
     const interval = setInterval(async () => {
@@ -84,7 +106,23 @@ const GxeManagerMonitor = () => {
       clearInterval(interval);
       gxeService.disconnectSSE();
     };
-  }, [loadData, connectToSSE, setStats]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connectToSSE, setStats]);
+
+  // ─── Re-fetch when server-side filters change ─────────────────────
+  const filtersKey = JSON.stringify([filters.status, filters.graphId, filters.dateFrom, filters.dateTo]);
+  const isFirstMount = useRef(true);
+
+  useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => loadData(filters), 300);
+    return () => clearTimeout(debounceRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtersKey]);
 
   const handleNewExecution = useCallback(() => {
     setNewExecDialogOpen(true);

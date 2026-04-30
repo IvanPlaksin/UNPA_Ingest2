@@ -221,19 +221,25 @@ class NodeRunner {
       // Executors return { __type: 'WAIT_FOR_SIGNAL', contract: {...} }
       // to trigger async signal waiting with full resolution policy support
       // ═══════════════════════════════════════════════════════════════════════
+      console.log(`[NodeRunner] ${nodeId} result __type:`, result?.__type, '| keys:', result ? Object.keys(result).join(',') : 'null');
       if (result && result.__type === 'WAIT_FOR_SIGNAL') {
+        console.log(`[NodeRunner] ${nodeId} ENTERING WAIT_FOR_SIGNAL block`);
+        console.log(`[NodeRunner] ${nodeId} contract resumeToken:`, result.contract?.resumeToken ? 'YES' : 'NO');
         const { AsyncSignalContract } = require('../signals/async-signal-contract');
         const contract = new AsyncSignalContract({
           ...result.contract,
           contextRef: {
+            ...(result.contract?.contextRef || {}),
+            // NodeRunner values OVERRIDE executor values (executor may not have nodeId)
             execution_id: ctx.executionId,
             node_id: nodeId,
-            ...(result.contract?.contextRef || {}),
           },
         });
 
         const validation = contract.validate();
+        console.log(`[NodeRunner] ${nodeId} contract validation:`, JSON.stringify(validation));
         if (!validation.valid) {
+          console.log(`[NodeRunner] ${nodeId} INVALID CONTRACT:`, validation.errors);
           return this._failure(
             'INVALID_SIGNAL_CONTRACT',
             FailurePhase.EXECUTE,
@@ -264,6 +270,7 @@ class NodeRunner {
           timeout_action: result.timeout_action,
           prompt: result.prompt,
           choices: result.choices || null,
+          accumulated_state: result.accumulated_state || null,
           response: result.response || result.prompt,
         };
         // Wrap legacy format in AsyncSignalContract for SignalOrchestrator
@@ -371,7 +378,7 @@ class NodeRunner {
     // Basic type checking for defined properties
     if (schema.properties) {
       for (const [field, propSchema] of Object.entries(schema.properties)) {
-        if (input[field] !== undefined && propSchema.type) {
+        if (input[field] !== undefined && input[field] !== null && propSchema.type) {
           const actualType = Array.isArray(input[field]) ? 'array' : typeof input[field];
           const allowedTypes = Array.isArray(propSchema.type) ? propSchema.type : [propSchema.type];
           if (!allowedTypes.includes(actualType) && !allowedTypes.includes('any')) {

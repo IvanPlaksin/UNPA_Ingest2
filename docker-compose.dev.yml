@@ -1,0 +1,84 @@
+# ═══════════════════════════════════════════════════════════════════
+# Development Override
+# ═══════════════════════════════════════════════════════════════════
+#
+# Usage:
+#   docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+#   make dev  (shortcut via Makefile)
+#
+# ═══════════════════════════════════════════════════════════════════
+
+
+
+services:
+  # ─────────────────────────────────────────────────────────────
+  # API — Development mode with hot reload
+  # ─────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+      target: deps
+    command: npx nodemon --watch src --ext js,json index.js
+    volumes:
+      - ./api/src:/app/src:ro
+      - ./api/index.js:/app/index.js:ro
+      - ./api/scripts:/app/scripts:ro
+    ports:
+      - "${API_PORT:-3010}:3000"
+    environment:
+      - NODE_ENV=development
+      - LOG_LEVEL=debug
+      - LOG_FORMAT=pretty
+      - RATE_LIMIT_ENABLED=false
+      - ENABLE_SWAGGER=true
+      - ENABLE_WEBSOCKET=true
+      - ENABLE_JOB_QUEUE=false
+
+  # ─────────────────────────────────────────────────────────────
+  # Redis — Expose debug port
+  # ─────────────────────────────────────────────────────────────
+  redis:
+    ports:
+      - "6379:6379"
+
+  # ─────────────────────────────────────────────────────────────
+  # Memgraph — More verbose logging
+  # ─────────────────────────────────────────────────────────────
+  memgraph:
+    command: ["--log-level=INFO", "--memory-limit=512", "--also-log-to-stderr"]
+    ports:
+      - "7687:7687"
+      - "7444:7444"
+
+  # ─────────────────────────────────────────────────────────────
+  # Qdrant — Expose both ports
+  # ─────────────────────────────────────────────────────────────
+  qdrant:
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+
+  # ─────────────────────────────────────────────────────────────
+  # MSSQL — Expose port, trust self-signed cert
+  # ─────────────────────────────────────────────────────────────
+  mssql:
+    ports:
+      - "1433:1433"
+
+  # ─────────────────────────────────────────────────────────────
+  # Frontend — Vite dev server with HMR
+  # ─────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./mcp
+      target: deps
+    command: npm run dev -- --host 0.0.0.0
+    volumes:
+      - ./mcp/src:/app/src:ro
+      - ./mcp/index.html:/app/index.html:ro
+      - ./mcp/vite.config.js:/app/vite.config.js:ro
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    profiles:
+      - ui

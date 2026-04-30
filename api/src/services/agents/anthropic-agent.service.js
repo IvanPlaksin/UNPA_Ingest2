@@ -8,7 +8,7 @@
  * Implements proper agentic loop with streaming.
  */
 
-const Anthropic = require('@anthropic-ai/sdk');
+const { getInstance: getLLMProvider } = require('./llm/LLMProviderService');
 const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
 const { StdioClientTransport } = require('@modelcontextprotocol/sdk/client/stdio.js');
 const { CODEX_TOOLS, executeCodexTool } = require('../codex/codex-tools');
@@ -17,7 +17,6 @@ const { filterToolsForTask, classifyTaskIntent } = require('../graph/tool-filter
 const { CatalogReuseService } = require('../graph/catalog-reuse.service');
 
 const MCP_SERVER_PATH = process.env.MCP_SERVER_PATH || 'd:/UN/Repos/MCP_CLAUDE/mcp-server/dist/index.js';
-const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514';
 const MAX_AGENT_ITERATIONS = 10;
 
 /**
@@ -46,7 +45,7 @@ const OVERLOAD_BACKOFF_BASE_MS = parseInt(process.env.AGENT_OVERLOAD_BACKOFF_MS 
 
 class AnthropicAgentService {
   constructor() {
-    this.anthropic = new Anthropic({ maxRetries: 3 });
+    this.llmProvider = getLLMProvider();
     this.mcpClient = null;
     this.mcpTransport = null;
     this.allTools = [];
@@ -75,7 +74,7 @@ class AnthropicAgentService {
         args: [MCP_SERVER_PATH],
         env: {
           ...process.env,
-          CODEX_API_URL: 'http://localhost:3010/api/v1/codex',
+          CODEX_API_URL: process.env.CODEX_API_URL || `${process.env.API_BASE_URL || 'http://localhost:3010'}/api/v1/codex`,
         },
       });
 
@@ -302,12 +301,11 @@ A related graph "${reuseResult.bestMatch.name}" exists in the catalog (${(reuseR
         let overloadRetries = 0;
         while (true) {
           try {
-            stream = this.anthropic.messages.stream({
-              model: ANTHROPIC_MODEL,
-              max_tokens: 8192,
+            stream = this.llmProvider.stream(currentMessages, {
+              model: 'sonnet',
+              maxTokens: 8192,
               system: effectiveSystemPrompt,
               tools: activeTools,
-              messages: currentMessages,
             });
             break; // success
           } catch (apiErr) {

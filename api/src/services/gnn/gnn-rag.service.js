@@ -29,7 +29,7 @@ class GNNRAGService {
     constructor(options = {}) {
         this.options = {
             // GNN settings
-            gnnServiceUrl: options.gnnServiceUrl || process.env.GNN_SERVICE_URL || 'http://localhost:5000',
+            gnnServiceUrl: options.gnnServiceUrl || process.env.GNN_SERVICE_URL || 'http://localhost:5001',
             embeddingDim: options.embeddingDim || 256,
 
             // Hybrid scoring weights

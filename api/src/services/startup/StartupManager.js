@@ -28,15 +28,47 @@ class StartupManager {
   }
 
   /**
+   * Validate required environment variables before startup.
+   * Exits with code 1 if any critical variable is missing.
+   */
+  validateRequiredEnvVars() {
+    const missing = [];
+
+    // Always required
+    const always = ['MEMGRAPH_URI', 'QDRANT_URL', 'REDIS_HOST'];
+    for (const v of always) {
+      if (!process.env[v]) missing.push(v);
+    }
+
+    // LLM provider-specific
+    const provider = process.env.LLM_PROVIDER || 'anthropic';
+    if (provider === 'azure') {
+      for (const v of ['AZURE_AI_ENDPOINT', 'AZURE_AI_KEY']) {
+        if (!process.env[v]) missing.push(v);
+      }
+    } else {
+      if (!process.env.ANTHROPIC_API_KEY) missing.push('ANTHROPIC_API_KEY');
+    }
+
+    if (missing.length > 0) {
+      this._log('error', `Missing required environment variables: ${missing.join(', ')}. Set them in .env or container environment.`);
+      process.exit(1);
+    }
+  }
+
+  /**
    * Initialize all background services.
    * Call after all core services (memgraph, qdrant, redis) are ready.
    */
   async initialize() {
     if (this._initialized) return this;
 
+    this.validateRequiredEnvVars();
     this._log('info', 'Initializing background services...');
 
     await this._initWorkspaceSchema();
+    await this._initDialogueSchema();
+    await this._initDialogueCollection();
     await this._initExtractionQueue();
     this._initOrphanDetector();
     this._initTombstoneExpirer();
@@ -64,6 +96,36 @@ class StartupManager {
       }
     } catch (err) {
       this._log('warn', `WorkSpace schema init skipped: ${err.message}`);
+    }
+  }
+
+  // ─── Dialogue Schema ──────────────────────────────────────────────
+
+  async _initDialogueSchema() {
+    try {
+      const { SchemaLoaderService } = require('../memgraph/schema-loader.service');
+      const memgraphService = require('../memgraph.service');
+      const loader = new SchemaLoaderService(memgraphService);
+      const result = await loader.loadSchema('dialogue-schema');
+      if (result.success) {
+        this._log('info', `Dialogue schema loaded (${result.statements} statements)`);
+      } else {
+        this._log('warn', `Dialogue schema loaded with ${result.errors.length} errors`);
+      }
+    } catch (err) {
+      this._log('warn', `Dialogue schema init skipped: ${err.message}`);
+    }
+  }
+
+  // ─── Dialogue Qdrant Collection ───────────────────────────────────
+
+  async _initDialogueCollection() {
+    try {
+      const { dialogueQdrantService } = require('../../core/aopeg/plugins/dialogue/services/dialogue.qdrant');
+      await dialogueQdrantService.initCollection();
+      this._log('info', 'Dialogue Qdrant collection initialized');
+    } catch (err) {
+      this._log('warn', `Dialogue collection init skipped: ${err.message}`);
     }
   }
 

@@ -1,0 +1,246 @@
+/* UnpaChat — scoped CSS with variables for theming */
+
+.unpa-chat-root {
+  --unpa-bg-primary: #0d1117;
+  --unpa-bg-secondary: #161b22;
+  --unpa-bg-tertiary: #21262d;
+  --unpa-border: #30363d;
+  --unpa-text-primary: #e6edf3;
+  --unpa-text-secondary: #8b949e;
+  --unpa-accent: #6366f1;
+  --unpa-accent-hover: #818cf8;
+  --unpa-user-bg: rgba(99, 102, 241, 0.12);
+  --unpa-bot-bg: var(--unpa-bg-secondary);
+  --unpa-error-color: #f85149;
+  --unpa-success-color: #3fb950;
+  --unpa-input-bg: var(--unpa-bg-tertiary);
+  --unpa-radius: 12px;
+  --unpa-radius-sm: 6px;
+  --unpa-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  font-family: var(--unpa-font);
+  background: var(--unpa-bg-primary);
+  color: var(--unpa-text-primary);
+  border-radius: var(--unpa-radius);
+  overflow: hidden;
+}
+
+/* Light theme override */
+.unpa-chat-root.unpa-theme-light {
+  --unpa-bg-primary: #ffffff;
+  --unpa-bg-secondary: #f6f8fa;
+  --unpa-bg-tertiary: #eaeef2;
+  --unpa-border: #d0d7de;
+  --unpa-text-primary: #1f2328;
+  --unpa-text-secondary: #656d76;
+  --unpa-user-bg: rgba(99, 102, 241, 0.08);
+  --unpa-bot-bg: var(--unpa-bg-secondary);
+  --unpa-input-bg: #ffffff;
+}
+
+/* ── Messages ─────────────────────────────────────────── */
+
+.unpa-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--unpa-border) transparent;
+}
+
+.unpa-chat-message {
+  display: flex;
+  gap: 10px;
+  animation: unpa-fadein 0.18s ease;
+}
+
+.unpa-chat-message-user {
+  flex-direction: row-reverse;
+}
+
+.unpa-chat-message-user .unpa-chat-message-content {
+  background: var(--unpa-user-bg);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: var(--unpa-radius) 4px var(--unpa-radius) var(--unpa-radius);
+  color: var(--unpa-text-primary);
+}
+
+.unpa-chat-message-bot .unpa-chat-message-content {
+  background: var(--unpa-bot-bg);
+  border: 1px solid var(--unpa-border);
+  border-radius: 4px var(--unpa-radius) var(--unpa-radius) var(--unpa-radius);
+}
+
+.unpa-chat-message-error .unpa-chat-message-content {
+  border-color: var(--unpa-error-color);
+  background: rgba(248, 81, 73, 0.08);
+}
+
+.unpa-chat-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--unpa-bg-tertiary);
+  border: 1px solid var(--unpa-border);
+  color: var(--unpa-text-secondary);
+}
+
+.unpa-chat-message-user .unpa-chat-avatar {
+  background: rgba(99, 102, 241, 0.2);
+  color: var(--unpa-accent);
+}
+
+.unpa-chat-message-content {
+  max-width: calc(100% - 80px);
+  padding: 8px 12px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.unpa-chat-message-content p {
+  margin: 2px 0;
+}
+
+/* Typing indicator */
+.unpa-chat-typing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--unpa-text-secondary);
+  font-size: 12px;
+  padding: 8px 12px;
+}
+
+.unpa-chat-spin {
+  animation: unpa-spin 1s linear infinite;
+}
+
+/* ── Choices ──────────────────────────────────────────── */
+
+.unpa-chat-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.unpa-chat-choice-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  background: var(--unpa-bg-tertiary);
+  border: 1px solid var(--unpa-border);
+  border-radius: 20px;
+  color: var(--unpa-text-primary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.unpa-chat-choice-btn:hover:not(.disabled) {
+  border-color: var(--unpa-accent);
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--unpa-accent-hover);
+}
+
+.unpa-chat-choice-btn.selected {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: var(--unpa-accent);
+  color: var(--unpa-accent-hover);
+}
+
+.unpa-chat-choice-btn.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.unpa-chat-choice-label {
+  font-size: 11px;
+  color: var(--unpa-accent);
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.unpa-chat-choice-prompt {
+  font-size: 12px;
+  color: var(--unpa-text-secondary);
+  margin-bottom: 8px;
+}
+
+/* ── Input area ───────────────────────────────────────── */
+
+.unpa-chat-input-area {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--unpa-border);
+  background: var(--unpa-bg-secondary);
+}
+
+.unpa-chat-input {
+  flex: 1;
+  padding: 8px 12px;
+  background: var(--unpa-input-bg);
+  border: 1px solid var(--unpa-border);
+  border-radius: var(--unpa-radius-sm);
+  color: var(--unpa-text-primary);
+  font-size: 13px;
+  font-family: var(--unpa-font);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.unpa-chat-input:focus {
+  border-color: var(--unpa-accent);
+}
+
+.unpa-chat-input::placeholder {
+  color: var(--unpa-text-secondary);
+}
+
+.unpa-chat-send-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--unpa-accent);
+  border: none;
+  border-radius: var(--unpa-radius-sm);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.unpa-chat-send-btn:hover:not(:disabled) {
+  background: var(--unpa-accent-hover);
+}
+
+.unpa-chat-send-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Animations ───────────────────────────────────────── */
+
+@keyframes unpa-fadein {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes unpa-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}

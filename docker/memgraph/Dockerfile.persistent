@@ -1,0 +1,21 @@
+FROM memgraph/memgraph:2.20.1
+
+USER root
+
+# Install Azure CLI
+RUN apt-get update && apt-get install -y \
+    curl \
+    ca-certificates \
+    gnupg \
+    lsb-release \
+    gzip \
+    && curl -sL https://aka.ms/InstallAzureCLIDeb | bash \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+USER memgraph
+
+ENTRYPOINT ["/entrypoint.sh"]

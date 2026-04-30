@@ -202,10 +202,19 @@ async function getDraftsForPromotion(workspaceId, options = {}) {
   q += ' RETURN d ORDER BY d.type, d.name';
 
   const result = await mg().runQuery(q, { wsId: workspaceId, draftIds });
+  console.log(`${LOG_PREFIX} getDraftsForPromotion: runQuery returned ${result.length} results`);
+  if (result.length > 0) {
+    const r0 = result[0];
+    console.log(`${LOG_PREFIX} First result keys: ${Object.keys(r0)}, has d: ${!!r0.d}, type d: ${typeof r0.d}`);
+    if (r0.d) console.log(`${LOG_PREFIX} d keys: ${Object.keys(r0.d)}, has properties: ${!!r0.d.properties}`);
+  }
   return result.map(r => {
-    const props = r.d?.properties || r.d;
+    // runQuery returns { d: <Neo4j Node with .properties> } or { d: <plain object> }
+    const node = r.d;
+    if (!node) return null;
+    const props = node.properties || node;
     return { ...props, content: typeof props.content === 'string' ? JSON.parse(props.content) : props.content };
-  });
+  }).filter(Boolean);
 }
 
 module.exports = {

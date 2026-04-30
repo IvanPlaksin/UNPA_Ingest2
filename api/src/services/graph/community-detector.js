@@ -13,7 +13,7 @@ class CommunityDetector {
   constructor() {
     this.driver = memgraphService.driver;
     this._mageAvailable = null; // lazily detected
-    this._gnnServiceUrl = process.env.GNN_SERVICE_URL || 'http://localhost:5000';
+    this._gnnServiceUrl = process.env.GNN_SERVICE_URL || 'http://localhost:5001';
     this._gnnAvailable = null; // lazily detected
   }
 

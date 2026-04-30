@@ -1,0 +1,37 @@
+# Core ML
+torch>=2.1.0
+torch-geometric>=2.4.0
+torch-scatter>=2.1.2
+torch-sparse>=0.6.18
+
+# DSPy for prompt optimization
+dspy-ai>=2.4.0
+
+# Graph database
+neo4j>=5.14.0
+
+# Vector store
+qdrant-client>=1.7.0
+
+# API
+fastapi>=0.104.0
+uvicorn>=0.24.0
+pydantic>=2.5.0
+
+# Utils
+numpy>=1.24.0
+scipy>=1.11.0
+scikit-learn>=1.3.0
+pandas>=2.1.0
+pyyaml>=6.0.1
+python-dotenv>=1.0.0
+
+# Redis for caching
+redis>=5.0.0
+
+# Logging
+structlog>=23.2.0
+
+# Monitoring
+prometheus-client>=0.17.0
+psutil>=5.9.0

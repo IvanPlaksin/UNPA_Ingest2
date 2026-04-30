@@ -33,6 +33,21 @@ router.get('/summary', (_req, res) => {
   res.json({ success: true, data: metrics.getSummary() });
 });
 
+/** GET /api/v1/metrics/dialogue — DevDialogue Collector stats */
+router.get('/dialogue', async (_req, res) => {
+  try {
+    const { getDialogueMetrics } = require('../core/aopeg/plugins/dialogue/services/dialogue.metrics');
+    const collector = getDialogueMetrics();
+    const [snapshot, inMemory] = await Promise.all([
+      collector.collectSnapshot(),
+      Promise.resolve(collector.getInMemoryMetrics()),
+    ]);
+    res.json({ success: true, data: { ...snapshot, runtime: inMemory } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 /** POST /api/v1/metrics/reset — Clear all metrics (admin) */
 router.post('/reset', (_req, res) => {
   metrics.reset();

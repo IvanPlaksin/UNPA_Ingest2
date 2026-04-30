@@ -7,7 +7,7 @@ const CONFIG = {
     neo4j: {
         uri: process.env.NEO4J_URI || 'bolt://localhost:7687',
         user: process.env.NEO4J_USERNAME || process.env.NEO4J_USER || 'memgraph',
-        password: process.env.NEO4J_PASSWORD || 'secret_password_123'
+        password: process.env.NEO4J_PASSWORD || process.env.MEMGRAPH_PASSWORD || 'secret_password_123'
     },
     ollama: {
         baseUrl: process.env.OLLAMA_URL || 'http://localhost:11434'

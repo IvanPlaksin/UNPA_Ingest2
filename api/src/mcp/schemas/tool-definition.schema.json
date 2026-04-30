@@ -2,13 +2,13 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "gxe-tool-definition",
   "type": "object",
-  "required": ["id", "name", "version", "level", "category", "description", "inputSchema", "outputSchema", "safetyLevel", "sideEffects"],
+  "required": ["id", "name", "version", "level", "category", "description", "inputSchema", "safetyLevel", "sideEffects"],
   "properties": {
     "id": { "type": "string", "pattern": "^[a-z]+\\.[a-z_]+$" },
     "name": { "type": "string" },
     "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
     "level": { "type": "integer", "enum": [1, 2, 3, 4] },
-    "category": { "type": "string", "enum": ["primitive", "text", "extraction", "vector", "graph", "ai", "control", "pattern", "meta", "data", "catalog", "backlog"] },
+    "category": { "type": "string", "enum": ["primitive", "text", "extraction", "vector", "graph", "ai", "control", "execution-control", "pattern", "meta", "data", "catalog", "backlog", "document", "workspace", "dialogue"] },
     "description": { "type": "string" },
     "inputSchema": { "type": "object" },
     "outputSchema": { "type": "object" },
@@ -18,7 +18,7 @@
     "sideEffects": { "type": "array", "items": { "type": "string", "enum": ["READ", "WRITE", "DELETE", "EXTERNAL_CALL"] } },
     "toolNamespace": {
       "type": "string",
-      "enum": ["CODEX", "CORE", "PROJECT"],
+      "enum": ["CODEX", "CORE", "PROJECT", "DIALOGUE"],
       "description": "Knowledge domain this tool belongs to: CODEX (standards/governance), CORE (platform infrastructure), PROJECT (target project tools)"
     },
     "resourceEstimate": {

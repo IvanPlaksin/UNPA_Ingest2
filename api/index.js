@@ -93,6 +93,7 @@ const monitorRoutes = require('./src/routes/monitor.route');
 const kbHealthRoutes = require('./src/routes/kb-health.route');
 const metacognitionRoutes = require('./src/routes/metacognition.route');
 const workspaceRoutes = require('./src/routes/workspace.routes');
+const dialogueRoutes = require('./src/routes/dialogue.route');
 const { initFormRoutes } = require('./src/routes/structural-form.route');
 const { initStructuralRoutes } = require('./src/routes/structural.route');
 
@@ -206,6 +207,7 @@ try {
 app.use('/api/v1/metrics', require('./src/routes/metrics.route'));
 app.use('/api/v1/metacognition', metacognitionRoutes);
 app.use('/api/v1/workspaces', workspaceRoutes);
+app.use('/api/v1/dialogue', dialogueRoutes);
 const _mg = require('./src/services/memgraph.service');
 app.use('/api/v1/forms', initFormRoutes(_mg));
 const { getFormService } = require('./src/routes/structural-form.route');
@@ -224,38 +226,24 @@ async function startServer() {
   try {
     logger.info(`Starting UN ProjectAdvisor API [${envConfig.env}]...`);
 
-    try {
-      await connectToAdo();
-      logger.info('Connected to Azure DevOps');
-    } catch (adoError) {
-      logger.warn('Azure DevOps connection failed — continuing without ADO features', { error: adoError.message });
-    }
+    // Fire-and-forget background init — server must start immediately for ACA health probes
+    connectToAdo()
+      .then(() => logger.info('Connected to Azure DevOps'))
+      .catch(err => logger.warn('Azure DevOps connection failed — continuing without ADO features', { error: err.message }));
 
-    // Initialize storage layer (Graph + Vector)
-    await initializeStorage().catch(err => {
-      logger.warn('Storage initialization warning', { error: err.message });
-    });
+    initializeStorage().catch(err => logger.warn('Storage initialization warning', { error: err.message }));
 
-    // Initialize background job queues
     if (envConfig.features.enableJobQueue) {
-      await jobQueueService.initialize().catch(err => {
-        logger.warn('Job queue initialization warning', { error: err.message });
-      });
+      jobQueueService.initialize().catch(err => logger.warn('Job queue initialization warning', { error: err.message }));
     }
 
-    // CC-031: Initialize background jobs (OrphanDetector, TombstoneExpirer)
     const startupManager = getStartupManager(logger);
-    await startupManager.initialize().catch(err => {
-      logger.warn('StartupManager initialization warning', { error: err.message });
-    });
+    startupManager.initialize().catch(err => logger.warn('StartupManager initialization warning', { error: err.message }));
 
-    // PH-001: Audit agent tool whitelists at startup
     try {
       const { auditAllWhitelists } = require('./src/middleware/whitelist-audit');
       const auditResult = auditAllWhitelists();
-      if (!auditResult.allSafe) {
-        logger.error('Whitelist audit FAILED — check logs for violations');
-      }
+      if (!auditResult.allSafe) logger.error('Whitelist audit FAILED — check logs for violations');
     } catch (err) {
       logger.warn('Whitelist audit skipped', { error: err.message });
     }
@@ -269,6 +257,19 @@ async function startServer() {
       logger.info('WebSocket initialized');
     }
 
+    // Start dialogue file watcher (incremental processing of new Claude Code sessions)
+    let dialogueWatcher = null;
+    if (process.env.DIALOGUE_WATCHER_ENABLED !== 'false') {
+      try {
+        const { getWatcher } = require('./src/core/aopeg/plugins/dialogue/services/dialogue.watcher');
+        dialogueWatcher = getWatcher();
+        dialogueWatcher.start();
+        logger.info('DialogueWatcher started');
+      } catch (err) {
+        logger.warn('DialogueWatcher start failed', { error: err.message });
+      }
+    }
+
     // Graceful shutdown — close all services holding the event loop open
     createShutdownHandler(server, [
       () => startupManager.shutdown(),
@@ -279,6 +280,7 @@ async function startServer() {
       () => stopSessionCleanup(),
       () => getTensorService()?.stopCleanup?.(),
       () => getQueryCache()?.shutdown?.(),
+      () => dialogueWatcher?.stop?.(),
     ]);
 
     server.listen(port, envConfig.server.host, () => {

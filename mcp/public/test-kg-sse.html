@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>KG SSE Test</title>
+  <style>
+    body { background: #0d1117; color: #c9d1d9; font-family: monospace; padding: 20px; }
+    .stage { padding: 8px; margin: 4px 0; border: 1px solid #30363d; border-radius: 6px; }
+    .stage.pending { border-color: #555; }
+    .stage.running { border-color: #58a6ff; background: rgba(88,166,255,0.1); }
+    .stage.done { border-color: #3fb950; background: rgba(63,185,80,0.1); }
+    .stage.error { border-color: #f85149; background: rgba(248,81,73,0.1); }
+    .log { font-size: 11px; color: #8b949e; margin: 2px 0; }
+    button { background: #238636; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+    button:hover { background: #2ea043; }
+    #events { max-height: 300px; overflow: auto; font-size: 11px; background: #161b22; padding: 10px; border-radius: 6px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h2>Knowledge Graph SSE Test</h2>
+  <button onclick="runTest()">Run KG Generation</button>
+  <div id="stages"></div>
+  <h3>Raw Events</h3>
+  <div id="events"></div>
+
+  <script>
+    const STAGES = [
+      { id: 'parse', label: 'Text Preprocessing' },
+      { id: 'chunk', label: 'Semantic Chunking' },
+      { id: 'extract', label: 'Entity & Relation Extraction' },
+      { id: 'deduplicate', label: 'Deduplication' },
+      { id: 'graph_build', label: 'Graph Construction' },
+      { id: 'ai_analysis', label: 'AI Quality Analysis' }
+    ];
+
+    let stageStates = {};
+    STAGES.forEach(s => stageStates[s.id] = 'pending');
+
+    function renderStages() {
+      const el = document.getElementById('stages');
+      el.innerHTML = STAGES.map(s => {
+        const status = stageStates[s.id];
+        return `<div class="stage ${status}"><strong>${s.label}</strong> — ${status}</div>`;
+      }).join('');
+    }
+
+    function addEvent(text) {
+      const el = document.getElementById('events');
+      el.innerHTML += `<div class="log">${new Date().toISOString().slice(11,23)} ${text}</div>`;
+      el.scrollTop = el.scrollHeight;
+    }
+
+    async function runTest() {
+      renderStages();
+      addEvent('Starting KG generation...');
+
+      const response = await fetch('/api/v1/gxe/generate-knowledge-graph', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: 'John works at Microsoft. Sarah manages John. Microsoft is in Redmond.' })
+      });
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() || '';
+
+        for (const part of parts) {
+          const lines = part.trim().split('\n');
+          let eventType = 'message';
+          let eventData = null;
+
+          for (const line of lines) {
+            if (line.startsWith(':')) continue;
+            if (line.startsWith('event: ')) eventType = line.slice(7).trim();
+            else if (line.startsWith('data: ')) {
+              try { eventData = JSON.parse(line.slice(6)); } catch(e) {}
+            }
+          }
+
+          if (eventData) {
+            const event = { type: eventType, ...eventData };
+            addEvent(`[${event.type}] ${event.stage || ''} ${event.status || ''} ${event.message || event.title || ''}`);
+
+            if (event.type === 'stage_update') {
+              const status = event.status === 'done' ? 'done' : event.status === 'error' ? 'error' : 'running';
+              stageStates[event.stage] = status;
+              renderStages();
+            }
+
+            if (event.type === 'complete') {
+              addEvent(`COMPLETE! Nodes: ${(event.nodes||[]).length}, Edges: ${(event.edges||[]).length}, AI: ${event.aiAnalysis ? 'YES (' + event.aiAnalysis.completenessScore + '%)' : 'NO'}`);
+            }
+          }
+        }
+      }
+      reader.releaseLock();
+      addEvent('Stream ended.');
+    }
+
+    renderStages();
+  </script>
+</body>
+</html>

@@ -17,7 +17,7 @@ module.exports = {
   },
   security: {
     cors: {
-      origins: process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : ['*'],
+      origins: (process.env.CORS_ORIGINS || '').split(',').filter(Boolean),
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
       credentials: true
     },

@@ -91,7 +91,7 @@ const GnnAnalysisPrompt = () => {
   useEffect(() => {
     if (!showGnnPrompt) return;
     let cancelled = false;
-    fetch(`${import.meta.env.VITE_GNN_URL || 'http://localhost:5000'}/health`)
+    fetch(`${import.meta.env.VITE_GNN_URL || 'http://localhost:5001'}/health`)
       .then(r => r.json())
       .then(h => {
         if (cancelled) return;

@@ -322,7 +322,7 @@ async function seedRules() {
 
       await mg().runQuery(`
         CREATE (r:CodexRule {
-          id: $id, codexId: $codexId, namespace: 'CODEX', nodeType: 'CodexRule',
+          id: $id, codexId: $codexId, namespace: 'Codex', nodeType: 'CodexRule',
           title: $title, summary: $summary, modality: $modality, scope: $scope,
           tier: 'M2', status: 'ACTIVE', rationale: $rationale,
           examples: $examples, antiPatterns: $antiPatterns,

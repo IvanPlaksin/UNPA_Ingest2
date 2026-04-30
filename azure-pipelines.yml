@@ -1,0 +1,455 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# UN ProjectAdvisor — Azure Pipelines CI/CD
+#
+# Stages:
+#   CI        — unit tests (API + frontend), runs on every push/PR
+#   Build     — Docker images → Azure Container Registry (main branch only)
+#   Staging   — deploy to staging Container Apps (auto)
+#   Production — deploy to production Container Apps (manual approval)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    exclude:
+      - '**/*.md'
+      - 'docs/**'
+      - 'scripts/**'
+
+pr:
+  branches:
+    include:
+      - main
+  paths:
+    exclude:
+      - '**/*.md'
+      - 'docs/**'
+
+# ─── Variable groups (configure in Azure DevOps Library) ───────────────────────
+# Group: unpa-acr        → ACR_NAME, ACR_SERVICE_CONNECTION
+# Group: unpa-staging    → STAGING_RESOURCE_GROUP, STAGING_APP_API, STAGING_APP_MCP
+# Group: unpa-production → PROD_RESOURCE_GROUP, PROD_APP_API, PROD_APP_MCP
+# ─────────────────────────────────────────────────────────────────────────────
+
+variables:
+  - group: unpa-acr
+  - name: IMAGE_TAG
+    value: '$(Build.BuildId)'
+  - name: ACR_LOGIN_SERVER
+    value: '$(ACR_NAME).azurecr.io'
+  - name: API_IMAGE
+    value: '$(ACR_LOGIN_SERVER)/unpa-api'
+  - name: MCP_IMAGE
+    value: '$(ACR_LOGIN_SERVER)/unpa-mcp'
+  - name: GNN_IMAGE
+    value: '$(ACR_LOGIN_SERVER)/unpa-gnn'
+  - name: INDEXING_IMAGE
+    value: '$(ACR_LOGIN_SERVER)/unpa-indexing'
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 1: CI — Tests
+# ═══════════════════════════════════════════════════════════════════════════════
+stages:
+  - stage: CI
+    displayName: 'CI — Tests'
+    jobs:
+
+      # ── API unit tests ──────────────────────────────────────────────────────
+      - job: TestAPI
+        displayName: 'API — Jest unit tests'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: '20.x'
+            displayName: 'Use Node.js 20'
+
+          - script: npm ci
+            workingDirectory: api
+            displayName: 'Install API dependencies'
+
+          - script: npx jest --no-coverage --testPathPattern="src/(gxe-manager|runtime|services|schemas|validation|repositories|datasource)" --testTimeout=15000 --forceExit
+            workingDirectory: api
+            displayName: 'Run API unit tests'
+            env:
+              NODE_ENV: test
+              ANTHROPIC_API_KEY: test-key-ci
+              LLM_PROVIDER: anthropic
+            continueOnError: false
+
+          - task: PublishTestResults@2
+            condition: always()
+            inputs:
+              testResultsFormat: 'JUnit'
+              testResultsFiles: 'api/junit.xml'
+              failTaskOnFailedTests: false
+              testRunTitle: 'API Unit Tests'
+
+      # ── Frontend tests ──────────────────────────────────────────────────────
+      - job: TestFrontend
+        displayName: 'Frontend — Vitest'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: '20.x'
+            displayName: 'Use Node.js 20'
+
+          - script: npm ci
+            workingDirectory: mcp
+            displayName: 'Install frontend dependencies'
+
+          - script: npm run test
+            workingDirectory: mcp
+            displayName: 'Run Vitest tests'
+            env:
+              NODE_ENV: test
+            continueOnError: false
+
+      # ── Security scan ───────────────────────────────────────────────────────
+      - job: SecurityScan
+        displayName: 'npm audit'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: '20.x'
+
+          - script: npm ci
+            workingDirectory: api
+            displayName: 'Install API deps'
+
+          - script: npm audit --audit-level=high
+            workingDirectory: api
+            displayName: 'Audit API dependencies'
+            continueOnError: true
+
+          - script: npm ci && npm audit --audit-level=high
+            workingDirectory: mcp
+            displayName: 'Audit frontend dependencies'
+            continueOnError: true
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 2: Build — Docker images → ACR
+# Runs only on main branch after CI passes
+# ═══════════════════════════════════════════════════════════════════════════════
+  - stage: Build
+    displayName: 'Build — Docker → ACR'
+    dependsOn: CI
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+
+      - job: BuildAndPush
+        displayName: 'Build & push all images'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: AzureCLI@2
+            displayName: 'ACR login'
+            inputs:
+              azureSubscription: '$(ACR_SERVICE_CONNECTION)'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: az acr login --name $(ACR_NAME)
+
+          # ── API image ────────────────────────────────────────────────────
+          - task: Docker@2
+            displayName: 'Build API image'
+            inputs:
+              containerRegistry: '$(ACR_SERVICE_CONNECTION)'
+              repository: 'unpa-api'
+              command: 'build'
+              Dockerfile: 'api/Dockerfile'
+              buildContext: '.'
+              arguments: '--platform linux/amd64'
+              tags: |
+                $(IMAGE_TAG)
+                latest
+
+          - task: Docker@2
+            displayName: 'Push API image'
+            inputs:
+              containerRegistry: '$(ACR_SERVICE_CONNECTION)'
+              repository: 'unpa-api'
+              command: 'push'
+              tags: |
+                $(IMAGE_TAG)
+                latest
+
+          # ── Frontend image ───────────────────────────────────────────────
+          # Derive VITE_API_URL from the deployed API FQDN (avoids stale pipeline variable)
+          - task: AzureCLI@2
+            displayName: 'Compute VITE_API_URL from ACA FQDN'
+            inputs:
+              azureSubscription: '$(ACR_SERVICE_CONNECTION)'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                FQDN=$(az containerapp show --name unpa-api --resource-group $(RESOURCE_GROUP) \
+                  --query "properties.configuration.ingress.fqdn" -o tsv 2>/dev/null)
+                if [ -z "$FQDN" ]; then
+                  FQDN="unpa-api.salmonsmoke-6ce7cdfe.eastus.azurecontainerapps.io"
+                fi
+                echo "##vso[task.setvariable variable=COMPUTED_VITE_API_URL]https://${FQDN}/api/v1"
+                echo "VITE_API_URL will be: https://${FQDN}/api/v1"
+
+          - task: Docker@2
+            displayName: 'Build MCP frontend image'
+            inputs:
+              containerRegistry: '$(ACR_SERVICE_CONNECTION)'
+              repository: 'unpa-mcp'
+              command: 'build'
+              Dockerfile: 'mcp/Dockerfile'
+              buildContext: 'mcp'
+              arguments: >
+                --platform linux/amd64
+                --build-arg VITE_API_URL=$(COMPUTED_VITE_API_URL)
+              tags: |
+                $(IMAGE_TAG)
+                latest
+
+          - task: Docker@2
+            displayName: 'Push MCP frontend image'
+            inputs:
+              containerRegistry: '$(ACR_SERVICE_CONNECTION)'
+              repository: 'unpa-mcp'
+              command: 'push'
+              tags: |
+                $(IMAGE_TAG)
+                latest
+
+          # ── GNN service image ────────────────────────────────────────────
+          - task: Docker@2
+            displayName: 'Build GNN service image'
+            inputs:
+              containerRegistry: '$(ACR_SERVICE_CONNECTION)'
+              repository: 'unpa-gnn'
+              command: 'build'
+              Dockerfile: 'gnn-service/Dockerfile'
+              buildContext: 'gnn-service'
+              arguments: '--platform linux/amd64'
+              tags: |
+                $(IMAGE_TAG)
+                latest
+
+          - task: Docker@2
+            displayName: 'Push GNN service image'
+            inputs:
+              containerRegistry: '$(ACR_SERVICE_CONNECTION)'
+              repository: 'unpa-gnn'
+              command: 'push'
+              tags: |
+                $(IMAGE_TAG)
+                latest
+
+          # ── Indexing pipeline image ──────────────────────────────────────
+          - task: Docker@2
+            displayName: 'Build indexing-pipeline image'
+            inputs:
+              containerRegistry: '$(ACR_SERVICE_CONNECTION)'
+              repository: 'unpa-indexing'
+              command: 'build'
+              Dockerfile: 'indexing-pipeline/Dockerfile'
+              buildContext: 'indexing-pipeline'
+              arguments: '--platform linux/amd64'
+              tags: |
+                $(IMAGE_TAG)
+                latest
+
+          - task: Docker@2
+            displayName: 'Push indexing-pipeline image'
+            inputs:
+              containerRegistry: '$(ACR_SERVICE_CONNECTION)'
+              repository: 'unpa-indexing'
+              command: 'push'
+              tags: |
+                $(IMAGE_TAG)
+                latest
+
+          # ── Publish image tag as pipeline artifact ───────────────────────
+          - script: echo "$(IMAGE_TAG)" > $(Build.ArtifactStagingDirectory)/image-tag.txt
+            displayName: 'Save image tag'
+
+          - task: PublishPipelineArtifact@1
+            inputs:
+              targetPath: '$(Build.ArtifactStagingDirectory)'
+              artifact: 'build-info'
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 3: Deploy to Staging
+# Auto-deploy after Build succeeds
+# ═══════════════════════════════════════════════════════════════════════════════
+  - stage: DeployStaging
+    displayName: 'Deploy → Staging'
+    dependsOn: Build
+    condition: succeeded()
+    variables:
+      - group: unpa-staging
+    jobs:
+
+      - deployment: DeployToStaging
+        displayName: 'Update staging Container Apps'
+        environment: 'staging'
+        pool:
+          vmImage: 'ubuntu-latest'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureCLI@2
+                  displayName: 'Deploy API to staging'
+                  inputs:
+                    azureSubscription: '$(ACR_SERVICE_CONNECTION)'
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      az containerapp update \
+                        --name "$(STAGING_APP_API)" \
+                        --resource-group "$(STAGING_RESOURCE_GROUP)" \
+                        --image "$(ACR_LOGIN_SERVER)/unpa-api:$(IMAGE_TAG)"
+
+                - task: AzureCLI@2
+                  displayName: 'Deploy MCP frontend to staging'
+                  inputs:
+                    azureSubscription: '$(ACR_SERVICE_CONNECTION)'
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      az containerapp update \
+                        --name "$(STAGING_APP_MCP)" \
+                        --resource-group "$(STAGING_RESOURCE_GROUP)" \
+                        --image "$(ACR_LOGIN_SERVER)/unpa-mcp:$(IMAGE_TAG)"
+
+                # ── Smoke test staging ───────────────────────────────────
+                - task: AzureCLI@2
+                  displayName: 'Staging smoke test'
+                  inputs:
+                    azureSubscription: '$(ACR_SERVICE_CONNECTION)'
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      set -e
+                      STAGING_URL=$(az containerapp show \
+                        --name "$(STAGING_APP_API)" \
+                        --resource-group "$(STAGING_RESOURCE_GROUP)" \
+                        --query "properties.configuration.ingress.fqdn" -o tsv)
+
+                      echo "Staging URL: https://$STAGING_URL"
+
+                      # Retry up to 10 times (container may be starting)
+                      for i in $(seq 1 10); do
+                        STATUS=$(curl -sf -o /dev/null -w "%{http_code}" \
+                          "https://$STAGING_URL/api/v1/health/live" || echo "000")
+                        echo "Attempt $i: /api/v1/health/live → $STATUS"
+                        if [ "$STATUS" = "200" ]; then
+                          echo "✅ API is live on staging"
+                          break
+                        fi
+                        [ $i -eq 10 ] && { echo "❌ Staging health check failed"; exit 1; }
+                        sleep 10
+                      done
+
+                      # Readiness check
+                      STATUS=$(curl -sf -o /dev/null -w "%{http_code}" \
+                        "https://$STAGING_URL/api/v1/health/ready" || echo "000")
+                      echo "/api/v1/health/ready → $STATUS"
+                      [ "$STATUS" = "200" ] && echo "✅ All dependencies ready" || \
+                        echo "⚠️  Ready check returned $STATUS (dependencies may still be warming up)"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 4: Deploy to Production
+# Manual approval required
+# ═══════════════════════════════════════════════════════════════════════════════
+  - stage: DeployProduction
+    displayName: 'Deploy → Production'
+    dependsOn: DeployStaging
+    condition: succeeded()
+    variables:
+      - group: unpa-production
+    jobs:
+
+      - deployment: DeployToProduction
+        displayName: 'Update production Container Apps'
+        environment: 'production'   # configure approvals in Azure DevOps Environments
+        pool:
+          vmImage: 'ubuntu-latest'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: DownloadPipelineArtifact@2
+                  inputs:
+                    artifact: 'build-info'
+                    path: '$(Pipeline.Workspace)/build-info'
+
+                - script: |
+                    TAG=$(cat $(Pipeline.Workspace)/build-info/image-tag.txt)
+                    echo "##vso[task.setvariable variable=DEPLOY_TAG]$TAG"
+                  displayName: 'Load image tag'
+
+                - task: AzureCLI@2
+                  displayName: 'Deploy API to production'
+                  inputs:
+                    azureSubscription: '$(ACR_SERVICE_CONNECTION)'
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      az containerapp update \
+                        --name "$(PROD_APP_API)" \
+                        --resource-group "$(PROD_RESOURCE_GROUP)" \
+                        --image "$(ACR_LOGIN_SERVER)/unpa-api:$(DEPLOY_TAG)"
+
+                - task: AzureCLI@2
+                  displayName: 'Deploy MCP frontend to production'
+                  inputs:
+                    azureSubscription: '$(ACR_SERVICE_CONNECTION)'
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      az containerapp update \
+                        --name "$(PROD_APP_MCP)" \
+                        --resource-group "$(PROD_RESOURCE_GROUP)" \
+                        --image "$(ACR_LOGIN_SERVER)/unpa-mcp:$(DEPLOY_TAG)"
+
+                # ── Production smoke test ────────────────────────────────
+                - task: AzureCLI@2
+                  displayName: 'Production smoke test'
+                  inputs:
+                    azureSubscription: '$(ACR_SERVICE_CONNECTION)'
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      set -e
+                      PROD_URL=$(az containerapp show \
+                        --name "$(PROD_APP_API)" \
+                        --resource-group "$(PROD_RESOURCE_GROUP)" \
+                        --query "properties.configuration.ingress.fqdn" -o tsv)
+
+                      for i in $(seq 1 6); do
+                        STATUS=$(curl -sf -o /dev/null -w "%{http_code}" \
+                          "https://$PROD_URL/api/v1/health/live" || echo "000")
+                        [ "$STATUS" = "200" ] && { echo "✅ Production API is live"; break; }
+                        [ $i -eq 6 ] && { echo "❌ Production health check failed"; exit 1; }
+                        sleep 10
+                      done
+
+                - task: AzureCLI@2
+                  displayName: 'Tag production release in ACR'
+                  inputs:
+                    azureSubscription: '$(ACR_SERVICE_CONNECTION)'
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      RELEASE_TAG="release-$(date +%Y%m%d)-$(DEPLOY_TAG)"
+                      for REPO in unpa-api unpa-mcp unpa-gnn unpa-indexing; do
+                        az acr import \
+                          --name "$(ACR_NAME)" \
+                          --source "$(ACR_LOGIN_SERVER)/$REPO:$(DEPLOY_TAG)" \
+                          --image "$REPO:$RELEASE_TAG" 2>/dev/null || true
+                      done
+                      echo "✅ Release tagged: $RELEASE_TAG"

@@ -68,4 +68,25 @@
 .gxe-toolbar__dropdown-item.active { background: rgba(34, 211, 238, 0.1); color: var(--nexus-accent-cyan, #22d3ee); }
 .gxe-toolbar__dropdown-divider { height: 1px; background: var(--nexus-border, #27272a); margin: 4px 0; }
 
+/* Date Range Picker */
+.gxe-toolbar__date-range {
+  display: flex; align-items: center; gap: 4px; padding: 4px 8px;
+  border: 1px solid var(--nexus-border, #27272a); border-radius: 6px;
+  background: var(--nexus-bg-tertiary, #18181b);
+}
+.gxe-toolbar__date-icon { color: var(--nexus-text-muted, #71717a); flex-shrink: 0; }
+.gxe-toolbar__date-input {
+  background: none; border: none; outline: none; font-size: 12px;
+  color: var(--nexus-text-secondary, #a1a1aa); width: 140px; padding: 2px 4px;
+}
+.gxe-toolbar__date-input:focus { color: var(--nexus-text-primary, #e4e4e7); }
+.gxe-toolbar__date-input::-webkit-calendar-picker-indicator { filter: invert(0.6); cursor: pointer; }
+.gxe-toolbar__date-separator { color: var(--nexus-text-muted, #71717a); font-size: 12px; }
+.gxe-toolbar__date-clear {
+  display: flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border: none; border-radius: 50%; cursor: pointer;
+  background: rgba(239, 68, 68, 0.2); color: var(--nexus-error, #ef4444); flex-shrink: 0;
+}
+.gxe-toolbar__date-clear:hover { background: rgba(239, 68, 68, 0.4); }
+
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

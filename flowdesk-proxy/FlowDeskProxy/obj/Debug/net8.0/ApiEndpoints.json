@@ -1,0 +1,50 @@
+[
+  {
+    "ContainingType": "FlowDeskProxy.Controllers.ChatController",
+    "Method": "SendMessage",
+    "RelativePath": "proxy/chat/message",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "body",
+        "Type": "FlowDeskProxy.Controllers.ChatMessageRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "FlowDeskProxy.Controllers.ChatController",
+    "Method": "CreateSession",
+    "RelativePath": "proxy/chat/session",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "body",
+        "Type": "FlowDeskProxy.Controllers.CreateSessionRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "FlowDeskProxy.Controllers.ChatController",
+    "Method": "GetSession",
+    "RelativePath": "proxy/chat/session/{sessionId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "sessionId",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  }
+]

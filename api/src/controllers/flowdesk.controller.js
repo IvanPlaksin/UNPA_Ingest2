@@ -241,7 +241,7 @@ async function health(_req, res) {
 
   // Check Qdrant
   try {
-    const r = await fetch('http://localhost:6333/collections/flowdesk_services');
+    const r = await fetch(`${process.env.QDRANT_URL || 'http://localhost:6333'}/collections/flowdesk_services`);
     const data = await r.json();
     status.qdrant = data.status === 'ok' ? 'ok' : 'error';
     status.qdrant_points = data.result?.points_count;
@@ -249,7 +249,7 @@ async function health(_req, res) {
 
   // Check TEI
   try {
-    const r = await fetch('http://localhost:8081/info');
+    const r = await fetch(`${process.env.TEI_URL || 'http://localhost:8081'}/info`);
     const data = await r.json();
     status.tei = data.model_id ? 'ok' : 'error';
     status.tei_model = data.model_id;
@@ -634,9 +634,47 @@ async function getBreachedTickets(req, res) {
   }
 }
 
+/**
+ * POST /api/v1/flowdesk/laptop/chat
+ * CaMeL-protected laptop provisioning AI assistant.
+ */
+async function laptopChat(req, res) {
+  try {
+    const camelChat = require('../services/camel/camel-chat.service');
+    const { sessionId, userId, message } = req.body;
+
+    if (!sessionId) return res.status(400).json({ error: 'sessionId is required' });
+    if (!userId) return res.status(400).json({ error: 'userId is required' });
+    if (!message || typeof message !== 'string' || message.trim().length === 0) {
+      return res.status(400).json({ error: 'message is required' });
+    }
+
+    const result = await camelChat.processMessage(sessionId, userId, message);
+    res.json({ sessionId, ...result });
+  } catch (err) {
+    console.error('[FlowDesk] laptopChat error:', err.message);
+    res.status(500).json({ error: 'Laptop chat failed', detail: err.message });
+  }
+}
+
+/**
+ * GET /api/v1/flowdesk/laptop/session/:sessionId
+ */
+async function getLaptopSession(req, res) {
+  try {
+    const camelChat = require('../services/camel/camel-chat.service');
+    const session = camelChat.getSession(req.params.sessionId);
+    if (!session) return res.status(404).json({ error: 'Session not found' });
+    res.json({ state: session.state, history: session.history, graphKey: session.graphKey });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
 module.exports = {
   classify, route, getUserContext, getServices, getServiceByCode, health,
   createRequest, getRequest, chat, getChatSession, getGraphVersions,
   createTicket, listTickets, getTicket, updateTicket, escalateTicket, closeTicket,
-  checkSLA, getBreachedTickets
+  checkSLA, getBreachedTickets,
+  laptopChat, getLaptopSession,
 };

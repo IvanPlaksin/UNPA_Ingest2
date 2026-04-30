@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { MessageSquare, Database, GitGraph, Settings, Search, LayoutDashboard, ListTodo, FolderTree, Bot, FlaskConical, Layers, Microscope, Workflow, Brain, Network, Globe, DatabaseZap, Activity, ClipboardList, BookOpen, BarChart3, FolderKanban, PenTool, FormInput, ChevronDown, ChevronRight } from 'lucide-react';
+import { MessageSquare, Database, GitGraph, Settings, Search, LayoutDashboard, ListTodo, FolderTree, Bot, FlaskConical, Layers, Microscope, Workflow, Brain, Network, Globe, DatabaseZap, Activity, ClipboardList, BookOpen, BarChart3, FolderKanban, PenTool, FormInput, ChevronDown, ChevronRight, Headphones } from 'lucide-react';
 import {
     Box,
     Drawer,
@@ -218,8 +218,10 @@ const Sidebar = () => {
 
                     <SectionHeader title="Assistant" />
                     <NavItem to="/agent" icon={Bot} label="Chat Agent" />
+                    <NavItem to="/flowdesk" icon={Headphones} label="FlowDesk Chat" />
                     <NavItem to="/backlog" icon={ClipboardList} label="BackLog" />
                     <NavItem to="/codex" icon={BookOpen} label="Codex Viewer" />
+                    <NavItem to="/dialogue" icon={MessageSquare} label="DevDialogue" />
 
                     <SectionHeader title="Monitoring" />
                     <NavItem to="/observability" icon={BarChart3} label="Observability" />

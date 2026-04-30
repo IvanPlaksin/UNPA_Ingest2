@@ -58,16 +58,32 @@ const CODEX_TOOLS = [
   },
   {
     name: 'codex_propose_change',
-    description: 'Propose a new rule or change to existing Codex rule. Creates a CodexProposal for human review.',
+    description: `Propose a new Codex rule, pattern, anti-pattern, or change to an existing one. Creates a CodexProposal for human review.
+
+WRITING GUIDELINES — every proposal MUST follow these:
+1. COMPLETENESS: Fill in ALL required fields. A rule without rationale, examples, or whyItExists is useless.
+2. ABSTRACTION LEVEL: Write rules that are specific enough to be actionable in the described context, but abstract enough to apply to similar situations. Do NOT write rules tied to one-off incidents — extract the general principle. Do NOT write rules so abstract that they cannot guide a concrete decision.
+3. RATIONALE: Explain WHY this rule exists — what goes wrong without it, what pattern it prevents.
+4. EXAMPLES: Provide at least 2 concrete examples showing correct application AND what violation looks like.
+5. TRACEABILITY: Link to a Codex Principle (derivesFromPrinciple) when possible.
+6. SCOPE: Always specify which parts of the system this rule applies to.`,
     input_schema: {
       type: 'object',
       properties: {
-        title: { type: 'string', description: 'Proposal title' },
-        description: { type: 'string', description: 'Detailed description and rationale' },
-        change_type: { type: 'string', enum: ['NEW_RULE', 'MODIFY_RULE', 'DEPRECATE_RULE', 'NEW_PATTERN', 'NEW_ANTIPATTERN'] },
-        target_rule_id: { type: 'string', description: 'Target rule ID for modifications (optional)' },
+        title: { type: 'string', description: 'Short, descriptive rule title (5-200 chars)' },
+        summary: { type: 'string', description: 'What this rule prescribes in 1-2 self-contained sentences' },
+        rationale: { type: 'string', description: 'WHY this rule exists — what problem it prevents, what happens without it. Most critical field.' },
+        whyItExists: { type: 'string', description: 'The specific event or observation that created the need for this rule' },
+        examples: { type: 'array', items: { type: 'string' }, description: 'Concrete examples of correct application and/or violations (at least 1, 2+ recommended)' },
+        change_type: { type: 'string', enum: ['NEW_RULE', 'MODIFY_RULE', 'DEPRECATE_RULE', 'NEW_PATTERN', 'NEW_ANTIPATTERN'], description: 'Type of change' },
+        target_rule_id: { type: 'string', description: 'Target rule codexId for MODIFY_RULE/DEPRECATE_RULE (e.g., CODEX-RULE-042)' },
+        scope: { type: 'array', items: { type: 'string' }, description: 'System areas: ["gxe","graph"], ["flowdesk"], ["extraction","KnowledgeQuantum"], etc.' },
+        modality: { type: 'string', enum: ['MUST', 'SHOULD', 'MAY', 'MUST_NOT', 'SHOULD_NOT'], description: 'Deontic modality. Default: SHOULD' },
+        ruleKind: { type: 'string', enum: ['CONSTITUTIVE', 'PRESCRIPTIVE'], description: 'CONSTITUTIVE=defines term, PRESCRIPTIVE=mandates behavior. Default: PRESCRIPTIVE' },
+        derivesFromPrinciple: { type: 'string', description: 'Codex Principle ID this derives from. Use codex_get_principles first to find valid IDs (format is PRINCIPLE-0-N, e.g., PRINCIPLE-0-4 = "граф, достойный доверия"). DO NOT invent IDs.' },
+        agentConfidence: { type: 'number', description: 'Confidence 0.0-1.0. Default: 0.7' },
       },
-      required: ['title', 'description', 'change_type'],
+      required: ['title', 'summary', 'rationale', 'whyItExists', 'examples', 'change_type'],
     },
   },
 ];
@@ -76,7 +92,7 @@ const CODEX_TOOLS = [
  * Execute a Codex tool call. Returns result as string.
  */
 async function executeCodexTool(toolName, toolInput) {
-  const CODEX_API = 'http://localhost:3010/api/v1/codex';
+  const CODEX_API = process.env.CODEX_API_URL || `${process.env.API_BASE_URL || 'http://localhost:3010'}/api/v1/codex`;
 
   try {
     let url;
@@ -104,17 +120,58 @@ async function executeCodexTool(toolName, toolInput) {
       case 'codex_check_compliance':
         url = `${CODEX_API}/compliance/${toolInput.scope || 'gxe'}`;
         break;
-      case 'codex_propose_change':
+      case 'codex_propose_change': {
         url = `${CODEX_API}/proposals`;
         method = 'POST';
-        body = JSON.stringify({
+
+        // Map change_type to proposalType expected by governance service
+        const CHANGE_TYPE_MAP = {
+          'NEW_RULE': 'CREATE',
+          'MODIFY_RULE': 'MODIFY',
+          'DEPRECATE_RULE': 'DEPRECATE',
+          'NEW_PATTERN': 'CREATE',
+          'NEW_ANTIPATTERN': 'CREATE',
+        };
+        const proposalType = CHANGE_TYPE_MAP[toolInput.change_type] || 'CREATE';
+
+        // Determine nodeType from change_type
+        const NODE_TYPE_MAP = {
+          'NEW_RULE': 'CodexRule',
+          'MODIFY_RULE': 'CodexRule',
+          'DEPRECATE_RULE': 'CodexRule',
+          'NEW_PATTERN': 'CodexPattern',
+          'NEW_ANTIPATTERN': 'BlackCodexEntry',
+        };
+        const nodeType = NODE_TYPE_MAP[toolInput.change_type] || 'CodexRule';
+
+        // Build proposedChanges with full Information Contract fields
+        const proposedChanges = {
+          nodeType,
           title: toolInput.title,
-          description: toolInput.description,
-          changeType: toolInput.change_type,
-          targetRuleId: toolInput.target_rule_id,
+          summary: toolInput.summary,
+          rationale: toolInput.rationale,
+          whyItExists: toolInput.whyItExists,
+          examples: toolInput.examples || [],
+          scope: toolInput.scope || [],
+          modality: toolInput.modality || 'SHOULD',
+          ruleKind: toolInput.ruleKind || 'PRESCRIPTIVE',
+          derivesFromPrinciple: toolInput.derivesFromPrinciple || '',
+        };
+
+        body = JSON.stringify({
+          proposalType,
+          title: toolInput.title,
+          summary: toolInput.summary,
+          rationale: toolInput.rationale,
+          whyItExists: toolInput.whyItExists,
+          examples: toolInput.examples || [],
+          targetCodexId: toolInput.target_rule_id || '',
+          proposedChanges,
+          agentConfidence: toolInput.agentConfidence || 0.7,
           proposedBy: 'gxe-assistant',
         });
         break;
+      }
       default:
         return JSON.stringify({ error: `Unknown tool: ${toolName}` });
     }

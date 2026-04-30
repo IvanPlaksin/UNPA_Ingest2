@@ -110,8 +110,8 @@ const AI_MODELS = {
     supportsStreaming: true,
     tier: 'recommended',
   },
-  'claude-haiku-4-5-20251001': {
-    id: 'claude-haiku-4-5-20251001',
+  'claude-haiku-4-5': {
+    id: 'claude-haiku-4-5',
     provider: 'anthropic',
     displayName: 'Claude Haiku 4.5',
     description: 'Fastest Claude model for quick tasks',

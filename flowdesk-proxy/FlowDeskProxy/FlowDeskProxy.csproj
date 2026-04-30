@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>FlowDeskProxy</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- YARP: reverse proxy for HTTP forwarding to GXE API -->
+    <PackageReference Include="Yarp.ReverseProxy" Version="2.2.0" />
+    <!-- SignalR server + RateLimiting are built into Microsoft.AspNetCore.App (net8.0 web SDK) -->
+  </ItemGroup>
+
+</Project>

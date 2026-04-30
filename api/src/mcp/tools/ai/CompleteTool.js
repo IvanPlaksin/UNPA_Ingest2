@@ -1,4 +1,5 @@
 const { BaseTool } = require('../primitives/BaseTool.js');
+const { getInstance: getLLMProvider } = require('../../../services/llm/LLMProviderService');
 
 class CompleteTool extends BaseTool {
   getDefinition() {
@@ -61,7 +62,7 @@ class CompleteTool extends BaseTool {
         case 'openai':
           return this.success(await this.completeOpenAI(prompt, systemPrompt, model || 'gpt-4o-mini', maxTokens, temperature, stopSequences, aiConfig));
         case 'anthropic':
-          return this.success(await this.completeAnthropic(prompt, systemPrompt, model || 'claude-haiku-4-5-20251001', maxTokens, temperature, stopSequences, aiConfig));
+          return this.success(await this.completeAnthropic(prompt, systemPrompt, model || 'haiku', maxTokens, temperature, stopSequences));
         case 'ollama':
           return this.success(await this.completeOllama(prompt, systemPrompt, model || 'llama3.2', maxTokens, temperature, aiConfig));
         case 'service':
@@ -129,41 +130,26 @@ class CompleteTool extends BaseTool {
     };
   }
 
-  async completeAnthropic(prompt, systemPrompt, model, maxTokens, temperature, stopSequences, config) {
-    const apiKey = config.anthropicKey || process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) throw new Error('Anthropic API key not configured');
-
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': apiKey,
-        'Content-Type': 'application/json',
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
+  async completeAnthropic(prompt, systemPrompt, model, maxTokens, temperature, stopSequences) {
+    const data = await getLLMProvider().chat(
+      [{ role: 'user', content: prompt }],
+      {
         model,
-        max_tokens: maxTokens,
-        ...(systemPrompt && { system: systemPrompt }),
-        messages: [{ role: 'user', content: prompt }],
+        maxTokens,
         temperature,
-        ...(stopSequences && { stop_sequences: stopSequences })
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Anthropic API error: ${await response.text()}`);
-    }
-
-    const data = await response.json();
+        system: systemPrompt || undefined,
+        ...(stopSequences && { stop_sequences: stopSequences }),
+      }
+    );
 
     return {
-      text: data.content[0].text,
+      text: data.content?.[0]?.text || '',
       usage: {
         promptTokens: data.usage?.input_tokens,
-        completionTokens: data.usage?.output_tokens
+        completionTokens: data.usage?.output_tokens,
       },
       model,
-      finishReason: data.stop_reason
+      finishReason: data.stop_reason,
     };
   }
 

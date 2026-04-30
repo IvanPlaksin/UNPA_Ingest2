@@ -75,7 +75,9 @@ const ExecutionList = () => {
     return (
       filters.status?.length > 0 ||
       filters.graphId ||
-      filters.search
+      filters.search ||
+      filters.dateFrom ||
+      filters.dateTo
     );
   }, [filters]);
 

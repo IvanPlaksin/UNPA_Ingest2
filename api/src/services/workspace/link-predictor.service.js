@@ -28,7 +28,7 @@
 'use strict';
 
 const LOG_PREFIX = '[LinkPredictor]';
-const GNN_SERVICE_URL = process.env.GNN_SERVICE_URL || 'http://localhost:5000';
+const GNN_SERVICE_URL = process.env.GNN_SERVICE_URL || 'http://localhost:5001';
 const GNN_TIMEOUT_MS = parseInt(process.env.GNN_TIMEOUT_MS, 10) || 5000;
 
 let _draftService = null;

@@ -30,14 +30,19 @@ async function getManager() {
     // RuntimeEngine constructor
     const { RuntimeEngine } = require('../runtime/RuntimeEngine');
 
-    // MCP registry (pluginRegistry)
+    // MCP registry — use AOPEGAdapter to create RuntimeEngine-compatible wrapper
     let mcpRegistry;
     try {
-      const { pluginRegistry } = require('../core/aopeg/registry/plugin-registry');
-      mcpRegistry = pluginRegistry;
+      const aopegModule = require('../core/aopeg/index');
+      if (!aopegModule.isAOPEGInitialized()) {
+        await aopegModule.initializeAOPEG({ loadPlugins: true, loadDomainPlugins: true });
+      }
+      const { AOPEGAdapter } = require('../runtime/integration/AOPEGAdapter');
+      mcpRegistry = new AOPEGAdapter(aopegModule.pluginRegistry).createMcpCompatibleRegistry();
+      console.log('[GxeManager Route] AOPEG registry initialized with', mcpRegistry.listTools().length, 'tools');
     } catch (e) {
-      // Fallback: minimal registry
-      mcpRegistry = { getTool: () => null };
+      console.warn('[GxeManager Route] AOPEG init failed, using minimal registry:', e.message);
+      mcpRegistry = { getTool: () => null, hasTool: () => false, listTools: () => [] };
     }
 
     const redisClient = redisService.getClient();
@@ -124,13 +129,15 @@ router.post('/executions', async (req, res) => {
 router.get('/executions', async (req, res) => {
   try {
     const manager = await getManager();
-    const { status, graphId, limit, offset } = req.query;
+    const { status, graphId, limit, offset, since, until } = req.query;
 
     const filters = {};
     if (status) filters.status = status.split(',');
     if (graphId) filters.graphId = graphId;
     if (limit) filters.limit = parseInt(limit, 10);
     if (offset) filters.offset = parseInt(offset, 10);
+    if (since) filters.since = parseInt(since, 10);
+    if (until) filters.until = parseInt(until, 10);
 
     const records = await manager.listExecutions(filters);
     res.json({ executions: records, count: records.length });
@@ -632,6 +639,7 @@ router.post('/transactions/:id/compensate', async (req, res) => {
  * GET /stream — SSE stream of all GxeManager events
  */
 router.get('/stream', async (req, res) => {
+  let headersSent = false;
   try {
     const manager = await getManager();
 
@@ -641,30 +649,43 @@ router.get('/stream', async (req, res) => {
       'Connection': 'keep-alive',
       'X-Accel-Buffering': 'no'
     });
+    headersSent = true;
 
     // Send initial stats
-    const stats = await manager.getStats();
-    res.write(`event: stats\ndata: ${JSON.stringify(stats)}\n\n`);
+    try {
+      const stats = await manager.getStats();
+      res.write(`event: stats\ndata: ${JSON.stringify(stats)}\n\n`);
+    } catch (statsErr) {
+      console.error('[GxeManager] SSE initial stats error:', statsErr.message);
+    }
 
-    // Forward all manager events to SSE
-    const events = [
-      'execution.queued', 'execution.initializing', 'execution.started',
-      'execution.paused', 'execution.resumed', 'execution.completed',
-      'execution.failed', 'execution.cancelled', 'execution.runtimeState',
-      'execution.nodeEvent'
-    ];
+    // Map internal events to SSE event categories the client understands
+    const EVENT_MAP = {
+      'execution.queued':        'execution',
+      'execution.initializing':  'execution',
+      'execution.started':       'execution',
+      'execution.completed':     'execution',
+      'execution.failed':        'execution',
+      'execution.cancelled':     'execution',
+      'execution.paused':        'statusChange',
+      'execution.resumed':       'statusChange',
+      'execution.runtimeState':  'statusChange',
+      'execution.nodeEvent':     'node',
+    };
 
     const handlers = {};
-    for (const event of events) {
-      handlers[event] = (data) => {
-        res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    for (const [internalEvent, sseEvent] of Object.entries(EVENT_MAP)) {
+      handlers[internalEvent] = (data) => {
+        try {
+          res.write(`event: ${sseEvent}\ndata: ${JSON.stringify(data)}\n\n`);
+        } catch { /* connection closed */ }
       };
-      manager.on(event, handlers[event]);
+      manager.on(internalEvent, handlers[internalEvent]);
     }
 
     // Heartbeat
     const heartbeat = setInterval(() => {
-      res.write(`:heartbeat\n\n`);
+      try { res.write(`:heartbeat\n\n`); } catch { /* connection closed */ }
     }, 15000);
 
     // Cleanup on disconnect
@@ -676,7 +697,12 @@ router.get('/stream', async (req, res) => {
     });
 
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('[GxeManager] SSE stream error:', err.message);
+    if (!headersSent) {
+      res.status(500).json({ error: err.message });
+    } else {
+      try { res.end(); } catch { /* already closed */ }
+    }
   }
 });
 

@@ -348,7 +348,14 @@ class GraphPathGenerator {
 
 async function generatePathsForGraph(graphId) {
   const neo4j = require('neo4j-driver');
-  const driver = neo4j.driver('bolt://localhost:7687', neo4j.auth.basic('memgraph', 'secret_password_123'), { disableLosslessIntegers: true });
+  const driver = neo4j.driver(
+    process.env.MEMGRAPH_URI || process.env.NEO4J_URI || 'bolt://localhost:7687',
+    neo4j.auth.basic(
+      process.env.MEMGRAPH_USER || process.env.NEO4J_USERNAME || 'memgraph',
+      process.env.MEMGRAPH_PASSWORD || process.env.NEO4J_PASSWORD || 'secret_password_123'
+    ),
+    { disableLosslessIntegers: true }
+  );
   const session = driver.session({ defaultAccessMode: neo4j.session.READ });
 
   try {

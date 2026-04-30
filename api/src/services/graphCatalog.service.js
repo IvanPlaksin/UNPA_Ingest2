@@ -179,6 +179,7 @@ class GraphCatalogService {
           description: $description,
           type: $type,
           namespace: $namespace,
+          graphKey: $graphKey,
           tags: $tags,
           visibility: $visibility,
           isPublic: $isPublic,
@@ -195,6 +196,7 @@ class GraphCatalogService {
         description: data.description || '',
         type: data.type || GRAPH_TYPES.ATOMIC,
         namespace: data.namespace || 'default',
+        graphKey: data.graphKey || null,
         tags: data.tags || [],
         visibility: data.visibility || 'PUBLIC',
         isPublic: data.isPublic !== false,
@@ -404,7 +406,7 @@ class GraphCatalogService {
       const entryUpdates = [];
       const params = { id, updatedAt: now };
 
-      const allowedFields = ['name', 'namespace', 'type', 'description', 'tags', 'isPublic', 'visibility'];
+      const allowedFields = ['name', 'namespace', 'type', 'description', 'tags', 'isPublic', 'visibility', 'graphKey'];
       for (const field of allowedFields) {
         if (updates[field] !== undefined) {
           entryUpdates.push(`c.${field} = $${field}`);
@@ -1106,6 +1108,8 @@ class GraphCatalogService {
       graphSubType: definition?.graphSubType || null,
       graphDimension: definition?.graphDimension || null,
       // Graph definition
+      nodeCount: toNumber(definition?.nodeCount) || 0,
+      edgeCount: toNumber(definition?.edgeCount) || 0,
       nodes: definition ? JSON.parse(definition.nodes || '[]') : [],
       edges: definition ? JSON.parse(definition.edges || '[]') : [],
       requiredParams: definition ? JSON.parse(definition.requiredParams || '{}') : {}

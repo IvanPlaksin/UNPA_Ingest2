@@ -39,8 +39,9 @@ function getTensorServiceLazy() {
 // LLM CONFIGURATION
 // ═══════════════════════════════════════════════════════════════════════════
 
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
+const { getInstance: getLLMProvider } = require('../services/llm/LLMProviderService');
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY; // kept for Pattern B SSE streaming (W4-04b)
+const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages'; // kept for Pattern B SSE streaming (W4-04b)
 
 // Available models
 const AVAILABLE_MODELS = {
@@ -253,7 +254,7 @@ async function handleAnomaly(pipeline, stageName, anomalyReason, stageInput, sta
   console.error(`[GXE AnomalyGate]   ${JSON.stringify(stageOutput, null, 2).substring(0, 1000).replace(/\n/g, '\n[GXE AnomalyGate]   ')}`);
   const analysis = await analyzeAnomalyWithClaude(
     { pipeline, stageName, anomalyReason, stageInput, stageOutput, taskDescription },
-    { anthropicUrl: ANTHROPIC_URL, anthropicKey: ANTHROPIC_API_KEY, model: AVAILABLE_MODELS['claude-haiku'] }
+    { model: 'haiku' }
   );
   return { anomalyDetected: true, stage: stageName, reason: anomalyReason, analysis, timestamp: new Date().toISOString() };
 }
@@ -810,14 +811,6 @@ async function callClaudeForGraph(task, options = {}) {
     turns: 0
   };
 
-  if (!ANTHROPIC_API_KEY) {
-    const msg = 'ANTHROPIC_API_KEY not configured in environment';
-    console.warn('[GXE]', msg);
-    tensorService?.fail(tensor?.id, msg);
-    llmMetadata.duration = Date.now() - startTime;
-    return { data: null, error: msg, llmMetadata };
-  }
-
   const modelId = AVAILABLE_MODELS[model] || AVAILABLE_MODELS[DEFAULT_MODEL];
   llmMetadata.modelId = modelId;
   const { content: systemPrompt, promptVersionId } = await getActiveGenerationPrompt(parentContext);
@@ -859,76 +852,43 @@ Respond with ONLY the JSON graph structure. No explanations, no markdown, just v
   try {
     while (turn < MAX_TURNS) {
       turn++;
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 120000);
-
-      const requestBody = {
-        model: modelId,
-        max_tokens: maxTokens,
-        temperature: temperature,
-        system: systemPrompt,
-        messages: messages
-      };
-
-      // Add tools only if enabled and available
-      if (useTools && tools.length > 0) {
-        requestBody.tools = tools;
-      }
-
-      // Fast mode: add speed parameter and beta header
       const isFast = FAST_MODELS.has(model);
-      if (isFast) {
-        requestBody.speed = 'fast';
-      }
-
-      const headers = {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
+      const chatOptions = {
+        model: modelId,
+        maxTokens,
+        temperature,
+        system: systemPrompt,
+        tools: (useTools && tools.length > 0) ? tools : undefined,
+        ...(isFast && { speed: 'fast', betaHeader: 'fast-mode-2026-02-01' }),
       };
-      if (isFast) {
-        headers['anthropic-beta'] = 'fast-mode-2026-02-01';
-      }
 
       // Log request stats before sending
-      logRequestStats(requestBody, `DAG Generation (turn ${turn})`);
-
-      const res = await fetch(ANTHROPIC_URL, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(requestBody),
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
+      logRequestStats({ model: modelId, max_tokens: maxTokens, temperature, messages }, `DAG Generation (turn ${turn})`);
 
       let data;
-      if (!res.ok) {
-        const errorBody = await res.json().catch(() => ({}));
-        const errorMsg = `Claude API error ${res.status}: ${errorBody.error?.message || res.statusText}`;
-
+      try {
+        const llmResp = await getLLMProvider().chat(messages, chatOptions);
+        data = llmResp;
+      } catch (err) {
         // If fast mode hits rate limit, retry without fast mode
-        if (isFast && res.status === 429) {
+        if (isFast && err.status === 429) {
           console.warn('[GXE] Fast mode rate limited, retrying without fast mode...');
-          delete requestBody.speed;
-          const stdHeaders = { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' };
-          const retryController = new AbortController();
-          const retryTimeout = setTimeout(() => retryController.abort(), 120000);
-          logRequestStats(requestBody, `DAG Generation (turn ${turn}, no fast)`);
-          const retryRes = await fetch(ANTHROPIC_URL, { method: 'POST', headers: stdHeaders, body: JSON.stringify(requestBody), signal: retryController.signal });
-          clearTimeout(retryTimeout);
-          if (!retryRes.ok) {
-            const retryErr = await retryRes.json().catch(() => ({}));
-            const retryMsg = `Claude API error ${retryRes.status}: ${retryErr.error?.message || retryRes.statusText} (after fast fallback)`;
+          logRequestStats({ model: modelId, max_tokens: maxTokens, temperature, messages }, `DAG Generation (turn ${turn}, no fast)`);
+          try {
+            const retryResp = await getLLMProvider().chat(messages, { ...chatOptions, speed: undefined, betaHeader: undefined });
+            data = retryResp;
+          } catch (retryErr) {
+            const retryMsg = `LLM error (after fast fallback): ${retryErr.message}`;
             console.error('[GXE]', retryMsg);
             return { data: null, error: retryMsg };
           }
-          data = await retryRes.json();
         } else {
-          console.error('[GXE]', errorMsg);
-          return { data: null, error: errorMsg };
+          const errMsg = `LLM error: ${err.message || err}`;
+          console.error('[GXE]', errMsg);
+          tensorService?.fail(tensor?.id, errMsg);
+          llmMetadata.duration = Date.now() - startTime;
+          return { data: null, error: errMsg, llmMetadata };
         }
-      } else {
-        data = await res.json();
       }
 
       // Collect usage data from Claude API response
@@ -1696,10 +1656,6 @@ exports.analyzePromptOptimization = async (req, res) => {
       });
     }
 
-    if (!ANTHROPIC_API_KEY) {
-      return res.status(500).json({ success: false, error: 'ANTHROPIC_API_KEY not configured' });
-    }
-
     const nodes = generationResult.nodes || [];
     const edges = generationResult.edges || [];
     const source = generationResult.source || 'unknown';
@@ -1796,44 +1752,15 @@ ${systemPrompt.substring(0, 8000)}
     // Use Opus 4.6 for optimization analysis (only available model — Sonnet/Haiku hit usage limits)
     const modelId = AVAILABLE_MODELS['claude-opus-4.6'] || AVAILABLE_MODELS['claude-opus'] || AVAILABLE_MODELS['claude-sonnet'];
 
-    const requestBody = {
-      model: modelId,
-      max_tokens: 2048,
-      temperature: 0.3,
-      system: analysisSystemPrompt,
-      messages: [{ role: 'user', content: userContent }]
-    };
-
-    const headers = {
-      'Content-Type': 'application/json',
-      'x-api-key': ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01'
-    };
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000);
-
     // Log request stats before sending
-    logRequestStats(requestBody, 'Prompt Optimization Analysis');
+    logRequestStats({ model: modelId, max_tokens: 2048, temperature: 0.3, messages: [{ role: 'user' }] }, 'Prompt Optimization Analysis');
 
-    const apiRes = await fetch(ANTHROPIC_URL, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(requestBody),
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
+    const llmResp = await getLLMProvider().chat(
+      [{ role: 'user', content: userContent }],
+      { model: modelId, maxTokens: 2048, temperature: 0.3, system: analysisSystemPrompt }
+    );
 
-    if (!apiRes.ok) {
-      const errBody = await apiRes.json().catch(() => ({}));
-      const errMsg = `Claude API error ${apiRes.status}: ${errBody.error?.message || apiRes.statusText}`;
-      console.error(`[GXE] analyzePromptOptimization ${errMsg}`);
-      return res.status(502).json({ success: false, error: errMsg });
-    }
-
-    const apiData = await apiRes.json();
-    const textBlock = apiData.content?.find(b => b.type === 'text');
-    const rawText = textBlock?.text || '';
+    const rawText = llmResp.content?.find(b => b.type === 'text')?.text || '';
 
     // Parse JSON from response
     let analysis;
@@ -1852,13 +1779,10 @@ ${systemPrompt.substring(0, 8000)}
         ...analysis,
         duration,
         model: modelId,
-        usage: apiData.usage || null
+        usage: llmResp.usage || null
       }
     });
   } catch (err) {
-    if (err.name === 'AbortError') {
-      return res.status(504).json({ success: false, error: 'Prompt optimization analysis timed out (60s)' });
-    }
     console.error('[GXE] analyzePromptOptimization error:', err.message);
     res.status(500).json({ success: false, error: err.message });
   }
@@ -2011,6 +1935,8 @@ exports.validateGraph = async (req, res) => {
  *
  * Body: { message, history, graphContext, executionError?, model?, namespace? }
  * Response: SSE stream with token/tool_call/tool_result/mutations/usage/done/error events
+ *
+ * TODO W4-04b: Migrate to LLMProviderService.streamRaw() after Azure streaming format testing.
  */
 exports.executionAssistantChat = async (req, res) => {
   const { message, history = [], graphContext = {}, executionError, model = DEFAULT_MODEL, namespace } = req.body;
@@ -2356,6 +2282,8 @@ Respond in clear, structured markdown. Use headings, bullet points, and code blo
  *
  * Body: { message, history, graphContext, model?, namespace? }
  * Response: SSE stream with token/tool_call/tool_result/usage/done/error events
+ *
+ * TODO W4-04b: Migrate to LLMProviderService.streamRaw() after Azure streaming format testing.
  */
 exports.graphAnalystChat = async (req, res) => {
   const { message, history = [], graphContext = {}, model = DEFAULT_MODEL, namespace } = req.body;
@@ -4619,10 +4547,6 @@ exports.generateKnowledgeGraph = async (req, res) => {
     sendSSE({ type: 'stage_update', stage: 'ai_analysis', status: 'running', progress: 92, message: 'Analyzing graph quality with Claude Haiku...' });
 
     try {
-      if (!ANTHROPIC_API_KEY) {
-        throw new Error('ANTHROPIC_API_KEY not configured');
-      }
-
       // Build compact graph summary (no properties bloat)
       const graphSummary = {
         entities: uniqueEntities.map(e => `${e.name} [${e.type || '?'}]`),
@@ -4643,35 +4567,13 @@ Evaluate completeness and identify gaps.`;
 
       sendSSE({ type: 'ai_analysis', title: 'AI Analysis Started', subtitle: 'Sending to Claude Haiku for quality analysis...' });
 
-      const kgAnalysisBody = {
-        model: AVAILABLE_MODELS['claude-haiku'],
-        max_tokens: 2048,
-        messages: [
-          { role: 'user', content: userMessage }
-        ],
-        system: analysisPrompt
-      };
+      logRequestStats({ model: 'haiku', max_tokens: 2048 }, 'KG AI Analysis (Haiku)');
 
-      // Log request stats before sending
-      logRequestStats(kgAnalysisBody, 'KG AI Analysis (Haiku)');
-
-      const aiResponse = await fetch(ANTHROPIC_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01'
-        },
-        body: JSON.stringify(kgAnalysisBody)
-      });
-
-      if (!aiResponse.ok) {
-        const errBody = await aiResponse.text();
-        throw new Error(`Claude API error ${aiResponse.status}: ${errBody.substring(0, 200)}`);
-      }
-
-      const aiData = await aiResponse.json();
-      const aiText = aiData.content?.[0]?.text || '';
+      const aiResp = await getLLMProvider().chat(
+        [{ role: 'user', content: userMessage }],
+        { model: 'haiku', maxTokens: 2048, system: analysisPrompt }
+      );
+      const aiText = aiResp.content?.[0]?.text || '';
 
       sendSSE({ type: 'stage_update', stage: 'ai_analysis', status: 'running', progress: 97, message: 'Parsing AI analysis results...' });
 

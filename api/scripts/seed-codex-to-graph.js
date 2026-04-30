@@ -31,11 +31,12 @@ async function seedCodexToGraph() {
   const parser = new CodexParser();
   const codex = await parser.parseAll();
 
-  console.log(`   Parts:      ${codex.parts.length}`);
-  console.log(`   Sections:   ${codex.sections.length}`);
-  console.log(`   Rules:      ${codex.rules.length}`);
-  console.log(`   Principles: ${codex.principles.length}`);
-  console.log(`   ADRs:       ${codex.adrs.length}`);
+  console.log(`   Parts:       ${codex.parts.length}`);
+  console.log(`   Sections:    ${codex.sections.length}`);
+  console.log(`   Rules:       ${codex.rules.length}`);
+  console.log(`   Definitions: ${codex.definitions?.length || 0}`);
+  console.log(`   Principles:  ${codex.principles.length}`);
+  console.log(`   ADRs:        ${codex.adrs.length}`);
   console.log();
 
   if (isDryRun) {
@@ -77,18 +78,36 @@ async function seedCodexToGraph() {
     }
   }
 
-  // 3. Clear existing Codex document nodes (not CodexRule from governance!)
+  // 3. Read current metadata version BEFORE any cleanup, so we preserve it
+  const preservedMeta = await memgraph.runQuery(`
+    MATCH (m:CodexMetadata {id: 'codex-metadata'})
+    RETURN m.version AS version
+  `);
+  const preservedVersion = preservedMeta[0]?.version || '0.1.0';
+  console.log(`   📦 Preserving current Codex version: ${preservedVersion}`);
+
+  // 4. Clear existing Codex document nodes BUT preserve governance-created ones
   console.log('🗑️  Clearing existing Codex document nodes...');
+
+  // 3a. Preserve CodexMetadata — only clear other document nodes
   await runQuery(`
     MATCH (n)
-    WHERE n:CodexPart OR n:CodexSection OR n:CodexPrinciple OR n:CodexADR OR n:CodexMetadata
+    WHERE n:CodexPart OR n:CodexSection OR n:CodexPrinciple OR n:CodexADR
     DETACH DELETE n
   `);
-  // Clear only rules with source='codex-parser' to not delete governance rules
+
+  // 3b. Clear only parser-generated rules (keep governance-created rules)
   await runQuery(`
     MATCH (r:CodexRule)
     WHERE r.source = 'codex-parser'
     DETACH DELETE r
+  `);
+
+  // 3c. Clear only parser-generated definitions
+  await runQuery(`
+    MATCH (d:CodexDefinition)
+    WHERE d.source = 'codex-parser'
+    DETACH DELETE d
   `);
 
   // 4. Create CodexPart nodes
@@ -144,6 +163,7 @@ async function seedCodexToGraph() {
     const params = {
       ...rule,
       code: rule.code || '',
+      subsectionHeading: rule.subsectionHeading || '',
       source: 'codex-parser'
     };
     await runQuery(`
@@ -156,20 +176,71 @@ async function seedCodexToGraph() {
         r.code = $code,
         r.title = $title,
         r.description = $description,
+        r.subsectionHeading = $subsectionHeading,
         r.scope = $scope,
         r.modality = $modality,
         r.status = $status,
         r.source = $source,
+        r.namespace = 'Codex',
         r.createdAt = datetime()
       ON MATCH SET
         r.title = $title,
         r.description = $description,
+        r.subsectionHeading = $subsectionHeading,
         r.modality = $modality,
         r.updatedAt = datetime()
       MERGE (s)-[:CONTAINS_RULE]->(r)
     `, params);
   }
   console.log(`   ✓ ${codex.rules.length} rules\n`);
+
+  // 6b. Create CodexDefinition nodes from tables
+  console.log('📊 Creating CodexDefinition nodes (structured tables)...');
+  const defsCount = (codex.definitions || []).length;
+  for (const def of (codex.definitions || [])) {
+    const params = {
+      definitionId: def.definitionId,
+      sectionId: def.sectionId,
+      partId: def.partId,
+      title: def.title,
+      subsectionHeading: def.subsectionHeading || '',
+      tableType: def.tableType,
+      columnNames: JSON.stringify(def.columnNames || []),
+      attributes: JSON.stringify(def.attributes || []),
+      rowCount: def.rowCount || 0,
+      scope: def.scope,
+      status: def.status || 'active',
+      source: 'codex-parser'
+    };
+    await runQuery(`
+      MATCH (s:CodexSection {sectionId: $sectionId})
+      MERGE (d:CodexDefinition {codexId: $definitionId})
+      ON CREATE SET
+        d.definitionId = $definitionId,
+        d.sectionId = $sectionId,
+        d.partId = $partId,
+        d.title = $title,
+        d.subsectionHeading = $subsectionHeading,
+        d.tableType = $tableType,
+        d.columnNames = $columnNames,
+        d.attributes = $attributes,
+        d.rowCount = $rowCount,
+        d.scope = $scope,
+        d.status = $status,
+        d.source = $source,
+        d.namespace = 'Codex',
+        d.createdAt = datetime()
+      ON MATCH SET
+        d.title = $title,
+        d.subsectionHeading = $subsectionHeading,
+        d.columnNames = $columnNames,
+        d.attributes = $attributes,
+        d.rowCount = $rowCount,
+        d.updatedAt = datetime()
+      MERGE (s)-[:CONTAINS_RULE]->(d)
+    `, params);
+  }
+  console.log(`   ✓ ${defsCount} definitions\n`);
 
   // 7. Create CodexPrinciple nodes
   console.log('🎯 Creating CodexPrinciple nodes...');
@@ -226,6 +297,49 @@ async function seedCodexToGraph() {
   }
   console.log(`   ✓ ${codex.adrs.length} ADRs\n`);
 
+  // 8b. Re-create GOVERNANCE Part + Section and link surviving governance nodes
+  console.log('🏛️  Re-creating GOVERNANCE section for proposal-derived rules...');
+  await runQuery(`
+    MERGE (gp:CodexPart {partId: 'GOVERNANCE'})
+    ON CREATE SET gp.codexId = 'GOVERNANCE',
+                  gp.title = 'Governance Rules',
+                  gp.namespace = 'Codex',
+                  gp.description = 'Rules created through the Codex governance proposal system',
+                  gp.order = 999,
+                  gp.fileName = '(governance)',
+                  gp.createdAt = datetime()
+    ON MATCH SET gp.updatedAt = datetime()
+  `);
+  await runQuery(`
+    MERGE (gs:CodexSection {codexId: 'CODEX-SECTION-GOV'})
+    ON CREATE SET gs.sectionId = 'GOV-PROPOSALS',
+                  gs.partId = 'GOVERNANCE',
+                  gs.namespace = 'Codex',
+                  gs.title = 'Approved Proposals',
+                  gs.description = 'Rules approved via governance workflow',
+                  gs.order = 1,
+                  gs.createdAt = datetime()
+    ON MATCH SET gs.updatedAt = datetime()
+  `);
+  await runQuery(`
+    MATCH (gp:CodexPart {partId: 'GOVERNANCE'}), (gs:CodexSection {codexId: 'CODEX-SECTION-GOV'})
+    MERGE (gp)-[:HAS_SECTION]->(gs)
+  `);
+  // Link all governance-created content nodes (CODEX-RULE-*, CODEX-PATTERN-*, GTS-*, CODEX-PROCESS-*)
+  await runQuery(`
+    MATCH (gs:CodexSection {codexId: 'CODEX-SECTION-GOV'})
+    MATCH (n)
+    WHERE (n:CodexRule OR n:CodexPattern OR n:CodexDefinition OR n:CodexConstraint)
+      AND (n.codexId STARTS WITH 'CODEX-RULE-'
+           OR n.codexId STARTS WITH 'CODEX-PATTERN-'
+           OR n.codexId STARTS WITH 'CODEX-CONSTRAINT-'
+           OR n.codexId STARTS WITH 'CODEX-DEF-'
+           OR n.codexId STARTS WITH 'GTS-'
+           OR n.codexId STARTS WITH 'CODEX-PROCESS-')
+    MERGE (gs)-[:CONTAINS_RULE]->(n)
+  `);
+  console.log('   ✓ GOVERNANCE section re-linked\n');
+
   // 9. Create cross-references between parts
   console.log('🔗 Creating cross-references...');
   const crossRefs = [
@@ -259,27 +373,27 @@ async function seedCodexToGraph() {
   }
   console.log('   ✓ cross-references created\n');
 
-  // 10. Create CodexMetadata node (preserve existing version from governance bumps)
-  console.log('📊 Creating CodexMetadata...');
-  const existingMeta = await runQuery(`
-    MATCH (m:CodexMetadata {id: 'codex-metadata'})
-    RETURN m.version AS version
-  `);
-  const currentVersion = existingMeta[0]?.version || '0.1.3';
+  // 10. Upsert CodexMetadata (preserve version read at the beginning)
+  console.log('📊 Updating CodexMetadata...');
+  const currentVersion = preservedVersion;
   await runQuery(`
     MERGE (m:CodexMetadata {id: 'codex-metadata'})
     SET m.version = $version,
         m.seededAt = datetime(),
+        m.parserVersion = $parserVersion,
         m.partsCount = $parts,
         m.sectionsCount = $sections,
         m.rulesCount = $rules,
+        m.definitionsCount = $definitions,
         m.principlesCount = $principles,
         m.adrsCount = $adrs
   `, {
     version: currentVersion,
+    parserVersion: codex.metadata?.parserVersion || '2.0.0',
     parts: codex.parts.length,
     sections: codex.sections.length,
     rules: codex.rules.length,
+    definitions: (codex.definitions || []).length,
     principles: codex.principles.length,
     adrs: codex.adrs.length
   });
@@ -289,7 +403,7 @@ async function seedCodexToGraph() {
   console.log('🔍 Verifying...');
   const stats = await memgraph.runQuery(`
     MATCH (n)
-    WHERE n:CodexPart OR n:CodexSection OR n:CodexRule OR n:CodexPrinciple OR n:CodexADR
+    WHERE n:CodexPart OR n:CodexSection OR n:CodexRule OR n:CodexDefinition OR n:CodexPrinciple OR n:CodexADR
     RETURN labels(n)[0] as label, count(n) as count
     ORDER BY label
   `);

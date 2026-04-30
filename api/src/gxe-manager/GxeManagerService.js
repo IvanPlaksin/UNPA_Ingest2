@@ -172,13 +172,66 @@ class GxeManagerService extends EventEmitter {
     const engine = this.engines.get(executionId);
     if (!engine) throw new Error(`${LOG_TAG} No active engine for ${executionId}`);
 
-    if (typeof engine.resume === 'function') {
+    // Create a promise that resolves when engine settles (WAITING or COMPLETED/FAILED)
+    const settled = new Promise((resolve) => {
+      const timeout = setTimeout(() => resolve('RUNNING'), 10000);
+
+      const onWaiting = () => {
+        clearTimeout(timeout);
+        engine.removeListener('execution:waitingForInput', onWaiting);
+        engine.removeListener('execution:completed', onCompleted);
+        engine.removeListener('execution:stateChange', onFailed);
+        resolve('WAITING');
+      };
+
+      const onCompleted = () => {
+        clearTimeout(timeout);
+        engine.removeListener('execution:waitingForInput', onWaiting);
+        engine.removeListener('execution:completed', onCompleted);
+        engine.removeListener('execution:stateChange', onFailed);
+        resolve('COMPLETED');
+      };
+
+      const onFailed = (ev) => {
+        if (ev.to === 'FAILED' || ev.to === 'COMPLETED') {
+          clearTimeout(timeout);
+          engine.removeListener('execution:waitingForInput', onWaiting);
+          engine.removeListener('execution:completed', onCompleted);
+          engine.removeListener('execution:stateChange', onFailed);
+          resolve(ev.to);
+        }
+      };
+
+      engine.on('execution:waitingForInput', onWaiting);
+      engine.on('execution:completed', onCompleted);
+      engine.on('execution:stateChange', onFailed);
+    });
+
+    // Resume the engine
+    if (signalPayload.nodeId && typeof engine.resumeExecution === 'function') {
+      await engine.resumeExecution(executionId, {
+        nodeId: signalPayload.nodeId,
+        output: signalPayload.payload || signalPayload
+      });
+    } else if (typeof engine.resume === 'function') {
       await engine.resume(signalPayload);
     }
-    await this.registry.updateStatus(executionId, ExecutionStatus.RUNNING, {
-      pausedAt: null
-    });
-    this.emit('execution.resumed', { executionId });
+
+    // Wait for engine to settle at next state
+    const settledState = await settled;
+    console.log(`${LOG_TAG} Resume settled: ${settledState}`);
+
+    // Map settled state to registry status
+    const statusMap = {
+      'WAITING': ExecutionStatus.WAITING,
+      'COMPLETED': ExecutionStatus.COMPLETED,
+      'FAILED': ExecutionStatus.FAILED,
+      'RUNNING': ExecutionStatus.RUNNING
+    };
+    const newStatus = statusMap[settledState] || ExecutionStatus.RUNNING;
+    await this.registry.updateStatus(executionId, newStatus, { pausedAt: null });
+
+    this.emit('execution.resumed', { executionId, settledState });
   }
 
   /**
@@ -349,7 +402,11 @@ class GxeManagerService extends EventEmitter {
   }
 
   async getStats() {
-    return this.registry.countByStatus();
+    const byStatus = await this.registry.countByStatus();
+    const total = Object.values(byStatus).reduce((sum, n) => sum + n, 0);
+    const activeCount = (byStatus.RUNNING || 0) + (byStatus.QUEUED || 0) +
+      (byStatus.INITIALIZING || 0) + (byStatus.PAUSED || 0) + (byStatus.WAITING || 0);
+    return { byStatus, total, activeCount };
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -386,7 +443,7 @@ class GxeManagerService extends EventEmitter {
 
       // 6. Execute (non-blocking — result handled via events and promise)
       const dag = this._extractDag(graph);
-      const result = await engine.execute(dag, record.inputPayload);
+      const result = await engine.execute(dag, record.inputPayload, { executionId });
 
       // 7. Handle completion (if not already handled via events)
       await this._handleResult(executionId, result);
@@ -414,15 +471,40 @@ class GxeManagerService extends EventEmitter {
 
   /** @private */
   _extractDag(graph) {
+    let nodes, edges;
+
     // Graph from catalog has { nodes, edges } in the GraphVersion content
     if (graph.nodes && graph.edges) {
-      return { nodes: graph.nodes, edges: graph.edges };
-    }
-    // Fallback: try content field
-    if (graph.content) {
+      nodes = graph.nodes;
+      edges = graph.edges;
+    } else if (graph.content) {
+      // Fallback: try content field
       const content = typeof graph.content === 'string' ? JSON.parse(graph.content) : graph.content;
-      return { nodes: content.nodes || [], edges: content.edges || [] };
+      nodes = content.nodes || [];
+      edges = content.edges || [];
+    } else {
+      return { nodes: [], edges: [] };
     }
+
+    // Filter out tref visual binding nodes and USES_TOOL edges
+    // RuntimeEngine should only receive executor nodes and flow edges
+    const execNodes = nodes.filter(n => !n.data?.isToolRef);
+    const flowEdges = edges.filter(e => e.label !== 'USES_TOOL');
+
+    // Ensure each node has executorType for RuntimeEngine tool lookup
+    for (const node of execNodes) {
+      if (!node.executorType && node.data?.tool) {
+        node.executorType = node.data.tool;
+      }
+      // Merge node config into parameters for executor access
+      if (node.data?.config && !node.parameters) {
+        node.parameters = node.data.config;
+      }
+    }
+
+    console.log(`${LOG_TAG} Extracted DAG: ${execNodes.length} exec nodes (from ${nodes.length} total), ${flowEdges.length} flow edges (from ${edges.length} total)`);
+
+    return { nodes: execNodes, edges: flowEdges };
     throw new Error('Graph has no nodes/edges');
   }
 
@@ -433,8 +515,49 @@ class GxeManagerService extends EventEmitter {
     });
 
     engine.on('execution:failed', async (data) => {
-      // RuntimeEngine reports failure before execute() promise resolves in some cases
+      console.log(`${LOG_TAG} [EVENT] execution:failed for ${executionId}`);
+      this.results.set(executionId, { ...data, status: 'FAILED' });
+      try {
+        await this.registry.updateStatus(executionId, ExecutionStatus.FAILED, {
+          completedAt: Date.now(),
+          error: data?.error || data?.failedNodes?.join(', ') || 'Execution failed',
+          nodeStates: data?.nodeResults
+        });
+        console.log(`${LOG_TAG} Registry updated to FAILED for ${executionId}`);
+      } catch (e) {
+        console.error(`${LOG_TAG} Failed to update registry to FAILED:`, e.message);
+      }
+      this.engines.delete(executionId);
       this.emit('execution.nodeEvent', { executionId, event: 'failed', ...data });
+    });
+
+    // Handle WAITING_FOR_INPUT events (fires after resume when next node pauses)
+    engine.on('execution:waitingForInput', async (waitResult) => {
+      this.results.set(executionId, waitResult);
+      await this.registry.updateStatus(executionId, ExecutionStatus.WAITING, {
+        nodeStates: waitResult.nodeResults
+      });
+      this.emit('execution.waiting', { executionId, waitingNodes: waitResult.waitingNodes });
+    });
+
+    // Handle completion after resume cycles
+    engine.on('execution:completed', async (completionResult) => {
+      console.log(`${LOG_TAG} [EVENT] execution:completed for ${executionId}`, completionResult?.status);
+      // Ensure status is set for _handleResult
+      const result = { ...completionResult, status: completionResult?.status || 'COMPLETED' };
+      this.results.set(executionId, result);
+      await this._handleResult(executionId, result);
+    });
+
+    // Also listen for node completions to track progress
+    engine.on('node:completed', (data) => {
+      // Update results incrementally so getExecutionResult reflects current state
+      const current = this.results.get(executionId) || {};
+      if (!current.nodeResults) current.nodeResults = {};
+      current.nodeResults[data.nodeId] = { status: 'SUCCEEDED', output: data.output };
+      if (!current.metrics) current.metrics = {};
+      current.metrics.nodesSucceeded = Object.values(current.nodeResults).filter(r => r.status === 'SUCCEEDED').length;
+      this.results.set(executionId, current);
     });
   }
 

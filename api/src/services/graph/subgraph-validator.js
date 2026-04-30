@@ -12,9 +12,8 @@
 
 const memgraphService = require('../memgraph.service');
 
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
-const VALIDATION_MODEL = 'claude-haiku-4-5-20251001';
+const VALIDATION_MODEL = 'haiku';
+const { getInstance: getLLMProvider } = require('../llm/LLMProviderService');
 const VALIDATION_TIMEOUT_MS = 30_000;
 
 const SYSTEM_PROMPT = `You are a graph quality auditor validating a SubGraph consolidation operation in a knowledge graph system.
@@ -172,43 +171,21 @@ CONSOLIDATION STATS:
 Evaluate this subgraph consolidation across all quality dimensions.`;
 
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), VALIDATION_TIMEOUT_MS);
-
-      const body = {
-        model: VALIDATION_MODEL,
-        max_tokens: 1024,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: userMessage }],
-      };
-
       const charToTokens = (c) => Math.ceil(c / 4);
       const sysT = charToTokens(SYSTEM_PROMPT.length);
       const msgT = charToTokens(userMessage.length);
       console.log(`[SubgraphValidator] Calling Claude: model=${VALIDATION_MODEL}, ~${sysT + msgT} input tokens`);
 
-      const response = await fetch(ANTHROPIC_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
+      const llmResp = await Promise.race([
+        getLLMProvider().chat([{ role: 'user', content: userMessage }], {
+          model: VALIDATION_MODEL,
+          maxTokens: 1024,
+          system: SYSTEM_PROMPT,
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Validation timeout')), VALIDATION_TIMEOUT_MS))
+      ]);
 
-      clearTimeout(timeout);
-
-      if (!response.ok) {
-        const errBody = await response.text().catch(() => '');
-        throw new Error(
-          `Claude API returned HTTP ${response.status}: ${errBody.substring(0, 300)}`
-        );
-      }
-
-      const data = await response.json();
-      const text = data.content?.[0]?.text || '';
+      const text = llmResp.content?.[0]?.text || '';
 
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {

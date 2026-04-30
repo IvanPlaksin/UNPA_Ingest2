@@ -1,9 +1,11 @@
 import React from 'react';
-import { BarChart3, Clock, GitBranch, Activity, FileText, Code } from 'lucide-react';
+import { BarChart3, Clock, GitBranch, Activity, FileText, Code, Workflow, Route } from 'lucide-react';
 import useGxeManagerStore from '../../../stores/gxeManagerStore';
 
 const TABS = [
   { id: 'overview',  label: 'Overview',  icon: BarChart3 },
+  { id: 'graph',     label: 'Graph',     icon: Workflow },
+  { id: 'process',   label: 'Process',   icon: Route },
   { id: 'timeline',  label: 'Timeline',  icon: Clock },
   { id: 'nodemap',   label: 'Node Map',  icon: GitBranch },
   { id: 'metrics',   label: 'Metrics',   icon: Activity },

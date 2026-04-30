@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "8fTX2DdGmGE=",
+  "success": true,
+  "projectFilePath": "D:\\UN\\Repos\\UNPA\\UNPA_Ingest\\flowdesk-proxy\\FlowDeskProxy\\FlowDeskProxy.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\IPLAKSIN\\.nuget\\packages\\system.io.hashing\\8.0.0\\system.io.hashing.8.0.0.nupkg.sha512",
+    "C:\\Users\\IPLAKSIN\\.nuget\\packages\\yarp.reverseproxy\\2.2.0\\yarp.reverseproxy.2.2.0.nupkg.sha512"
+  ],
+  "logs": []
+}

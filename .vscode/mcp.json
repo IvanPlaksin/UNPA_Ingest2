@@ -1,0 +1,29 @@
+{
+    "mcpServers": {
+        "project-knowledge": {
+            "type": "stdio",
+            "command": "node",
+            "args": [
+                "d:/UN/Repos/MCP_CLAUDE/mcp-server/dist/index.js"
+            ],
+            "env": {
+                "NODE_ENV": "production",
+                "MCP_TRANSPORT": "stdio",
+                "MCP_SERVER_NAME": "project-knowledge",
+                "MCP_SERVER_VERSION": "1.0.0",
+                "QDRANT_URL": "http://localhost:6333",
+                "QDRANT_COLLECTION": "project_knowledge",
+                "MEMGRAPH_URI": "bolt://localhost:7687",
+                "MEMGRAPH_USER": "memgraph",
+                "MEMGRAPH_PASSWORD": "secret_password_123",
+                "TEI_URL": "http://localhost:8081",
+                "CLAUDE_SESSION_KEY": "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",
+                "CLAUDE_ORGANIZATION_ID": "990e8979-b161-420d-925c-9818eebb3718",
+                "CLAUDE_PROJECT_ID": "019b8d63-3b21-758b-8a74-16eec3d3e14a",
+                "CLAUDE_BASE_URL": "https://claude.ai/api",
+                "LOG_LEVEL": "info"
+            },
+            "description": "Доступ к базе знаний проекта: семантический поиск, граф связей, артефакты"
+        }
+    }
+}

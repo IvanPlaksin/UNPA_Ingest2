@@ -18,6 +18,7 @@ const executionControlTools = require('./tools/execution-control/index.js');
 const documentTools = require('./tools/document/index.js');
 const codexTools = require('./tools/codex/index.js');
 const workspaceTools = require('./tools/workspace/index.js');
+const dialogueTools = require('./tools/dialogue/index.js');
 
 function createAllTools() {
   return [
@@ -35,7 +36,8 @@ function createAllTools() {
     ...executionControlTools.createExecutionControlTools(),
     ...documentTools.createDocumentTools(),
     ...codexTools.createCodexTools(),
-    ...workspaceTools.createWorkspaceTools()
+    ...workspaceTools.createWorkspaceTools(),
+    ...dialogueTools.createDialogueTools(),
   ];
 }
 

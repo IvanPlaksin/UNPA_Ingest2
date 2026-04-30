@@ -28,4 +28,8 @@ router.post('/tickets/:ticketId/close', controller.closeTicket);
 router.post('/sla/check', controller.checkSLA);
 router.get('/sla/breached', controller.getBreachedTickets);
 
+// Laptop Provisioning — CaMeL-protected AI assistant
+router.post('/laptop/chat', controller.laptopChat);
+router.get('/laptop/session/:sessionId', controller.getLaptopSession);
+
 module.exports = router;

@@ -2,7 +2,8 @@ import React, { useState, useCallback } from 'react';
 import {
   Search, Filter, ChevronDown, Plus,
   RefreshCw, Wifi, WifiOff,
-  SortAsc, SortDesc, Grid3X3, List
+  SortAsc, SortDesc, Grid3X3, List,
+  Calendar, X
 } from 'lucide-react';
 import useGxeManagerStore from '../../../stores/gxeManagerStore';
 import { fetchExecutions, fetchStats } from '../../../services/gxeManager.service';
@@ -11,6 +12,7 @@ import './GxeManagerToolbar.css';
 
 const STATUS_OPTIONS = [
   { value: 'RUNNING', label: 'Running' },
+  { value: 'WAITING', label: 'Waiting' },
   { value: 'PAUSED', label: 'Paused' },
   { value: 'QUEUED', label: 'Queued' },
   { value: 'COMPLETED', label: 'Completed' },
@@ -141,6 +143,59 @@ const SortByDropdown = ({ isOpen, onClose }) => {
   );
 };
 
+const DateRangePicker = () => {
+  const filters = useGxeManagerStore(state => state.filters);
+  const setDateRange = useGxeManagerStore(state => state.setDateRange);
+
+  const toInputValue = (ts) => {
+    if (!ts) return '';
+    return new Date(ts).toISOString().slice(0, 16);
+  };
+
+  const handleFromChange = (e) => {
+    const val = e.target.value;
+    setDateRange(val ? new Date(val).getTime() : null, filters.dateTo);
+  };
+
+  const handleToChange = (e) => {
+    const val = e.target.value;
+    setDateRange(filters.dateFrom, val ? new Date(val).getTime() : null);
+  };
+
+  const handleClear = (e) => {
+    e.stopPropagation();
+    setDateRange(null, null);
+  };
+
+  const hasDateFilter = filters.dateFrom || filters.dateTo;
+
+  return (
+    <div className="gxe-toolbar__date-range">
+      <Calendar size={14} className="gxe-toolbar__date-icon" />
+      <input
+        type="datetime-local"
+        value={toInputValue(filters.dateFrom)}
+        onChange={handleFromChange}
+        className="gxe-toolbar__date-input"
+        title="From date"
+      />
+      <span className="gxe-toolbar__date-separator">—</span>
+      <input
+        type="datetime-local"
+        value={toInputValue(filters.dateTo)}
+        onChange={handleToChange}
+        className="gxe-toolbar__date-input"
+        title="To date"
+      />
+      {hasDateFilter && (
+        <button className="gxe-toolbar__date-clear" onClick={handleClear} title="Clear date filter">
+          <X size={12} />
+        </button>
+      )}
+    </div>
+  );
+};
+
 const GxeManagerToolbar = ({ onNewExecution }) => {
   const [filterOpen, setFilterOpen] = useState(false);
   const [groupByOpen, setGroupByOpen] = useState(false);
@@ -154,18 +209,24 @@ const GxeManagerToolbar = ({ onNewExecution }) => {
   const groupBy = useGxeManagerStore(state => state.groupBy);
 
   const activeFilterCount = (filters.status?.length || 0) +
-    (filters.graphId ? 1 : 0);
+    (filters.graphId ? 1 : 0) +
+    (filters.dateFrom || filters.dateTo ? 1 : 0);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      const [execs, statsData] = await Promise.all([fetchExecutions(), fetchStats()]);
+      const params = { limit: 200 };
+      if (filters.status?.length > 0) params.status = filters.status.join(',');
+      if (filters.dateFrom) params.since = filters.dateFrom;
+      if (filters.dateTo) params.until = filters.dateTo;
+      if (filters.graphId) params.graphId = filters.graphId;
+      const [execs, statsData] = await Promise.all([fetchExecutions(params), fetchStats()]);
       setExecutions(execs.executions || execs || []);
       setStats(statsData);
     } finally {
       setRefreshing(false);
     }
-  }, [setExecutions, setStats]);
+  }, [setExecutions, setStats, filters]);
 
   const handleSearch = useCallback((e) => {
     setFilters({ search: e.target.value });
@@ -212,6 +273,8 @@ const GxeManagerToolbar = ({ onNewExecution }) => {
         </button>
         <SortByDropdown isOpen={sortByOpen} onClose={() => setSortByOpen(false)} />
       </div>
+
+      <DateRangePicker />
 
       <div className="gxe-toolbar__spacer" />
 

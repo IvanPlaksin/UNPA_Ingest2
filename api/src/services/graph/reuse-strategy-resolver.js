@@ -19,7 +19,7 @@ function getCatalog() {
   return _catalogService;
 }
 
-const GNN_SERVICE_URL = process.env.GNN_SERVICE_URL || 'http://localhost:5000';
+const GNN_SERVICE_URL = process.env.GNN_SERVICE_URL || 'http://localhost:5001';
 
 /**
  * Call GNN service. Returns null on failure (graceful degradation).

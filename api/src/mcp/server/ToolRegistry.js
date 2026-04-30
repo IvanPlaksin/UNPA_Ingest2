@@ -11,6 +11,10 @@ class ToolRegistry {
   register(tool) {
     // Validate tool definition
     const definition = tool.getDefinition();
+    // Default outputSchema if not provided
+    if (!definition.outputSchema) {
+      definition.outputSchema = { type: 'object' };
+    }
     if (!this.validateToolDef(definition)) {
       throw new Error(`Invalid tool definition for ${definition.id}: ${JSON.stringify(this.validateToolDef.errors)}`);
     }

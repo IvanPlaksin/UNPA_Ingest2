@@ -93,25 +93,26 @@ class CodexService {
       throw new Error(`Unknown Codex node type: ${nodeType}`);
     }
 
+    // Fetch ALL codexIds for this type — need to find true max across
+    // both plain IDs (CODEX-RULE-042) and scoped IDs (CODEX-RULE-TM-001)
     const mg = getMemgraph();
-    const query = `
+    const result = await mg.runQuery(`
       MATCH (n:${nodeType})
       WHERE n.codexId STARTS WITH 'CODEX-${prefix}-'
       RETURN n.codexId AS codexId
-      ORDER BY n.codexId DESC
-      LIMIT 1
-    `;
+    `);
 
-    const result = await mg.runQuery(query);
-
-    let nextSeq = 1;
-    if (result.length > 0) {
-      const lastId = result[0].codexId;
-      const lastSeq = parseInt(lastId.split('-').pop(), 10);
-      nextSeq = lastSeq + 1;
+    let maxSeq = 0;
+    const seqPattern = /(\d+)$/;
+    for (const row of result) {
+      const match = row.codexId.match(seqPattern);
+      if (match) {
+        const seq = parseInt(match[1], 10);
+        if (seq > maxSeq) maxSeq = seq;
+      }
     }
 
-    return `CODEX-${prefix}-${String(nextSeq).padStart(3, '0')}`;
+    return `CODEX-${prefix}-${String(maxSeq + 1).padStart(3, '0')}`;
   }
 
   // ============================================================
@@ -411,7 +412,8 @@ class CodexService {
     const result = await mg.runQuery(`
       MATCH (p:CodexPart)
       OPTIONAL MATCH (p)-[:HAS_SECTION]->(s:CodexSection)
-      OPTIONAL MATCH (s)-[:CONTAINS_RULE]->(r:CodexRule)
+      OPTIONAL MATCH (s)-[:CONTAINS_RULE]->(r)
+      WHERE r:CodexRule OR r:CodexPattern OR r:CodexDefinition OR r:CodexConstraint
       WITH p, s, collect(r) as rules
       RETURN p, s, rules
       ORDER BY p.order, s.order
@@ -441,24 +443,54 @@ class CodexService {
   async getRulesBySection(sectionId) {
     const mg = getMemgraph();
     const result = await mg.runQuery(`
-      MATCH (s:CodexSection {sectionId: $sectionId})-[:CONTAINS_RULE]->(r:CodexRule)
+      MATCH (s:CodexSection {sectionId: $sectionId})-[:CONTAINS_RULE]->(r)
+      WHERE r:CodexRule OR r:CodexDefinition OR r:CodexPattern OR r:CodexConstraint
       RETURN r
-      ORDER BY r.ruleId
+      ORDER BY coalesce(r.ruleId, r.definitionId, r.codexId)
     `, { sectionId });
 
     return result.map(r => r.r);
   }
 
   /**
-   * Get Codex metadata (version, counts)
+   * Get Codex metadata (version + live counts from database).
+   * Augments static CodexMetadata node with real-time counts.
    */
   async getCodexMetadata() {
     const mg = getMemgraph();
-    const result = await mg.runQuery(`
-      MATCH (m:CodexMetadata {id: 'codex-metadata'})
+
+    // Fetch static metadata node (version, timestamps)
+    const metaResult = await mg.runQuery(`
+      MERGE (m:CodexMetadata {id: 'codex-metadata'})
+      ON CREATE SET m.version = '0.1.0', m.createdAt = datetime()
       RETURN m
     `);
-    return result[0]?.m || null;
+    const meta = metaResult[0]?.m?.properties || metaResult[0]?.m || {};
+
+    // Compute live counts so UI always reflects actual state
+    // Labels alone are sufficient — no namespace filter (Parts/Sections may lack it)
+    const counts = await mg.runQuery(`
+      OPTIONAL MATCH (r:CodexRule)
+      WITH count(r) AS rulesCount
+      OPTIONAL MATCH (p:CodexPrinciple)
+      WITH rulesCount, count(p) AS principlesCount
+      OPTIONAL MATCH (s:CodexSection)
+      WITH rulesCount, principlesCount, count(s) AS sectionsCount
+      OPTIONAL MATCH (pt:CodexPart)
+      WITH rulesCount, principlesCount, sectionsCount, count(pt) AS partsCount
+      OPTIONAL MATCH (a:CodexADR)
+      RETURN rulesCount, principlesCount, sectionsCount, partsCount, count(a) AS adrsCount
+    `);
+
+    const c = counts[0] || {};
+    return {
+      ...meta,
+      rulesCount: c.rulesCount ?? meta.rulesCount ?? 0,
+      principlesCount: c.principlesCount ?? meta.principlesCount ?? 0,
+      sectionsCount: c.sectionsCount ?? meta.sectionsCount ?? 0,
+      partsCount: c.partsCount ?? meta.partsCount ?? 0,
+      adrsCount: c.adrsCount ?? meta.adrsCount ?? 0,
+    };
   }
 
   /**
@@ -468,11 +500,23 @@ class CodexService {
     const mg = getMemgraph();
     const lowerQuery = query.toLowerCase();
 
+    // Helper: safe toLower that handles non-string properties (arrays, ints, etc.)
+    // Some nodes store arrays/objects in text fields — guard with toString()
     const result = await mg.runQuery(`
       MATCH (n)
-      WHERE (n:CodexPart OR n:CodexSection OR n:CodexRule OR n:CodexPrinciple OR n:CodexADR)
-        AND (toLower(n.title) CONTAINS $query
-             OR toLower(coalesce(n.description, '')) CONTAINS $query)
+      WHERE (n:CodexPart OR n:CodexSection OR n:CodexRule OR n:CodexPrinciple OR n:CodexADR
+             OR n:CodexPattern OR n:CodexDefinition)
+      WITH n,
+           CASE WHEN n.title IS NOT NULL THEN toLower(toString(n.title)) ELSE '' END AS _title,
+           CASE WHEN n.description IS NOT NULL THEN toLower(toString(n.description)) ELSE '' END AS _desc,
+           CASE WHEN n.summary IS NOT NULL THEN toLower(toString(n.summary)) ELSE '' END AS _summary,
+           CASE WHEN n.rationale IS NOT NULL THEN toLower(toString(n.rationale)) ELSE '' END AS _rationale,
+           CASE WHEN n.codexId IS NOT NULL THEN toLower(toString(n.codexId)) ELSE '' END AS _codexId
+      WHERE _title CONTAINS $query
+         OR _desc CONTAINS $query
+         OR _summary CONTAINS $query
+         OR _rationale CONTAINS $query
+         OR _codexId CONTAINS $query
       RETURN labels(n)[0] as type, n
       LIMIT 30
     `, { query: lowerQuery });

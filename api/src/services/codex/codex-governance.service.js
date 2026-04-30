@@ -42,7 +42,12 @@ class CodexGovernanceService {
   };
 
   /**
-   * Submit a new proposal from an agent
+   * Submit a new proposal from an agent.
+   *
+   * Accepts structured fields matching the Information Contract:
+   *   title, summary, rationale, whyItExists, examples, scope, modality, etc.
+   * These fields are stored both on the proposal itself (for review)
+   * and inside proposedChanges (for apply-time node creation).
    */
   async submitProposal(proposal, context = {}) {
     const {
@@ -55,7 +60,15 @@ class CodexGovernanceService {
 
     const validTypes = ['CREATE', 'MODIFY', 'DEPRECATE', 'SUPERSEDE'];
     if (!validTypes.includes(proposalType)) {
-      throw new Error(`Invalid proposalType: ${proposalType}`);
+      throw new Error(`Invalid proposalType: ${proposalType}. Valid: ${validTypes.join(', ')}`);
+    }
+
+    // Validate narrative fields — refuse incomplete proposals
+    if (!proposal.rationale && !rationale) {
+      throw new Error('Proposal rejected: "rationale" is required. Explain WHY this rule must exist.');
+    }
+    if (!proposal.summary) {
+      throw new Error('Proposal rejected: "summary" is required. Describe what this rule prescribes in 1-2 sentences.');
     }
 
     // For MODIFY/DEPRECATE/SUPERSEDE, target must exist
@@ -73,15 +86,34 @@ class CodexGovernanceService {
       }
     }
 
+    // Build enriched proposedChanges: merge explicit proposedChanges with
+    // top-level structured fields so apply-time CREATE has full data
+    let enrichedChanges = typeof proposedChanges === 'string'
+      ? (() => { try { return JSON.parse(proposedChanges); } catch { return {}; } })()
+      : { ...(proposedChanges || {}) };
+
+    // Narrative fields from proposal override sparse proposedChanges
+    if (proposal.title && !enrichedChanges.title) enrichedChanges.title = proposal.title;
+    if (proposal.summary && !enrichedChanges.summary) enrichedChanges.summary = proposal.summary;
+    if (proposal.rationale && !enrichedChanges.rationale) enrichedChanges.rationale = proposal.rationale;
+    if (proposal.whyItExists && !enrichedChanges.whyItExists) enrichedChanges.whyItExists = proposal.whyItExists;
+    if (proposal.examples?.length && !enrichedChanges.examples?.length) enrichedChanges.examples = proposal.examples;
+    if (proposal.scope?.length && !enrichedChanges.scope?.length) enrichedChanges.scope = proposal.scope;
+    if (proposal.modality && !enrichedChanges.modality) enrichedChanges.modality = proposal.modality;
+    if (proposal.ruleKind && !enrichedChanges.ruleKind) enrichedChanges.ruleKind = proposal.ruleKind;
+    if (proposal.derivesFromPrinciple && !enrichedChanges.derivesFromPrinciple) {
+      enrichedChanges.derivesFromPrinciple = proposal.derivesFromPrinciple;
+    }
+
     const proposalNode = await codexService.createNode('CodexProposal', {
       title: `${proposalType}: ${proposal.title || targetCodexId || 'New node'}`,
-      summary: proposal.summary || `Proposal to ${proposalType.toLowerCase()} Codex content`,
-      rationale: rationale,
-      whyItExists: `Agent ${context.agentId || 'unknown'} identified need for this change`,
-      examples: proposal.examples || ['Submitted via Proposal Engine'],
+      summary: proposal.summary,
+      rationale: proposal.rationale || rationale,
+      whyItExists: proposal.whyItExists || `Agent ${context.agentId || 'unknown'} identified need for this change`,
+      examples: (proposal.examples?.length) ? proposal.examples : ['No examples provided — reviewer should request'],
       proposalType,
       targetCodexId: targetCodexId || '',
-      proposedChanges: typeof proposedChanges === 'string' ? proposedChanges : JSON.stringify(proposedChanges || {}),
+      proposedChanges: JSON.stringify(enrichedChanges),
       agentConfidence,
       reviewStatus: 'PENDING',
       changeabilityTier: 'REVIEWED',
@@ -217,7 +249,79 @@ class CodexGovernanceService {
     if (typeof proposedChanges === 'string') {
       try { proposedChanges = JSON.parse(proposedChanges); } catch { proposedChanges = {}; }
     }
+
+    // === APPLY-TIME ENRICHMENT ===
+    // Defense-in-depth: pull narrative fields from the proposal node itself
+    // into proposedChanges. Covers old proposals with sparse proposedChanges
+    // and any future edge case where submit-time enrichment was incomplete.
+    const _deserialize = (v) => {
+      if (typeof v !== 'string') return v;
+      try { const p = JSON.parse(v); return Array.isArray(p) ? p : v; } catch { return v; }
+    };
+
+    const narrativeFields = ['title', 'summary', 'rationale', 'whyItExists'];
+    for (const field of narrativeFields) {
+      if (!proposedChanges[field] && proposal[field]) {
+        // Strip proposal-specific prefixes from title (e.g., "CREATE: ...")
+        let value = proposal[field];
+        if (field === 'title' && typeof value === 'string') {
+          value = value.replace(/^(CREATE|MODIFY|DEPRECATE|SUPERSEDE):\s*/i, '');
+        }
+        proposedChanges[field] = value;
+      }
+    }
+    // Arrays need deserialization (stored as JSON strings in Memgraph)
+    if (!proposedChanges.examples || !proposedChanges.examples.length) {
+      const pExamples = _deserialize(proposal.examples);
+      if (Array.isArray(pExamples) && pExamples.length > 0
+          && pExamples[0] !== 'Submitted via Proposal Engine'
+          && pExamples[0] !== 'No examples provided — reviewer should request') {
+        proposedChanges.examples = pExamples;
+      }
+    }
+    if (!proposedChanges.scope || !proposedChanges.scope.length) {
+      const pScope = _deserialize(proposal.scope);
+      if (Array.isArray(pScope) && pScope.length > 0) {
+        proposedChanges.scope = pScope;
+      }
+    }
+    const optionalFields = ['modality', 'ruleKind', 'derivesFromPrinciple'];
+    for (const field of optionalFields) {
+      if (!proposedChanges[field] && proposal[field]) {
+        proposedChanges[field] = proposal[field];
+      }
+    }
+
+    // === APPLY-TIME VALIDATION ===
+    // Refuse to create empty shells — require minimum content quality
     const proposalType = proposal.proposalType;
+    if (proposalType === 'CREATE') {
+      const missing = [];
+      if (!proposedChanges.summary || proposedChanges.summary.length < 10) missing.push('summary (min 10 chars)');
+      if (!proposedChanges.rationale || proposedChanges.rationale.length < 15) missing.push('rationale (min 15 chars)');
+      if (missing.length > 0) {
+        throw new Error(
+          `Cannot apply proposal ${codexId}: created node would be incomplete. ` +
+          `Missing required fields: ${missing.join(', ')}. ` +
+          `Re-submit the proposal with complete data using codex_propose_change tool.`
+        );
+      }
+
+      // Validate derivesFromPrinciple references an existing principle — prevent dangling refs
+      if (proposedChanges.derivesFromPrinciple) {
+        const mg = getMemgraph();
+        const exists = await mg.runQuery(
+          'MATCH (p:CodexPrinciple {codexId: $pid}) RETURN p.codexId AS id',
+          { pid: proposedChanges.derivesFromPrinciple }
+        );
+        if (exists.length === 0) {
+          // Strip invalid reference rather than reject — link can be added later
+          console.warn(`[CodexGovernance] derivesFromPrinciple '${proposedChanges.derivesFromPrinciple}' does not exist — removing from proposedChanges`);
+          delete proposedChanges.derivesFromPrinciple;
+        }
+      }
+    }
+
     const targetCodexId = proposal.targetCodexId;
 
     let result;
@@ -229,6 +333,8 @@ class CodexGovernanceService {
           proposedChanges,
           { isAdmin: true, createdBy: `proposal:${codexId}` }
         );
+        // Create graph relationships so the new node is visible in UI
+        await this._linkNewNode(result, proposedChanges);
         break;
 
       case 'MODIFY':
@@ -328,14 +434,71 @@ class CodexGovernanceService {
   }
 
   /**
-   * Increment Codex patch version (0.1.3 → 0.1.4) and record the triggering proposal
+   * Link a newly created node into the Codex graph so it appears in UI views.
+   * Creates DERIVES_FROM relationship to principle (for graph view)
+   * and optionally links to a governance section (for hierarchy view).
+   */
+  async _linkNewNode(createdNode, proposedChanges) {
+    const mg = getMemgraph();
+    const nodeProps = createdNode?.properties || createdNode || {};
+    const newCodexId = nodeProps.codexId;
+    if (!newCodexId) return;
+
+    // 1. Create DERIVES_FROM → Principle relationship (makes node visible in graph view)
+    const principleId = proposedChanges.derivesFromPrinciple;
+    if (principleId) {
+      try {
+        await mg.runQuery(`
+          MATCH (r {codexId: $newCodexId, namespace: 'Codex'})
+          MATCH (p:CodexPrinciple {codexId: $principleId, namespace: 'Codex'})
+          MERGE (r)-[:DERIVES_FROM {strength: 'direct', createdAt: $now}]->(p)
+        `, { newCodexId, principleId, now: new Date().toISOString() });
+      } catch (err) {
+        console.warn(`[CodexGovernance] Could not link to principle ${principleId}: ${err.message}`);
+      }
+    }
+
+    // 2. Ensure a "Governance Rules" section exists and link the rule to it
+    //    (makes node visible in hierarchy/tree view)
+    const nodeType = proposedChanges.nodeType || 'CodexRule';
+    if (['CodexRule', 'CodexPattern', 'CodexDefinition', 'CodexConstraint'].includes(nodeType)) {
+      try {
+        await mg.runQuery(`
+          MERGE (gp:CodexPart {partId: 'GOVERNANCE'})
+          ON CREATE SET gp.title = 'Governance Rules',
+                        gp.namespace = 'Codex',
+                        gp.description = 'Rules created through the Codex governance proposal system',
+                        gp.order = 999
+          MERGE (gs:CodexSection {codexId: 'CODEX-SECTION-GOV'})
+          ON CREATE SET gs.sectionId = 'GOV-PROPOSALS',
+                        gs.namespace = 'Codex',
+                        gs.title = 'Approved Proposals',
+                        gs.description = 'Rules approved via governance workflow',
+                        gs.order = 1
+          MERGE (gp)-[:HAS_SECTION]->(gs)
+          WITH gs
+          MATCH (r {codexId: $newCodexId, namespace: 'Codex'})
+          MERGE (gs)-[:CONTAINS_RULE]->(r)
+        `, { newCodexId });
+      } catch (err) {
+        console.warn(`[CodexGovernance] Could not link to governance section: ${err.message}`);
+      }
+    }
+  }
+
+  /**
+   * Increment Codex patch version (0.1.3 → 0.1.4) and record the triggering proposal.
+   * Uses MERGE to auto-create CodexMetadata node if it doesn't exist.
    */
   async _bumpCodexVersion(triggerProposalId) {
     const mg = getMemgraph();
+
+    // MERGE ensures the metadata node exists (creates if missing)
     const result = await mg.runQuery(`
-      MATCH (m:CodexMetadata {id: 'codex-metadata'})
+      MERGE (m:CodexMetadata {id: 'codex-metadata'})
+      ON CREATE SET m.version = '0.1.0', m.createdAt = $now
       RETURN m.version AS version
-    `);
+    `, { now: new Date().toISOString() });
 
     const current = result[0]?.version || '0.1.0';
     const parts = current.split('.');
@@ -343,7 +506,7 @@ class CodexGovernanceService {
     const newVersion = `${parts[0]}.${parts[1]}.${patch}`;
 
     await mg.runQuery(`
-      MATCH (m:CodexMetadata {id: 'codex-metadata'})
+      MERGE (m:CodexMetadata {id: 'codex-metadata'})
       SET m.version = $newVersion,
           m.lastBumpAt = $now,
           m.lastBumpTrigger = $trigger

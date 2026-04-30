@@ -646,7 +646,8 @@ class RuntimeEngine extends EventEmitter {
       'scheduler:initialized',
       'execution:progress',
       'execution:completed',
-      'execution:failed'
+      'execution:failed',
+      'execution:waitingForInput'  // BACKLOG-0046: needed for resume-continue cycle
     ];
 
     for (const eventName of eventsToProxy) {
@@ -791,6 +792,24 @@ RuntimeEngine.prototype.resumeExecution = async function(executionId, { nodeId, 
 
   // Resume the node in scheduler
   await this._scheduler.resumeNode(nodeId, output);
+
+  // After resume, scheduler may have paused at next WAIT_FOR_INPUT node
+  // Need to wait briefly for scheduler to finish processing the next node
+  await new Promise(r => setTimeout(r, 100));
+
+  if (this._scheduler.hasWaitingNodes) {
+    try {
+      await this._stateMachine.transition('await_signal');
+      this.emit('execution:stateChange', {
+        executionId: this._executionId,
+        from: 'RUNNING',
+        to: 'WAITING'
+      });
+    } catch (e) {
+      // State machine might already be in WAITING if event handler beat us
+      console.log(`[RuntimeEngine] await_signal transition failed (state=${this._stateMachine.state}):`, e.message);
+    }
+  }
 
   return { status: this._stateMachine.state };
 };

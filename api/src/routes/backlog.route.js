@@ -144,7 +144,7 @@ router.post('/items/:backlogId/review', async (req, res) => {
 
 router.post('/items/:backlogId/complete', async (req, res) => {
   try {
-    const item = await backlogService.complete(req.params.backlogId, req.body.verifiedBy || 'admin');
+    const item = await backlogService.complete(req.params.backlogId, req.body.verifiedBy || 'admin', req.body.implementationNotes, req.body.implementedFiles);
     res.json({ success: true, data: item });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });

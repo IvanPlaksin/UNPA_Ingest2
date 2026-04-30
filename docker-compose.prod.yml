@@ -1,0 +1,158 @@
+# ═══════════════════════════════════════════════════════════════════
+# Production Override
+# ═══════════════════════════════════════════════════════════════════
+#
+# Usage:
+#   docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#   make prod  (shortcut via Makefile)
+#
+# Features:
+#   - Resource limits (CPU, memory)
+#   - JSON log rotation
+#   - Restart policies
+#   - env_file for secrets
+#   - Tuned healthchecks
+#
+# ═══════════════════════════════════════════════════════════════════
+
+
+
+services:
+  # ─────────────────────────────────────────────────────────────
+  # API — Production with resource limits
+  # ─────────────────────────────────────────────────────────────
+  api:
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+      - LOG_FORMAT=json
+      - RATE_LIMIT_ENABLED=true
+      - RATE_LIMIT_MAX=200
+      - HELMET_ENABLED=true
+      - ENABLE_WEBSOCKET=true
+      - ENABLE_JOB_QUEUE=true
+      - ENABLE_SWAGGER=false
+    env_file:
+      - .env.production
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "10"
+    healthcheck:
+      test: ["CMD", "node", "scripts/docker-healthcheck.js"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+
+  # ─────────────────────────────────────────────────────────────
+  # Redis — Production tuning
+  # ─────────────────────────────────────────────────────────────
+  redis:
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru --save 60 1000
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 768M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # ─────────────────────────────────────────────────────────────
+  # Memgraph — Production with higher memory
+  # ─────────────────────────────────────────────────────────────
+  memgraph:
+    restart: unless-stopped
+    command: ["--log-level=WARNING", "--memory-limit=2048", "--also-log-to-stderr"]
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 3G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # ─────────────────────────────────────────────────────────────
+  # Qdrant — Production with higher memory
+  # ─────────────────────────────────────────────────────────────
+  qdrant:
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # ─────────────────────────────────────────────────────────────
+  # ETL Worker — Production
+  # ─────────────────────────────────────────────────────────────
+  etl-worker:
+    restart: on-failure:5
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # ─────────────────────────────────────────────────────────────
+  # Frontend — Production nginx
+  # ─────────────────────────────────────────────────────────────
+  frontend:
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+        
+  # ─────────────────────────────────────────────────────────────
+  # MSSQL — Expose port, trust self-signed cert
+  # ─────────────────────────────────────────────────────────────
+  mssql:
+    ports:
+      - "1433:1433"

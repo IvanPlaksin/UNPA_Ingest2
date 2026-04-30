@@ -1,16 +1,18 @@
 import React, { useMemo } from 'react';
 import { AlertCircle, CheckCircle2, Clock, Zap } from 'lucide-react';
 
+const getStatus = (s) => typeof s === 'object' && s !== null ? s.status : s;
+
 const OverviewTab = ({ execution }) => {
   const nodeStats = useMemo(() => {
     if (!execution) return { total: 0, completed: 0, failed: 0, running: 0, pending: 0 };
     const states = execution.nodeStates || {};
     const entries = Object.entries(states);
     const total = entries.length;
-    const completed = entries.filter(([, s]) => ['COMPLETED', 'SUCCEEDED', 'SKIPPED'].includes(s)).length;
-    const failed = entries.filter(([, s]) => s === 'FAILED').length;
-    const running = entries.filter(([, s]) => s === 'RUNNING').length;
-    const pending = entries.filter(([, s]) => s === 'PENDING').length;
+    const completed = entries.filter(([, s]) => ['COMPLETED', 'SUCCEEDED', 'SKIPPED', 'CANCELLED'].includes(getStatus(s))).length;
+    const failed = entries.filter(([, s]) => getStatus(s) === 'FAILED').length;
+    const running = entries.filter(([, s]) => ['RUNNING', 'EXECUTING'].includes(getStatus(s))).length;
+    const pending = entries.filter(([, s]) => ['PENDING', 'READY', 'QUEUED'].includes(getStatus(s))).length;
     return { total, completed, failed, running, pending };
   }, [execution?.nodeStates]);
 
@@ -25,18 +27,38 @@ const OverviewTab = ({ execution }) => {
       {/* Execution Info */}
       <div className="gxe-tab__section">
         <h4 className="gxe-tab__section-title">Execution Info</h4>
+        {execution._graphDescription && (
+          <div className="gxe-tab__field" style={{ marginBottom: 12 }}>
+            <span className="gxe-tab__label">Description</span>
+            <span className="gxe-tab__value" style={{ fontStyle: 'italic', color: '#a1a1aa' }}>{execution._graphDescription}</span>
+          </div>
+        )}
         <div className="gxe-tab__grid">
           <div className="gxe-tab__field">
-            <span className="gxe-tab__label">Execution ID</span>
-            <span className="gxe-tab__value gxe-tab__value--mono">{execution.executionId}</span>
-          </div>
-          <div className="gxe-tab__field">
             <span className="gxe-tab__label">Graph ID</span>
-            <span className="gxe-tab__value">{execution.graphId}</span>
+            <span className="gxe-tab__value gxe-tab__value--mono">{execution.graphId}</span>
           </div>
           <div className="gxe-tab__field">
             <span className="gxe-tab__label">Graph Version</span>
-            <span className="gxe-tab__value">{execution.graphVersion || 'latest'}</span>
+            <span className="gxe-tab__value">
+              {execution._catalogEntryId && execution._resolvedVersion ? (
+                <>
+                  <a
+                    href={`/gxe?graphId=${execution._catalogEntryId}&version=${execution._resolvedVersion}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="gxe-tab__link"
+                  >
+                    v{execution._resolvedVersion}
+                  </a>
+                  {(!execution.graphVersion || execution.graphVersion === 'latest') && (
+                    <span style={{ color: '#71717a', marginLeft: 4 }}>(latest)</span>
+                  )}
+                </>
+              ) : (
+                execution.graphVersion || 'latest'
+              )}
+            </span>
           </div>
           <div className="gxe-tab__field">
             <span className="gxe-tab__label">Status</span>
@@ -49,6 +71,10 @@ const OverviewTab = ({ execution }) => {
           <div className="gxe-tab__field">
             <span className="gxe-tab__label">Trigger Type</span>
             <span className="gxe-tab__value">{execution.triggerType || 'MANUAL'}</span>
+          </div>
+          <div className="gxe-tab__field">
+            <span className="gxe-tab__label">Current Node</span>
+            <span className="gxe-tab__value gxe-tab__value--mono">{execution.currentNodeId || '—'}</span>
           </div>
         </div>
       </div>

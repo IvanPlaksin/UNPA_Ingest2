@@ -16,6 +16,7 @@
 
 const axios = require('axios');
 const { EventEmitter } = require('events');
+const { getInstance: getLLMProvider } = require('../llm/LLMProviderService');
 const { v4: uuidv4 } = require('uuid');
 
 const { GraphState, ToolExecutor } = require('./tool-executor');
@@ -1146,53 +1147,27 @@ class GraphBuilderAgent extends EventEmitter {
    * @private
    */
   async _callAnthropic(modelId, messages, tools) {
-    const apiKey = getApiKey('anthropic');
-    if (!apiKey) {
-      throw new Error('ANTHROPIC_API_KEY not configured');
-    }
-
     const modelInfo = getModel(modelId);
     const { system, messages: convertedMessages } = this._convertMessagesToAnthropicFormat(messages);
 
-    const payload = {
-      model: modelId,
-      max_tokens: modelInfo?.maxTokens || this.config.maxTokens,
-      messages: convertedMessages,
-    };
+    const resolvedTools = (tools && tools.length > 0 && modelInfo?.supportsTools)
+      ? this._convertToolsToAnthropicFormat(tools)
+      : undefined;
 
-    if (system) {
-      payload.system = system;
-    }
-
-    if (tools && tools.length > 0 && modelInfo?.supportsTools) {
-      payload.tools = this._convertToolsToAnthropicFormat(tools);
-    }
-
-    const headers = {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    };
-
-    // Add beta header for extended context if needed
-    const provider = AI_PROVIDERS.anthropic;
-    if (provider?.betaHeader) {
-      headers['anthropic-beta'] = provider.betaHeader;
-    }
-
-    console.log('[GraphBuilderAgent] Calling Anthropic:', {
+    console.log('[GraphBuilderAgent] Calling LLM:', {
       model: modelId,
       messageCount: convertedMessages.length,
-      hasTools: !!payload.tools,
+      hasTools: !!resolvedTools,
     });
 
-    const response = await axios.post(
-      'https://api.anthropic.com/v1/messages',
-      payload,
-      { headers, timeout: this.config.timeout }
-    );
+    const llmResp = await getLLMProvider().chat(convertedMessages, {
+      model: modelId,
+      maxTokens: modelInfo?.maxTokens || this.config.maxTokens,
+      system: system || undefined,
+      tools: resolvedTools,
+    });
 
-    const data = response.data;
+    const data = { content: llmResp.content, stop_reason: llmResp.stop_reason || llmResp.stopReason };
 
     // Convert Anthropic response to OpenAI format
     let content = '';

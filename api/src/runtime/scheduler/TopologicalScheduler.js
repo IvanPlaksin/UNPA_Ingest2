@@ -146,6 +146,12 @@ class TopologicalScheduler extends EventEmitter {
     /** @type {Map<string, Object>} nodeId → waitContext */
     this._waitingNodes = new Map();
 
+    // Track how many times each merge node was decremented via _skipUnreachable
+    // (i.e., via non-taken branches). When this equals the total incoming edge count,
+    // all paths to the merge node were passively skipped → skip the merge node too.
+    /** @type {Map<string, number>} nodeId → passive skip decrement count */
+    this._passiveDecrements = new Map();
+
     // Initialized flag
     this._initialized = false;
   }
@@ -542,6 +548,9 @@ class TopologicalScheduler extends EventEmitter {
       throw new Error(`Node ${nodeId} is not in WAITING_INPUT state`);
     }
 
+    // Reset completion promise for next pause/completion cycle
+    this._completion = new Deferred();
+
     // Transition back to EXECUTING
     sm.transition('input_received');
 
@@ -552,10 +561,13 @@ class TopologicalScheduler extends EventEmitter {
     });
 
     // Inject received input as the node's output and propagate downstream
+    console.log(`[Scheduler:resumeNode] ${nodeId} propagating output...`);
     const propagationResults = this._dataFlowManager.propagateOutput(nodeId, inputPayload);
     const failedPropagations = propagationResults.filter(r => !r.success);
+    console.log(`[Scheduler:resumeNode] ${nodeId} propagation: ${propagationResults.length} total, ${failedPropagations.length} failed`);
 
     if (failedPropagations.length > 0) {
+      console.log(`[Scheduler:resumeNode] ${nodeId} PROPAGATION FAILED:`, failedPropagations);
       sm.transition('error', { retriesExhausted: true });
       this._metrics.nodesFailed++;
       this._nodeResults.set(nodeId, {
@@ -599,7 +611,32 @@ class TopologicalScheduler extends EventEmitter {
     }
 
     // Continue graph execution
+    console.log(`[Scheduler:resumeNode] ${nodeId} calling _onNodeCompleted...`);
+
+    // Debug: check state of downstream nodes BEFORE _onNodeCompleted
+    for (const edge of this._dag.edges) {
+      const src = edge.source || edge.sourceNodeId;
+      if (src === nodeId) {
+        const tgt = edge.target || edge.targetNodeId;
+        const tgtSm = this._nodeStates.get(tgt);
+        const tgtDeg = this._inDegree.get(tgt);
+        console.log(`[Scheduler:resumeNode] downstream ${tgt}: state=${tgtSm?.state}, inDegree=${tgtDeg}`);
+      }
+    }
+
     this._onNodeCompleted(nodeId);
+
+    // Debug: check state AFTER _onNodeCompleted
+    for (const edge of this._dag.edges) {
+      const src = edge.source || edge.sourceNodeId;
+      if (src === nodeId) {
+        const tgt = edge.target || edge.targetNodeId;
+        const tgtSm = this._nodeStates.get(tgt);
+        const tgtDeg = this._inDegree.get(tgt);
+        console.log(`[Scheduler:resumeNode] AFTER: ${tgt}: state=${tgtSm?.state}, inDegree=${tgtDeg}`);
+      }
+    }
+    console.log(`[Scheduler:resumeNode] ${nodeId} resume complete. Active promises: ${this._activePromises.size}`);
   }
 
   /**
@@ -725,9 +762,6 @@ class TopologicalScheduler extends EventEmitter {
     if (result === 'true' && TRUE_LABELS.includes(label)) return true;
     if (result === 'false' && FALSE_LABELS.includes(label)) return true;
 
-    // Partial/substring match
-    if (label.includes(result) || result.includes(label)) return true;
-
     return false;
   }
 
@@ -740,20 +774,40 @@ class TopologicalScheduler extends EventEmitter {
     if (!sm || sm.isTerminal) return;
 
     if (sm.state === NodeState.PENDING) {
-      // Check if this is a merge node (multiple incoming edges)
-      // Merge nodes should NOT be skipped — only their inDegree decremented
+      // Check if this is a merge node (multiple incoming forward edges).
+      // Merge nodes must NOT be skipped unconditionally — track how many times
+      // _skipUnreachable is called on this node (i.e., non-taken branch decrements).
+      // When passiveDecrements === incomingCount, ALL paths were non-taken → skip.
+      // When passiveDecrements < incomingCount, at least one active path → READY.
       const incomingCount = this._dag.edges.filter(e => (e.target || e.targetNodeId) === targetId).length;
       if (incomingCount > 1) {
-        // Merge node: decrement inDegree, don't skip
+        const passive = (this._passiveDecrements.get(targetId) || 0) + 1;
+        this._passiveDecrements.set(targetId, passive);
+
         const newDegree = (this._inDegree.get(targetId) || 1) - 1;
         this._inDegree.set(targetId, newDegree);
         if (newDegree === 0) {
-          if (sm.canTransition('deps_satisfied')) {
-            sm.transition('deps_satisfied');
-            this.emit('node:stateChange', { nodeId: targetId, from: 'PENDING', to: 'READY' });
+          if (passive === incomingCount) {
+            // Every incoming path was a non-taken branch → skip the merge node and propagate
+            if (sm.canTransition('skip_branch')) sm.transition('skip_branch');
+            else if (sm.canTransition('cancel')) sm.transition('cancel');
+            this._metrics.nodesSkipped++;
+            this._nodeResults.set(targetId, { status: 'SKIPPED', reason: 'All upstream paths skipped' });
+            this.emit('node:stateChange', { nodeId: targetId, from: 'PENDING', to: 'SKIPPED' });
+            for (const edge of this._dag.edges) {
+              if ((edge.source || edge.sourceNodeId) === targetId) {
+                this._skipUnreachable(edge.target || edge.targetNodeId, conditionNodeId);
+              }
+            }
+          } else {
+            // At least one active propagation reached this merge node → mark READY
+            if (sm.canTransition('deps_satisfied')) {
+              sm.transition('deps_satisfied');
+              this.emit('node:stateChange', { nodeId: targetId, from: 'PENDING', to: 'READY' });
+            }
           }
         }
-        return; // Don't skip merge nodes or propagate further
+        return;
       }
 
       // Single-input node: safe to skip

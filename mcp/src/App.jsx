@@ -27,11 +27,13 @@ import FlowDeskPage from './pages/FlowDeskPage';
 import FlowDeskConfigPage from './pages/FlowDeskConfigPage';
 import BackLogPage from './pages/BackLogPage';
 import CodexViewerPage from './pages/CodexViewerPage';
+import DialoguePage from './pages/DialoguePage/DialoguePage';
 import ObservabilityPage from './pages/ObservabilityPage';
 import WorkspacesPage from './pages/WorkspacesPage';
 import WorkspaceDetailPage from './pages/WorkspaceDetailPage';
 import StructuralFormDemoPage from './pages/StructuralFormDemoPage';
 import StructuralEditorPage from './pages/StructuralEditorPage';
+import UnpaChatDemoPage from './pages/UnpaChatDemoPage';
 
 // import './index.css'; // Removing in favor of CssBaseline and MUI styles
 
@@ -147,12 +149,14 @@ function App() {
                                 {/* FlowDesk AI Intake Demo */}
                                 <Route path="/flowdesk" element={<FlowDeskPage />} />
                                 <Route path="/forms-demo" element={<StructuralFormDemoPage />} />
+                                <Route path="/unpa-chat-demo" element={<UnpaChatDemoPage />} />
                                 <Route path="/structural-editor" element={<StructuralEditorPage />} />
                                 <Route path="/flowdesk/config" element={<FlowDeskConfigPage />} />
 
                                 {/* BackLog — AI-generated code modification tasks */}
                                 <Route path="/backlog" element={<BackLogPage />} />
                                 <Route path="/codex" element={<CodexViewerPage />} />
+                                <Route path="/dialogue/*" element={<DialoguePage />} />
 
                                 {/* WorkSpace — Isolated knowledge extraction sandbox */}
                                 <Route path="/workspaces" element={<WorkspacesPage />} />

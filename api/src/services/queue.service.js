@@ -2,9 +2,12 @@
 const { Queue } = require('bullmq');
 const IORedis = require('ioredis');
 
+const tlsEnabled = process.env.REDIS_TLS === 'true';
 const REDIS_CONFIG = {
     host: process.env.REDIS_HOST || 'localhost',
-    port: process.env.REDIS_PORT || 6379,
+    port: parseInt(process.env.REDIS_PORT || '6379', 10),
+    ...(tlsEnabled && { tls: {} }),
+    ...(process.env.REDIS_PASSWORD && { password: process.env.REDIS_PASSWORD }),
     maxRetriesPerRequest: null
 };
 

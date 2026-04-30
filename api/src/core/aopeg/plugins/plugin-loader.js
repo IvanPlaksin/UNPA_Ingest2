@@ -165,6 +165,7 @@ async function loadDomainPlugins() {
     const { flowdeskPlugin } = require('./flowdesk');
     const { validationPlugin } = require('./validation');
     const { extractionPlugin } = require('./extraction');
+    const { dialoguePlugin } = require('./dialogue');
 
     const sqlExtractionPlugin = new SqlExtractionPlugin();
 
@@ -179,6 +180,7 @@ async function loadDomainPlugins() {
       flowdeskPlugin,
       validationPlugin,
       extractionPlugin,
+      dialoguePlugin,
     ]);
 
     console.log('[PluginLoader] Domain plugins loaded');

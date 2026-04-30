@@ -28,7 +28,7 @@ const {
 const LOG_PREFIX = '[PatternMatcher]';
 
 // GNN service (same as the rest of the project)
-const GNN_SERVICE_URL = process.env.GNN_SERVICE_URL || 'http://localhost:5000';
+const GNN_SERVICE_URL = process.env.GNN_SERVICE_URL || 'http://localhost:5001';
 const GNN_TIMEOUT_MS = parseInt(process.env.GNN_TIMEOUT_MS, 10) || 8000;
 
 // Thresholds

@@ -1,3 +1,1513 @@
 DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
 DEBUG: getChangesetChanges type: function
 App created at 2025-12-10T11:04:06.173Z
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+App created at 2026-01-23T14:54:35.663Z
+[API] GET /api/v1/health
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+App created at 2026-01-23T14:55:10.436Z
+[API] GET /api/v1/aopeg/health
+[API] POST /api/v1/aopeg/initialize
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/aopeg/examples
+[API] GET /api/v1/aopeg/stats
+[API] GET /api/v1/health
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+App created at 2026-01-23T14:56:29.303Z
+[API] GET /api/v1/aopeg/stats
+[API] GET /api/v1/health
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+App created at 2026-01-23T14:56:52.789Z
+[API] GET /api/v1/aopeg/stats
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+App created at 2026-01-23T14:59:36.959Z
+[API] GET /api/v1/aopeg/stats
+[API] GET /api/v1/health
+[API] GET /api/v1/aopeg/graphs
+[API] GET /api/v1/aopeg/registry/executors
+[API] POST /api/v1/aopeg/examples/example-simple-sequential/import
+[API] GET /api/v1/aopeg/examples
+[API] GET /api/v1/health
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+App created at 2026-01-23T15:01:29.222Z
+[API] POST /api/v1/aopeg/examples/example-simple-sequential/import
+[API] GET /api/v1/health
+[API] POST /api/v1/aopeg/examples/example-simple-sequential/import
+[API] GET /api/v1/aopeg/graphs
+[API] GET /api/v1/aopeg/stats
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/aopeg/graphs?
+[API] GET /api/v1/aopeg/graphs?
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/aopeg/graphs/f02be527-0035-4696-a203-a2aa399dcaf2
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/aopeg/graphs/f02be527-0035-4696-a203-a2aa399dcaf2
+[API] GET /api/v1/health
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/aopeg/graphs/f02be527-0035-4696-a203-a2aa399dcaf2
+[API] GET /api/v1/health
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/aopeg/graphs/f02be527-0035-4696-a203-a2aa399dcaf2
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/aopeg/graphs/f02be527-0035-4696-a203-a2aa399dcaf2
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/aopeg/graphs/f02be527-0035-4696-a203-a2aa399dcaf2
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/aopeg/graphs/f02be527-0035-4696-a203-a2aa399dcaf2
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/aopeg/graphs/f02be527-0035-4696-a203-a2aa399dcaf2
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/aopeg/graphs/f02be527-0035-4696-a203-a2aa399dcaf2
+[API] GET /api/v1/aopeg/graphs?
+[API] GET /api/v1/aopeg/graphs?
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/aopeg/graphs/992f6428-1897-4d76-8d39-bbd46d2e5527
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/aopeg/graphs/992f6428-1897-4d76-8d39-bbd46d2e5527
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/aopeg/graphs/992f6428-1897-4d76-8d39-bbd46d2e5527
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/aopeg/graphs/992f6428-1897-4d76-8d39-bbd46d2e5527
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/aopeg/graphs/992f6428-1897-4d76-8d39-bbd46d2e5527
+[API] GET /api/v1/health
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/aopeg/graphs/992f6428-1897-4d76-8d39-bbd46d2e5527
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+App created at 2026-01-26T08:40:06.857Z
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+App created at 2026-01-26T08:46:02.167Z
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+App created at 2026-01-26T08:46:19.885Z
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/aopeg/graphs?
+[API] GET /api/v1/aopeg/graphs?
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/aopeg/graphs?
+[API] GET /api/v1/aopeg/graphs?
+[API] GET /api/v1/health
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/aopeg/graphs?
+[API] GET /api/v1/aopeg/graphs?
+[API] GET /api/v1/health
+[API] GET /api/v1/aopeg/graphs?
+[API] GET /api/v1/health
+[API] GET /api/v1/aopeg/graphs?
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/health
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] OPTIONS /api/v1/ai-agent/sessions
+[API] OPTIONS /api/v1/ai-agent/sessions
+[API] GET /api/v1/aopeg/registry/executors
+[API] POST /api/v1/ai-agent/sessions
+[API] POST /api/v1/ai-agent/sessions
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/health
+[API] OPTIONS /api/v1/ai-agent/sessions
+[API] POST /api/v1/ai-agent/sessions
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+App created at 2026-01-26T10:26:55.525Z
+[API] POST /api/v1/ai-agent/sessions
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] OPTIONS /api/v1/ai-agent/sessions
+[API] GET /api/v1/aopeg/registry/executors
+[API] POST /api/v1/ai-agent/sessions
+[API] POST /api/v1/ai-agent/sessions
+[API] GET /api/v1/aopeg/registry/executors
+[API] OPTIONS /api/v1/ai-agent/sessions/04236522-296e-4b6d-a3e3-6fae770af350/chat/stream
+[API] POST /api/v1/ai-agent/sessions/04236522-296e-4b6d-a3e3-6fae770af350/chat/stream
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] OPTIONS /api/v1/ai-agent/sessions
+[API] OPTIONS /api/v1/ai-agent/sessions
+[API] GET /api/v1/aopeg/registry/executors
+[API] POST /api/v1/ai-agent/sessions
+[API] POST /api/v1/ai-agent/sessions
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] OPTIONS /api/v1/ai-agent/sessions
+[API] POST /api/v1/ai-agent/sessions
+[API] POST /api/v1/ai-agent/sessions
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/health
+[API] GET /api/v1/graph-types/catalog
+[API] GET /api/v1/graph-types/catalog
+[API] GET /api/v1/health
+[API] GET /api/v1/graph-types/catalog
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/graph-types/catalog
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/graph-types/catalog
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/graph-types/catalog
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/health
+[API] OPTIONS /api/v1/ai-agent/sessions
+[API] OPTIONS /api/v1/ai-agent/sessions
+[API] GET /api/v1/health
+[API] POST /api/v1/ai-agent/sessions
+[API] POST /api/v1/ai-agent/sessions
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+App created at 2026-01-26T12:42:40.246Z
+[API] GET /api/v1/health
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+App created at 2026-01-26T12:43:23.892Z
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/graph-types/catalog
+[API] OPTIONS /api/v1/ai-agent/sessions
+[API] POST /api/v1/ai-agent/sessions
+[API] POST /api/v1/ai-agent/sessions
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/graph-types/catalog
+[API] GET /api/v1/aopeg/registry/executors
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+App created at 2026-02-05T10:36:12.744Z
+[API] GET /test
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] POST /gxe/generate
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] POST /api/v1/gxe/generate
+[API] POST /api/v1/gxe/v2/validate
+[API] POST /api/v1/gxe/generate
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] POST /api/v1/gxe/v2/validate
+[API] POST /api/v1/gxe/generate
+[API] POST /api/v1/gxe/v2/validate
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+App created at 2026-02-05T11:12:01.025Z
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/gxe/health
+[API] POST /api/v1/gxe/ab-test
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+App created at 2026-02-06T08:04:16.457Z
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+App created at 2026-02-06T08:06:49.992Z
+[API] GET /api/v1/health
+[API] POST /api/v1/gxe/ab-test
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] POST /api/v1/gxe/ab-test
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] POST /api/v1/gxe/generate
+[API] POST /api/v1/gxe/generate
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+App created at 2026-02-06T08:18:30.854Z
+[API] GET /api/v1/health
+[API] GET /api/v1/aopeg/patterns/stats
+[API] POST /api/v1/gxe/generate
+[API] POST /api/v1/gxe/generate
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/aopeg/patterns/stats
+[API] POST /api/v1/knowledge/query
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/aopeg/examples
+[API] POST /api/v1/aopeg/examples/example-simple-sequential/import
+[API] POST /api/v1/aopeg/graphs
+[API] POST /api/v1/aopeg/graphs
+[API] POST /api/v1/aopeg/execute/1b0e8044-8be0-4b39-b90a-1dd832860943
+[API] POST /api/v1/aopeg/graphs/1b0e8044-8be0-4b39-b90a-1dd832860943/activate
+[API] GET /api/v1/aopeg/registry/executors
+[API] POST /api/v1/aopeg/graphs
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] POST /api/v1/aopeg/graphs/5328fbeb-5d1c-4bda-b160-ab9d567bdc3d/activate
+[API] POST /api/v1/aopeg/execute/5328fbeb-5d1c-4bda-b160-ab9d567bdc3d
+[API] POST /api/v1/knowledge/query
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] POST /api/v1/gxe/generate
+[API] POST /api/v1/gxe/generate
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] POST /api/v1/gxe/generate
+[API] POST /api/v1/gxe/ab-test
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] POST /api/v1/gxe/generate
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+App created at 2026-02-06T09:10:49.305Z
+[API] GET /api/v1/health
+[API] POST /api/v1/gxe/ab-test
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/tensors/stream
+[API] GET /api/v1/health
+[API] GET /api/v1/knowledge/planes?limit=200
+[API] GET /api/v1/health
+[API] GET /api/v1/knowledge/planes?limit=200
+[API] GET /api/v1/health
+[API] GET /api/v1/knowledge/planes?limit=200
+[API] GET /api/v1/health
+[API] GET /api/v1/tensors/stream
+[API] GET /api/v1/knowledge/planes?limit=200
+[API] GET /api/v1/tensors/stream
+[API] GET /api/v1/health
+[API] GET /api/v1/knowledge/planes?limit=200
+[API] GET /api/v1/health
+[API] GET /api/v1/tensors/stream
+[API] GET /api/v1/knowledge/planes?limit=200
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+[API] GET /api/v1/health
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function
+DEBUG: tfvcController keys: getTree, getContent, getHistory, getChangesetChanges, getDiff
+DEBUG: getChangesetChanges type: function

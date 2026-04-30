@@ -25,23 +25,39 @@ class QueryProfileExecutor extends BaseExecutor {
 
   async execute(parameters, context) {
     const startTime = Date.now();
-    const userId = this.getRequiredParam(parameters, 'user_id');
+    // BACKLOG-0045: accept both user_id and userId
+    const userId = parameters.user_id || parameters.userId;
+    if (!userId) return this.error('MISSING_PARAM', 'user_id or userId is required', true);
     const includeManager = this.getParam(parameters, 'include_manager', false);
     const includeHistory = this.getParam(parameters, 'include_history', false);
+    // BACKLOG-0045: configurable label (default: UNStaffProfile, FlowDesk uses Staff)
+    const label = parameters.label || parameters.nodeLabel || 'UNStaffProfile';
 
     try {
       const memgraph = require('../../../../../services/memgraph.service');
 
-      const profileQuery = includeManager
-        ? `MATCH (u:UNStaffProfile {user_id: $userId})
-           OPTIONAL MATCH (u)-[:REPORTS_TO]->(m:UNStaffProfile)
-           RETURN u, m`
-        : `MATCH (u:UNStaffProfile {user_id: $userId}) RETURN u`;
+      // Try configured label first, fallback to alternative labels
+      const labels = [label, ...(label === 'UNStaffProfile' ? ['Staff'] : ['UNStaffProfile'])];
+      let profileResult = null;
 
-      const profileResult = await memgraph.executeQuery(profileQuery, { userId });
+      for (const tryLabel of labels) {
+        const profileQuery = includeManager
+          ? `MATCH (u:${tryLabel} {id: $userId}) OPTIONAL MATCH (u)-[:REPORTS_TO]->(m:${tryLabel}) RETURN u, m`
+          : `MATCH (u:${tryLabel} {id: $userId}) RETURN u`;
 
-      if (!profileResult.records || profileResult.records.length === 0) {
-        return this.error('USER_NOT_FOUND', `UNStaffProfile not found for user_id: ${userId}`, true);
+        profileResult = await memgraph.executeQuery(profileQuery, { userId });
+        if (profileResult.records && profileResult.records.length > 0) break;
+
+        // Also try user_id field
+        const altQuery = includeManager
+          ? `MATCH (u:${tryLabel} {user_id: $userId}) OPTIONAL MATCH (u)-[:REPORTS_TO]->(m:${tryLabel}) RETURN u, m`
+          : `MATCH (u:${tryLabel} {user_id: $userId}) RETURN u`;
+        profileResult = await memgraph.executeQuery(altQuery, { userId });
+        if (profileResult.records && profileResult.records.length > 0) break;
+      }
+
+      if (!profileResult || !profileResult.records || profileResult.records.length === 0) {
+        return this.error('USER_NOT_FOUND', `Profile not found for user_id: ${userId} (tried labels: ${labels.join(', ')})`, true);
       }
 
       const record = profileResult.records[0];
