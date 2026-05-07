@@ -48,6 +48,7 @@ jest.mock('../../services/datasource.service', () => ({
 
 // Mock registry
 const mockRegistry = {
+  register: jest.fn(),
   execute: jest.fn(),
   getExecutor: jest.fn().mockReturnValue({
     invalidateCache: jest.fn().mockResolvedValue(undefined),

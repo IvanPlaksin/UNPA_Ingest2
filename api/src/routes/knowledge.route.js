@@ -2817,113 +2817,86 @@ router.get('/crud/node/:nodeId/structure', async (req, res) => {
         const isInternalId = !isNaN(parsedId);
         const safeLimit = Math.min(Math.max(1, parseInt(limit) || 50), 200);
 
-        // OPTIMIZED: Single query with UNION for better performance
-        // Fetch center + all edges in one go with LIMIT
+        // Three flat queries (no CALL subqueries — AGE v1.6 does not support them).
+        // Rename 'center' (PostgreSQL geometric reserved) and 'node' (reserved) to safe aliases.
         const queryTensor = tensorService.start('db.query.structure', {
             nodeId, isInternalId, limit: safeLimit
         }, requestTensor.id);
 
-        const query = isInternalId
-            ? `// Get center node first
-               MATCH (center) WHERE id(center) = $id
-               // Get outgoing in subquery
-               CALL {
-                 WITH center
-                 MATCH (center)-[r]->(n)
-                 RETURN r, n, 'outgoing' as direction
-                 LIMIT ${safeLimit}
-               }
-               RETURN center, r as rel, n as node, direction
-               UNION ALL
-               // Get incoming separately
-               MATCH (center) WHERE id(center) = $id
-               CALL {
-                 WITH center
-                 MATCH (n)-[r]->(center)
-                 RETURN r, n, 'incoming' as direction
-                 LIMIT ${safeLimit}
-               }
-               RETURN center, r as rel, n as node, direction`
-            : `MATCH (center {id: $id})
-               CALL {
-                 WITH center
-                 MATCH (center)-[r]->(n)
-                 RETURN r, n, 'outgoing' as direction
-                 LIMIT ${safeLimit}
-               }
-               RETURN center, r as rel, n as node, direction
-               UNION ALL
-               MATCH (center {id: $id})
-               CALL {
-                 WITH center
-                 MATCH (n)-[r]->(center)
-                 RETURN r, n, 'incoming' as direction
-                 LIMIT ${safeLimit}
-               }
-               RETURN center, r as rel, n as node, direction`;
+        // For AGE internal IDs: extract the label from ag_catalog (top 16 bits of graphid)
+        // so MATCH (ctr:Label) uses the label table's primary key instead of scanning all labels.
+        let matchCtr;
+        let idParam = {};
+        if (isInternalId) {
+            const label = await memgraphService.getVertexLabelById(nodeId);
+            if (label) {
+                matchCtr = `MATCH (ctr:${label}) WHERE id(ctr) = ${nodeId}`;
+            } else {
+                matchCtr = `MATCH (ctr) WHERE id(ctr) = ${nodeId}`;
+            }
+        } else {
+            matchCtr = 'MATCH (ctr {id: $id})';
+            idParam = { id: nodeId };
+        }
 
-        const records = await executeCypher(query, { id: isInternalId ? parsedId : nodeId });
-        tensorService.complete(queryTensor.id, { recordCount: records.length });
+        const [centerRecords, outRecords, inRecords] = await Promise.all([
+            executeCypher(`${matchCtr} RETURN ctr`, idParam),
+            executeCypher(`${matchCtr} MATCH (ctr)-[r]->(nbr) RETURN ctr, r AS rel, nbr, 'outgoing' AS dir LIMIT ${safeLimit}`, idParam),
+            executeCypher(`${matchCtr} MATCH (nbr)-[r]->(ctr) RETURN ctr, r AS rel, nbr, 'incoming' AS dir LIMIT ${safeLimit}`, idParam)
+        ]);
+        tensorService.complete(queryTensor.id, { recordCount: outRecords.length + inRecords.length });
 
-        if (records.length === 0) {
+        if (centerRecords.length === 0) {
             tensorService.complete(requestTensor.id, { status: 404 });
             return res.status(404).json({ error: 'Node not found' });
         }
 
         // Processing tensor
         const processTensor = tensorService.start('api.process.structure', {
-            recordCount: records.length
+            recordCount: outRecords.length + inRecords.length
         }, requestTensor.id);
 
-        // Build nodes and edges from UNION query results
+        // Build nodes and edges
         const nodes = new Map();
         const edges = [];
-        let centerId = null;
 
-        // Process each record from UNION query
-        for (const record of records) {
-            const centerNode = record.get('center');
+        const centerNodeRaw = centerRecords[0].get('ctr');
+        const centerId = safeIdToString(centerNodeRaw.identity);
+        nodes.set(centerId, {
+            id: centerId,
+            externalId: centerNodeRaw.properties.id,
+            labels: centerNodeRaw.labels,
+            properties: centerNodeRaw.properties,
+            isCenter: true
+        });
+
+        for (const record of [...outRecords, ...inRecords]) {
             const rel = record.get('rel');
-            const node = record.get('node');
-            const direction = record.get('direction');
+            const nbr = record.get('nbr');
+            const direction = record.get('dir');
 
-            // Set center node (same for all records)
-            if (!centerId && centerNode) {
-                centerId = safeIdToString(centerNode.identity);
-                nodes.set(centerId, {
-                    id: centerId,
-                    externalId: centerNode.properties.id,
-                    labels: centerNode.labels,
-                    properties: centerNode.properties,
-                    isCenter: true
-                });
-            }
-
-            // Add connected node
-            if (node) {
-                const nodeId = safeIdToString(node.identity);
-                if (!nodes.has(nodeId)) {
-                    nodes.set(nodeId, {
-                        id: nodeId,
-                        externalId: node.properties.id,
-                        labels: node.labels,
-                        properties: node.properties,
+            if (nbr) {
+                const nbrId = safeIdToString(nbr.identity);
+                if (!nodes.has(nbrId)) {
+                    nodes.set(nbrId, {
+                        id: nbrId,
+                        externalId: nbr.properties.id,
+                        labels: nbr.labels,
+                        properties: nbr.properties,
                         isCenter: false
                     });
                 }
 
-                // Add edge with proper direction
-                if (rel && centerId) {
+                if (rel) {
                     const edgeId = direction === 'outgoing'
-                        ? `edge-${centerId}-${nodeId}-${rel.type}`
-                        : `edge-${nodeId}-${centerId}-${rel.type}`;
+                        ? `edge-${centerId}-${nbrId}-${rel.type}`
+                        : `edge-${nbrId}-${centerId}-${rel.type}`;
 
-                    // Avoid duplicate edges
                     if (!edges.find(e => e.id === edgeId)) {
                         edges.push({
                             id: edgeId,
-                            source: direction === 'outgoing' ? centerId : nodeId,
-                            target: direction === 'outgoing' ? nodeId : centerId,
+                            source: direction === 'outgoing' ? centerId : nbrId,
+                            target: direction === 'outgoing' ? nbrId : centerId,
                             type: rel.type,
                             properties: rel.properties || {},
                             direction

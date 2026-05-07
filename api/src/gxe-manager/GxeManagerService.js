@@ -643,11 +643,6 @@ class GxeManagerService extends EventEmitter {
           nodesFailed: $nodesFailed,
           error: $error
         })
-        WITH e
-        OPTIONAL MATCH (c:CatalogEntry {entryId: $graphId})
-        FOREACH (x IN CASE WHEN c IS NOT NULL THEN [1] ELSE [] END |
-          CREATE (e)-[:EXECUTED_FROM]->(c)
-        )
         RETURN e.executionId AS id
       `, {
         executionId: record.executionId,
@@ -667,6 +662,15 @@ class GxeManagerService extends EventEmitter {
         nodesFailed: result?.metrics?.nodesFailed || 0,
         error: record.error || ''
       });
+
+      // AGE-compatible conditional relationship: separate query (FOREACH not supported in AGE)
+      if (record.graphId) {
+        await session.run(`
+          MATCH (e:ExecutionRecord:META {executionId: $executionId})
+          MATCH (c:CatalogEntry {entryId: $graphId})
+          MERGE (e)-[:EXECUTED_FROM]->(c)
+        `, { executionId: record.executionId, graphId: record.graphId });
+      }
 
       console.log(`${LOG_TAG} Persisted ${executionId} to Memgraph`);
 

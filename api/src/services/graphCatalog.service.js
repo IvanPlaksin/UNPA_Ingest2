@@ -81,6 +81,8 @@ class GraphCatalogService {
    * Initialize schema indexes
    */
   async initializeSchema() {
+    // CREATE INDEX ON :Label(prop) is Memgraph-specific syntax — always fails on AGE.
+    if (process.env.GRAPH_DB_BACKEND === 'postgres-age') return;
     const status = await this.verifyConnection();
     if (!status.connected) {
       console.warn('[GraphCatalog] Skipping schema init - not connected:', status.error);
@@ -631,12 +633,13 @@ class GraphCatalogService {
     try {
       const result = await session.run(`
         MATCH (c:CatalogEntry)
-        RETURN c.namespace as namespace, count(c) as count
-        ORDER BY namespace
+        WITH c.namespace AS ns, c
+        RETURN ns, count(c) AS cnt
+        ORDER BY ns
       `);
       return result.records.map(record => ({
-        namespace: record.get('namespace'),
-        count: toNumber(record.get('count'))
+        namespace: record.get('ns'),
+        count: toNumber(record.get('cnt'))
       }));
     } finally {
       await session.close();
@@ -651,12 +654,13 @@ class GraphCatalogService {
     try {
       const result = await session.run(`
         MATCH (c:CatalogEntry)
-        RETURN c.type as type, count(c) as count
-        ORDER BY type
+        WITH c.type AS gtype, c
+        RETURN gtype, count(c) AS cnt
+        ORDER BY gtype
       `);
       return result.records.map(record => ({
-        type: record.get('type'),
-        count: toNumber(record.get('count'))
+        type: record.get('gtype'),
+        count: toNumber(record.get('cnt'))
       }));
     } finally {
       await session.close();
@@ -673,12 +677,13 @@ class GraphCatalogService {
         MATCH (c:CatalogEntry)
         WHERE c.tags IS NOT NULL AND size(c.tags) > 0
         UNWIND c.tags AS tag
-        RETURN tag as label, count(*) as count
-        ORDER BY count DESC, label
+        WITH tag, count(*) AS tagCount
+        RETURN tag AS lbl, tagCount AS cnt
+        ORDER BY tagCount DESC, tag
       `);
       return result.records.map(record => ({
-        label: record.get('label'),
-        count: toNumber(record.get('count'))
+        label: record.get('lbl'),
+        count: toNumber(record.get('cnt'))
       }));
     } finally {
       await session.close();

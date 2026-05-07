@@ -16,6 +16,22 @@ const mockEmbeddingService = {
     searchSimilar: jest.fn().mockResolvedValue([]),
 };
 
+// Mock llm-provider to avoid real LLM calls in unit tests
+jest.mock('../../../services/extraction/llm-provider', () => ({
+    extractEntitiesWithLLM: jest.fn().mockResolvedValue({ entities: [], relationships: [] }),
+    isLLMAvailable: jest.fn().mockReturnValue(false),
+    getActiveProviderName: jest.fn().mockReturnValue('mock'),
+}));
+
+// Mock cross-source-resolver to avoid embedding service calls in unit tests
+jest.mock('../../../services/extraction/cross-source-resolver', () => ({
+    createCrossSourceResolver: jest.fn(() => ({
+        resolveAll: jest.fn().mockResolvedValue([]),
+        getStats: jest.fn().mockReturnValue({}),
+    })),
+    CrossSourceResolver: jest.fn(),
+}));
+
 // Mock BullMQ
 jest.mock('bullmq', () => ({
     Worker: jest.fn().mockImplementation((name, processor, opts) => ({

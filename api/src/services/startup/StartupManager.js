@@ -66,6 +66,7 @@ class StartupManager {
     this.validateRequiredEnvVars();
     this._log('info', 'Initializing background services...');
 
+    await this._initAGENamespaceIndexes();
     await this._initWorkspaceSchema();
     await this._initDialogueSchema();
     await this._initDialogueCollection();
@@ -81,9 +82,25 @@ class StartupManager {
     return this;
   }
 
+  // ─── AGE Namespace Indexes ────────────────────────────────────────
+
+  async _initAGENamespaceIndexes() {
+    if (process.env.GRAPH_DB_BACKEND !== 'postgres-age') return;
+    try {
+      const memgraphService = require('../memgraph.service');
+      await memgraphService.ensureNamespaceIndexes();
+      this._log('info', 'AGE namespace property indexes ensured');
+    } catch (err) {
+      this._log('warn', `AGE namespace index migration skipped: ${err.message}`);
+    }
+  }
+
   // ─── WorkSpace Schema ─────────────────────────────────────────────
 
   async _initWorkspaceSchema() {
+    // CREATE INDEX ON :Label(prop) is Memgraph-specific syntax — always fails on AGE
+    // with "syntax error at or near ON", taking ~100ms per statement. Skip entirely on AGE.
+    if (process.env.GRAPH_DB_BACKEND === 'postgres-age') return;
     try {
       const { SchemaLoaderService } = require('../memgraph/schema-loader.service');
       const memgraphService = require('../memgraph.service');
@@ -102,6 +119,8 @@ class StartupManager {
   // ─── Dialogue Schema ──────────────────────────────────────────────
 
   async _initDialogueSchema() {
+    // CREATE INDEX ON :Label(prop) is Memgraph-specific syntax — always fails on AGE. Skip.
+    if (process.env.GRAPH_DB_BACKEND === 'postgres-age') return;
     try {
       const { SchemaLoaderService } = require('../memgraph/schema-loader.service');
       const memgraphService = require('../memgraph.service');

@@ -22,6 +22,12 @@ class SchemaLoaderService {
    * @returns {Promise<{success: boolean, statements: number, errors: string[]}>}
    */
   async loadSchema(schemaName) {
+    // AGE does not support Memgraph-specific CREATE INDEX ON :Label(prop) syntax.
+    // Running these statements takes ~100ms each (round-trip + error), blocking startup.
+    if (process.env.GRAPH_DB_BACKEND === 'postgres-age') {
+      return { success: true, statements: 0, errors: [] };
+    }
+
     const schemaPath = path.join(__dirname, 'schemas', `${schemaName}.cypher`);
 
     if (!fs.existsSync(schemaPath)) {

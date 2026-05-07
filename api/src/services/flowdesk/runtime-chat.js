@@ -146,45 +146,53 @@ function convertGxeToAopegDag(nodes, edges) {
  * @param {number|null} versionNumber - specific version to load, null = latest (currentVersion)
  */
 async function loadDialogDAG(versionNumber = null, graphId = null) {
-  const neo4j = require('neo4j-driver');
-  const { MEMGRAPH_CONFIG } = require('./import-config');
-  const driver = neo4j.driver(MEMGRAPH_CONFIG.uri, neo4j.auth.basic(MEMGRAPH_CONFIG.user, MEMGRAPH_CONFIG.password), { disableLosslessIntegers: true });
-  const session = driver.session({ defaultAccessMode: neo4j.session.READ });
+  const { getGraphDB } = require('../storage/GraphDBPort');
+  const graphDB = getGraphDB();
+
+  const runQ = (cypher, params = {}) => graphDB.runQuery(cypher, params);
 
   try {
     let query;
     const params = {};
 
     if (graphId) {
-      // Load by specific graph ID — use currentVersion from CatalogEntry
       query = `
         MATCH (c:CatalogEntry)-[:DEFINES]->(g:GraphDefinition)
-        WHERE c.entryId = $graphId OR c.id = $graphId
+        WHERE c.entryId = $graphId OR g.graphId = $graphId
         RETURN g.nodes AS nodes, g.edges AS edges, c.currentVersion AS version
-        ORDER BY size(g.nodes) DESC
+        ORDER BY g.nodeCount DESC
         LIMIT 1
       `;
       params.graphId = graphId;
     } else if (versionNumber) {
-      // Load specific version
       query = `
         MATCH (c:CatalogEntry {namespace: 'FLOWDESK', type: 'dialog'})-[:DEFINES]->(g:GraphDefinition)
         RETURN g.nodes AS nodes, g.edges AS edges, $ver AS version
-        ORDER BY size(g.nodes) DESC
+        ORDER BY g.nodeCount DESC
         LIMIT 1
       `;
       params.ver = versionNumber;
     } else {
-      // Load latest — use currentVersion from CatalogEntry
       query = `
         MATCH (c:CatalogEntry {namespace: 'FLOWDESK', type: 'dialog'})-[:DEFINES]->(g:GraphDefinition)
         RETURN g.nodes AS nodes, g.edges AS edges, c.currentVersion AS version
-        ORDER BY size(g.nodes) DESC
+        ORDER BY g.nodeCount DESC
         LIMIT 1
       `;
     }
 
-    const result = await session.run(query, params);
+    let result = await runQ(query, params);
+
+    // If graphId lookup returned nothing, fall back to namespace/type query
+    if (result.records.length === 0 && graphId) {
+      console.log(`[FlowDesk RT] graphId '${graphId}' not found, falling back to latest FLOWDESK dialog`);
+      result = await runQ(`
+        MATCH (c:CatalogEntry {namespace: 'FLOWDESK', type: 'dialog'})-[:DEFINES]->(g:GraphDefinition)
+        RETURN g.nodes AS nodes, g.edges AS edges, c.currentVersion AS version
+        ORDER BY g.nodeCount DESC
+        LIMIT 1
+      `);
+    }
 
     if (result.records.length === 0) throw new Error(`Intake Dialog graph${versionNumber ? ' v' + versionNumber : ''} not found in Memgraph`);
 
@@ -213,9 +221,8 @@ async function loadDialogDAG(versionNumber = null, graphId = null) {
 
     console.log(`[FlowDesk RT] Loaded graph v${version} (${nodes.length} nodes, ${edges.length} edges)`);
     return { nodes, edges, version };
-  } finally {
-    await session.close();
-    await driver.close();
+  } catch (err) {
+    throw err;
   }
 }
 

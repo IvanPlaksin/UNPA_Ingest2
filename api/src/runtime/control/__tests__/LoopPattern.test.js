@@ -196,7 +196,9 @@ async function testAsync() {
   assertEqual(asyncResult.results, [10, 20, 30], 'Async: correct results');
 }
 
-testAsync().then(() => {
+test('LoopPattern: async, validation, serialization, constants', async () => {
+  await testAsync();
+
   console.log('\n=== Validation ===\n');
 
   const validLoop = createForEach('valid', 'data.items');
@@ -252,10 +254,9 @@ testAsync().then(() => {
   assertEqual(LoopState.COMPLETED, 'completed', 'LoopState.COMPLETED');
   assertEqual(LoopState.ABORTED, 'aborted', 'LoopState.ABORTED');
 
-  // Summary
   console.log('\n=== Summary ===');
   console.log(`Passed: ${passed}`);
   console.log(`Failed: ${failed}`);
 
-  process.exit(failed > 0 ? 1 : 0);
-});
+  expect(failed).toBe(0);
+}, 10000);

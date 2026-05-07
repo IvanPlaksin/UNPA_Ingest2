@@ -410,38 +410,31 @@ async function getChatSession(req, res) {
  */
 async function getGraphVersions(_req, res) {
   try {
-    const neo4j = require('neo4j-driver');
-    const { MEMGRAPH_CONFIG } = require('../services/flowdesk/import-config');
-    const driver = neo4j.driver(MEMGRAPH_CONFIG.uri, neo4j.auth.basic(MEMGRAPH_CONFIG.user, MEMGRAPH_CONFIG.password), { disableLosslessIntegers: true });
-    const session = driver.session({ defaultAccessMode: neo4j.session.READ });
+    const { getGraphDB } = require('../services/storage/GraphDBPort');
+    const graphDB = getGraphDB();
 
-    try {
-      const r = await session.run(`
-        MATCH (c:CatalogEntry {namespace:'FLOWDESK', type:'dialog'})-[:DEFINES]->(g:GraphDefinition)-[:HAS_VERSION]->(v:GraphVersion)
-        RETURN c.entryId AS entryId, c.name AS name, c.currentVersion AS currentVersion,
-               v.versionNumber AS version, v.versionId AS versionId,
-               v.createdAt AS createdAt, v.changelog AS changelog,
-               g.nodeCount AS nodeCount, g.edgeCount AS edgeCount
-        ORDER BY v.versionNumber DESC
-      `);
+    const r = await graphDB.runQuery(`
+      MATCH (c:CatalogEntry {namespace:'FLOWDESK', type:'dialog'})-[:DEFINES]->(g:GraphDefinition)-[:HAS_VERSION]->(v:GraphVersion)
+      RETURN c.entryId AS entryId, c.name AS name, c.currentVersion AS currentVersion,
+             v.versionNumber AS version, v.versionId AS versionId,
+             v.createdAt AS createdAt, v.changelog AS changelog,
+             g.nodeCount AS nodeCount, g.edgeCount AS edgeCount
+      ORDER BY v.versionNumber DESC
+    `);
 
-      const versions = r.records.map(rec => ({
-        entryId: rec.get('entryId'),
-        name: rec.get('name'),
-        version: rec.get('version'),
-        versionId: rec.get('versionId'),
-        isCurrent: rec.get('version') === rec.get('currentVersion'),
-        nodeCount: rec.get('nodeCount'),
-        edgeCount: rec.get('edgeCount'),
-        createdAt: rec.get('createdAt'),
-        changelog: rec.get('changelog'),
-      }));
+    const versions = r.records.map(rec => ({
+      entryId: rec.get('entryId'),
+      name: rec.get('name'),
+      version: rec.get('version'),
+      versionId: rec.get('versionId'),
+      isCurrent: rec.get('version') === rec.get('currentVersion'),
+      nodeCount: rec.get('nodeCount'),
+      edgeCount: rec.get('edgeCount'),
+      createdAt: rec.get('createdAt'),
+      changelog: rec.get('changelog'),
+    }));
 
-      res.json({ versions, currentVersion: r.records[0]?.get('currentVersion') });
-    } finally {
-      await session.close();
-      await driver.close();
-    }
+    res.json({ versions, currentVersion: r.records[0]?.get('currentVersion') });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

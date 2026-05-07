@@ -125,11 +125,6 @@ class AuditLogger {
           details: $details,
           timestamp: $timestamp
         })
-        WITH a
-        OPTIONAL MATCH (e:ExecutionRecord:META {executionId: $executionId})
-        FOREACH (x IN CASE WHEN e IS NOT NULL THEN [1] ELSE [] END |
-          CREATE (a)-[:AUDITS]->(e)
-        )
       `, {
         id: record.id,
         action: record.action,
@@ -139,6 +134,15 @@ class AuditLogger {
         details: JSON.stringify(record.details),
         timestamp: record.timestamp
       });
+
+      // AGE-compatible conditional relationship: separate query (FOREACH not supported in AGE)
+      if (record.executionId) {
+        await session.run(`
+          MATCH (a:AuditEntry:META {auditId: $id})
+          MATCH (e:ExecutionRecord:META {executionId: $executionId})
+          MERGE (a)-[:AUDITS]->(e)
+        `, { id: record.id, executionId: record.executionId });
+      }
     } finally {
       await session.close();
     }

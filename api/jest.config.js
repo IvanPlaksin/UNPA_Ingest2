@@ -14,6 +14,9 @@ module.exports = {
     '^.+\\.js$': 'babel-jest'
   },
   moduleFileExtensions: ['ts', 'js', 'json'],
+  moduleNameMapper: {
+    '^uuid$': '<rootDir>/src/__mocks__/uuid.js',
+  },
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/**/*.test.ts',

@@ -277,4 +277,285 @@ router.get('/circuits', (_req, res) => {
   }
 });
 
+/**
+ * GET /health/age-indexes
+ * Diagnostic: reports namespace index state for the AGE backend.
+ */
+router.get('/age-indexes', async (_req, res) => {
+  try {
+    const memgraphService = require('../services/memgraph.service');
+    const adapter = memgraphService._adapter;
+    if (!adapter || typeof adapter._initPool !== 'function') {
+      return res.json({ backend: process.env.GRAPH_DB_BACKEND, available: false });
+    }
+    const pool = adapter._initPool();
+    const client = await pool.connect();
+    try {
+      const graphName = adapter._graphName || process.env.AGE_GRAPH_NAME || 'unpa';
+      const [labels, indexes, validIndexes, sampleExpr] = await Promise.all([
+        client.query(
+          `SELECT count(*)::int AS n FROM ag_catalog.ag_label l
+           WHERE l.graph = (SELECT g.namespace FROM ag_catalog.ag_graph g WHERE g.name = $1)
+             AND l.kind = 'v' AND l.name NOT LIKE '_ag_label%'`,
+          [graphName]
+        ),
+        client.query(
+          `SELECT count(*)::int AS n FROM pg_indexes
+           WHERE schemaname = $1 AND indexname LIKE 'idx\\_${graphName}\\_%\\_ns'`,
+          [graphName]
+        ),
+        client.query(
+          `SELECT count(*)::int AS n FROM pg_indexes pi
+           JOIN pg_index idx ON idx.indexrelid = (
+             SELECT oid FROM pg_class WHERE relname = pi.indexname
+               AND relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = $1)
+           )
+           WHERE pi.schemaname = $1 AND pi.indexname LIKE 'idx\\_${graphName}\\_%\\_ns'
+             AND idx.indisvalid = true`,
+          [graphName]
+        ),
+        client.query(
+          `SELECT l.name FROM ag_catalog.ag_label l
+           WHERE l.graph = (SELECT g.namespace FROM ag_catalog.ag_graph g WHERE g.name = $1)
+             AND l.kind = 'v' AND l.name NOT LIKE '_ag_label%' LIMIT 1`,
+          [graphName]
+        ),
+      ]);
+      const testLabel = sampleExpr.rows[0]?.name;
+      let exprWorking = null;
+      if (testLabel) {
+        try {
+          const r = await client.query(`SELECT (properties::text::jsonb->>'namespace') AS ns FROM "${graphName}"."${testLabel}" LIMIT 1`);
+          exprWorking = { ok: true, sampleValue: r.rows[0]?.ns };
+        } catch (e) {
+          exprWorking = { ok: false, error: e.message };
+        }
+      }
+      // Get all distinct namespace values across first few non-empty tables
+      let sampleNamespaces = [];
+      let explainPlan = null;
+      const nsExpr = `(properties::text::jsonb->>'namespace')`;
+      try {
+        const allLabels = await client.query(
+          `SELECT l.name FROM ag_catalog.ag_label l
+           WHERE l.graph = (SELECT g.namespace FROM ag_catalog.ag_graph g WHERE g.name = $1)
+             AND l.kind = 'v' AND l.name NOT LIKE '_ag_label%'`,
+          [graphName]
+        );
+        for (const row of allLabels.rows.slice(0, 20)) {
+          try {
+            const r2 = await client.query(
+              `SELECT DISTINCT ${nsExpr} AS ns FROM "${graphName}"."${row.name}" LIMIT 3`
+            );
+            if (r2.rows.some(r => r.ns)) {
+              sampleNamespaces.push({ label: row.name, namespaces: r2.rows.map(r => r.ns) });
+              if (sampleNamespaces.length >= 3) break;
+            }
+          } catch {}
+        }
+        // EXPLAIN one real query, and show actual stored index expression
+        if (sampleNamespaces.length > 0) {
+          await client.query("SET enable_seqscan = off");
+          const firstLabel = sampleNamespaces[0].label;
+          const expRes = await client.query(
+            `EXPLAIN SELECT COUNT(*) FROM "${graphName}"."${firstLabel}" WHERE ${nsExpr} = 'GXE'`
+          );
+          explainPlan = expRes.rows.map(r => r['QUERY PLAN']).join('\n');
+          // Show index definitions for this label's namespace index
+          const safeName = firstLabel.toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 40);
+          const idxName = `idx_${graphName}_${safeName}_ns`.substring(0, 63);
+          const idxDef = await client.query(
+            `SELECT pg_get_indexdef(i.indexrelid) AS def, i.indisvalid, i.indexprs IS NOT NULL AS is_functional
+             FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid
+             WHERE c.relname = $1 AND c.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = $2)`,
+            [idxName, graphName]
+          );
+          explainPlan = {
+            plan: expRes.rows.map(r => r['QUERY PLAN']).join('\n'),
+            indexDef: idxDef.rows[0] || null,
+            indexName: idxName,
+          };
+        }
+      } catch (e) {
+        sampleNamespaces = [{ error: e.message }];
+      }
+
+      res.json({
+        graphName,
+        vertexLabels: labels.rows[0].n,
+        namespacIndexes: indexes.rows[0].n,
+        validNamespacIndexes: validIndexes.rows[0].n,
+        cachedExpr: adapter._nsExprCache,
+        exprTestWorking: exprWorking,
+        sampleNamespaces,
+        explainPlan,
+      });
+    } finally {
+      client.release();
+    }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/**
+ * GET /health/edge-tables
+ * List edge label tables in the AGE graph with their estimated row counts.
+ * Used to verify whether any edges exist at all (pg_class.reltuples estimate).
+ */
+router.get('/edge-tables', async (_req, res) => {
+  try {
+    const memgraphService = require('../services/memgraph.service');
+    const adapter = memgraphService._adapter;
+    if (!adapter || typeof adapter._initPool !== 'function') {
+      return res.json({ backend: process.env.GRAPH_DB_BACKEND, available: false });
+    }
+    const pool = adapter._initPool();
+    const graphName = adapter._graphName || process.env.AGE_GRAPH_NAME || 'unpa';
+    const client = await pool.connect();
+    try {
+      const result = await client.query(`
+        SELECT l.name, c.reltuples::bigint AS est_rows, c.relpages
+        FROM ag_catalog.ag_label l
+        JOIN pg_class c ON c.relname = l.name
+          AND c.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = $1)
+        WHERE l.graph = (SELECT g.namespace FROM ag_catalog.ag_graph g WHERE g.name = $1)
+          AND l.kind = 'e' AND l.name NOT LIKE '_ag_label%'
+        ORDER BY c.reltuples DESC
+      `, [graphName]);
+      res.json({
+        graphName,
+        edgeLabels: result.rows,
+        totalEdgeTables: result.rows.length,
+        tablesWithData: result.rows.filter(r => r.relpages > 0).length,
+      });
+    } finally {
+      client.release();
+    }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/**
+ * GET /health/count-ns?namespace=GXE
+ * Time countNodesByNamespace directly for diagnostics.
+ */
+router.get('/count-ns', async (req, res) => {
+  const namespace = req.query.namespace || 'GXE';
+  try {
+    const memgraphService = require('../services/memgraph.service');
+    const t0 = Date.now();
+    const count = await memgraphService.countNodesByNamespace(namespace);
+    const ms = Date.now() - t0;
+    res.json({ namespace, count, durationMs: ms });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/**
+ * GET /health/count-edges?namespace=GXE
+ * Bypasses JS cache — runs unpa_count_ns_edges directly for diagnostics.
+ */
+router.get('/count-edges', async (req, res) => {
+  const namespace = req.query.namespace || 'GXE';
+  try {
+    const memgraphService = require('../services/memgraph.service');
+    const adapter = memgraphService._adapter;
+    if (!adapter || typeof adapter._initPool !== 'function') {
+      return res.json({ backend: process.env.GRAPH_DB_BACKEND, available: false });
+    }
+    const pool = adapter._initPool();
+    const graphName = adapter._graphName || process.env.AGE_GRAPH_NAME || 'unpa';
+    const client = await pool.connect();
+    try {
+      await client.query("SET statement_timeout = '20000'");
+      const t0 = Date.now();
+      let result, error;
+      try {
+        const r = await client.query(
+          `SELECT public.unpa_count_ns_edges($1, $2) AS n`,
+          [graphName, namespace]
+        );
+        result = Number(r.rows[0]?.n) || 0;
+      } catch (e) {
+        error = e.message;
+      }
+      const ms = Date.now() - t0;
+
+      // Also count vertex IDs for the namespace (to verify vertices exist)
+      let vertexIdCount = null;
+      let vertexIdError = null;
+      try {
+        const vr = await client.query(`
+          SELECT count(*) AS n FROM (
+            SELECT l.name FROM ag_catalog.ag_label l
+            JOIN pg_class c ON c.relname = l.name
+              AND c.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = $1)
+            WHERE l.graph = (SELECT g.namespace FROM ag_catalog.ag_graph g WHERE g.name = $1)
+              AND l.kind = 'v' AND l.name NOT LIKE '_ag_label%'
+              AND c.relpages > 0
+          ) t
+        `, [graphName]);
+        vertexIdCount = Number(vr.rows[0]?.n) || 0;
+      } catch (e) {
+        vertexIdError = e.message;
+      }
+
+      // Sample a few actual graphid values from GXE vertices + edges
+      let sampleVids = null, sampleEdgeIds = null;
+      try {
+        const sr = await client.query(`
+          SELECT l.name FROM ag_catalog.ag_label l
+          JOIN pg_class c ON c.relname = l.name
+            AND c.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = $1)
+          WHERE l.graph = (SELECT g.namespace FROM ag_catalog.ag_graph g WHERE g.name = $1)
+            AND l.kind = 'v' AND l.name NOT LIKE '_ag_label%'
+            AND c.relpages > 0 LIMIT 1
+        `, [graphName]);
+        const vLabel = sr.rows[0]?.name;
+        if (vLabel) {
+          const vids = await client.query(
+            `SELECT id::text AS id FROM "${graphName}"."${vLabel}" WHERE (properties::text::jsonb->>'namespace') = $1 LIMIT 3`,
+            [namespace]
+          );
+          sampleVids = vids.rows.map(r => r.id);
+
+          // Sample edge start_ids from the first edge table
+          const er = await client.query(`
+            SELECT l.name FROM ag_catalog.ag_label l
+            JOIN pg_class c ON c.relname = l.name
+              AND c.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = $1)
+            WHERE l.graph = (SELECT g.namespace FROM ag_catalog.ag_graph g WHERE g.name = $1)
+              AND l.kind = 'e' AND l.name NOT LIKE '_ag_label%'
+              AND c.relpages > 0 LIMIT 1
+          `, [graphName]);
+          const eLabel = er.rows[0]?.name;
+          if (eLabel) {
+            const eids = await client.query(
+              `SELECT start_id::text AS start_id FROM "${graphName}"."${eLabel}" LIMIT 3`
+            );
+            sampleEdgeIds = { label: eLabel, startIds: eids.rows.map(r => r.start_id) };
+          }
+        }
+      } catch (e) {
+        sampleVids = { error: e.message };
+      }
+
+      res.json({
+        namespace, graphName,
+        edgeCount: result, error,
+        durationMs: ms,
+        nonEmptyVertexLabelCount: vertexIdCount, vertexIdError,
+        sampleVids, sampleEdgeIds,
+      });
+    } finally {
+      client.release();
+    }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 module.exports = router;

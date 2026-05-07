@@ -245,13 +245,15 @@ class RuntimeEngine extends EventEmitter {
           failedNodes: missingTools.map(t => t.nodeId),
         });
 
-        this._stateMachine.transition(ExecutionState.FAILED);
+        await this._stateMachine.transition('validation_failed').catch(() => {});
         return {
           executionId: this._executionId,
           status: 'FAILED',
           error: errMsg,
           missingTools,
-          nodeResults: {},
+          nodeResults: Object.fromEntries(
+            missingTools.map(t => [t.nodeId, { status: 'FAILED', error: `Tool not found: ${t.toolId || 'none'}` }])
+          ),
         };
       }
 

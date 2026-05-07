@@ -278,14 +278,14 @@ class BackLogService extends EventEmitter {
     const result = await mg().runQuery(`
       MATCH (b:BackLogItem)
       ${whereClause}
-      RETURN b.status as status, b.priority as priority, count(*) as count
+      RETURN b.status as status, b.priority as priority, count(*) as cnt
     `);
 
     const byStatus = {};
     const byPriority = {};
 
     for (const row of result) {
-      const count = typeof row.count === 'number' ? row.count : 1;
+      const count = typeof row.cnt === 'number' ? row.cnt : 1;
       byStatus[row.status] = (byStatus[row.status] || 0) + count;
       byPriority[row.priority] = (byPriority[row.priority] || 0) + count;
     }
