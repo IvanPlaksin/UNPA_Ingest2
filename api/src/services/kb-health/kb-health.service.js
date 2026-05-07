@@ -126,11 +126,12 @@ class KBHealthService {
    */
   async computeFreshness() {
     try {
-      // Use updatedAt string comparison (ISO dates sort lexicographically)
+      // Filter to string-type updatedAt only — some legacy nodes store zoned_date_time objects
+      // which cause type errors when compared with >= against a string literal in Memgraph
       const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
       const result = await memgraphService.runQuery(`
         MATCH (n)
-        WHERE n.updatedAt IS NOT NULL
+        WHERE n.updatedAt IS NOT NULL AND valueType(n.updatedAt) = 'String'
         RETURN count(n) AS total,
                sum(CASE WHEN n.updatedAt >= '${cutoff}' THEN 1 ELSE 0 END) AS fresh
       `);

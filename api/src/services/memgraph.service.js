@@ -1102,40 +1102,28 @@ if (process.env.GRAPH_DB_BACKEND === 'postgres-age') {
     module.exports.MemgraphService = AGEMemgraphShim;
     module.exports.getMemgraphService = () => shimInstance;
     module.exports.getSharedDriver = () => shimInstance.driver;
-    return; // Skip MemgraphService singleton below
-}
+} else {
+    // ────────────────────────────────────────────────────────────────────────
+    // SINGLETON FACTORY (Memgraph / default path)
+    // ────────────────────────────────────────────────────────────────────────
 
-// ────────────────────────────────────────────────────────────────────────────
-// SINGLETON FACTORY
-// ────────────────────────────────────────────────────────────────────────────
+    /** @type {MemgraphService} */
+    let instance = null;
 
-/** @type {MemgraphService} */
-let instance = null;
-
-/**
- * Get MemgraphService singleton
- * @returns {MemgraphService}
- */
-function getMemgraphService() {
-    if (!instance) {
-        instance = new MemgraphService();
+    function getMemgraphService() {
+        if (!instance) {
+            instance = new MemgraphService();
+        }
+        return instance;
     }
-    return instance;
-}
 
-/**
- * Get the shared driver for use by other services (e.g., MemgraphClient).
- * This prevents multiple driver instances and connection pool exhaustion.
- * @returns {import('neo4j-driver').Driver}
- */
-function getSharedDriver() {
-    return getMemgraphService().driver;
-}
+    function getSharedDriver() {
+        return getMemgraphService().driver;
+    }
 
-// Export both the class and singleton getter
-// Default export is singleton for backwards compatibility
-const singletonInstance = getMemgraphService();
-module.exports = singletonInstance;
-module.exports.MemgraphService = MemgraphService;
-module.exports.getMemgraphService = getMemgraphService;
-module.exports.getSharedDriver = getSharedDriver;
+    const singletonInstance = getMemgraphService();
+    module.exports = singletonInstance;
+    module.exports.MemgraphService = MemgraphService;
+    module.exports.getMemgraphService = getMemgraphService;
+    module.exports.getSharedDriver = getSharedDriver;
+}
