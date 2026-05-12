@@ -1,0 +1,131 @@
+{
+  "id": "flowdesk.process.ticket-lifecycle",
+  "name": "Ticket Lifecycle Workflow",
+  "version": "1.0.0",
+  "namespace": "FLOWDESK",
+  "metadata": {
+    "domain": "ITSM",
+    "businessProcess": "Ticket Management",
+    "description": "Complete ticket lifecycle: create → route → assign → SLA monitoring",
+    "replaces": "Hardcoded Siebel CRM ticket workflow"
+  },
+  "nodes": [
+    {
+      "id": "WF-START",
+      "type": "start",
+      "executor": "workflow.start",
+      "config": {
+        "inputs": [
+          { "name": "title", "type": "string", "required": true },
+          { "name": "description", "type": "string", "required": false },
+          { "name": "priority", "type": "string", "required": false, "default": "medium" },
+          { "name": "category", "type": "string", "required": false, "default": "general" },
+          { "name": "requester", "type": "string", "required": true }
+        ]
+      }
+    },
+    {
+      "id": "N1-CREATE",
+      "type": "executor",
+      "executor": "flowdesk.manage_ticket",
+      "config": {
+        "operation": "create"
+      },
+      "transitions": [
+        { "target": "N2-ROUTE", "condition": "always" }
+      ]
+    },
+    {
+      "id": "N2-ROUTE",
+      "type": "executor",
+      "executor": "flowdesk.route_ticket",
+      "config": {
+        "useAI": false
+      },
+      "transitions": [
+        { "target": "N3-PRIORITY-CHECK", "condition": "always" }
+      ]
+    },
+    {
+      "id": "N3-PRIORITY-CHECK",
+      "type": "decision",
+      "executor": "common.branch",
+      "config": {
+        "field": "priority",
+        "branches": {
+          "critical": "N4A-IMMEDIATE-ASSIGN",
+          "high": "N4A-IMMEDIATE-ASSIGN",
+          "medium": "N4B-QUEUE",
+          "low": "N4B-QUEUE"
+        },
+        "default": "N4B-QUEUE"
+      }
+    },
+    {
+      "id": "N4A-IMMEDIATE-ASSIGN",
+      "type": "executor",
+      "executor": "flowdesk.manage_ticket",
+      "config": {
+        "operation": "assign"
+      },
+      "transitions": [
+        { "target": "N5-SLA-SETUP", "condition": "always" }
+      ]
+    },
+    {
+      "id": "N4B-QUEUE",
+      "type": "executor",
+      "executor": "common.log",
+      "config": {
+        "level": "info",
+        "message": "Ticket added to queue for assignment"
+      },
+      "transitions": [
+        { "target": "N5-SLA-SETUP", "condition": "always" }
+      ]
+    },
+    {
+      "id": "N5-SLA-SETUP",
+      "type": "executor",
+      "executor": "flowdesk.check_sla",
+      "config": {
+        "operation": "check",
+        "autoEscalate": true
+      },
+      "transitions": [
+        { "target": "N6-NOTIFY", "condition": "always" }
+      ]
+    },
+    {
+      "id": "N6-NOTIFY",
+      "type": "executor",
+      "executor": "flowdesk.send_notification",
+      "config": {
+        "template": "ticket_created",
+        "channels": ["email"]
+      },
+      "transitions": [
+        { "target": "WF-END", "condition": "always" }
+      ]
+    },
+    {
+      "id": "WF-END",
+      "type": "end",
+      "executor": "workflow.end",
+      "config": {
+        "outputs": ["ticketId", "queue", "assignee", "priority", "status"]
+      }
+    }
+  ],
+  "edges": [
+    { "id": "e01", "source": "WF-START", "target": "N1-CREATE" },
+    { "id": "e02", "source": "N1-CREATE", "target": "N2-ROUTE" },
+    { "id": "e03", "source": "N2-ROUTE", "target": "N3-PRIORITY-CHECK" },
+    { "id": "e04", "source": "N3-PRIORITY-CHECK", "target": "N4A-IMMEDIATE-ASSIGN", "label": "critical/high" },
+    { "id": "e05", "source": "N3-PRIORITY-CHECK", "target": "N4B-QUEUE", "label": "medium/low" },
+    { "id": "e06", "source": "N4A-IMMEDIATE-ASSIGN", "target": "N5-SLA-SETUP" },
+    { "id": "e07", "source": "N4B-QUEUE", "target": "N5-SLA-SETUP" },
+    { "id": "e08", "source": "N5-SLA-SETUP", "target": "N6-NOTIFY" },
+    { "id": "e09", "source": "N6-NOTIFY", "target": "WF-END" }
+  ]
+}

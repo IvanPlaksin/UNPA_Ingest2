@@ -16,7 +16,7 @@ const { PluginBase, createSimpleExecutor, createSuccessResult, createErrorResult
 // Import real services
 const qdrantService = require('../../../../services/qdrant.service');
 const memgraphService = require('../../../../services/memgraph.service');
-const llmService = require('../../../../services/llm.service');
+const { getInstance: getLLMProvider } = require('../../../../services/llm/LLMProviderService');
 const { EmbeddingService } = require('../../../../services/structuring/embeddings/EmbeddingService');
 const { HybridSearch, createHybridSearch } = require('../../../../services/retrieval/hybrid-search');
 const { QueryExpansionService, createQueryExpansionService } = require('../../../../services/retrieval/query-expansion.service');
@@ -70,6 +70,7 @@ function getQueryExpansion() {
     queryExpansionInstance = createQueryExpansionService({
       maxExpansions: 5,
       maxSynonymsPerTerm: 3,
+      llmService: getLLMProvider(),
     });
   }
   return queryExpansionInstance;
@@ -90,6 +91,11 @@ const expandQueryExecutor = createSimpleExecutor({
       includeSynonyms: { type: 'boolean', default: true },
       includeUNTerms: { type: 'boolean', default: true },
       includeRelatedSystems: { type: 'boolean', default: true },
+      generateRelated: {
+        type: 'boolean',
+        default: false,
+        description: 'Use LLM to generate related queries (requires LLM provider)'
+      },
     },
   },
   async execute(params, context) {
@@ -105,6 +111,7 @@ const expandQueryExecutor = createSimpleExecutor({
         includeSynonyms: params.includeSynonyms !== false,
         includeUNTerms: params.includeUNTerms !== false,
         includeRelatedSystems: params.includeRelatedSystems !== false,
+        generateRelated: params.generateRelated === true,
       });
 
       return createSuccessResult({
@@ -115,10 +122,12 @@ const expandQueryExecutor = createSimpleExecutor({
         systemExpansions: result.systemExpansions,
         unEntities: result.unEntities,
         relatedSystems: result.relatedSystems,
+        relatedQueries: result.relatedQueries || [],
       }, {
         termCount: result.metadata.termCount,
         synonymCount: result.metadata.synonymCount,
         expansionRatio: result.metadata.expansionRatio,
+        relatedQueriesGenerated: (result.relatedQueries || []).length,
       }, 1.0);
 
     } catch (error) {
@@ -171,11 +180,21 @@ const vectorSearchExecutor = createSimpleExecutor({
         }, { searchType: 'vector', error: 'Embedding service unavailable' });
       }
 
+      // Build filter and resolve fullNamespace for collection selection.
+      // fullNamespace is the 4th arg to searchSimilar and determines which
+      // Qdrant collection to use via namespace.config.js mapping.
+      let searchFilter = null;
+      let fullNamespace = namespace;
+
+      if (namespace.startsWith('project:')) {
+        // project:<id> → project collection, filter by projectId
+        fullNamespace = namespace;
+        searchFilter = { must: [{ key: 'projectId', match: { value: namespace.slice(8) } }] };
+      }
+      // unified, core, meta, codex, etc. are passed as-is to resolve via namespace.config.js
+
       // Search in Qdrant
-      const searchResult = await qdrantService.searchSimilar(queryVector, topK, {
-        namespace: namespace.startsWith('project:') ? 'project' : namespace,
-        ...(namespace.startsWith('project:') && { projectId: namespace.slice(8) }),
-      });
+      const searchResult = await qdrantService.searchSimilar(queryVector, topK, searchFilter, fullNamespace);
 
       // Filter by score threshold
       const filteredResults = searchResult.filter(r => r.score >= scoreThreshold);
@@ -566,13 +585,16 @@ Instructions:
       // Call LLM
       let response;
       try {
-        response = await llmService.chat(messages, []);
+        response = await getLLMProvider().chat(messages);
       } catch (llmError) {
         console.warn('[generate] LLM call failed:', llmError.message);
         return createErrorResult('LLM_ERROR', `LLM unavailable: ${llmError.message}`, true);
       }
 
-      const generatedText = response?.content || response || '';
+      const rawContent = response?.content;
+      const generatedText = Array.isArray(rawContent)
+        ? rawContent.filter(b => b.type === 'text').map(b => b.text).join('')
+        : (rawContent || '');
 
       return createSuccessResult({
         response: generatedText,
@@ -638,8 +660,11 @@ const summarizeResultsExecutor = createSimpleExecutor({
 
       let summary;
       try {
-        const response = await llmService.chat(messages, []);
-        summary = response?.content || response || '';
+        const response = await getLLMProvider().chat(messages);
+        const rc = response?.content;
+        summary = Array.isArray(rc)
+          ? rc.filter(b => b.type === 'text').map(b => b.text).join('')
+          : (rc || '');
       } catch (llmError) {
         // Fallback to simple extraction
         summary = results

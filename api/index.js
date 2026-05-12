@@ -2,8 +2,6 @@ const fs = require('fs');
 const path = require('path');
 // Enable TypeScript imports for AOPEG plugin .ts files
 require('ts-node').register({ transpileOnly: true, compilerOptions: { module: 'commonjs' } });
-// Disable SSL verification for on-premise ADO
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 // Load env vars from api/.env
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
@@ -84,7 +82,8 @@ const toolCatalogRoutes = require('./src/routes/toolCatalog.route');
 const gxeManagerRoutes = require('./src/routes/gxeManager.route');
 const approvalRoutes = require('./src/routes/approval.route');
 const assistantRoutes = require('./src/routes/assistant.route');
-const flowdeskRoutes = require('./src/routes/flowdesk.route');
+const flowdeskRoutes = require('./src/instances/flowdesk/routes/flowdesk.route');
+const flowdeskConfigRoutes = require('./src/instances/flowdesk/routes/flowdesk-config.route');
 const codexRoutes = require('./src/routes/codex.route');
 const backlogRoutes = require('./src/routes/backlog.route');
 const backlogExecutionRoutes = require('./src/routes/backlog-execution.route');
@@ -94,6 +93,7 @@ const kbHealthRoutes = require('./src/routes/kb-health.route');
 const metacognitionRoutes = require('./src/routes/metacognition.route');
 const workspaceRoutes = require('./src/routes/workspace.routes');
 const dialogueRoutes = require('./src/routes/dialogue.route');
+const sigillumRoutes = require('./src/routes/sigillum.route');
 const { initFormRoutes } = require('./src/routes/structural-form.route');
 const { initStructuralRoutes } = require('./src/routes/structural.route');
 
@@ -192,6 +192,7 @@ app.use('/api/v1/graph-status', graphStatusRoutes);
 app.use('/api/v1/tool-catalog', toolCatalogRoutes);
 app.use('/api/v1/approval', approvalRoutes);
 app.use('/api/v1/assistant', assistantRoutes);
+app.use('/api/v1/flowdesk/config', flowdeskConfigRoutes);
 app.use('/api/v1/flowdesk', flowdeskRoutes);
 app.use('/api/v1/codex', codexRoutes);
 app.use('/api/v1/backlog', backlogRoutes);
@@ -208,6 +209,7 @@ app.use('/api/v1/metrics', require('./src/routes/metrics.route'));
 app.use('/api/v1/metacognition', metacognitionRoutes);
 app.use('/api/v1/workspaces', workspaceRoutes);
 app.use('/api/v1/dialogue', dialogueRoutes);
+app.use('/api/v1/sigillum', sigillumRoutes);
 const _mg = require('./src/services/memgraph.service');
 app.use('/api/v1/forms', initFormRoutes(_mg));
 const { getFormService } = require('./src/routes/structural-form.route');

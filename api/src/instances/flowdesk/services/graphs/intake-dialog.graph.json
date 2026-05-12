@@ -1,0 +1,154 @@
+{
+  "id": "flowdesk.dialog.intake",
+  "type": "dialog",
+  "name": "Intake Dialog",
+  "version": "1.0.0",
+  "namespace": "FLOWDESK",
+  "description": "Main intake dialog — classifies intent, collects location & beneficiary, spawns process graph",
+
+  "state_schema": {
+    "intent": null,
+    "service_code": null,
+    "service_name": null,
+    "location": null,
+    "location_candidates": null,
+    "beneficiary": null,
+    "beneficiary_type": null,
+    "justification": null,
+    "confirmed": false
+  },
+
+  "nodes": [
+    {
+      "id": "WF-START",
+      "type": "start",
+      "executor": "workflow.start",
+      "config": {
+        "inputs": [
+          { "name": "userId", "type": "string", "required": true },
+          { "name": "message", "type": "string", "required": true }
+        ]
+      },
+      "transitions": [
+        { "condition": "default", "to": "D1-CLASSIFY" }
+      ]
+    },
+    {
+      "id": "D1-CLASSIFY",
+      "executor": "flowdesk.dialog.classify-intent",
+      "prompt": null,
+      "transitions": [
+        { "condition": "high_confidence", "to": "D3-CHECK-LOC" },
+        { "condition": "medium_confidence", "to": "D2-CLARIFY" },
+        { "condition": "low_confidence", "to": "D2-OPEN" },
+        { "condition": "default", "to": "D2-OPEN" }
+      ]
+    },
+    {
+      "id": "D2-CLARIFY",
+      "executor": "flowdesk.dialog.clarify-intent",
+      "transitions": [
+        { "condition": "confirmed", "to": "D3-CHECK-LOC" },
+        { "condition": "changed", "to": "D1-CLASSIFY" },
+        { "condition": "default", "to": "D2-OPEN" }
+      ]
+    },
+    {
+      "id": "D2-OPEN",
+      "executor": "flowdesk.dialog.open-query",
+      "transitions": [
+        { "condition": "classified", "to": "D3-CHECK-LOC" },
+        { "condition": "default", "to": "D2-OPEN" }
+      ]
+    },
+    {
+      "id": "D3-CHECK-LOC",
+      "executor": "flowdesk.dialog.check-location",
+      "transitions": [
+        { "condition": "has_location", "to": "D6-ASK-BENEF" },
+        { "condition": "no_location", "to": "D4-ASK-LOC" }
+      ]
+    },
+    {
+      "id": "D4-ASK-LOC",
+      "executor": "flowdesk.dialog.ask-location",
+      "prompt": "Where do you need this service? Please provide a city name, duty station, or country.",
+      "transitions": [
+        { "condition": "location_found", "to": "D6-ASK-BENEF" },
+        { "condition": "multiple_matches", "to": "D5-SELECT-LOC" },
+        { "condition": "not_found", "to": "D4-ASK-LOC" }
+      ]
+    },
+    {
+      "id": "D5-SELECT-LOC",
+      "executor": "flowdesk.dialog.select-location",
+      "transitions": [
+        { "condition": "selected", "to": "D6-ASK-BENEF" },
+        { "condition": "default", "to": "D4-ASK-LOC" }
+      ]
+    },
+    {
+      "id": "D6-ASK-BENEF",
+      "executor": "flowdesk.dialog.ask-beneficiary",
+      "prompt": "Is this request for yourself or for another staff member?",
+      "transitions": [
+        { "condition": "self", "to": "D8-CONFIRM" },
+        { "condition": "other", "to": "D7-FIND-USER" }
+      ]
+    },
+    {
+      "id": "D7-FIND-USER",
+      "executor": "flowdesk.dialog.find-user",
+      "prompt": "Please provide the name or email of the staff member.",
+      "transitions": [
+        { "condition": "found", "to": "D8-CONFIRM" },
+        { "condition": "multiple", "to": "D7-FIND-USER" },
+        { "condition": "not_found", "to": "D7-FIND-USER" }
+      ]
+    },
+    {
+      "id": "D8-CONFIRM",
+      "executor": "flowdesk.dialog.confirm-request",
+      "transitions": [
+        { "condition": "confirmed", "to": "D10-SPAWN" },
+        { "condition": "edit", "to": "D4-ASK-LOC" },
+        { "condition": "cancel", "to": "WF-END" }
+      ]
+    },
+    {
+      "id": "D10-SPAWN",
+      "executor": "flowdesk.dialog.spawn-process",
+      "transitions": [
+        { "condition": "default", "to": "WF-END" }
+      ]
+    },
+    {
+      "id": "WF-END",
+      "type": "end",
+      "executor": "workflow.end",
+      "config": {
+        "outputs": ["service_code", "location", "beneficiary", "process_result"]
+      },
+      "transitions": []
+    }
+  ],
+
+  "edges": [
+    { "from": "WF-START", "to": "D1-CLASSIFY" },
+    { "from": "D1-CLASSIFY", "to": "D2-CLARIFY", "condition": "medium_confidence" },
+    { "from": "D1-CLASSIFY", "to": "D2-OPEN", "condition": "low_confidence" },
+    { "from": "D1-CLASSIFY", "to": "D3-CHECK-LOC", "condition": "high_confidence" },
+    { "from": "D2-CLARIFY", "to": "D3-CHECK-LOC" },
+    { "from": "D2-OPEN", "to": "D3-CHECK-LOC" },
+    { "from": "D3-CHECK-LOC", "to": "D4-ASK-LOC", "condition": "no_location" },
+    { "from": "D3-CHECK-LOC", "to": "D6-ASK-BENEF", "condition": "has_location" },
+    { "from": "D4-ASK-LOC", "to": "D5-SELECT-LOC", "condition": "multiple" },
+    { "from": "D4-ASK-LOC", "to": "D6-ASK-BENEF", "condition": "found" },
+    { "from": "D5-SELECT-LOC", "to": "D6-ASK-BENEF" },
+    { "from": "D6-ASK-BENEF", "to": "D7-FIND-USER", "condition": "other" },
+    { "from": "D6-ASK-BENEF", "to": "D8-CONFIRM", "condition": "self" },
+    { "from": "D7-FIND-USER", "to": "D8-CONFIRM" },
+    { "from": "D8-CONFIRM", "to": "D10-SPAWN", "condition": "confirmed" },
+    { "from": "D10-SPAWN", "to": "WF-END" }
+  ]
+}
