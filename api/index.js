@@ -94,6 +94,7 @@ const metacognitionRoutes = require('./src/routes/metacognition.route');
 const workspaceRoutes = require('./src/routes/workspace.routes');
 const dialogueRoutes = require('./src/routes/dialogue.route');
 const sigillumRoutes = require('./src/routes/sigillum.route');
+const tier0Routes = require('./src/routes/tier0.route');
 const { initFormRoutes } = require('./src/routes/structural-form.route');
 const { initStructuralRoutes } = require('./src/routes/structural.route');
 
@@ -210,6 +211,7 @@ app.use('/api/v1/metacognition', metacognitionRoutes);
 app.use('/api/v1/workspaces', workspaceRoutes);
 app.use('/api/v1/dialogue', dialogueRoutes);
 app.use('/api/v1/sigillum', sigillumRoutes);
+app.use('/api/v1/tier0', tier0Routes);
 const _mg = require('./src/services/memgraph.service');
 app.use('/api/v1/forms', initFormRoutes(_mg));
 const { getFormService } = require('./src/routes/structural-form.route');
