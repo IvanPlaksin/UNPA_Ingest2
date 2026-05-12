@@ -256,6 +256,7 @@ async function strategyB(alreadyIndexed) {
             project_id:   (s.projectPath || '').split('/').pop() || 'default',
             created_at:   s.startedAt || new Date().toISOString(),
             name:         `dialogue_session_${s.sessionId}`,
+            text:         s.summary,
             sessionId:    s.sessionId,
             platform:     s.platform || null,
             messageCount: s.messageCount,

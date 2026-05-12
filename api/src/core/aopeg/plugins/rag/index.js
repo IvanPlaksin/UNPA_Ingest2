@@ -202,14 +202,18 @@ const vectorSearchExecutor = createSimpleExecutor({
       const results = filteredResults.map((r, index) => ({
         id: r.id,
         text: r.payload?.text || r.payload?.content || '',
+        name: r.payload?.name || r.payload?.quantum_id || '',
         score: r.score,
         rank: index + 1,
         source: 'vector',
         metadata: {
-          namespace: r.payload?.namespace,
-          chunkIndex: r.payload?.chunkIndex,
-          entityCount: r.payload?.entityCount,
-          createdAt: r.payload?.createdAt,
+          namespace:    r.payload?.namespace,
+          sessionId:    r.payload?.sessionId,
+          sourceType:   r.payload?.source_type,
+          primaryType:  r.payload?.primary_type,
+          chunkIndex:   r.payload?.chunkIndex,
+          entityCount:  r.payload?.entityCount,
+          createdAt:    r.payload?.createdAt,
         },
       }));
 
