@@ -74,7 +74,10 @@ async function migrateEdge(edgeId) {
   const patch    = {};
 
   for (const [key, val] of Object.entries(defaults)) {
-    if (current[key] === undefined || current[key] === null) {
+    // Only patch truly absent fields with non-null defaults.
+    // Null-defaulted fields (valid_from, valid_to, etc.) are never stored by
+    // Memgraph when set to null, so absence === null — no patch needed.
+    if (current[key] === undefined && val !== null && val !== undefined) {
       patch[key] = val;
     }
   }

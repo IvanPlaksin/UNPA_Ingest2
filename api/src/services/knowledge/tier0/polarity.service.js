@@ -5,6 +5,13 @@ const neo4j    = require('neo4j-driver');
 
 const VALID_POLARITIES = ['AFFIRMED', 'NEGATED'];
 
+// Lazy-loaded to avoid circular dependency (tier0 ← tier1 cycle)
+let _hypothesisService;
+function _getHypothesisService() {
+  if (!_hypothesisService) _hypothesisService = require('../tier1/hypothesis.service');
+  return _hypothesisService;
+}
+
 async function setPolarity(edgeId, polarity, confidence = 1.0) {
   if (!VALID_POLARITIES.includes(polarity)) {
     throw new Error(`Invalid polarity '${polarity}'. Must be AFFIRMED or NEGATED.`);
@@ -35,12 +42,12 @@ async function getPolarity(edgeId) {
 }
 
 // Detect if AFFIRMED and NEGATED edges of same type exist between the same pair of nodes.
-// Creates a Hypothesis node on conflict (stubbed until HypothesisService exists).
+// Creates a full Hypothesis node via HypothesisService on conflict.
 async function detectContradiction(nodeAId, nodeBId, relationType) {
   const rows = await memgraph.runQuery(
     `MATCH (a)-[r:${relationType}]->(b)
      WHERE id(a) = $aId AND id(b) = $bId AND r.status <> 'RETRACTED'
-     RETURN r.polarity AS polarity, id(r) AS edgeId`,
+     RETURN r.polarity AS polarity, r.namespace AS namespace`,
     { aId: neo4j.int(nodeAId), bId: neo4j.int(nodeBId) }
   );
 
@@ -48,28 +55,18 @@ async function detectContradiction(nodeAId, nodeBId, relationType) {
   const hasAffirmed = polarities.includes('AFFIRMED');
   const hasNegated  = polarities.includes('NEGATED');
 
-  if (!hasAffirmed || !hasNegated) {
-    return { hasContradiction: false };
-  }
+  if (!hasAffirmed || !hasNegated) return { hasContradiction: false };
 
-  // TODO: Create actual Hypothesis node when HypothesisService exists.
-  // For now, record the conflict in the graph with a placeholder node.
-  const now = new Date().toISOString();
-  const conflictRows = await memgraph.runQuery(
-    `CREATE (h:Hypothesis {
-       type: 'POLARITY_CONFLICT',
-       relationType: $relationType,
-       nodeAId: $aId,
-       nodeBId: $bId,
-       detected_at: $now,
-       status: 'OPEN'
-     })
-     RETURN id(h) AS hypothesisId`,
-    { relationType, aId: String(nodeAId), bId: String(nodeBId), now }
-  );
+  const namespace = rows.find(r => r.namespace)?.namespace || 'SYSTEM';
 
-  const hypothesisId = conflictRows[0]?.hypothesisId;
-  return { hasContradiction: true, hypothesisId };
+  const result = await _getHypothesisService().createHypothesis({
+    type:      'POLARITY_CONFLICT',
+    statement: `Polarity conflict on ${relationType} between nodes ${nodeAId} and ${nodeBId}`,
+    context:   { nodeAId: String(nodeAId), nodeBId: String(nodeBId), relationType },
+    namespace,
+  });
+
+  return { hasContradiction: true, hypothesisId: result.hypothesisId };
 }
 
 // Create a NEGATED counterpart for an existing AFFIRMED edge.

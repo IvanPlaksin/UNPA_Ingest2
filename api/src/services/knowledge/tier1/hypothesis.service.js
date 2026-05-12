@@ -222,9 +222,8 @@ async function evaluateWithACH(hypothesisId) {
 
   const counts = await memgraph.runQuery(
     `MATCH (h:Hypothesis) WHERE h.id IN $ids
-     OPTIONAL MATCH (h)-[r:CONTRADICTS]->()
-     RETURN h.id AS id, h.statement AS statement,
-            h.confidence AS confidence, count(r) AS contradicts_count
+     RETURN h.id AS id, h.statement AS statement, h.confidence AS confidence,
+            size([(h)-[:CONTRADICTS]->() | 1]) AS contradicts_count
      ORDER BY contradicts_count ASC, h.confidence DESC`,
     { ids: allIds }
   );
