@@ -495,45 +495,110 @@ const assembleContextExecutor = createSimpleExecutor({
 // EXECUTOR: RERANK RESULTS
 // ────────────────────────────────────────────────────────────────────────────
 
+// ── BM25 helper (simple TF-IDF approximation) ────────────────────────────────
+
+function tokenize(text) {
+  return (text || '').toLowerCase().replace(/[^\w\s]/g, ' ').split(/\s+/).filter(t => t.length > 2);
+}
+
+function bm25Score(docTokens, queryTokens, avgDocLen, k1 = 1.5, b = 0.75) {
+  const docLen = docTokens.length;
+  const freq = {};
+  for (const t of docTokens) freq[t] = (freq[t] || 0) + 1;
+  let score = 0;
+  for (const qt of queryTokens) {
+    const tf = freq[qt] || 0;
+    if (tf === 0) continue;
+    const idf = Math.log(1 + 1 / (0.5 + 0.5 * tf));
+    score += idf * (tf * (k1 + 1)) / (tf + k1 * (1 - b + b * docLen / Math.max(avgDocLen, 1)));
+  }
+  return score;
+}
+
 const rerankResultsExecutor = createSimpleExecutor({
   type: 'rag.rerank',
   displayName: 'Rerank Results',
-  description: 'Rerank search results using cross-encoder or LLM',
+  description: 'Rerank search results using BM25 or LLM scoring',
   domain: 'rag',
   parameterSchema: {
     type: 'object',
     properties: {
-      topK: { type: 'number', default: 10, description: 'Number of top results to keep' },
-      method: { type: 'string', default: 'score', description: 'Reranking method: score, llm' },
+      topK:   { type: 'number', default: 10,        description: 'Number of top results to keep' },
+      method: { type: 'string', default: 'combined', description: 'Reranking method: score|bm25|llm|combined' },
     },
   },
   async execute(params, context) {
-    const query = context.input?.query || '';
+    const query   = params.query || context.input?.query || '';
     const results = context.input?.results || [];
-    const topK = params.topK || 10;
+    const topK    = params.topK || 10;
+    const method  = params.method || 'combined';
 
     if (results.length === 0) {
-      return createSuccessResult({
-        results: [],
-        query,
-      }, { method: params.method || 'score' });
+      return createSuccessResult({ results: [], query }, { method });
     }
 
-    // For now, simple score-based reranking
-    const sorted = [...results].sort((a, b) => (b.score || 0) - (a.score || 0));
-    const reranked = sorted.slice(0, topK).map((r, i) => ({
-      ...r,
-      originalRank: results.indexOf(r) + 1,
-      newRank: i + 1,
+    let reranked;
+
+    if (method === 'llm') {
+      // LLM reranking: ask LLM to score 0-10, fall back to bm25 on any error
+      let llmProvider = null;
+      try { llmProvider = getLLMProvider(); } catch { /* no provider */ }
+
+      if (llmProvider) {
+        try {
+          const batch = results.slice(0, 15);
+          const lines = batch.map((r, i) =>
+            `${i + 1}. [${r.id}] ${(r.text || r.content || r.name || '').slice(0, 200)}`
+          ).join('\n');
+          const prompt =
+            `Score each result's relevance to the query. Scale: 0-10 integers only.\n` +
+            `Query: "${query}"\n\nResults:\n${lines}\n\n` +
+            `Respond with ONLY a JSON array of ${batch.length} integers, e.g. [8,3,9,5].`;
+
+          const raw = await llmProvider.chat([{ role: 'user', content: prompt }], { maxTokens: 120, temperature: 0 });
+          const text = Array.isArray(raw)
+            ? raw.filter(b => b.type === 'text').map(b => b.text).join('')
+            : (typeof raw === 'string' ? raw : raw?.content || '');
+
+          const match = text.match(/\[[\d,\s]+\]/);
+          if (match) {
+            const scores = JSON.parse(match[0]);
+            if (Array.isArray(scores) && scores.length >= batch.length) {
+              const scored = batch.map((r, i) => ({ ...r, score: (scores[i] || 0) / 10 }));
+              reranked = [...scored, ...results.slice(15)].sort((a, b) => (b.score || 0) - (a.score || 0));
+            }
+          }
+        } catch (e) {
+          console.warn('[rerank] LLM scoring failed, falling back to BM25:', e.message);
+        }
+      }
+    }
+
+    if (!reranked) {
+      // BM25 reranking: combine BM25 score with original vector score
+      const queryTokens = tokenize(query);
+      const allTokens   = results.map(r => tokenize(r.text || r.content || r.name || ''));
+      const avgLen      = allTokens.reduce((s, t) => s + t.length, 0) / Math.max(allTokens.length, 1);
+
+      reranked = results.map((r, i) => {
+        const bm25 = bm25Score(allTokens[i], queryTokens, avgLen);
+        const normBm25 = Math.min(bm25 / 10, 1);
+        const combined = (r.score || 0) * 0.6 + normBm25 * 0.4;
+        return { ...r, score: combined };
+      }).sort((a, b) => (b.score || 0) - (a.score || 0));
+    }
+
+    const top = reranked.slice(0, topK).map((r, i) => ({
+      ...r, originalRank: results.indexOf(results.find(x => x.id === r.id)) + 1, newRank: i + 1,
     }));
 
     return createSuccessResult({
-      results: reranked,
+      results: top,
       query,
     }, {
-      method: params.method || 'score',
+      method,
       originalCount: results.length,
-      rerankedCount: reranked.length,
+      rerankedCount: top.length,
     });
   },
 });
