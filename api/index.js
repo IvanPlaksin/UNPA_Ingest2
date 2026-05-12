@@ -95,6 +95,7 @@ const workspaceRoutes = require('./src/routes/workspace.routes');
 const dialogueRoutes = require('./src/routes/dialogue.route');
 const sigillumRoutes = require('./src/routes/sigillum.route');
 const tier0Routes = require('./src/routes/tier0.route');
+const tier1Routes = require('./src/routes/tier1.route');
 const { initFormRoutes } = require('./src/routes/structural-form.route');
 const { initStructuralRoutes } = require('./src/routes/structural.route');
 
@@ -206,12 +207,17 @@ try {
   const { setupBacklogEventHandlers } = require('./src/services/notifications/backlog-events');
   setupBacklogEventHandlers();
 } catch (err) { console.warn('[Notifications] Event setup failed:', err.message); }
+try {
+  const decayWorker = require('./src/workers/confidence-decay.worker');
+  decayWorker.initialize().catch(() => {});
+} catch (err) { console.warn('[DecayWorker] Init skipped:', err.message); }
 app.use('/api/v1/metrics', require('./src/routes/metrics.route'));
 app.use('/api/v1/metacognition', metacognitionRoutes);
 app.use('/api/v1/workspaces', workspaceRoutes);
 app.use('/api/v1/dialogue', dialogueRoutes);
 app.use('/api/v1/sigillum', sigillumRoutes);
 app.use('/api/v1/tier0', tier0Routes);
+app.use('/api/v1/tier1', tier1Routes);
 const _mg = require('./src/services/memgraph.service');
 app.use('/api/v1/forms', initFormRoutes(_mg));
 const { getFormService } = require('./src/routes/structural-form.route');
