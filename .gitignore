@@ -39,6 +39,7 @@ logs/
 .claude/
 .vs/
 .vscode/settings.json
+.vscode/mcp.json
 
 # Docker compose (environment-specific, use .example)
 docker-compose.yml
