@@ -1,13 +1,13 @@
-# Приложение A: JSON Schemas
+# Appendix A: JSON Schemas
 
-**Статус:** 🔴 Не начат
-**Версия:** -
-**Последнее обновление:** -
+**Status:** 🔴 Not started
+**Version:** -
+**Last updated:** -
 
-## Содержание
+## Contents
 
-Централизованные JSON Schema определения для всех типов узлов и рёбер графа знаний.
+Centralized JSON Schema definitions for all node and edge types in the knowledge graph.
 
 ---
 
-*Этот документ является частью [Кодекса UN ProjectAdvisor](../CODEX_INDEX.md)*
+*This document is part of the [UN ProjectAdvisor Codex](../CODEX_INDEX.md)*

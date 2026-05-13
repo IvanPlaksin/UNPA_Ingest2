@@ -1,40 +1,40 @@
-# CODEX-EVOLUTION: Саморазвивающаяся система
+# CODEX-EVOLUTION: Self-Evolving System
 
-**Статус:** 🟡 Черновик
-**Версия:** 0.1.0
-**Последнее обновление:** 2026-03-12
-
----
-
-## Преамбула
-
-Система UN ProjectAdvisor проектируется не как статичный инструмент, а как **саморазвивающийся организм**. Граф знаний — это живая структура, которая непрерывно растёт, уточняется, исправляет свои ошибки и учится на собственном опыте.
-
-Данный стандарт определяет:
-
-1. **Каскадную архитектуру ИИ-агентов** — как множество агентов координируют работу
-2. **Механизмы консенсуса** — как агенты принимают коллективные решения
-3. **Автономную оптимизацию** — как система улучшает себя без вмешательства человека
-4. **Обнаружение и разрешение противоречий** — как конфликты превращаются в знание
-5. **Самодокументацию** — как система описывает собственную эволюцию
-6. **Уровни автономии** — границы самостоятельности на каждом этапе зрелости
+**Status:** 🟡 Draft
+**Version:** 0.1.0
+**Last updated:** 2026-03-12
 
 ---
 
-## 8.1 Каскадная архитектура ИИ-агентов (Agent Cascade)
+## Preamble
 
-### Трёхуровневая иерархия
+The UN ProjectAdvisor system is designed not as a static tool, but as a **self-evolving organism**. The knowledge graph is a living structure that continuously grows, refines itself, corrects its mistakes, and learns from its own experience.
 
-Система агентов организована в три уровня, каждый из которых обладает собственной зоной ответственности и уровнем полномочий.
+This standard defines:
+
+1. **Cascading AI agent architecture** — how multiple agents coordinate their work
+2. **Consensus mechanisms** — how agents make collective decisions
+3. **Autonomous optimization** — how the system improves itself without human intervention
+4. **Contradiction detection and resolution** — how conflicts are turned into knowledge
+5. **Self-documentation** — how the system describes its own evolution
+6. **Autonomy levels** — the boundaries of independence at each maturity stage
+
+---
+
+## 8.1 Cascading AI Agent Architecture (Agent Cascade)
+
+### Three-tier hierarchy
+
+The agent system is organized into three levels, each with its own zone of responsibility and level of authority.
 
 ```
                         ┌──────────────────────────┐
                         │      ORCHESTRATOR        │
                         │      (Meta-agent)        │
                         │                          │
-                        │  - Распределяет задачи   │
-                        │  - Разрешает конфликты   │
-                        │  - Управляет автономией   │
+                        │  - Distributes tasks     │
+                        │  - Resolves conflicts    │
+                        │  - Manages autonomy      │
                         │  - trustScore ≥ 0.95     │
                         └────────────┬─────────────┘
                                      │
@@ -45,7 +45,7 @@
     │   AGENTS            │ │  AGENTS         │ │   AGENTS          │
     │                     │ │                 │ │                   │
     │  Extractor          │ │  Validator      │ │  Enricher         │
-    │  Resolver           │ │  Optimizer      │ │  (+ будущие)      │
+    │  Resolver           │ │  Optimizer      │ │  (+ future)       │
     │                     │ │                 │ │                   │
     │  trustScore ≥ 0.8   │ │  trustScore ≥   │ │  trustScore ≥ 0.8 │
     │                     │ │  0.85           │ │                   │
@@ -55,10 +55,10 @@
         │   Worker    │       │   Worker    │       │   Worker    │
         │   Agents    │       │   Agents    │       │   Agents    │
         │             │       │             │       │             │
-        │  Атомарные  │       │  Проверка   │       │  Векторизация│
-        │  извлечения │       │  полей      │       │  Связи       │
-        │             │       │  хешей      │       │  Контексты   │
-        │  trustScore │       │  схем       │       │              │
+        │  Atomic     │       │  Field      │       │  Vectorization│
+        │  extractions│       │  checking   │       │  Links       │
+        │             │       │  hashes     │       │  Contexts    │
+        │  trustScore │       │  schemas    │       │              │
         │  ≥ 0.6      │       │             │       │  trustScore  │
         └─────────────┘       └─────────────┘       │  ≥ 0.6      │
                                                     └─────────────┘
@@ -71,22 +71,22 @@
                         └──────────────────────────┘
 ```
 
-### Специализации агентов
+### Agent specializations
 
-| Агент | Специализация | Типичные операции | Требуемый trustScore |
+| Agent | Specialization | Typical operations | Required trustScore |
 |-------|---------------|-------------------|---------------------|
-| **Extractor** | Извлечение фактов из источников | Парсинг SQL, анализ кода, NLP-извлечение | ≥ 0.8 |
-| **Validator** | Проверка качества и консистентности | Валидация схем, проверка хешей, CODEX-VALID | ≥ 0.85 |
-| **Enricher** | Обогащение связями и контекстом | Создание рёбер, добавление провенанса, классификация | ≥ 0.8 |
-| **Resolver** | Разрешение конфликтов и дубликатов | Entity resolution, merge, deduplication | ≥ 0.85 |
-| **Optimizer** | Оптимизация структуры и производительности | Реорганизация индексов, сжатие цепочек, архивация | ≥ 0.8 |
+| **Extractor** | Extracting facts from sources | SQL parsing, code analysis, NLP extraction | ≥ 0.8 |
+| **Validator** | Quality and consistency verification | Schema validation, hash checking, CODEX-VALID | ≥ 0.85 |
+| **Enricher** | Enrichment with links and context | Creating edges, adding provenance, classification | ≥ 0.8 |
+| **Resolver** | Conflict and duplicate resolution | Entity resolution, merge, deduplication | ≥ 0.85 |
+| **Optimizer** | Structure and performance optimization | Index reorganization, chain compression, archiving | ≥ 0.8 |
 
-### Регистрация и обнаружение агентов
+### Agent registration and discovery
 
-Каждый агент регистрируется в графе знаний как узел типа `:Agent` в пространстве имён `META`:
+Each agent is registered in the knowledge graph as a node of type `:Agent` in the `META` namespace:
 
 ```javascript
-// Регистрация агента в Knowledge Graph
+// Register an agent in the Knowledge Graph
 const agentNode = {
   id: crypto.randomUUID(),
   label: 'Agent',
@@ -116,12 +116,12 @@ const agentNode = {
 };
 ```
 
-### Протокол обнаружения
+### Discovery protocol
 
-Агенты обнаруживают друг друга через Cypher-запросы к META-namespace:
+Agents discover each other through Cypher queries to the META namespace:
 
 ```cypher
-// Найти всех активных агентов с нужной специализацией
+// Find all active agents with the required specialization
 MATCH (a:Agent {namespace: 'META', status: 'ACTIVE'})
 WHERE a.specialization = 'Validator'
   AND a.trustScore >= 0.85
@@ -129,9 +129,9 @@ RETURN a.agentId, a.trustScore, a.capabilities
 ORDER BY a.trustScore DESC
 ```
 
-### Межагентная коммуникация
+### Inter-agent communication
 
-Агенты взаимодействуют через рёбра Knowledge Graph. Это гарантирует полную трассируемость всех решений.
+Agents interact through Knowledge Graph edges. This guarantees complete traceability of all decisions.
 
 ```
 ┌─────────────┐   DELEGATED_TO    ┌─────────────┐
@@ -149,10 +149,10 @@ ORDER BY a.trustScore DESC
                                   └──────────────┘
 ```
 
-**Типы коммуникационных рёбер:**
+**Communication edge types:**
 
 ```cypher
-// DELEGATED_TO — передача задачи от вышестоящего агента
+// DELEGATED_TO — task delegation from a higher-level agent
 CREATE (orchestrator)-[:DELEGATED_TO {
   taskId:      $taskId,
   priority:    'HIGH',
@@ -161,7 +161,7 @@ CREATE (orchestrator)-[:DELEGATED_TO {
   delegatedAt: datetime()
 }]->(extractor)
 
-// REVIEWED_BY — результат проверки нижестоящего агента
+// REVIEWED_BY — result of a lower-level agent's review
 CREATE (result)-[:REVIEWED_BY {
   reviewerId:  $validatorAgentId,
   verdict:     'APPROVED',          // APPROVED | REJECTED | NEEDS_REVISION
@@ -170,7 +170,7 @@ CREATE (result)-[:REVIEWED_BY {
   reviewedAt:  datetime()
 }]->(validator)
 
-// QUALITY_ISSUE — обнаружение проблемы в данных другого агента
+// QUALITY_ISSUE — discovery of a problem in another agent's data
 CREATE (node)-[:QUALITY_ISSUE {
   issueId:     $issueId,
   reporterId:  $reporterAgentId,
@@ -182,24 +182,24 @@ CREATE (node)-[:QUALITY_ISSUE {
 }]->(reporter)
 ```
 
-### Правило неприкосновенности данных
+### Data inviolability rule
 
-> **Агент, обнаруживший проблему в данных другого агента, ОБЯЗАН зафиксировать это как ребро `QUALITY_ISSUE` с описанием проблемы, а не молча исправить.** Молчаливое исправление нарушает цепочку провенанса и делает невозможным анализ системных ошибок.
+> **An agent that discovers a problem in another agent's data MUST record this as a `QUALITY_ISSUE` edge with a description of the problem, not silently fix it.** Silent correction breaks the provenance chain and makes analysis of systemic errors impossible.
 
 ---
 
-## 8.2 Консенсус качества: голосование агентов
+## 8.2 Quality consensus: agent voting
 
-### Три уровня консенсуса
+### Three levels of consensus
 
-Механизмы консенсуса определены в [Манифесте для ИИ-агентов](../manifesto/AI_MANIFESTO.md) и реализуются через протокол голосования.
+Consensus mechanisms are defined in the [Manifesto for AI Agents](../manifesto/AI_MANIFESTO.md) and are implemented through a voting protocol.
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
-│                       УРОВНИ КОНСЕНСУСА                           │
+│                       CONSENSUS LEVELS                             │
 ├────────────────┬──────────────────┬────────────────────────────────┤
 │   MAJORITY     │    WEIGHTED      │        UNANIMOUS               │
-│   (> 50%)      │  (взвешенное)    │        (100%)                  │
+│   (> 50%)      │  (weighted)      │        (100%)                  │
 ├────────────────┼──────────────────┼────────────────────────────────┤
 │ Entity         │ SQL schema →     │ DELETE entity                  │
 │ resolution     │ business rules   │ MERGE entities                 │
@@ -213,14 +213,14 @@ CREATE (node)-[:QUALITY_ISSUE {
 │ Routine        │ Domain expertise │ Schema migration               │
 │ enrichment     │ required         │                                │
 ├────────────────┼──────────────────┼────────────────────────────────┤
-│ Порог: >50%    │ Порог: Σweight × │ Порог: 100% участников         │
-│ голосов        │ vote > 0.5       │ согласны                       │
-│ кворум: ≥3     │ кворум: ≥3       │ кворум: ≥3 (все с trustScore   │
-│ агента         │ агента           │ ≥ 0.8 в домене)                │
+│ Threshold: >50%│ Threshold: Σweight│ Threshold: 100% of participants│
+│ of votes       │ × vote > 0.5     │ agree                          │
+│ quorum: ≥3     │ quorum: ≥3       │ quorum: ≥3 (all with trustScore│
+│ agents         │ agents           │ ≥ 0.8 in domain)               │
 └────────────────┴──────────────────┴────────────────────────────────┘
 ```
 
-### Протокол голосования
+### Voting protocol
 
 ```
 ┌──────────┐     Propose      ┌───────────┐     Broadcast     ┌──────────┐
@@ -241,7 +241,7 @@ CREATE (node)-[:QUALITY_ISSUE {
                               └────────────┘
 ```
 
-**Реализация протокола:**
+**Protocol implementation:**
 
 ```javascript
 class VotingSession {
@@ -312,50 +312,50 @@ class VotingSession {
 }
 ```
 
-### Правила тайм-аута и кворума
+### Timeout and quorum rules
 
-| Параметр | MAJORITY | WEIGHTED | UNANIMOUS |
-|----------|----------|----------|-----------|
-| Кворум | ≥ 3 агента | ≥ 3 агента | Все агенты с trustScore ≥ 0.8 |
-| Тайм-аут раунда | 30 сек | 60 сек | 120 сек |
-| Макс. раундов | 1 | 2 | 3 |
-| При отсутствии кворума | ESCALATED | ESCALATED | ESCALATED |
-| При тайм-ауте | Решение по текущим голосам | Решение по текущим голосам | ESCALATED |
+| Parameter | MAJORITY | WEIGHTED | UNANIMOUS |
+|-----------|----------|----------|-----------|
+| Quorum | ≥ 3 agents | ≥ 3 agents | All agents with trustScore ≥ 0.8 |
+| Round timeout | 30 sec | 60 sec | 120 sec |
+| Max rounds | 1 | 2 | 3 |
+| When quorum absent | ESCALATED | ESCALATED | ESCALATED |
+| On timeout | Decision by current votes | Decision by current votes | ESCALATED |
 
-### Разрешение конфликтов
+### Conflict resolution
 
-Если консенсус не достигнут после максимального числа раундов, задача эскалируется по цепочке:
+If consensus is not reached after the maximum number of rounds, the task is escalated up the chain:
 
 ```
-Раунд 1 ──► Нет консенсуса ──► Раунд 2 ──► Нет консенсуса ──► Раунд 3
-                                                                    │
-                                                              Нет консенсуса
-                                                                    │
-                                                              ┌─────▼──────┐
-                                                              │ ESCALATION │
-                                                              │            │
-                                                              │ Orchestrator│
-                                                              │ принимает  │
-                                                              │ решение    │
-                                                              └─────┬──────┘
-                                                                    │
-                                                    ┌───────────────┼──────────────┐
-                                                    │               │              │
-                                            trustScore ≥ 0.95   trustScore      human
-                                            → Orchestrator       < 0.95         review
-                                              решает сам         → эскалация    required
-                                                                   к человеку
+Round 1 ──► No consensus ──► Round 2 ──► No consensus ──► Round 3
+                                                               │
+                                                         No consensus
+                                                               │
+                                                         ┌─────▼──────┐
+                                                         │ ESCALATION │
+                                                         │            │
+                                                         │ Orchestrator│
+                                                         │ makes      │
+                                                         │ decision   │
+                                                         └─────┬──────┘
+                                                               │
+                                               ┌───────────────┼──────────────┐
+                                               │               │              │
+                                       trustScore ≥ 0.95   trustScore      human
+                                       → Orchestrator       < 0.95         review
+                                         decides itself     → escalate      required
+                                                             to human
 ```
 
-Все решения (включая эскалированные) фиксируются в графе как рёбра `:DECIDED_BY` с полным обоснованием.
+All decisions (including escalated ones) are recorded in the graph as `:DECIDED_BY` edges with full justification.
 
 ---
 
-## 8.3 Автономная оптимизация (APES — Agent Performance Evolution System)
+## 8.3 Autonomous optimization (APES — Agent Performance Evolution System)
 
-### Архитектура APES
+### APES architecture
 
-APES — это замкнутый контур обратной связи, объединяющий две существующие библиотеки паттернов системы в единый механизм самооптимизации.
+APES is a closed feedback loop that combines two existing pattern libraries of the system into a single self-optimization mechanism.
 
 ```
     ┌───────────────────────────────────────────────────────────────────┐
@@ -370,7 +370,7 @@ APES — это замкнутый контур обратной связи, о�
     │         │                                               │        │
     │         └───────────────────────────────────────────────┘        │
     │                                                                  │
-    │    Компоненты:                                                    │
+    │    Components:                                                   │
     │    ┌─────────────────────────┐  ┌─────────────────────────────┐  │
     │    │ Runtime PatternLibrary  │  │ Extraction PatternLibrary   │  │
     │    │ runtime/learning/       │  │ services/patterns/          │  │
@@ -380,8 +380,8 @@ APES — это замкнутый контур обратной связи, о�
     │    │ - suggestBestGraph()    │  │ - registerRelationPattern() │  │
     │    │ - getStats()            │  │ - learnFromExtraction()     │  │
     │    │                         │  │ - matchPatterns()           │  │
-    │    │ Метрики:                │  │                             │  │
-    │    │ - successRate           │  │ Метрики:                    │  │
+    │    │ Metrics:                │  │                             │  │
+    │    │ - successRate           │  │ Metrics:                    │  │
     │    │ - avgDurationMs         │  │ - observationCount          │  │
     │    │ - executionCount        │  │ - confidence                │  │
     │    └─────────────────────────┘  │ - domain coverage           │  │
@@ -391,11 +391,11 @@ APES — это замкнутый контур обратной связи, о�
 
 ### Runtime PatternLibrary
 
-Файл: `api/src/runtime/learning/PatternLibrary.js`
+File: `api/src/runtime/learning/PatternLibrary.js`
 
-Эта библиотека работает на уровне GXE Runtime — она запоминает, какие графы (DAG) были успешно выполнены, и автоматически предлагает лучший граф для новой задачи на основе категории.
+This library operates at the GXE Runtime level — it remembers which graphs (DAGs) were successfully executed, and automatically suggests the best graph for a new task based on category.
 
-**Ключевые операции:**
+**Key operations:**
 
 ```javascript
 const { PatternLibrary } = require('./runtime/learning/PatternLibrary');
@@ -405,10 +405,10 @@ const library = new PatternLibrary({
   minSuccessRate: 0.7
 });
 
-// ── EXECUTE: выполнить граф ──────────────────────────────────────
+// ── EXECUTE: run the graph ───────────────────────────────────────
 const result = await runtimeEngine.run(dagDefinition, inputData);
 
-// ── MEASURE: записать результат ──────────────────────────────────
+// ── MEASURE: record the result ───────────────────────────────────
 await library.recordExecution({
   category:   'sql-extraction',
   graphHash:  dagDefinition.contentHash,
@@ -417,33 +417,33 @@ await library.recordExecution({
   dag:        dagDefinition
 });
 
-// ── COMPARE: получить лучший граф для категории ──────────────────
+// ── COMPARE: get the best graph for the category ─────────────────
 const bestPattern = await library.suggestBestGraph('sql-extraction');
 // Returns: { dag, successRate, avgDurationMs, executionCount }
 
-// ── ADJUST: если текущий граф хуже лучшего — заменить ────────────
+// ── ADJUST: if the current graph is worse than the best — replace ─
 if (bestPattern && bestPattern.successRate > currentSuccessRate) {
   dagDefinition = bestPattern.dag;  // Use the better-performing graph
 }
 ```
 
-**Кэш-стратегия:** LRU (Least Recently Used) с eviction при превышении `maxSize`. Паттерны с `successRate < minSuccessRate` (по умолчанию 0.7) не кэшируются.
+**Caching strategy:** LRU (Least Recently Used) with eviction when `maxSize` is exceeded. Patterns with `successRate < minSuccessRate` (default 0.7) are not cached.
 
 ### Extraction PatternLibrary
 
-Файл: `api/src/services/patterns/pattern-library.js`
+File: `api/src/services/patterns/pattern-library.js`
 
-Эта библиотека работает на уровне извлечения знаний — она накапливает шаблоны для распознавания сущностей, связей и подграфов в тексте.
+This library operates at the knowledge extraction level — it accumulates patterns for recognizing entities, relationships, and subgraphs in text.
 
-**Типы паттернов:**
+**Pattern types:**
 
-| Тип | Класс | Пример |
-|-----|-------|--------|
+| Type | Class | Example |
+|------|-------|---------|
 | Entity | `EntityPattern` | `{name: "SQLTable", regex: /CREATE TABLE\s+(\w+)/}` |
 | Relation | `RelationPattern` | `{type: "REFERENCES", source: "Column", target: "Table"}` |
 | Subgraph | `SubgraphPattern` | `{name: "FK-chain", nodes: [...], edges: [...]}` |
 
-**Автоматическое продвижение паттернов:**
+**Automatic pattern promotion:**
 
 ```javascript
 const patternLib = new PatternLibrary({
@@ -451,7 +451,7 @@ const patternLib = new PatternLibrary({
   learningThreshold: 5   // Auto-promote after 5 successful observations
 });
 
-// Регистрация паттерна вручную
+// Manual pattern registration
 patternLib.registerEntityPattern({
   name:       'StoredProcedure',
   domain:     'SQL',
@@ -460,99 +460,99 @@ patternLib.registerEntityPattern({
   confidence: 0.9
 });
 
-// Автоматическое обучение из результатов извлечения
+// Automatic learning from extraction results
 patternLib.learnFromExtraction({
   source:   'mssql-schema-scan',
   entities: extractedEntities,
   relations: extractedRelations
 });
-// Если паттерн наблюдался ≥ learningThreshold (5) раз
-// → автоматически продвигается из learningBuffer в основной каталог
+// If a pattern was observed ≥ learningThreshold (5) times
+// → automatically promoted from learningBuffer to the main catalog
 
-// Поиск паттернов по домену
+// Search patterns by domain
 const sqlPatterns = patternLib.findByDomain('SQL');
 ```
 
-### Контур самонастройки (Self-Tuning Loop)
+### Self-tuning loop
 
-Полный цикл самооптимизации APES:
+The complete APES self-optimization cycle:
 
 ```
- Шаг 1: EXECUTE                Шаг 2: MEASURE
+ Step 1: EXECUTE               Step 2: MEASURE
  ─────────────────              ─────────────────
- Выполнить граф                 Записать метрики
- с текущими                     в PatternLibrary
- параметрами                    (success/failure,
+ Execute the graph              Record metrics
+ with current                   in PatternLibrary
+ parameters                     (success/failure,
                                 duration, outputs)
         │                              │
         │                              ▼
-        │                       Шаг 3: COMPARE
+        │                       Step 3: COMPARE
         │                       ─────────────────
-        │                       Сравнить текущий
-        │                       результат с лучшим
-        │                       паттерном категории
+        │                       Compare current
+        │                       result with the best
+        │                       pattern for the category
         │                              │
         │                              ▼
-        │                       Шаг 4: ADJUST
+        │                       Step 4: ADJUST
         │                       ─────────────────
-        │                       Если текущий хуже:
-        │                       - заменить граф
-        │                       - обновить параметры
-        │                       - продвинуть паттерн
+        │                       If current is worse:
+        │                       - replace graph
+        │                       - update parameters
+        │                       - promote pattern
         │                              │
         └──────────────────────────────┘
-              (следующая итерация)
+              (next iteration)
 ```
 
-**Ключевые метрики APES:**
+**Key APES metrics:**
 
-| Метрика | Источник | Пороговое значение |
-|---------|----------|-------------------|
-| `successRate` | Runtime PatternLibrary | ≥ 0.7 для кэширования |
-| `avgDurationMs` | Runtime PatternLibrary | Снижение ≥ 10% = улучшение |
-| `observationCount` | Extraction PatternLibrary | ≥ 5 для auto-promotion |
-| `confidence` | Extraction PatternLibrary | ≥ 0.4 для pattern matching |
-| `domainCoverage` | Extraction PatternLibrary | Доля покрытых паттернов в домене |
+| Metric | Source | Threshold |
+|--------|--------|-----------|
+| `successRate` | Runtime PatternLibrary | ≥ 0.7 for caching |
+| `avgDurationMs` | Runtime PatternLibrary | ≥ 10% reduction = improvement |
+| `observationCount` | Extraction PatternLibrary | ≥ 5 for auto-promotion |
+| `confidence` | Extraction PatternLibrary | ≥ 0.4 for pattern matching |
+| `domainCoverage` | Extraction PatternLibrary | Share of covered patterns in domain |
 
 ---
 
-## 8.4 Обнаружение и разрешение противоречий
+## 8.4 Contradiction detection and resolution
 
-### Типы противоречий
+### Types of contradictions
 
-Система различает четыре класса противоречий, каждый из которых требует отдельной стратегии обнаружения и разрешения.
+The system distinguishes four classes of contradictions, each of which requires a separate detection and resolution strategy.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│                      ТИПЫ ПРОТИВОРЕЧИЙ                               │
+│                      CONTRADICTION TYPES                              │
 ├─────────────────┬────────────────────────────────────────────────────┤
 │                 │                                                    │
-│   FACTUAL       │  Одинаковый contentHash, разные свойства           │
-│   (фактическое) │  Пример: rowCount = 50000 vs rowCount = 52347    │
+│   FACTUAL       │  Same contentHash, different property values       │
+│                 │  Example: rowCount = 50000 vs rowCount = 52347    │
 │                 │                                                    │
 ├─────────────────┼────────────────────────────────────────────────────┤
 │                 │                                                    │
-│   TEMPORAL       │  Перекрывающиеся valid_time окна для одной        │
-│   (временное)    │  сущности                                         │
-│                 │  Пример: vt=[Jan-Mar] ∩ vt=[Feb-Apr] для          │
-│                 │  одного и того же факта                            │
+│   TEMPORAL      │  Overlapping valid_time windows for the same       │
+│                 │  entity                                            │
+│                 │  Example: vt=[Jan-Mar] ∩ vt=[Feb-Apr] for         │
+│                 │  the same fact                                     │
 │                 │                                                    │
 ├─────────────────┼────────────────────────────────────────────────────┤
 │                 │                                                    │
-│   STRUCTURAL     │  Конфликтующие направления или типы рёбер         │
-│   (структурное)  │  Пример: A-[DEPENDS_ON]->B и B-[DEPENDS_ON]->A  │
-│                 │  (циклическая зависимость)                        │
+│   STRUCTURAL    │  Conflicting directions or types of edges          │
+│                 │  Example: A-[DEPENDS_ON]->B and B-[DEPENDS_ON]->A │
+│                 │  (circular dependency)                             │
 │                 │                                                    │
 ├─────────────────┼────────────────────────────────────────────────────┤
 │                 │                                                    │
-│   CONFIDENCE     │  Значительное расхождение confidence (> 0.3)      │
-│   (по           │  для одного и того же факта из разных источников  │
-│   уверенности)  │  Пример: conf=0.9 (LLM) vs conf=0.5 (regex)     │
+│   CONFIDENCE    │  Significant confidence divergence (> 0.3)         │
+│                 │  for the same fact from different sources          │
+│                 │  Example: conf=0.9 (LLM) vs conf=0.5 (regex)     │
 │                 │                                                    │
 └─────────────────┴────────────────────────────────────────────────────┘
 ```
 
-### Механизмы обнаружения
+### Detection mechanisms
 
 ```javascript
 class ContradictionDetector {
@@ -635,16 +635,16 @@ class ContradictionDetector {
 }
 ```
 
-### Стратегии разрешения
+### Resolution strategies
 
-| Стратегия | Описание | Когда применяется |
-|-----------|----------|-------------------|
-| **SUPERSEDE** | Новый факт заменяет старый (старый → `SUPERSEDED`) | Новый факт имеет более высокий `confidence` или более свежий `vt_start` |
-| **MERGE** | Объединение фактов в один с комбинированными свойствами | Факты дополняют друг друга (разные непротиворечащие поля) |
-| **COEXIST** | Оба факта остаются активными с пометкой | Разные точки зрения, оба обоснованы (разные `sourceType`) |
-| **ESCALATE** | Передача решения на вышестоящий уровень | Невозможно определить автоматически, требуется экспертиза |
+| Strategy | Description | When applied |
+|----------|-------------|--------------|
+| **SUPERSEDE** | New fact replaces the old one (old → `SUPERSEDED`) | New fact has higher `confidence` or a more recent `vt_start` |
+| **MERGE** | Facts are merged into one with combined properties | Facts complement each other (different non-conflicting fields) |
+| **COEXIST** | Both facts remain active with a note | Different perspectives, both justified (different `sourceType`) |
+| **ESCALATE** | Decision is passed to a higher level | Cannot be determined automatically, requires expertise |
 
-### Схема ребра CONTRADICTS
+### CONTRADICTS edge schema
 
 ```cypher
 CREATE (existing)-[:CONTRADICTS {
@@ -662,16 +662,16 @@ CREATE (existing)-[:CONTRADICTS {
 }]->(incoming)
 ```
 
-### Жизненный цикл противоречия
+### Contradiction lifecycle
 
 ```
-  ┌─────────┐     Обнаружение      ┌─────────────┐
-  │ Новый   │─────────────────────►│             │
-  │ факт    │                      │  DETECTED   │
+  ┌─────────┐     Detection        ┌─────────────┐
+  │ New     │─────────────────────►│             │
+  │ fact    │                      │  DETECTED   │
   │         │                      │             │
   └─────────┘                      └──────┬──────┘
                                           │
-                                   Классификация
+                                   Classification
                                    (type, severity)
                                           │
                                    ┌──────▼──────┐
@@ -682,8 +682,8 @@ CREATE (existing)-[:CONTRADICTS {
                                           │
                           ┌───────────────┼───────────────┐
                           │               │               │
-                   confidence         severity        структурное
-                   delta < 0.3       = LOW             совпадение
+                   confidence         severity        structural
+                   delta < 0.3       = LOW             match
                           │               │               │
                    auto-resolve      auto-resolve     ┌───▼────┐
                           │               │           │        │
@@ -704,20 +704,20 @@ CREATE (existing)-[:CONTRADICTS {
 
 ---
 
-## 8.5 Self-Documentation: граф документирует себя
+## 8.5 Self-Documentation: the graph documents itself
 
-### Принцип самодокументации
+### Self-documentation principle
 
-Граф знаний UN ProjectAdvisor является **самодокументирующейся системой**. Каждое значимое решение, принятое системой или её агентами, автоматически фиксируется как узел ADR (Architecture Decision Record) в пространстве имён `META`.
+The UN ProjectAdvisor knowledge graph is a **self-documenting system**. Every significant decision made by the system or its agents is automatically recorded as an ADR (Architecture Decision Record) node in the `META` namespace.
 
-Значимые решения включают:
+Significant decisions include:
 
-- Изменение схемы графа (добавление нового типа узла или ребра)
-- Продвижение паттерна в PatternLibrary (auto-promotion)
-- Разрешение противоречия (SUPERSEDE, MERGE, COEXIST)
-- Повышение уровня автономии агента
-- Создание нового namespace
-- Миграция данных между версиями
+- Changing the graph schema (adding a new node or edge type)
+- Promoting a pattern in PatternLibrary (auto-promotion)
+- Resolving a contradiction (SUPERSEDE, MERGE, COEXIST)
+- Upgrading an agent's autonomy level
+- Creating a new namespace
+- Migrating data between versions
 
 ### ADR (Architecture Decision Record)
 
@@ -725,14 +725,14 @@ CREATE (existing)-[:CONTRADICTS {
 CREATE (adr:ADR:NodeVersion {
   adrId:          'ADR-2026-0342',
   namespace:      'META',
-  title:          'Автоматическое продвижение паттерна StoredProcedure',
+  title:          'Automatic promotion of StoredProcedure pattern',
   status:         'ACCEPTED',        // PROPOSED | ACCEPTED | DEPRECATED | SUPERSEDED
-  context:        'Паттерн StoredProcedure наблюдался 7 раз с confidence ≥ 0.85. ' +
-                  'Порог auto-promotion (5 наблюдений) превышен.',
-  decision:       'Паттерн продвинут из learningBuffer в основной каталог ' +
-                  'Extraction PatternLibrary.',
-  consequences:   'Будущие извлечения из SQL-кода будут автоматически ' +
-                  'распознавать хранимые процедуры без явного указания паттерна.',
+  context:        'The StoredProcedure pattern was observed 7 times with confidence ≥ 0.85. ' +
+                  'The auto-promotion threshold (5 observations) has been exceeded.',
+  decision:       'Pattern promoted from learningBuffer to the main catalog ' +
+                  'of Extraction PatternLibrary.',
+  consequences:   'Future extractions from SQL code will automatically ' +
+                  'recognize stored procedures without explicitly specifying the pattern.',
   createdBy:      'agent-optimizer-pattern-001',
   createdAt:      datetime(),
   decisionType:   'PATTERN_PROMOTION',  // SCHEMA_CHANGE | PATTERN_PROMOTION |
@@ -744,11 +744,11 @@ CREATE (adr:ADR:NodeVersion {
 })
 ```
 
-### Связи ADR с затронутыми узлами
+### ADR relationships with affected nodes
 
 ```
 ┌──────────┐   MOTIVATED_BY    ┌──────────────────┐
-│  ADR     │──────────────────►│ Затронутый узел   │
+│  ADR     │──────────────────►│ Affected node     │
 │  node    │                   │ (Pattern,         │
 │          │                   │  Schema,          │
 │          │   MOTIVATED_BY    │  Namespace,       │
@@ -756,14 +756,14 @@ CREATE (adr:ADR:NodeVersion {
 │          │                   └──────────────────┘
 │          │
 │          │   SUPERSEDES      ┌──────────────────┐
-│          │──────────────────►│ Предыдущий ADR   │
-│          │                   │ (если замена)     │
+│          │──────────────────►│ Previous ADR     │
+│          │                   │ (if replacement)  │
 │          │                   └──────────────────┘
 └──────────┘
 ```
 
 ```cypher
-// Связь ADR с затронутым паттерном
+// Link ADR with the affected pattern
 MATCH (adr:ADR {adrId: 'ADR-2026-0342'})
 MATCH (pattern:Pattern {name: 'StoredProcedure', domain: 'SQL'})
 CREATE (adr)-[:MOTIVATED_BY {
@@ -772,7 +772,7 @@ CREATE (adr)-[:MOTIVATED_BY {
   createdAt: datetime()
 }]->(pattern)
 
-// Связь ADR с агентом, принявшим решение
+// Link ADR with the agent that made the decision
 MATCH (adr:ADR {adrId: 'ADR-2026-0342'})
 MATCH (agent:Agent {agentId: 'agent-optimizer-pattern-001'})
 CREATE (adr)-[:DECIDED_BY {
@@ -781,7 +781,7 @@ CREATE (adr)-[:DECIDED_BY {
 }]->(agent)
 ```
 
-### Автогенерация ADR
+### ADR auto-generation
 
 ```javascript
 class ADRGenerator {
@@ -833,12 +833,12 @@ class ADRGenerator {
 }
 ```
 
-### Автогенерация Changelog из SUPERSEDES-цепочек
+### Auto-generation of Changelog from SUPERSEDES chains
 
-Система автоматически генерирует историю изменений (changelog) для любой сущности, обходя цепочку `SUPERSEDES`:
+The system automatically generates a changelog for any entity by traversing the `SUPERSEDES` chain:
 
 ```cypher
-// Получить полную историю изменений для сущности
+// Get the full change history for an entity
 MATCH path = (current:NodeVersion {entityId: $entityId, status: 'ACTIVE'})
               -[:SUPERSEDES*]->(ancestor:NodeVersion)
 WITH nodes(path) AS versions
@@ -848,33 +848,33 @@ RETURN v.versionId, v.sequenceNumber, v.status,
 ORDER BY v.sequenceNumber DESC
 ```
 
-**Формат автоматического changelog:**
+**Automatic changelog format:**
 
 ```
-CHANGELOG для entityId: BR-001 (Правило валидации бюджета)
+CHANGELOG for entityId: BR-001 (Budget validation rule)
 ═══════════════════════════════════════════════════════════
 
 v3 [ACTIVE]    2026-03-12  agent-enricher-002
-   Добавлено: связь с namespace FINANCE
+   Added: link to FINANCE namespace
    ADR: ADR-2026-0341
 
 v2 [SUPERSEDED] 2026-03-10  agent-extractor-sql-001
-   Изменено: confidence 0.7 → 0.9 (подтверждено из SQL constraint)
+   Changed: confidence 0.7 → 0.9 (confirmed from SQL constraint)
    ADR: ADR-2026-0298
 
 v1 [SUPERSEDED] 2026-03-08  agent-extractor-doc-003
-   Создано: извлечено из документа "Budget Policy 2026.docx"
+   Created: extracted from document "Budget Policy 2026.docx"
    ADR: null (initial creation)
 ```
 
-### Граф как самодокументирующаяся система
+### Graph as a self-documenting system
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
 │                    SELF-DOCUMENTING GRAPH                          │
 │                                                                    │
-│   Данные                   Решения                  История       │
-│   ──────                   ───────                  ───────       │
+│   Data                     Decisions                History        │
+│   ────                     ─────────                ───────       │
 │   (:Table)                 (:ADR)                   SUPERSEDES    │
 │   (:Column)                  │                      chain         │
 │   (:Procedure)               │                         │          │
@@ -882,91 +882,91 @@ v1 [SUPERSEDED] 2026-03-08  agent-extractor-doc-003
 │        │                     │                         │          │
 │        └─────────────────────┘                         │          │
 │                                                        │          │
-│   Паттерны                 Агенты                      │          │
+│   Patterns                 Agents                      │          │
 │   ────────                 ──────                      │          │
 │   (:Pattern)               (:Agent)                    │          │
 │        │                     │                         │          │
 │        │              DECIDED_BY                       │          │
 │        └─────────────────────┘                         │          │
 │                                                        │          │
-│   Противоречия             Версии                      │          │
+│   Contradictions           Versions                    │          │
 │   ──────────────           ──────                      │          │
 │   CONTRADICTS edges        (:NodeVersion)──────────────┘          │
 │                                                                    │
-│   Каждый элемент графа ССЫЛАЕТСЯ на решение,                      │
-│   которое привело к его созданию.                                 │
+│   Every element of the graph REFERENCES the decision              │
+│   that led to its creation.                                       │
 └────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 8.6 Уровни автономии (Autonomy Levels 0-4)
+## 8.6 Autonomy levels (Autonomy Levels 0-4)
 
-### Определение уровней
+### Level definitions
 
-Система определяет пять уровней автономии, через которые агент (или группа агентов) проходит по мере накопления доверия.
+The system defines five autonomy levels through which an agent (or group of agents) progresses as trust accumulates.
 
 ```
 Level 0       Level 1        Level 2       Level 3        Level 4
 MANUAL        SUPERVISED     GUIDED        AUTONOMOUS     SELF-EVOLVING
   │               │              │              │              │
-  │  Агент        │  Агент       │  Агент       │  Агент       │  Агент
-  │  предлагает,  │  выполняет   │  выполняет   │  обрабатывает│  может
-  │  человек      │  рутинные,   │  большинство │  все операции│  изменять
-  │  утверждает   │  человек     │  операций,   │  самостоятельно│ собственные
-  │  ВСЁ          │  утверждает  │  человек     │  человек     │  правила
-  │               │  критические │  проверяет   │  вмешивается │  (unanimous
-  │               │              │  дайджест    │  при аномалиях│  consensus)
-  │               │              │  еженедельно │              │
+  │  Agent        │  Agent       │  Agent       │  Agent       │  Agent
+  │  proposes,    │  performs    │  performs    │  handles all │  can
+  │  human        │  routine,    │  most        │  operations  │  modify
+  │  approves     │  human       │  operations, │  independently│ its own
+  │  EVERYTHING   │  approves    │  human       │  human       │  rules
+  │               │  critical    │  reviews     │  intervenes  │  (unanimous
+  │               │              │  digest      │  on anomalies│  consensus)
+  │               │              │  weekly      │              │
   ▼               ▼              ▼              ▼              ▼
 trustScore    trustScore     trustScore    trustScore     trustScore
   N/A           ≥ 0.80         ≥ 0.90        ≥ 0.95         ≥ 0.98
 ```
 
-### Текущий статус системы
+### Current system status
 
-> **Система UN ProjectAdvisor работает на Level 1 (Supervised).**
+> **The UN ProjectAdvisor system operates at Level 1 (Supervised).**
 >
-> Агенты выполняют рутинные операции (извлечение, валидация, обогащение)
-> автономно. Критические операции (удаление, слияние, изменение namespace)
-> требуют подтверждения человека.
+> Agents perform routine operations (extraction, validation, enrichment)
+> autonomously. Critical operations (deletion, merging, namespace changes)
+> require human confirmation.
 
-### Матрица полномочий
+### Authority matrix
 
 ```
 ┌─────────────────────────┬────────┬────────┬────────┬────────┬────────┐
-│ Операция                │ Lv 0   │ Lv 1   │ Lv 2   │ Lv 3   │ Lv 4   │
+│ Operation               │ Lv 0   │ Lv 1   │ Lv 2   │ Lv 3   │ Lv 4   │
 │                         │ Manual │ Super. │ Guided │ Auto.  │ S-Evol │
 ├─────────────────────────┼────────┼────────┼────────┼────────┼────────┤
-│ Создать узел            │ HUMAN  │ AUTO   │ AUTO   │ AUTO   │ AUTO   │
-│ Создать ребро           │ HUMAN  │ AUTO   │ AUTO   │ AUTO   │ AUTO   │
-│ Обновить confidence     │ HUMAN  │ AUTO   │ AUTO   │ AUTO   │ AUTO   │
+│ Create node             │ HUMAN  │ AUTO   │ AUTO   │ AUTO   │ AUTO   │
+│ Create edge             │ HUMAN  │ AUTO   │ AUTO   │ AUTO   │ AUTO   │
+│ Update confidence       │ HUMAN  │ AUTO   │ AUTO   │ AUTO   │ AUTO   │
 │ Entity resolution       │ HUMAN  │ HUMAN  │ AUTO   │ AUTO   │ AUTO   │
-│ Продвинуть паттерн      │ HUMAN  │ HUMAN  │ AUTO   │ AUTO   │ AUTO   │
-│ Разрешить противоречие  │ HUMAN  │ HUMAN  │ REVIEW │ AUTO   │ AUTO   │
-│ Создать namespace       │ HUMAN  │ HUMAN  │ HUMAN  │ AUTO   │ AUTO   │
-│ Изменить namespace      │ HUMAN  │ HUMAN  │ HUMAN  │ HUMAN  │ AUTO*  │
+│ Promote pattern         │ HUMAN  │ HUMAN  │ AUTO   │ AUTO   │ AUTO   │
+│ Resolve contradiction   │ HUMAN  │ HUMAN  │ REVIEW │ AUTO   │ AUTO   │
+│ Create namespace        │ HUMAN  │ HUMAN  │ HUMAN  │ AUTO   │ AUTO   │
+│ Change namespace        │ HUMAN  │ HUMAN  │ HUMAN  │ HUMAN  │ AUTO*  │
 │ MERGE entities          │ HUMAN  │ HUMAN  │ HUMAN  │ HUMAN  │ AUTO*  │
 │ DELETE (Tombstone)      │ HUMAN  │ HUMAN  │ HUMAN  │ HUMAN  │ AUTO*  │
-│ Миграция схемы          │ HUMAN  │ HUMAN  │ HUMAN  │ HUMAN  │ AUTO*  │
-│ Изменить правила агента │ HUMAN  │ HUMAN  │ HUMAN  │ HUMAN  │ UNAN*  │
-│ Повысить autonomy level │ HUMAN  │ HUMAN  │ HUMAN  │ HUMAN  │ UNAN*  │
+│ Schema migration        │ HUMAN  │ HUMAN  │ HUMAN  │ HUMAN  │ AUTO*  │
+│ Change agent rules      │ HUMAN  │ HUMAN  │ HUMAN  │ HUMAN  │ UNAN*  │
+│ Upgrade autonomy level  │ HUMAN  │ HUMAN  │ HUMAN  │ HUMAN  │ UNAN*  │
 ├─────────────────────────┼────────┼────────┼────────┼────────┼────────┤
-│ HUMAN  = требует подтверждения человека                               │
-│ AUTO   = агент выполняет автономно                                    │
-│ REVIEW = агент выполняет, человек проверяет в дайджесте              │
-│ AUTO*  = автономно, но с unanimous consensus агентов                  │
-│ UNAN*  = только через unanimous consensus + Orchestrator trustScore  │
+│ HUMAN  = requires human confirmation                                  │
+│ AUTO   = agent executes autonomously                                  │
+│ REVIEW = agent executes, human reviews in digest                     │
+│ AUTO*  = autonomous, but with unanimous agent consensus               │
+│ UNAN*  = only through unanimous consensus + Orchestrator trustScore  │
 │          ≥ 0.98                                                       │
 └───────────────────────────────────────────────────────────────────────┘
 ```
 
-### Критерии повышения уровня
+### Level upgrade criteria
 
-Переход на каждый следующий уровень автономии требует выполнения метрических порогов на протяжении **минимум 30 дней**.
+Transitioning to each next autonomy level requires meeting metric thresholds for a **minimum of 30 days**.
 
-| Критерий | Lv 0→1 | Lv 1→2 | Lv 2→3 | Lv 3→4 |
-|----------|--------|--------|--------|--------|
+| Criterion | Lv 0→1 | Lv 1→2 | Lv 2→3 | Lv 3→4 |
+|-----------|--------|--------|--------|--------|
 | **trustScore** | ≥ 0.80 | ≥ 0.90 | ≥ 0.95 | ≥ 0.98 |
 | **successRate** (Runtime) | ≥ 70% | ≥ 85% | ≥ 95% | ≥ 99% |
 | **Completeness** (CODEX-VALID) | ≥ 90% | ≥ 95% | ≥ 98% | ≥ 99.5% |
@@ -974,10 +974,10 @@ trustScore    trustScore     trustScore    trustScore     trustScore
 | **Confidence calibration** | ≥ 0.6 | ≥ 0.75 | ≥ 0.85 | ≥ 0.95 |
 | **QUALITY_ISSUE rate** (per 1000 ops) | < 50 | < 20 | < 5 | < 1 |
 | **Contradiction resolution accuracy** | N/A | ≥ 80% | ≥ 90% | ≥ 97% |
-| **Минимум операций** | 100 | 1,000 | 10,000 | 100,000 |
-| **Минимальный срок на уровне** | - | 30 дней | 90 дней | 180 дней |
+| **Minimum operations** | 100 | 1,000 | 10,000 | 100,000 |
+| **Minimum time at level** | - | 30 days | 90 days | 180 days |
 
-### Протокол повышения уровня
+### Level upgrade protocol
 
 ```javascript
 async function evaluateAutonomyUpgrade(agentId) {
@@ -1027,47 +1027,47 @@ async function evaluateAutonomyUpgrade(agentId) {
 }
 ```
 
-### Понижение уровня (Demotion)
+### Level demotion
 
-Понижение уровня автономии происходит автоматически при нарушении порогов:
+Level demotion occurs automatically when thresholds are violated:
 
-| Триггер | Действие |
-|---------|----------|
-| `trustScore` упал ниже порога текущего уровня | Понижение на 1 уровень |
-| `QUALITY_ISSUE` rate превысил порог в 3x | Понижение на 1 уровень |
-| Критическое противоречие, созданное агентом | Понижение на 1 уровень + review |
-| Обнаружена фальсификация провенанса | Понижение до Level 0 + расследование |
-
----
-
-## Перспективы развития
-
-### Интеграция с GNN для предиктивного скоринга качества
-
-GNN-сервис (порт 5000) уже поддерживает link prediction и node classification. В будущем эти возможности будут интегрированы в APES:
-
-- **Предиктивное обнаружение противоречий** — GNN предсказывает конфликтующие рёбра до их создания на основе структурных паттернов графа
-- **Рекомендация trustScore** — GNN анализирует историю агента и предсказывает оптимальный trustScore на основе embedding-сходства с успешными агентами
-- **Оптимизация графов** — GNN предлагает структурные улучшения (недостающие рёбра, избыточные узлы) на основе обученной модели графовой структуры
-
-### Федеративное обучение между duty stations
-
-26 duty stations ООН генерируют знания параллельно. Федеративное обучение позволит:
-
-- Каждая станция обучает локальную модель на своих данных
-- Градиенты (не данные) агрегируются центральным координатором
-- Глобальная модель распространяется обратно на станции
-- Приватность данных сохраняется (данные не покидают станцию)
-
-### Мультимодальное знание
-
-Унификация знаний из разных модальностей в едином графе:
-
-- **Текст** → NLP-извлечение → узлы и рёбра с провенансом `sourceType: 'document'`
-- **Код** → AST-анализ → узлы и рёбра с провенансом `sourceType: 'code'`
-- **Диаграммы** → Computer Vision → узлы и рёбра с провенансом `sourceType: 'diagram'`
-- Все три модальности связываются через `SAME_AS` рёбра с confidence-оценкой
+| Trigger | Action |
+|---------|--------|
+| `trustScore` fell below the current level's threshold | Demotion by 1 level |
+| `QUALITY_ISSUE` rate exceeded threshold by 3x | Demotion by 1 level |
+| Critical contradiction created by the agent | Demotion by 1 level + review |
+| Provenance falsification detected | Demotion to Level 0 + investigation |
 
 ---
 
-*Этот документ является частью [Кодекса UN ProjectAdvisor](../CODEX_INDEX.md)*
+## Future development prospects
+
+### GNN integration for predictive quality scoring
+
+The GNN service (port 5000) already supports link prediction and node classification. In the future, these capabilities will be integrated into APES:
+
+- **Predictive contradiction detection** — GNN predicts conflicting edges before they are created, based on structural graph patterns
+- **trustScore recommendation** — GNN analyzes the agent's history and predicts the optimal trustScore based on embedding similarity with successful agents
+- **Graph optimization** — GNN suggests structural improvements (missing edges, redundant nodes) based on a trained graph structure model
+
+### Federated learning across duty stations
+
+26 UN duty stations generate knowledge in parallel. Federated learning will allow:
+
+- Each station trains a local model on its own data
+- Gradients (not data) are aggregated by a central coordinator
+- The global model is distributed back to the stations
+- Data privacy is preserved (data does not leave the station)
+
+### Multimodal knowledge
+
+Unification of knowledge from different modalities in a single graph:
+
+- **Text** → NLP extraction → nodes and edges with provenance `sourceType: 'document'`
+- **Code** → AST analysis → nodes and edges with provenance `sourceType: 'code'`
+- **Diagrams** → Computer Vision → nodes and edges with provenance `sourceType: 'diagram'`
+- All three modalities are linked through `SAME_AS` edges with a confidence score
+
+---
+
+*This document is part of the [Codex UN ProjectAdvisor](../CODEX_INDEX.md)*

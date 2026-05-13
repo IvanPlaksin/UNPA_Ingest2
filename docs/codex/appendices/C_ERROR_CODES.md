@@ -1,13 +1,13 @@
-# Приложение C: Error Codes
+# Appendix C: Error Codes
 
-**Статус:** 🔴 Не начат
-**Версия:** -
-**Последнее обновление:** -
+**Status:** 🔴 Not started
+**Version:** -
+**Last updated:** -
 
-## Содержание
+## Contents
 
-Коды ошибок и процедуры восстановления для всех операций с графом знаний.
+Error codes and recovery procedures for all knowledge graph operations.
 
 ---
 
-*Этот документ является частью [Кодекса UN ProjectAdvisor](../CODEX_INDEX.md)*
+*This document is part of the [UN ProjectAdvisor Codex](../CODEX_INDEX.md)*

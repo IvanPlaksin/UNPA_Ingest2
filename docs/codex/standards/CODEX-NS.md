@@ -1,42 +1,42 @@
-# CODEX-NS: Стандарт namespace
+# CODEX-NS: Namespace Standard
 
-**Статус:** 🟡 В разработке
-**Версия:** 0.1.0
-**Последнее обновление:** 2026-03-12
+**Status:** 🟡 In development
+**Version:** 0.1.0
+**Last updated:** 2026-03-12
 
 ---
 
-## Оглавление
+## Table of Contents
 
-- [4.1 Четыре пространства имён](#41-четыре-пространства-имён)
+- [4.1 Four namespaces](#41-four-namespaces)
 - [4.2 Routing rules](#42-routing-rules)
 - [4.3 Cross-namespace queries](#43-cross-namespace-queries)
 - [4.4 Isolation guarantees](#44-isolation-guarantees)
-- [4.5 ExecutionRecord — почему META, не PROJECT](#45-executionrecord--почему-meta-не-project)
+- [4.5 ExecutionRecord — why META, not PROJECT](#45-executionrecord--why-meta-not-project)
 
 ---
 
-## Преамбула
+## Preamble
 
-Namespace -- механизм изоляции в UN ProjectAdvisor. Каждый узел и каждое ребро в графе знаний принадлежат ровно одному namespace. Namespace определяет:
+Namespace is the isolation mechanism in UN ProjectAdvisor. Every node and every edge in the knowledge graph belongs to exactly one namespace. A namespace defines:
 
-- **Видимость:** кто может читать данные
-- **Мутабельность:** кто может записывать данные
-- **Маршрутизацию:** куда направляются запросы
-- **Изоляцию:** какие данные не должны пересекаться
+- **Visibility:** who can read the data
+- **Mutability:** who can write the data
+- **Routing:** where requests are directed
+- **Isolation:** which data must not overlap
 
-Четыре пространства обеспечивают разделение между системными знаниями (`CORE`), проектными данными (`PROJECT`), мета-знаниями (`META`) и общими ресурсами (`COMMON`).
+The four namespaces provide separation between system knowledge (`CORE`), project data (`PROJECT`), meta-knowledge (`META`), and shared resources (`COMMON`).
 
 ```
-Принцип: данные разделены по ПРИРОДЕ, а не по технологии хранения.
-Один Memgraph, один Qdrant, один Redis -- но четыре логических контура.
+Principle: data is separated by NATURE, not by storage technology.
+One Memgraph, one Qdrant, one Redis — but four logical circuits.
 ```
 
 ---
 
-## 4.1 Четыре пространства имён
+## 4.1 Four namespaces
 
-### Архитектура
+### Architecture
 
 ```
                     ┌──────────────────────────────────────────────┐
@@ -67,29 +67,29 @@ Namespace -- механизм изоляции в UN ProjectAdvisor. Кажды�
   └─────────────────┼──────────────────────────────────────────────┼─────────────────┘
                     └──────────────────────────────────────────────┘
 
-  Стрелки = разрешённые cross-namespace READ
-  ╳ = запрещённые прямые связи между PROJECT-ами
+  Arrows = allowed cross-namespace READs
+  ╳ = forbidden direct links between PROJECTs
 ```
 
-### CORE -- системные знания
+### CORE — system knowledge
 
 **Enum:** `KnowledgeNamespace.CORE = 'core'`
 
-Знания о самом UN ProjectAdvisor: его сервисах, пайплайнах, конфигурациях, API-схемах и архитектурных решениях.
+Knowledge about UN ProjectAdvisor itself: its services, pipelines, configurations, API schemas, and architectural decisions.
 
-| Свойство | Значение |
-|----------|----------|
-| **Назначение** | Системные знания о PA |
-| **Примеры узлов** | `Service`, `Pipeline`, `Component`, `Config`, `Schema`, `API`, `Architecture`, `Decision` |
-| **Формат namespace** | `core` |
-| **Частота обновлений** | При релизах системы |
-| **Чтение** | `DEVELOPER`, `ARCHITECT`, `ADMIN` |
-| **Запись** | `ARCHITECT`, `ADMIN` |
+| Property | Value |
+|----------|-------|
+| **Purpose** | System knowledge about PA |
+| **Example nodes** | `Service`, `Pipeline`, `Component`, `Config`, `Schema`, `API`, `Architecture`, `Decision` |
+| **Namespace format** | `core` |
+| **Update frequency** | On system releases |
+| **Read** | `DEVELOPER`, `ARCHITECT`, `ADMIN` |
+| **Write** | `ARCHITECT`, `ADMIN` |
 | **Qdrant collection** | `core_knowledge` |
 | **Redis prefix** | `core:` |
-| **Cache TTL** | 3600 с (1 час) |
+| **Cache TTL** | 3600 s (1 hour) |
 
-**Пример узла:**
+**Example node:**
 
 ```cypher
 (:Service {
@@ -102,25 +102,25 @@ Namespace -- механизм изоляции в UN ProjectAdvisor. Кажды�
 })
 ```
 
-### PROJECT -- проектные данные
+### PROJECT — project data
 
 **Enum:** `KnowledgeNamespace.PROJECT = 'project'`
 
-Извлечённые знания из legacy-систем ООН. Каждый проект хранится в собственном подпространстве `PROJECT:{project_name}`. Проекты полностью изолированы друг от друга -- прямые рёбра между `PROJECT:imis` и `PROJECT:umoja` запрещены.
+Knowledge extracted from UN legacy systems. Each project is stored in its own sub-namespace `PROJECT:{project_name}`. Projects are fully isolated from each other — direct edges between `PROJECT:imis` and `PROJECT:umoja` are forbidden.
 
-| Свойство | Значение |
-|----------|----------|
-| **Назначение** | Данные legacy-проектов |
-| **Примеры узлов** | `File`, `Class`, `Method`, `WorkItem`, `Table`, `StoredProcedure`, `BusinessRule`, `Person`, `Team` |
-| **Формат namespace** | `project:{project_name}` (например, `project:imis`, `project:umoja`) |
-| **Частота обновлений** | При переиндексации |
-| **Чтение** | Все роли (`VIEWER` и выше) |
-| **Запись** | `DEVELOPER`, `ARCHITECT`, `ADMIN`, `SYSTEM` |
-| **Qdrant collection** | `project_{project_name}` (например, `project_imis`) |
+| Property | Value |
+|----------|-------|
+| **Purpose** | Data from legacy projects |
+| **Example nodes** | `File`, `Class`, `Method`, `WorkItem`, `Table`, `StoredProcedure`, `BusinessRule`, `Person`, `Team` |
+| **Namespace format** | `project:{project_name}` (e.g., `project:imis`, `project:umoja`) |
+| **Update frequency** | On re-indexing |
+| **Read** | All roles (`VIEWER` and above) |
+| **Write** | `DEVELOPER`, `ARCHITECT`, `ADMIN`, `SYSTEM` |
+| **Qdrant collection** | `project_{project_name}` (e.g., `project_imis`) |
 | **Redis prefix** | `project:{project_name}:` |
-| **Cache TTL** | 1800 с (30 минут) |
+| **Cache TTL** | 1800 s (30 minutes) |
 
-**Пример узла:**
+**Example node:**
 
 ```cypher
 (:StoredProcedure {
@@ -134,25 +134,25 @@ Namespace -- механизм изоляции в UN ProjectAdvisor. Кажды�
 })
 ```
 
-### META -- мета-знания
+### META — meta-knowledge
 
 **Enum:** `KnowledgeNamespace.META = 'meta'`
 
-Знания о знаниях: стратегии извлечения, паттерны обработки, записи о выполнении пайплайнов, метрики качества. META -- это то, КАК система работает и учится, а не ЧТО она извлекает.
+Knowledge about knowledge: extraction strategies, processing patterns, pipeline execution records, quality metrics. META is about HOW the system works and learns, not WHAT it extracts.
 
-| Свойство | Значение |
-|----------|----------|
-| **Назначение** | Методологические знания, стратегии, записи выполнения |
-| **Примеры узлов** | `Strategy`, `DataType`, `Tool`, `ContextPattern`, `StrategyExecution`, `ExtractionCycle`, `DecisionRecord`, `QualityRule` |
-| **Формат namespace** | `meta` |
-| **Частота обновлений** | По мере обучения системы |
-| **Чтение** | `ARCHITECT`, `ADMIN`, `SYSTEM` |
-| **Запись** | `SYSTEM`, `ADMIN` |
+| Property | Value |
+|----------|-------|
+| **Purpose** | Methodological knowledge, strategies, execution records |
+| **Example nodes** | `Strategy`, `DataType`, `Tool`, `ContextPattern`, `StrategyExecution`, `ExtractionCycle`, `DecisionRecord`, `QualityRule` |
+| **Namespace format** | `meta` |
+| **Update frequency** | As the system learns |
+| **Read** | `ARCHITECT`, `ADMIN`, `SYSTEM` |
+| **Write** | `SYSTEM`, `ADMIN` |
 | **Qdrant collection** | `meta_knowledge` |
 | **Redis prefix** | `meta:` |
-| **Cache TTL** | 7200 с (2 часа) |
+| **Cache TTL** | 7200 s (2 hours) |
 
-**Пример узла:**
+**Example node:**
 
 ```cypher
 (:Strategy {
@@ -166,25 +166,25 @@ Namespace -- механизм изоляции в UN ProjectAdvisor. Кажды�
 })
 ```
 
-### COMMON -- общие ресурсы
+### COMMON — shared resources
 
 **Enum:** `KnowledgeNamespace.COMMON = 'common'`
 
-Словари, глоссарии, шаблоны и справочные данные, используемые всеми остальными namespace. Содержит онтологию ООН, аббревиатуры, организационную структуру. Запись только для утверждённых контрибьюторов (`ADMIN`).
+Dictionaries, glossaries, templates, and reference data used by all other namespaces. Contains the UN ontology, abbreviations, organizational structure. Write access only for approved contributors (`ADMIN`).
 
-| Свойство | Значение |
-|----------|----------|
-| **Назначение** | Общая терминология, словари, справочные данные |
-| **Примеры узлов** | `Term`, `Concept`, `Organization`, `System`, `DocumentPattern`, `Glossary`, `Acronym`, `UNEntity` |
-| **Формат namespace** | `common` |
-| **Частота обновлений** | Редко |
-| **Чтение** | Все роли (`VIEWER` и выше) |
-| **Запись** | Только `ADMIN` |
+| Property | Value |
+|----------|-------|
+| **Purpose** | Common terminology, dictionaries, reference data |
+| **Example nodes** | `Term`, `Concept`, `Organization`, `System`, `DocumentPattern`, `Glossary`, `Acronym`, `UNEntity` |
+| **Namespace format** | `common` |
+| **Update frequency** | Rarely |
+| **Read** | All roles (`VIEWER` and above) |
+| **Write** | `ADMIN` only |
 | **Qdrant collection** | `common_vocabulary` |
 | **Redis prefix** | `common:` |
-| **Cache TTL** | 86400 с (24 часа) |
+| **Cache TTL** | 86400 s (24 hours) |
 
-**Пример узла:**
+**Example node:**
 
 ```cypher
 (:Acronym {
@@ -202,25 +202,25 @@ Namespace -- механизм изоляции в UN ProjectAdvisor. Кажды�
 
 ## 4.2 Routing rules
 
-### Алгоритм автоопределения namespace
+### Namespace auto-detection algorithm
 
-При поступлении запроса `NamespaceRouter` определяет целевой namespace по следующему алгоритму:
+When a request arrives, `NamespaceRouter` determines the target namespace using the following algorithm:
 
 ```javascript
 /**
- * Алгоритм маршрутизации (namespace-router.service.js)
+ * Routing algorithm (namespace-router.service.js)
  *
- * Приоритет:
- *   1. Явно указанный namespace (explicitNamespace)
- *   2. Определение по sourceSystem / projectId
- *   3. Определение по label / типу узла
- *   4. Анализ текста запроса (regex-паттерны)
- *   5. Default → 'project' (для pipeline-записей) или 'common' (для запросов)
+ * Priority:
+ *   1. Explicitly specified namespace (explicitNamespace)
+ *   2. Determination by sourceSystem / projectId
+ *   3. Determination by label / node type
+ *   4. Query text analysis (regex patterns)
+ *   5. Default → 'project' (for pipeline writes) or 'common' (for queries)
  */
 async function resolveNamespace(context) {
   const { explicitNamespace, sourceSystem, label, query } = context;
 
-  // [1] Явный namespace — высший приоритет
+  // [1] Explicit namespace — highest priority
   if (explicitNamespace) {
     if (!checkAccess(explicitNamespace, context.userRole, 'read')) {
       throw new Error(`Access denied to namespace: ${explicitNamespace}`);
@@ -228,13 +228,13 @@ async function resolveNamespace(context) {
     return explicitNamespace;
   }
 
-  // [2] По sourceSystem — если данные пришли из конкретного проекта
+  // [2] By sourceSystem — if data came from a specific project
   if (sourceSystem) {
     const projectName = sourceSystem.toLowerCase();
     return `project:${projectName}`;
   }
 
-  // [3] По label — каждый namespace имеет allowedNodeLabels
+  // [3] By label — each namespace has allowedNodeLabels
   if (label) {
     for (const [ns, config] of Object.entries(NAMESPACE_CONFIGS)) {
       if (config.allowedNodeLabels.includes(label)) {
@@ -243,7 +243,7 @@ async function resolveNamespace(context) {
     }
   }
 
-  // [4] По тексту запроса — regex-анализ
+  // [4] By query text — regex analysis
   if (query) {
     const scores = analyzeQueryPatterns(query);
     const bestMatch = Object.entries(scores)
@@ -258,12 +258,12 @@ async function resolveNamespace(context) {
 }
 ```
 
-### Regex-паттерны определения
+### Regex detection patterns
 
-`NamespaceRouter` использует следующие паттерны для анализа текста запроса:
+`NamespaceRouter` uses the following patterns to analyze query text:
 
-| Namespace | Паттерны | Примеры совпадений |
-|-----------|----------|--------------------|
+| Namespace | Patterns | Example matches |
+|-----------|----------|-----------------|
 | `core` | `/\b(pipeline\|service\|component\|api\|architecture)\b/i` | "How does the pipeline work?" |
 | `core` | `/\b(memgraph\|qdrant\|redis\|bullmq)\s+(service\|config)/i` | "memgraph service configuration" |
 | `project` | `/\b(imis\|umoja\|inspira\|galileo\|mercury\|atlas)\b/i` | "Show IMIS stored procedures" |
@@ -275,33 +275,33 @@ async function resolveNamespace(context) {
 | `common` | `/\b(acronym\|abbreviation\|term\|glossary)/i` | "UN acronym list" |
 | `common` | `/\b(un\s+organization\|department\|unit\|oict\|dgacm)/i` | "DGACM structure" |
 
-### Таблица маршрутизации по label
+### Routing table by label
 
-| Label | Namespace | Пример |
-|-------|-----------|--------|
+| Label | Namespace | Example |
+|-------|-----------|---------|
 | `Service`, `Pipeline`, `Component` | `core` | PA API gateway service |
 | `Config`, `Schema`, `API` | `core` | GraphQL schema definition |
-| `Architecture`, `Decision` | `core` | ADR-005: выбор Memgraph |
-| `File`, `Class`, `Method`, `Function` | `project:{name}` | Класс `UserManager` из IMIS |
-| `WorkItem`, `Epic`, `Bug`, `Task` | `project:{name}` | Work item #42300 из IMIS |
-| `Table`, `Column`, `StoredProcedure` | `project:{name}` | Таблица `HR_EMPLOYEES` из Umoja |
-| `BusinessRule`, `BusinessProcess` | `project:{name}` | Правило валидации контракта |
-| `Strategy`, `ContextPattern` | `meta` | Стратегия извлечения SQL-схем |
-| `StrategyExecution`, `ExtractionCycle` | `meta` | Запись о выполнении пайплайна |
-| `DecisionRecord`, `QualityRule` | `meta` | Решение об изменении стратегии |
-| `Term`, `Concept`, `Glossary` | `common` | Термин "appropriation" |
+| `Architecture`, `Decision` | `core` | ADR-005: choosing Memgraph |
+| `File`, `Class`, `Method`, `Function` | `project:{name}` | Class `UserManager` from IMIS |
+| `WorkItem`, `Epic`, `Bug`, `Task` | `project:{name}` | Work item #42300 from IMIS |
+| `Table`, `Column`, `StoredProcedure` | `project:{name}` | Table `HR_EMPLOYEES` from Umoja |
+| `BusinessRule`, `BusinessProcess` | `project:{name}` | Contract validation rule |
+| `Strategy`, `ContextPattern` | `meta` | SQL schema extraction strategy |
+| `StrategyExecution`, `ExtractionCycle` | `meta` | Pipeline execution record |
+| `DecisionRecord`, `QualityRule` | `meta` | Strategy change decision |
+| `Term`, `Concept`, `Glossary` | `common` | Term "appropriation" |
 | `Acronym`, `UNEntity` | `common` | OICT, DGACM, ACABQ |
 | `Organization`, `System` | `common` | United Nations Secretariat |
-| `DocumentPattern` | `common` | Шаблон General Assembly resolution |
+| `DocumentPattern` | `common` | General Assembly resolution template |
 
-### Определение storage paths
+### Determining storage paths
 
-Каждый namespace маппится на конкретные storage-пути:
+Each namespace maps to specific storage paths:
 
 ```javascript
 // namespace.config.js — getStoragePaths()
 
-// Для PROJECT namespace path строится динамически:
+// For PROJECT namespace the path is built dynamically:
 getStoragePaths('project:imis')
 // → {
 //     graphPrefix:      'project:imis',
@@ -310,7 +310,7 @@ getStoragePaths('project:imis')
 //     storagePath:      '/knowledge/projects/imis'
 //   }
 
-// Для остальных namespace — статические пути:
+// For other namespaces — static paths:
 getStoragePaths('core')
 // → {
 //     graphPrefix:      'core',
@@ -324,89 +324,89 @@ getStoragePaths('core')
 
 ## 4.3 Cross-namespace queries
 
-### Разрешённые паттерны
+### Allowed patterns
 
-**1. READ из любого namespace (при наличии прав доступа)**
+**1. READ from any namespace (with the required access rights)**
 
-Чтение всегда разрешено, если роль пользователя входит в `readRoles` целевого namespace.
+Reading is always allowed if the user's role is in `readRoles` of the target namespace.
 
 ```cypher
-// Запрос к CORE — информация о сервисах
+// Query to CORE — information about services
 MATCH (s:Service {namespace: 'core'})
 WHERE s.name CONTAINS 'Memgraph'
 RETURN s.name, s.description;
 
-// Запрос к PROJECT — данные конкретного проекта
+// Query to PROJECT — data of a specific project
 MATCH (sp:StoredProcedure {fullNamespace: 'project:imis'})
 WHERE sp.name STARTS WITH 'sp_get'
 RETURN sp.name, sp.language;
 
-// Запрос к COMMON — справочные данные
+// Query to COMMON — reference data
 MATCH (a:Acronym {namespace: 'common'})
 WHERE a.name = 'OICT'
 RETURN a.fullForm;
 ```
 
-**2. JOIN между PROJECT и COMMON (обогащение проектных данных справочниками)**
+**2. JOIN between PROJECT and COMMON (enriching project data with reference data)**
 
-Проектные данные часто ссылаются на общую терминологию. Такие cross-namespace запросы выполняются через isCrossNamespace-рёбра.
+Project data often references common terminology. Such cross-namespace queries are executed through isCrossNamespace edges.
 
 ```cypher
-// Найти все таблицы IMIS, связанные с организацией из COMMON
+// Find all IMIS tables linked to an organization from COMMON
 MATCH (t:Table {fullNamespace: 'project:imis'})
       -[r:REFERENCES_ENTITY {isCrossNamespace: true}]->
       (org:Organization {namespace: 'common'})
 RETURN t.name AS tableName, org.name AS organization;
 
-// Обогатить бизнес-правила терминами из глоссария
+// Enrich business rules with glossary terms
 MATCH (br:BusinessRule {fullNamespace: 'project:umoja'})
       -[:USES_TERM {isCrossNamespace: true}]->
       (term:Term {namespace: 'common'})
 RETURN br.name, collect(term.name) AS relatedTerms;
 ```
 
-**3. META читает из PROJECT (анализ результатов извлечения)**
+**3. META reads from PROJECT (analyzing extraction results)**
 
-META-знания связаны с проектными данными через записи о выполнении и стратегии.
+META knowledge is linked to project data through execution records and strategies.
 
 ```cypher
-// Какие стратегии использовались для проекта IMIS
+// Which strategies were used for the IMIS project
 MATCH (se:StrategyExecution {namespace: 'meta'})
 WHERE se.targetProject = 'imis'
 MATCH (se)-[:USED_STRATEGY]->(s:Strategy {namespace: 'meta'})
 RETURN s.name, se.successRate, se.executedAt;
 
-// Агрегация метрик качества по проектам
+// Aggregate quality metrics by project
 MATCH (qr:QualityRule {namespace: 'meta'})
       -[:EVALUATED]->(cycle:ExtractionCycle {namespace: 'meta'})
 WHERE cycle.targetNamespace STARTS WITH 'project:'
 RETURN cycle.targetNamespace, avg(qr.score) AS avgQuality;
 ```
 
-**4. CORE читает из COMMON (конфигурация ссылается на организационную структуру)**
+**4. CORE reads from COMMON (configuration references organizational structure)**
 
 ```cypher
-// Какие сервисы PA обслуживают организации из COMMON
+// Which PA services serve organizations from COMMON
 MATCH (svc:Service {namespace: 'core'})
       -[:SERVES {isCrossNamespace: true}]->
       (org:Organization {namespace: 'common'})
 RETURN svc.name, org.name;
 ```
 
-### Запрещённые паттерны
+### Forbidden patterns
 
-**1. Прямые рёбра между разными PROJECT-ами**
+**1. Direct edges between different PROJECTs**
 
-Каждый проект -- изолированный контур. Нельзя создавать прямые связи между `PROJECT:imis` и `PROJECT:umoja`.
+Each project is an isolated circuit. Direct links between `PROJECT:imis` and `PROJECT:umoja` are forbidden.
 
 ```cypher
-// ЗАПРЕЩЕНО: прямое ребро между проектами
+// FORBIDDEN: direct edge between projects
 MATCH (a:Table {fullNamespace: 'project:imis'}),
       (b:Table {fullNamespace: 'project:umoja'})
 CREATE (a)-[:SIMILAR_TO]->(b);
-// ^^^ Нарушение изоляции! Используйте COMMON для связывания.
+// ^^^ Isolation violation! Use COMMON for linking.
 
-// ПРАВИЛЬНЫЙ ПОДХОД: связывание через COMMON
+// CORRECT APPROACH: linking through COMMON
 MATCH (a:Table {fullNamespace: 'project:imis'}),
       (b:Table {fullNamespace: 'project:umoja'}),
       (concept:Concept {namespace: 'common'})
@@ -415,29 +415,29 @@ CREATE (a)-[:IMPLEMENTS {isCrossNamespace: true}]->(concept),
        (b)-[:IMPLEMENTS {isCrossNamespace: true}]->(concept);
 ```
 
-**2. Запись в CORE из pipeline-кода**
+**2. Writing to CORE from pipeline code**
 
-CORE -- readonly для пайплайнов. Только `ARCHITECT` и `ADMIN` могут модифицировать системные знания.
+CORE is read-only for pipelines. Only `ARCHITECT` and `ADMIN` can modify system knowledge.
 
 ```cypher
-// ЗАПРЕЩЕНО: pipeline пишет в CORE
-// В коде executor-а:
+// FORBIDDEN: pipeline writes to CORE
+// In executor code:
 // await memgraph.mergeNode('Service', { namespace: 'core', ... });
-// ^^^ Rejection: writeRoles не включает SYSTEM для CORE
+// ^^^ Rejection: writeRoles does not include SYSTEM for CORE
 
-// ПРАВИЛЬНО: pipeline пишет в META или PROJECT
+// CORRECT: pipeline writes to META or PROJECT
 // await memgraph.mergeNode('ExtractionCycle', { namespace: 'meta', ... });
 ```
 
-**3. Модификация COMMON без утверждения**
+**3. Modifying COMMON without approval**
 
-COMMON содержит словари и онтологии, которые используют все namespace. Изменения требуют роли `ADMIN`.
+COMMON contains dictionaries and ontologies used by all namespaces. Changes require the `ADMIN` role.
 
 ```cypher
-// ЗАПРЕЩЕНО: developer добавляет термин в COMMON
+// FORBIDDEN: developer adds a term to COMMON
 // checkAccess('common', 'DEVELOPER', 'write') → false
 
-// ПРАВИЛЬНО: только ADMIN
+// CORRECT: ADMIN only
 // checkAccess('common', 'ADMIN', 'write') → true
 MERGE (t:Term {id: $id, namespace: 'common'})
 SET t.name = 'appropriation',
@@ -445,20 +445,20 @@ SET t.name = 'appropriation',
     t.createdAt = datetime();
 ```
 
-**4. Запись META-данных в PROJECT namespace**
+**4. Writing META data to PROJECT namespace**
 
-Записи о выполнении, стратегии и метрики качества -- это мета-знания. Они описывают работу системы, а не извлечённые данные проекта.
+Execution records, strategies, and quality metrics are meta-knowledge. They describe how the system works, not extracted project data.
 
 ```cypher
-// ЗАПРЕЩЕНО: ExecutionRecord в PROJECT
+// FORBIDDEN: ExecutionRecord in PROJECT
 CREATE (er:ExecutionRecord {
   namespace: 'project',
   fullNamespace: 'project:imis',
   ...
 });
-// ^^^ Нарушение! ExecutionRecord — всегда META. См. раздел 4.5.
+// ^^^ Violation! ExecutionRecord is always META. See section 4.5.
 
-// ПРАВИЛЬНО:
+// CORRECT:
 CREATE (er:ExecutionRecord {
   namespace: 'meta',
   fullNamespace: 'meta',
@@ -471,36 +471,36 @@ CREATE (er:ExecutionRecord {
 
 ## 4.4 Isolation guarantees
 
-### Таблица правил изоляции
+### Isolation rules table
 
-| Правило | Гарантия | Enforcement |
-|---------|----------|-------------|
-| **PROJECT:X ↛ PROJECT:Y** | Прямые рёбра между разными проектами запрещены | `mergeRelationship()` + namespace check |
-| **CORE immutable для pipelines** | SYSTEM роль не имеет write-доступа к CORE | `checkAccess('core', 'SYSTEM', 'write') → false` |
-| **COMMON write = ADMIN only** | Только ADMIN может модифицировать общие ресурсы | `writeRoles: [UserRole.ADMIN]` |
-| **META write = SYSTEM + ADMIN** | Пайплайны пишут в META автоматически | `writeRoles: [UserRole.SYSTEM, UserRole.ADMIN]` |
-| **Label → Namespace binding** | Каждый label разрешён только в определённых namespace | `isLabelAllowed(namespace, label)` |
-| **Cross-namespace маркировка** | Все cross-namespace рёбра имеют `isCrossNamespace: true` | `_markCrossNamespaceRefs()` |
-| **PROJECT namespace всегда с projectId** | `project` без квалификатора запрещён в production | Routing validation |
+| Rule | Guarantee | Enforcement |
+|------|-----------|-------------|
+| **PROJECT:X ↛ PROJECT:Y** | Direct edges between different projects are forbidden | `mergeRelationship()` + namespace check |
+| **CORE immutable for pipelines** | SYSTEM role has no write access to CORE | `checkAccess('core', 'SYSTEM', 'write') → false` |
+| **COMMON write = ADMIN only** | Only ADMIN can modify shared resources | `writeRoles: [UserRole.ADMIN]` |
+| **META write = SYSTEM + ADMIN** | Pipelines write to META automatically | `writeRoles: [UserRole.SYSTEM, UserRole.ADMIN]` |
+| **Label → Namespace binding** | Each label is allowed only in specific namespaces | `isLabelAllowed(namespace, label)` |
+| **Cross-namespace marking** | All cross-namespace edges have `isCrossNamespace: true` | `_markCrossNamespaceRefs()` |
+| **PROJECT namespace always with projectId** | `project` without qualifier is forbidden in production | Routing validation |
 
-### Enforcement в memgraph.service.js
+### Enforcement in memgraph.service.js
 
-Основной enforcement реализован в `mergeRelationship()` через параметр `isCrossNamespace` и в `_markCrossNamespaceRefs()`:
+The main enforcement is implemented in `mergeRelationship()` through the `isCrossNamespace` parameter and in `_markCrossNamespaceRefs()`:
 
 ```javascript
 /**
- * memgraph.service.js — enforcement cross-namespace рёбер
+ * memgraph.service.js — enforcement of cross-namespace edges
  */
 async mergeRelationship(fromId, toId, type, properties = {}, isCrossNamespace = false) {
   // ...
 
   const relProps = {
     ...properties,
-    isCrossNamespace,            // Маркировка cross-namespace ребра
+    isCrossNamespace,            // Marking cross-namespace edge
     createdAt: new Date().toISOString()
   };
 
-  // MERGE ребро
+  // MERGE edge
   const query = `
     MATCH (a), (b)
     WHERE a.id = $fromId AND b.id = $toId
@@ -510,15 +510,15 @@ async mergeRelationship(fromId, toId, type, properties = {}, isCrossNamespace = 
   `;
   await session.run(query, { fromId, toId, properties: relProps });
 
-  // Пометить узлы как участники cross-namespace связи
+  // Mark nodes as participants in cross-namespace relationship
   if (isCrossNamespace) {
     await this._markCrossNamespaceRefs(session, fromId, toId);
   }
 }
 
 /**
- * Маркировка узлов, участвующих в cross-namespace связях.
- * Позволяет быстро находить "пограничные" узлы.
+ * Marking nodes that participate in cross-namespace relationships.
+ * Allows quickly finding "boundary" nodes.
  */
 async _markCrossNamespaceRefs(session, fromId, toId) {
   const query = `
@@ -531,11 +531,11 @@ async _markCrossNamespaceRefs(session, fromId, toId) {
 }
 ```
 
-Контроль доступа реализован в `NamespaceRouter.checkAccess()`:
+Access control is implemented in `NamespaceRouter.checkAccess()`:
 
 ```javascript
 /**
- * namespace-router.service.js — проверка доступа
+ * namespace-router.service.js — access check
  */
 checkAccess(namespace, userRole, operation = 'read') {
   // Wildcard project namespace → base 'project'
@@ -560,11 +560,11 @@ checkAccess(namespace, userRole, operation = 'read') {
 }
 ```
 
-Label-валидация через `isLabelAllowed()`:
+Label validation through `isLabelAllowed()`:
 
 ```javascript
 /**
- * namespace.config.js — проверка допустимости label в namespace
+ * namespace.config.js — checking label validity in a namespace
  */
 function isLabelAllowed(fullNamespace, label) {
   const config = getNamespaceConfig(fullNamespace);
@@ -572,7 +572,7 @@ function isLabelAllowed(fullNamespace, label) {
   return config.allowedNodeLabels.includes(label);
 }
 
-// Примеры:
+// Examples:
 isLabelAllowed('core', 'Service')          // → true
 isLabelAllowed('core', 'Table')            // → false (Table — PROJECT)
 isLabelAllowed('project:imis', 'Table')    // → true
@@ -580,12 +580,12 @@ isLabelAllowed('common', 'StoredProcedure') // → false (SP — PROJECT)
 isLabelAllowed('meta', 'Strategy')         // → true
 ```
 
-### Аудит cross-namespace операций
+### Auditing cross-namespace operations
 
-Для мониторинга cross-namespace связей используется аудиторный запрос:
+To monitor cross-namespace relationships, the following audit query is used:
 
 ```cypher
-// Найти все cross-namespace рёбра
+// Find all cross-namespace edges
 MATCH (a)-[r {isCrossNamespace: true}]->(b)
 RETURN a.fullNamespace AS fromNS,
        b.fullNamespace AS toNS,
@@ -593,7 +593,7 @@ RETURN a.fullNamespace AS fromNS,
        count(r) AS edgeCount
 ORDER BY edgeCount DESC;
 
-// Найти нарушения: прямые рёбра между разными PROJECT-ами
+// Find violations: direct edges between different PROJECTs
 MATCH (a)-[r]->(b)
 WHERE a.namespace = 'project'
   AND b.namespace = 'project'
@@ -605,7 +605,7 @@ RETURN a.fullNamespace AS fromProject,
        a.id AS fromId,
        b.id AS toId;
 
-// Найти узлы с неправильным label для их namespace
+// Find nodes with a wrong label for their namespace
 MATCH (n)
 WHERE n.namespace IS NOT NULL
   AND n.namespace = 'core'
@@ -615,7 +615,7 @@ WHERE n.namespace IS NOT NULL
   AND NOT n:Decision AND NOT n:Worker
 RETURN labels(n) AS wrongLabels, n.id, n.namespace;
 
-// Статистика по namespace
+// Statistics by namespace
 MATCH (n)
 WHERE n.namespace IS NOT NULL
 RETURN n.namespace AS namespace,
@@ -626,18 +626,18 @@ ORDER BY namespace;
 
 ---
 
-## 4.5 ExecutionRecord -- почему META, не PROJECT
+## 4.5 ExecutionRecord — why META, not PROJECT
 
-### Текущая проблема
+### Current problem
 
-В текущей реализации `RuntimeAdapter` (`api/src/services/immutable-graph/integration/runtime-adapter.ts`) узлы `ExecutionRecord` записываются в PROJECT namespace:
+In the current implementation of `RuntimeAdapter` (`api/src/services/immutable-graph/integration/runtime-adapter.ts`), `ExecutionRecord` nodes are written to the PROJECT namespace:
 
 ```typescript
-// runtime-adapter.ts — ТЕКУЩЕЕ состояние (НЕПРАВИЛЬНО)
+// runtime-adapter.ts — CURRENT state (INCORRECT)
 export class RuntimeAdapter {
   private static readonly PATTERN_NODE_TYPE = 'ExecutionPattern';
   private static readonly EXECUTION_NODE_TYPE = 'ExecutionRecord';
-  private static readonly PATTERN_NAMESPACE = Namespace.PROJECT;  // ← ПРОБЛЕМА
+  private static readonly PATTERN_NAMESPACE = Namespace.PROJECT;  // ← PROBLEM
 
   constructor(
     private graphService: ImmutableGraphService,
@@ -647,53 +647,53 @@ export class RuntimeAdapter {
   async recordExecution(result: ExecutionResult): Promise<RecordResult> {
     // ...
     await this.createExecutionRecord(result, pattern.entityId);
-    // ^^^ Записывается в PROJECT namespace через PATTERN_NAMESPACE
+    // ^^^ Written to PROJECT namespace via PATTERN_NAMESPACE
   }
 }
 ```
 
-Это означает, что записи о выполнении пайплайна попадают в `project:gxe-patterns`, смешиваясь с проектными данными.
+This means pipeline execution records end up in `project:gxe-patterns`, mixed with project data.
 
-### Целевое состояние
+### Target state
 
-`ExecutionRecord` и `ExecutionPattern` всегда должны записываться в `META` namespace:
+`ExecutionRecord` and `ExecutionPattern` must always be written to the `META` namespace:
 
 ```typescript
-// runtime-adapter.ts — ЦЕЛЕВОЕ состояние (ПРАВИЛЬНО)
+// runtime-adapter.ts — TARGET state (CORRECT)
 export class RuntimeAdapter {
   private static readonly PATTERN_NODE_TYPE = 'ExecutionPattern';
   private static readonly EXECUTION_NODE_TYPE = 'ExecutionRecord';
-  private static readonly PATTERN_NAMESPACE = Namespace.META;  // ← ИСПРАВЛЕНО
+  private static readonly PATTERN_NAMESPACE = Namespace.META;  // ← FIXED
 
   constructor(
     private graphService: ImmutableGraphService,
-    private projectId: string = 'execution-records'  // ← Описательный ID
+    private projectId: string = 'execution-records'  // ← Descriptive ID
   ) {}
 }
 ```
 
-### Обоснование
+### Rationale
 
-| Аргумент | Объяснение |
-|----------|------------|
-| **Природа данных** | ExecutionRecord описывает КАК система работала (время, статус, метрики), а не ЧТО было извлечено. Это мета-знания по определению. |
-| **Cross-project аналитика** | Для сравнения эффективности стратегий между проектами нужен единый namespace. Если записи разбросаны по `project:imis`, `project:umoja` -- агрегация требует multi-namespace запросов. |
-| **Label consistency** | `ExecutionRecord` и `StrategyExecution` входят в `allowedNodeLabels` для META (`Strategy`, `StrategyExecution`, `ExtractionCycle`, `DecisionRecord`), но не для PROJECT. |
-| **Иммутабельность** | Запись о выполнении никогда не должна изменяться. META namespace обеспечивает это через write-only для SYSTEM. |
-| **Чистота PROJECT** | Проектные данные должны содержать только знания, извлечённые из legacy-систем. Системные метрики загрязняют проектный граф. |
-| **Связь с проектом** | Ссылка на проект сохраняется через свойство `targetProject`, а не через namespace. Это позволяет фильтровать по проекту без нарушения изоляции. |
+| Argument | Explanation |
+|----------|-------------|
+| **Nature of data** | ExecutionRecord describes HOW the system worked (time, status, metrics), not WHAT was extracted. This is meta-knowledge by definition. |
+| **Cross-project analytics** | To compare strategy effectiveness between projects, a single namespace is needed. If records are scattered across `project:imis`, `project:umoja` — aggregation requires multi-namespace queries. |
+| **Label consistency** | `ExecutionRecord` and `StrategyExecution` are in `allowedNodeLabels` for META (`Strategy`, `StrategyExecution`, `ExtractionCycle`, `DecisionRecord`), but not for PROJECT. |
+| **Immutability** | An execution record must never be changed. The META namespace ensures this through write-only access for SYSTEM. |
+| **PROJECT cleanliness** | Project data should contain only knowledge extracted from legacy systems. System metrics pollute the project graph. |
+| **Link to project** | The reference to the project is preserved through the `targetProject` property, not through the namespace. This allows filtering by project without violating isolation. |
 
-### Миграция
+### Migration
 
-Для переноса существующих `ExecutionRecord` из PROJECT в META:
+To move existing `ExecutionRecord` nodes from PROJECT to META:
 
 ```cypher
-// Шаг 1: Найти все ExecutionRecord в PROJECT namespace
+// Step 1: Find all ExecutionRecord nodes in PROJECT namespace
 MATCH (er:ExecutionRecord)
 WHERE er.namespace = 'project'
 RETURN count(er) AS recordsToMigrate;
 
-// Шаг 2: Обновить namespace
+// Step 2: Update namespace
 MATCH (er:ExecutionRecord)
 WHERE er.namespace = 'project'
 SET er.namespace = 'meta',
@@ -706,7 +706,7 @@ SET er.namespace = 'meta',
     er.migratedAt = datetime(),
     er.migrationReason = 'CODEX-NS-4.5: ExecutionRecord belongs to META';
 
-// Шаг 3: Обновить связанные ExecutionPattern
+// Step 3: Update related ExecutionPattern nodes
 MATCH (ep:ExecutionPattern)
 WHERE ep.namespace = 'project'
 SET ep.namespace = 'meta',
@@ -719,22 +719,22 @@ SET ep.namespace = 'meta',
     ep.migratedAt = datetime(),
     ep.migrationReason = 'CODEX-NS-4.5: ExecutionPattern belongs to META';
 
-// Шаг 4: Верификация
+// Step 4: Verification
 MATCH (er:ExecutionRecord)
 WHERE er.namespace = 'project'
 RETURN count(er) AS remainingInProject;
-// Ожидаемый результат: 0
+// Expected result: 0
 
 MATCH (er:ExecutionRecord {namespace: 'meta'})
 RETURN count(er) AS migratedRecords,
        collect(DISTINCT er.targetProject) AS projects;
 ```
 
-После миграции необходимо обновить `runtime-adapter.ts`:
-- Изменить `PATTERN_NAMESPACE` с `Namespace.PROJECT` на `Namespace.META`
-- Добавить `ExecutionRecord` в `allowedNodeLabels` конфигурации META namespace
-- Обновить `projectId` конструктора на описательное значение вместо `'gxe-patterns'`
+After migration, `runtime-adapter.ts` must be updated:
+- Change `PATTERN_NAMESPACE` from `Namespace.PROJECT` to `Namespace.META`
+- Add `ExecutionRecord` to `allowedNodeLabels` in the META namespace configuration
+- Update the constructor's `projectId` to a descriptive value instead of `'gxe-patterns'`
 
 ---
 
-*Этот документ является частью [Кодекса UN ProjectAdvisor](../CODEX_INDEX.md)*
+*This document is part of the [UN ProjectAdvisor Codex](../CODEX_INDEX.md)*

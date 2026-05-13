@@ -1,8 +1,8 @@
 # Node.js API Integration Guide
 
-## Вызов GNN Service из Node.js
+## Calling the GNN Service from Node.js
 
-### Пример сервиса в Node.js API
+### Example Service in Node.js API
 
 ```javascript
 // api/src/services/gnn.service.js
@@ -102,7 +102,7 @@ class GNNService {
 module.exports = new GNNService();
 ```
 
-### Пример route в Node.js
+### Example Route in Node.js
 
 ```javascript
 // api/src/routes/gnn.route.js
@@ -164,10 +164,10 @@ router.get('/status', async (req, res) => {
 module.exports = router;
 ```
 
-### Добавление в index.js
+### Adding to index.js
 
 ```javascript
-// В api/src/index.js добавить:
+// Add to api/src/index.js:
 const gnnRoutes = require('./routes/gnn.route');
 app.use('/api/v1/gnn', gnnRoutes);
 ```

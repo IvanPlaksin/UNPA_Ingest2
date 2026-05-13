@@ -1,108 +1,110 @@
-# CODEX-META: Стандарт метаданных
+# CODEX-META: Metadata Standard
 
-> **Status:** 🟡 В разработке | **Version:** 0.1.0 | **Date:** 2026-03-12
-
----
-
-## 1. Преамбула
-
-Метаданные определяют доверие. Узел без провенанса — это слух.
-
-Каждый факт в графе знаний UN ProjectAdvisor должен нести ответ на три вопроса:
-- **Кто** его создал? (агент, пайплайн, пользователь)
-- **Когда** он был создан и когда он валиден? (bi-temporal model)
-- **Насколько** ему можно доверять? (confidence, hash chain)
-
-Настоящий стандарт основан на:
-- **W3C PROV-O** — онтология провенанса (Entity, Activity, Agent)
-- **PAV** (Provenance, Authoring and Versioning) — расширение Dublin Core для научных данных
-- **Bi-temporal data model** — разделение Transaction Time и Valid Time
-
-Без метаданных граф знаний — это свалка строк. С метаданными — это аудируемый реестр фактов.
+> **Status:** 🟡 In Development | **Version:** 0.1.0 | **Date:** 2026-03-12
 
 ---
 
-## 2.1. Обязательные поля — минимальный контракт
+## 1. Preamble
 
-Не все узлы несут одинаковую ответственность. Мы вводим три уровня метаданных:
+Metadata defines trust. A node without provenance is a rumor.
+
+Every fact in the UN ProjectAdvisor knowledge graph must carry answers to three questions:
+- **Who** created it? (agent, pipeline, user)
+- **When** was it created and when is it valid? (bi-temporal model)
+- **How much** can it be trusted? (confidence, hash chain)
+
+This standard is based on:
+- **W3C PROV-O** -- provenance ontology (Entity, Activity, Agent)
+- **PAV** (Provenance, Authoring and Versioning) -- Dublin Core extension for scientific data
+- **Bi-temporal data model** -- separation of Transaction Time and Valid Time
+
+Without metadata, the knowledge graph is a dump of strings. With metadata, it is an auditable registry of facts.
+
+---
+
+## 2.1. Required fields -- minimum contract
+
+Not all nodes carry the same responsibility. We define three levels of metadata:
 
 ```
-┌─────────────────────────────────────────────────┐
-│              LEVEL 3: VERSION                   │
-│  versionId, entityId, sequenceNumber, status,   │
-│  ttStart/ttEnd, vtStart/vtEnd,                  │
-│  contentHash, chainHash                         │
-│  ┌─────────────────────────────────────────┐    │
-│  │          LEVEL 2: PROVENANCE            │    │
-│  │  sourceType, sourceId, sourceSystem,    │    │
-│  │  extractionCycleId, confidence          │    │
-│  │  ┌─────────────────────────────────┐    │    │
-│  │  │      LEVEL 1: MANDATORY         │    │    │
-│  │  │  id, createdAt, namespace       │    │    │
-│  │  └─────────────────────────────────┘    │    │
-│  └─────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│              LEVEL 3: VERSION           │
+│  versionId, entityId, sequenceNumber,   │
+│  status, ttStart/ttEnd, vtStart/vtEnd,  │
+│  contentHash, chainHash                 │
+│  ┌─────────────────────────────────┐    │
+│  │          LEVEL 2: PROVENANCE    │    │
+│  │  sourceType, sourceId,          │    │
+│  │  sourceSystem,                  │    │
+│  │  extractionCycleId, confidence  │    │
+│  │  ┌─────────────────────────┐    │    │
+│  │  │   LEVEL 1: MANDATORY    │    │    │
+│  │  │  id, createdAt,         │    │    │
+│  │  │  namespace              │    │    │
+│  │  └─────────────────────────┘    │    │
+│  └─────────────────────────────────┘    │
+└─────────────────────────────────────────┘
 ```
 
-### Level 1 — MANDATORY (все узлы)
+### Level 1 -- MANDATORY (all nodes)
 
-Абсолютный минимум. Каждый узел в графе обязан иметь эти поля.
+Absolute minimum. Every node in the graph must have these fields.
 
-| Поле        | Тип      | Описание                              | Пример                                |
-|-------------|----------|---------------------------------------|---------------------------------------|
-| `id`        | `string` | Глобально уникальный идентификатор    | `"proc-sp_GetUsers-v3"`               |
-| `createdAt` | `string` | ISO 8601 timestamp создания           | `"2026-03-12T14:30:00.000Z"`          |
-| `namespace` | `string` | Пространство имён (изоляция данных)   | `"un-pa"`, `"client-acme"`            |
+| Field       | Type     | Description                            | Example                               |
+|-------------|----------|----------------------------------------|---------------------------------------|
+| `id`        | `string` | Globally unique identifier             | `"proc-sp_GetUsers-v3"`               |
+| `createdAt` | `string` | ISO 8601 creation timestamp            | `"2026-03-12T14:30:00.000Z"`          |
+| `namespace` | `string` | Namespace (data isolation)             | `"un-pa"`, `"client-acme"`            |
 
-### Level 2 — PROVENANCE (извлечённые данные)
+### Level 2 -- PROVENANCE (extracted data)
 
-Обязателен для любых данных, полученных из внешних источников (SQL, файлы, API).
+Required for any data obtained from external sources (SQL, files, APIs).
 
-| Поле                | Тип      | Описание                                       | Пример                                |
+| Field               | Type     | Description                                     | Example                               |
 |---------------------|----------|-------------------------------------------------|---------------------------------------|
-| `sourceType`        | `string` | Тип источника данных                            | `"mssql"`, `"file"`, `"api"`, `"user"` |
-| `sourceId`          | `string` | Идентификатор конкретного источника              | `"server01.db.dbo.sp_GetUsers"`       |
-| `sourceSystem`      | `string` | Имя системы-источника                           | `"ERP-SAP"`, `"HR-Portal"`           |
-| `extractionCycleId` | `string` | UUID цикла извлечения (см. раздел 2.6)          | `"cycle-a1b2c3d4-..."`               |
-| `confidence`        | `number` | Уровень доверия к факту (0.0 — 1.0)            | `0.85`                                |
+| `sourceType`        | `string` | Data source type                                | `"mssql"`, `"file"`, `"api"`, `"user"` |
+| `sourceId`          | `string` | Identifier of the specific source               | `"server01.db.dbo.sp_GetUsers"`       |
+| `sourceSystem`      | `string` | Source system name                              | `"ERP-SAP"`, `"HR-Portal"`           |
+| `extractionCycleId` | `string` | UUID of the extraction cycle (see section 2.6)  | `"cycle-a1b2c3d4-..."`               |
+| `confidence`        | `number` | Confidence level for the fact (0.0 -- 1.0)      | `0.85`                                |
 
-### Level 3 — VERSION (версионируемые узлы)
+### Level 3 -- VERSION (versioned nodes)
 
-Обязателен для узлов, которые эволюционируют во времени.
+Required for nodes that evolve over time.
 
-| Поле             | Тип      | Описание                                    | Пример                                |
-|------------------|----------|---------------------------------------------|---------------------------------------|
-| `versionId`      | `string` | UUID конкретной версии                      | `"ver-f7e8d9c0-..."`                  |
-| `entityId`       | `string` | UUID логической сущности (общий для версий) | `"ent-a1b2c3d4-..."`                  |
-| `sequenceNumber` | `number` | Порядковый номер версии (1, 2, 3...)        | `3`                                   |
-| `status`         | `string` | Статус версии                               | `"ACTIVE"`, `"SUPERSEDED"`, `"DRAFT"` |
-| `ttStart`        | `string` | Transaction Time — начало                   | `"2026-03-12T14:30:00.000Z"`          |
-| `ttEnd`          | `string` | Transaction Time — конец (null = текущая)   | `null`                                |
-| `vtStart`        | `string` | Valid Time — начало                         | `"2026-01-01T00:00:00.000Z"`          |
-| `vtEnd`          | `string` | Valid Time — конец (null = бессрочно)        | `null`                                |
-| `contentHash`    | `string` | SHA-256 от канонизированного содержимого     | `"sha256:a1b2c3..."`                  |
-| `chainHash`      | `string` | SHA-256 от (contentHash + previousHash)     | `"sha256:d4e5f6..."`                  |
+| Field            | Type     | Description                                  | Example                               |
+|------------------|----------|----------------------------------------------|---------------------------------------|
+| `versionId`      | `string` | UUID of the specific version                 | `"ver-f7e8d9c0-..."`                  |
+| `entityId`       | `string` | UUID of the logical entity (shared across versions) | `"ent-a1b2c3d4-..."`           |
+| `sequenceNumber` | `number` | Sequential version number (1, 2, 3...)       | `3`                                   |
+| `status`         | `string` | Version status                               | `"ACTIVE"`, `"SUPERSEDED"`, `"DRAFT"` |
+| `ttStart`        | `string` | Transaction Time -- start                    | `"2026-03-12T14:30:00.000Z"`          |
+| `ttEnd`          | `string` | Transaction Time -- end (null = current)     | `null`                                |
+| `vtStart`        | `string` | Valid Time -- start                          | `"2026-01-01T00:00:00.000Z"`          |
+| `vtEnd`          | `string` | Valid Time -- end (null = indefinite)        | `null`                                |
+| `contentHash`    | `string` | SHA-256 of canonicalized content             | `"sha256:a1b2c3..."`                  |
+| `chainHash`      | `string` | SHA-256 of (contentHash + previousHash)      | `"sha256:d4e5f6..."`                  |
 
-### Матрица применения уровней
+### Level applicability matrix
 
-| Тип сущности        | Level 1 | Level 2 | Level 3 | Обоснование                              |
+| Entity type         | Level 1 | Level 2 | Level 3 | Rationale                                |
 |----------------------|---------|---------|---------|------------------------------------------|
-| Domain nodes         | ✅      | ✅      | —       | Извлечены из источников, но не версионируются индивидуально |
-| NodeVersion          | ✅      | ✅      | ✅      | Полная история эволюции с аудитом        |
-| CatalogEntry         | ✅      | —       | —       | Реестровая запись, провенанс на уровне связанных версий     |
-| ExecutionRecord      | ✅      | —       | —       | Лог выполнения, иммутабельный по природе |
-| Relationship (edge)  | ✅      | ✅      | —       | Извлечённые связи требуют провенанса     |
-| Settings             | ✅      | —       | —       | Конфигурация, не извлечённые данные      |
+| Domain nodes         | Yes     | Yes     | --      | Extracted from sources but not individually versioned |
+| NodeVersion          | Yes     | Yes     | Yes     | Full evolution history with audit        |
+| CatalogEntry         | Yes     | --      | --      | Registry record, provenance at linked versions level |
+| ExecutionRecord      | Yes     | --      | --      | Execution log, immutable by nature       |
+| Relationship (edge)  | Yes     | Yes     | --      | Extracted relationships require provenance |
+| Settings             | Yes     | --      | --      | Configuration, not extracted data        |
 
-### Код определения уровня
+### Level determination code
 
 ```javascript
 /**
- * Определяет требуемый уровень метаданных для узла.
+ * Determines the required metadata level for a node.
  *
- * @param {string} label - Метка узла (Domain, NodeVersion, CatalogEntry и т.д.)
- * @param {object} properties - Свойства узла
- * @returns {{ level: number, missing: string[] }} Требуемый уровень и список недостающих полей
+ * @param {string} label - Node label (Domain, NodeVersion, CatalogEntry, etc.)
+ * @param {object} properties - Node properties
+ * @returns {{ level: number, missing: string[] }} Required level and list of missing fields
  */
 function determineRequiredLevel(label, properties) {
   const L1_FIELDS = ['id', 'createdAt', 'namespace'];
@@ -112,7 +114,7 @@ function determineRequiredLevel(label, properties) {
     'ttStart', 'contentHash', 'chainHash'
   ];
 
-  // Определяем требуемый уровень по метке
+  // Determine required level by label
   const LEVEL_MAP = {
     'NodeVersion':     3,
     'GraphVersion':    3,
@@ -133,12 +135,12 @@ function determineRequiredLevel(label, properties) {
 
   const requiredLevel = LEVEL_MAP[label] ?? 1;
 
-  // Собираем обязательные поля для данного уровня
+  // Collect required fields for the given level
   let requiredFields = [...L1_FIELDS];
   if (requiredLevel >= 2) requiredFields.push(...L2_FIELDS);
   if (requiredLevel >= 3) requiredFields.push(...L3_FIELDS);
 
-  // Находим отсутствующие поля
+  // Find missing fields
   const missing = requiredFields.filter(f =>
     properties[f] === undefined || properties[f] === null
   );
@@ -153,57 +155,57 @@ function determineRequiredLevel(label, properties) {
 
 ---
 
-## 2.2. Knowledge Quantum — полная схема
+## 2.2. Knowledge Quantum -- full schema
 
-Knowledge Quantum — это атомарная единица знания в графе. Каждый квант содержит 8 блоков метаданных, от обязательных до опциональных.
+A Knowledge Quantum is the atomic unit of knowledge in the graph. Each quantum contains 8 metadata blocks, from mandatory to optional.
 
-### Блок 1: Core Identity — Ядро идентификации
+### Block 1: Core Identity
 
 ```typescript
 interface CoreIdentity {
-  /** Глобально уникальный идентификатор кванта знания */
+  /** Globally unique identifier of the knowledge quantum */
   quantumId: string;          // "kq-<uuid>"
 
-  /** Отпечаток содержимого (SHA-256 от канонизированных данных) */
+  /** Content fingerprint (SHA-256 of canonicalized data) */
   fingerprint: string;        // "sha256:a1b2c3d4..."
 
-  /** Номер версии (целое число, монотонно возрастающее) */
+  /** Version number (integer, monotonically increasing) */
   version: number;            // 1, 2, 3...
 
-  /** Текущее состояние кванта */
+  /** Current state of the quantum */
   state: 'DRAFT' | 'ACTIVE' | 'SUPERSEDED' | 'ARCHIVED' | 'DELETED';
 
-  /** Теги для произвольной классификации */
+  /** Tags for arbitrary classification */
   tags: string[];             // ["critical", "needs-review", "auto-extracted"]
 }
 ```
 
-### Блок 2: Provenance — Происхождение
+### Block 2: Provenance
 
 ```typescript
 interface Provenance {
-  /** Тип источника */
+  /** Source type */
   sourceType: 'mssql' | 'postgresql' | 'file' | 'api' | 'user' | 'llm' | 'gnn';
 
-  /** Система-источник (имя для человека) */
+  /** Source system (human-readable name) */
   sourceSystem: string;       // "ERP-SAP", "HR-Portal", "Git-Monorepo"
 
-  /** Идентификатор объекта в источнике */
+  /** Object identifier in the source */
   sourceId: string;           // "dbo.sp_GetUsers", "file://docs/arch.md"
 
-  /** Цикл извлечения */
+  /** Extraction cycle */
   extraction: {
     cycleId: string;          // "cycle-<uuid>"
-    cycleNumber: number;      // Порядковый номер цикла (1, 2, 3...)
-    previousCycleId: string | null; // Ссылка на предыдущий цикл
+    cycleNumber: number;      // Sequential cycle number (1, 2, 3...)
+    previousCycleId: string | null; // Reference to previous cycle
     startedAt: string;        // ISO 8601
     completedAt: string;      // ISO 8601
     pipelineVersion: string;  // "sql-extraction-v2.1"
   };
 
-  /** Метрики качества извлечения */
+  /** Extraction quality metrics */
   quality: {
-    confidence: number;       // 0.0 — 1.0
+    confidence: number;       // 0.0 -- 1.0
     method: string;           // "ast-parse", "regex", "llm-extract", "gnn-predict"
     validatedBy: string | null; // "human", "cross-reference", null
     validatedAt: string | null;
@@ -211,59 +213,59 @@ interface Provenance {
 }
 ```
 
-### Блок 3: Classification — Классификация
+### Block 3: Classification
 
 ```typescript
 interface Classification {
-  /** Основной тип сущности */
+  /** Primary entity type */
   primaryType: string;        // "Procedure", "Table", "BusinessRule", "Concept"
 
-  /** Организационная принадлежность */
+  /** Organizational affiliation */
   org: {
     department: string;       // "IT", "Finance", "HR"
     team: string;             // "Backend", "Data-Engineering"
     project: string;          // "UN-PA", "ACME-Migration"
   };
 
-  /** Домен знаний */
+  /** Knowledge domain */
   domain: {
     area: string;             // "database", "business-logic", "infrastructure"
     subArea: string;          // "stored-procedures", "etl", "networking"
   };
 
-  /** Технологический стек */
+  /** Technology stack */
   tech: {
     language: string;         // "T-SQL", "JavaScript", "Python"
     framework: string | null; // "Express", "React", null
     platform: string;         // "SQL Server 2019", "Node.js 20"
   };
 
-  /** Волатильность — как часто данные меняются */
+  /** Volatility -- how often data changes */
   volatility: 'STATIC' | 'SLOW' | 'MODERATE' | 'FAST' | 'REALTIME';
 }
 ```
 
-### Блок 4: Semantic Context — Семантический контекст
+### Block 4: Semantic Context
 
 ```typescript
 interface SemanticContext {
-  /** Человекочитаемый заголовок */
-  title: string;              // "Процедура получения пользователей"
+  /** Human-readable title */
+  title: string;              // "User retrieval procedure"
 
-  /** Краткое описание (1-3 предложения) */
-  summary: string;            // "Извлекает активных пользователей с фильтрацией по отделу..."
+  /** Brief description (1-3 sentences) */
+  summary: string;            // "Retrieves active users filtered by department..."
 
-  /** Ключевые слова для поиска */
+  /** Keywords for search */
   keywords: string[];         // ["users", "authentication", "department-filter"]
 
-  /** Именованные сущности, извлечённые NER */
+  /** Named entities extracted by NER */
   entities: {
     name: string;             // "sp_GetUsers"
     type: string;             // "PROCEDURE", "TABLE", "COLUMN"
-    span: [number, number];   // Позиция в исходном тексте [start, end]
+    span: [number, number];   // Position in the source text [start, end]
   }[];
 
-  /** Векторное представление (embedding) */
+  /** Vector representation (embedding) */
   embedding: {
     model: string;            // "bge-m3", "text-embedding-3-small"
     dimensions: number;       // 1024, 384
@@ -273,39 +275,39 @@ interface SemanticContext {
 }
 ```
 
-### Блок 5: Relationships — Связи
+### Block 5: Relationships
 
 ```typescript
 interface Relationships {
-  /** Явные связи (извлечённые из источника) */
+  /** Explicit relationships (extracted from source) */
   explicit: {
     type: string;             // "CALLS", "REFERENCES", "OPERATES_ON"
-    targetId: string;         // ID целевого узла
-    confidence: number;       // 0.0 — 1.0
-    sourceEvidence: string;   // "EXEC dbo.sp_Helper" (фрагмент кода)
+    targetId: string;         // Target node ID
+    confidence: number;       // 0.0 -- 1.0
+    sourceEvidence: string;   // "EXEC dbo.sp_Helper" (code fragment)
   }[];
 
-  /** Предсказанные связи (GNN link prediction) */
+  /** Predicted relationships (GNN link prediction) */
   inferred: {
     type: string;             // "LIKELY_CALLS", "SIMILAR_TO"
     targetId: string;
-    score: number;            // Вероятность из модели
+    score: number;            // Model probability
     model: string;            // "gnn-link-pred-v1.2"
     predictedAt: string;      // ISO 8601
   }[];
 
-  /** Кластерная принадлежность */
+  /** Cluster membership */
   clusters: {
     algorithm: string;        // "label-propagation", "louvain"
     clusterId: string;        // "cluster-17"
-    membershipScore: number;  // 0.0 — 1.0
+    membershipScore: number;  // 0.0 -- 1.0
   }[];
 
-  /** Графовые метрики узла */
+  /** Node graph metrics */
   graphMetrics: {
-    degree: number;           // Количество связей
-    inDegree: number;         // Входящие
-    outDegree: number;        // Исходящие
+    degree: number;           // Number of relationships
+    inDegree: number;         // Incoming
+    outDegree: number;        // Outgoing
     pageRank: number;         // PageRank score
     betweenness: number;      // Betweenness centrality
     computedAt: string;       // ISO 8601
@@ -313,11 +315,11 @@ interface Relationships {
 }
 ```
 
-### Блок 6: Evolution History — История эволюции
+### Block 6: Evolution History
 
 ```typescript
 interface EvolutionHistory {
-  /** История циклов извлечения, затронувших этот квант */
+  /** History of extraction cycles that touched this quantum */
   cycles: {
     cycleId: string;
     cycleNumber: number;
@@ -326,7 +328,7 @@ interface EvolutionHistory {
     timestamp: string;
   }[];
 
-  /** Цепочка версий */
+  /** Version chain */
   versions: {
     versionId: string;
     sequenceNumber: number;
@@ -338,59 +340,59 @@ interface EvolutionHistory {
 }
 ```
 
-### Блок 7: Quality Metrics — Метрики качества
+### Block 7: Quality Metrics
 
 ```typescript
 interface QualityMetrics {
-  /** Результат валидации схемы */
+  /** Schema validation result */
   schemaValidation: {
     valid: boolean;
     errors: string[];         // ["missing field: sourceId", "invalid confidence: -0.5"]
     checkedAt: string;
   };
 
-  /** Количество использований (запросы, переходы, цитирования) */
+  /** Usage count (queries, traversals, citations) */
   usageCount: {
-    queries: number;          // Сколько раз запрашивался
-    traversals: number;       // Сколько раз был частью пути
-    citations: number;        // Сколько раз на него ссылались
+    queries: number;          // How many times queried
+    traversals: number;       // How many times part of a path
+    citations: number;        // How many times referenced
     lastAccessedAt: string;
   };
 
-  /** Уровень качества (автоматически вычисляется) */
+  /** Quality tier (automatically computed) */
   qualityTier: 'GOLD' | 'SILVER' | 'BRONZE' | 'UNVERIFIED';
 }
 ```
 
-Правила определения `qualityTier`:
+`qualityTier` determination rules:
 
-| Tier       | Условия                                                                                       |
+| Tier       | Conditions                                                                                    |
 |------------|-----------------------------------------------------------------------------------------------|
-| `GOLD`     | `confidence >= 0.9` И `validatedBy !== null` И `schemaValidation.valid === true`              |
-| `SILVER`   | `confidence >= 0.7` И `schemaValidation.valid === true`                                       |
-| `BRONZE`   | `confidence >= 0.5` И все обязательные поля Level 1 заполнены                                 |
-| `UNVERIFIED` | Всё остальное                                                                              |
+| `GOLD`     | `confidence >= 0.9` AND `validatedBy !== null` AND `schemaValidation.valid === true`          |
+| `SILVER`   | `confidence >= 0.7` AND `schemaValidation.valid === true`                                     |
+| `BRONZE`   | `confidence >= 0.5` AND all required Level 1 fields are populated                             |
+| `UNVERIFIED` | Everything else                                                                             |
 
-### Блок 8: Access Control — Контроль доступа
+### Block 8: Access Control
 
 ```typescript
 interface AccessControl {
-  /** Уровень секретности */
+  /** Security classification level */
   securityLevel: 'PUBLIC' | 'INTERNAL' | 'CONFIDENTIAL' | 'RESTRICTED';
 
-  /** Команда-владелец */
+  /** Owner team */
   ownerTeam: string;          // "data-engineering", "security"
 
-  /** Роли с доступом на чтение */
+  /** Roles with read access */
   allowedRoles: string[];     // ["admin", "analyst", "developer"]
 }
 ```
 
 ---
 
-## 2.3. Provenance — Маппинг на W3C PROV-O
+## 2.3. Provenance -- W3C PROV-O Mapping
 
-### Соответствие концепций PROV-O и PA
+### PROV-O concepts vs PA concepts
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
@@ -423,58 +425,58 @@ interface AccessControl {
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-### Таблица маппинга
+### Mapping table
 
-| PROV-O Концепция         | PA Реализация              | Memgraph Метка/Связь         | Описание                                      |
+| PROV-O Concept           | PA Implementation          | Memgraph Label/Relationship  | Description                                   |
 |--------------------------|----------------------------|------------------------------|-----------------------------------------------|
-| `prov:Entity`            | Knowledge Node             | `(:Domain)`, `(:Procedure)`  | Извлечённый факт (узел знаний)                |
-| `prov:Activity`          | Extraction Cycle           | `(:ExtractionCycle)`         | Один проход пайплайна извлечения              |
-| `prov:Agent`             | Pipeline / User            | `(:Pipeline)`, `(:User)`     | Кто выполнил извлечение                       |
-| `prov:wasGeneratedBy`    | EXTRACTED_BY               | `-[:EXTRACTED_BY]->`         | Узел создан в рамках цикла                    |
-| `prov:wasDerivedFrom`    | DERIVED_FROM               | `-[:DERIVED_FROM]->`         | Узел извлечён из источника                    |
-| `prov:wasAssociatedWith` | EXECUTED_BY                | `-[:EXECUTED_BY]->`          | Цикл запущен агентом/пайплайном               |
-| `prov:wasAttributedTo`   | ATTRIBUTED_TO              | `-[:ATTRIBUTED_TO]->`        | Факт приписан конкретному агенту              |
-| `prov:used`              | USED_SOURCE                | `-[:USED_SOURCE]->`          | Цикл использовал источник данных              |
-| `prov:wasInformedBy`     | INFORMED_BY                | `-[:INFORMED_BY]->`          | Цикл использовал результаты другого цикла     |
-| `prov:generatedAtTime`   | `createdAt`                | Свойство узла                | Время создания (ISO 8601)                     |
-| `prov:invalidatedAtTime` | `ttEnd`                    | Свойство узла                | Время инвалидации версии                      |
+| `prov:Entity`            | Knowledge Node             | `(:Domain)`, `(:Procedure)`  | Extracted fact (knowledge node)               |
+| `prov:Activity`          | Extraction Cycle           | `(:ExtractionCycle)`         | One extraction pipeline pass                  |
+| `prov:Agent`             | Pipeline / User            | `(:Pipeline)`, `(:User)`     | Who performed the extraction                  |
+| `prov:wasGeneratedBy`    | EXTRACTED_BY               | `-[:EXTRACTED_BY]->`         | Node created within a cycle                   |
+| `prov:wasDerivedFrom`    | DERIVED_FROM               | `-[:DERIVED_FROM]->`         | Node extracted from a source                  |
+| `prov:wasAssociatedWith` | EXECUTED_BY                | `-[:EXECUTED_BY]->`          | Cycle executed by an agent/pipeline           |
+| `prov:wasAttributedTo`   | ATTRIBUTED_TO              | `-[:ATTRIBUTED_TO]->`        | Fact attributed to a specific agent           |
+| `prov:used`              | USED_SOURCE                | `-[:USED_SOURCE]->`          | Cycle used a data source                      |
+| `prov:wasInformedBy`     | INFORMED_BY                | `-[:INFORMED_BY]->`          | Cycle used results of another cycle           |
+| `prov:generatedAtTime`   | `createdAt`                | Node property                | Creation time (ISO 8601)                      |
+| `prov:invalidatedAtTime` | `ttEnd`                    | Node property                | Version invalidation time                     |
 
-### Как заполнять поля провенанса
+### How to populate provenance fields
 
-| Поле                | Источник значения                             | Пример                                     |
-|---------------------|-----------------------------------------------|---------------------------------------------|
-| `sourceType`        | Тип коннектора, выполнившего извлечение        | `"mssql"` для SQL Server                    |
-| `sourceId`          | Полный путь к объекту в источнике              | `"server01.MyDB.dbo.sp_GetUsers"`           |
-| `sourceSystem`      | Имя, присвоенное администратором при настройке | `"ERP-Production"`                          |
-| `extractionCycleId` | UUID, сгенерированный при старте пайплайна     | `"cycle-550e8400-e29b-41d4-a716-446655440000"` |
-| `confidence`        | Определяется методом извлечения (см. ниже)     | `0.85`                                      |
+| Field               | Source of value                                  | Example                                      |
+|---------------------|--------------------------------------------------|----------------------------------------------|
+| `sourceType`        | Type of connector that performed the extraction  | `"mssql"` for SQL Server                     |
+| `sourceId`          | Full path to the object in the source            | `"server01.MyDB.dbo.sp_GetUsers"`            |
+| `sourceSystem`      | Name assigned by the administrator during setup  | `"ERP-Production"`                           |
+| `extractionCycleId` | UUID generated at pipeline start                 | `"cycle-550e8400-e29b-41d4-a716-446655440000"` |
+| `confidence`        | Determined by extraction method (see below)      | `0.85`                                       |
 
-### Правила определения confidence по типу источника
+### Confidence determination rules by source type
 
-| Тип источника    | Метод                | Базовый confidence | Обоснование                                      |
-|------------------|----------------------|--------------------|--------------------------------------------------|
-| **AST**          | Парсинг AST          | **1.0**            | Синтаксическое дерево — детерминистичный разбор  |
-| **Regex**        | Регулярные выражения | **0.9**            | Покрывает большинство паттернов, но не все        |
-| **User**         | Ручной ввод          | **0.8**            | Человек может ошибиться, но обычно точен          |
-| **LLM**          | Языковая модель      | **0.7**            | Высокое качество, но возможны галлюцинации        |
-| **GNN**          | Графовая нейросеть   | **0.6**            | Предсказание на основе структуры графа            |
-| **Heuristic**    | Эвристические правила| **0.5**            | Простые правила, высокий false positive rate       |
+| Source type      | Method               | Base confidence | Rationale                                        |
+|------------------|----------------------|-----------------|--------------------------------------------------|
+| **AST**          | AST parsing          | **1.0**         | Syntax tree -- deterministic parsing             |
+| **Regex**        | Regular expressions  | **0.9**         | Covers most patterns but not all                 |
+| **User**         | Manual input         | **0.8**         | Human may err but is generally accurate          |
+| **LLM**          | Language model       | **0.7**         | High quality but hallucinations possible         |
+| **GNN**          | Graph neural network | **0.6**         | Prediction based on graph structure              |
+| **Heuristic**    | Heuristic rules      | **0.5**         | Simple rules, high false positive rate           |
 
-> **Важно:** Базовый confidence может быть скорректирован валидацией. Например, LLM-извлечение, подтверждённое кросс-ссылкой, получает `confidence = 0.7 + 0.2 = 0.9`.
+> **Important:** Base confidence can be adjusted by validation. For example, LLM extraction confirmed by cross-reference receives `confidence = 0.7 + 0.2 = 0.9`.
 
 ---
 
-## 2.4. Hash chain — криптографическая целостность
+## 2.4. Hash chain -- cryptographic integrity
 
-Каждая версия узла содержит криптографическую цепочку хешей, обеспечивающую неизменяемость истории.
+Each node version contains a cryptographic hash chain ensuring the immutability of history.
 
-### Три типа хешей
+### Three hash types
 
-| Хеш            | Формула                                        | Назначение                                          |
-|-----------------|------------------------------------------------|-----------------------------------------------------|
-| `contentHash`   | `SHA-256(canonicalize(content))`               | Отпечаток содержимого текущей версии                |
-| `previousHash`  | `chainHash` предыдущей версии                  | Ссылка на предшественника (как в блокчейне)         |
-| `chainHash`     | `SHA-256(contentHash + ":" + previousHash)`    | Цепочечный хеш, связывающий версии                  |
+| Hash           | Formula                                        | Purpose                                             |
+|----------------|------------------------------------------------|-----------------------------------------------------|
+| `contentHash`  | `SHA-256(canonicalize(content))`               | Content fingerprint of the current version          |
+| `previousHash` | `chainHash` of the previous version            | Reference to the predecessor (like in blockchain)   |
+| `chainHash`    | `SHA-256(contentHash + ":" + previousHash)`    | Chain hash linking versions together                |
 
 ```
   Version 1 (GENESIS)         Version 2                   Version 3
@@ -486,23 +488,23 @@ interface AccessControl {
   └──────────────────┘        └──────────────────┘        └──────────────────┘
 ```
 
-### Алгоритм канонизации (canonicalization)
+### Canonicalization algorithm
 
-Перед вычислением `contentHash` содержимое узла приводится к каноническому виду:
+Before computing `contentHash`, the node content is brought to canonical form:
 
 ```javascript
 const crypto = require('crypto');
 
 /**
- * Канонизирует объект для вычисления contentHash.
+ * Canonicalizes an object for contentHash computation.
  *
- * Шаги:
- * 1. Удалить служебные поля (id, createdAt, ttStart, ttEnd, contentHash, chainHash и т.д.)
- * 2. Отсортировать ключи рекурсивно
- * 3. Сериализовать в JSON (без пробелов)
+ * Steps:
+ * 1. Remove service fields (id, createdAt, ttStart, ttEnd, contentHash, chainHash, etc.)
+ * 2. Sort keys recursively
+ * 3. Serialize to JSON (no spaces)
  *
- * @param {object} properties - Свойства узла
- * @returns {string} Каноническая JSON-строка
+ * @param {object} properties - Node properties
+ * @returns {string} Canonical JSON string
  */
 function canonicalize(properties) {
   const SERVICE_FIELDS = new Set([
@@ -534,7 +536,7 @@ function canonicalize(properties) {
 }
 
 /**
- * Вычисляет contentHash для свойств узла.
+ * Computes contentHash for node properties.
  */
 function computeContentHash(properties) {
   const canonical = canonicalize(properties);
@@ -543,10 +545,10 @@ function computeContentHash(properties) {
 }
 
 /**
- * Вычисляет chainHash для текущей версии.
+ * Computes chainHash for the current version.
  *
- * @param {string} contentHash - Хеш содержимого текущей версии
- * @param {string|null} previousChainHash - chainHash предыдущей версии (null для GENESIS)
+ * @param {string} contentHash - Content hash of the current version
+ * @param {string|null} previousChainHash - chainHash of the previous version (null for GENESIS)
  * @returns {string} chainHash
  */
 function computeChainHash(contentHash, previousChainHash) {
@@ -557,13 +559,13 @@ function computeChainHash(contentHash, previousChainHash) {
 }
 ```
 
-### Валидация цепочки
+### Chain validation
 
 ```javascript
 /**
- * Валидирует целостность цепочки версий.
+ * Validates the integrity of a version chain.
  *
- * @param {Array} versions - Массив версий, отсортированных по sequenceNumber
+ * @param {Array} versions - Array of versions sorted by sequenceNumber
  * @returns {{ valid: boolean, brokenAt: number|null, error: string|null }}
  */
 function validateChain(versions) {
@@ -571,7 +573,7 @@ function validateChain(versions) {
     return { valid: true, brokenAt: null, error: null };
   }
 
-  // Проверяем GENESIS версию
+  // Check GENESIS version
   const genesis = versions[0];
   const expectedGenesisChain = computeChainHash(genesis.contentHash, null);
   if (genesis.chainHash !== expectedGenesisChain) {
@@ -582,12 +584,12 @@ function validateChain(versions) {
     };
   }
 
-  // Проверяем каждую последующую версию
+  // Check each subsequent version
   for (let i = 1; i < versions.length; i++) {
     const current = versions[i];
     const previous = versions[i - 1];
 
-    // previousHash текущей версии должен совпадать с chainHash предыдущей
+    // previousHash of current version must match chainHash of previous version
     if (current.previousHash !== previous.chainHash) {
       return {
         valid: false,
@@ -596,7 +598,7 @@ function validateChain(versions) {
       };
     }
 
-    // chainHash текущей версии должен быть корректным
+    // chainHash of current version must be correct
     const expectedChain = computeChainHash(current.contentHash, previous.chainHash);
     if (current.chainHash !== expectedChain) {
       return {
@@ -611,12 +613,12 @@ function validateChain(versions) {
 }
 ```
 
-### Паттерн GENESIS — первая версия
+### GENESIS pattern -- first version
 
-Первая версия сущности (sequenceNumber = 1) использует специальный паттерн:
+The first version of an entity (sequenceNumber = 1) uses a special pattern:
 
 ```javascript
-// Создание GENESIS версии
+// Creating a GENESIS version
 const genesisVersion = {
   versionId: `ver-${uuidv4()}`,
   entityId: `ent-${uuidv4()}`,
@@ -627,50 +629,50 @@ const genesisVersion = {
   vtStart: new Date().toISOString(),
   vtEnd: null,
   contentHash: computeContentHash(properties),
-  previousHash: null,                                        // <-- null для GENESIS
-  chainHash: computeChainHash(computeContentHash(properties), null), // <-- "GENESIS" как previousHash
+  previousHash: null,                                        // <-- null for GENESIS
+  chainHash: computeChainHash(computeContentHash(properties), null), // <-- "GENESIS" as previousHash
 };
 ```
 
-При валидации: если `previousHash === null` и `sequenceNumber === 1`, это корректная GENESIS версия.
+During validation: if `previousHash === null` and `sequenceNumber === 1`, this is a valid GENESIS version.
 
 ---
 
-## 2.5. Bi-temporal model — двумерное время
+## 2.5. Bi-temporal model -- two-dimensional time
 
-Каждая версионируемая сущность (Level 3) существует в двух временных измерениях:
+Every versioned entity (Level 3) exists in two temporal dimensions:
 
 ```
-                    Valid Time (vt) — «Когда факт реально действовал?»
+                    Valid Time (vt) -- "When was the fact actually valid?"
                     ────────────────────────────────────────────────>
 
  Transaction Time   │
- (tt) — «Когда      │   ┌─────────────────────┐
-  мы узнали          │   │  V1: sp_GetUsers     │
-  об этом факте?»    │   │  vt: [Jan, Mar)      │ ← «Процедура была актуальна Jan-Mar»
-                     │   │  tt: [Feb, ∞)        │ ← «Мы узнали об этом в Feb»
+ (tt) -- "When      │   ┌─────────────────────┐
+  did we learn       │   │  V1: sp_GetUsers     │
+  about this fact?"  │   │  vt: [Jan, Mar)      │ ← "Procedure was current Jan-Mar"
+                     │   │  tt: [Feb, ∞)        │ ← "We learned about this in Feb"
                      │   └─────────────────────┘
                      │
                      │   ┌─────────────────────┐
                      │   │  V2: sp_GetUsers_v2  │
-                     │   │  vt: [Mar, ∞)        │ ← «Новая версия с Mar»
-                     │   │  tt: [Mar, ∞)        │ ← «Мы узнали об этом в Mar»
+                     │   │  vt: [Mar, ∞)        │ ← "New version from Mar"
+                     │   │  tt: [Mar, ∞)        │ ← "We learned about this in Mar"
                      │   └─────────────────────┘
                      │
                      │   ┌─────────────────────┐
                      │   │  V1-fix: sp_GetUsers │
-                     │   │  vt: [Jan, Feb)      │ ← «Оказывается, V1 работала только до Feb»
-                     │   │  tt: [Apr, ∞)        │ ← «Мы это осознали только в Apr (ретроспективно)»
+                     │   │  vt: [Jan, Feb)      │ ← "Turns out V1 was only valid until Feb"
+                     │   │  tt: [Apr, ∞)        │ ← "We realized this only in Apr (retrospective)"
                      │   └─────────────────────┘
                      ▼
 ```
 
-### Примеры Cypher-запросов
+### Cypher query examples
 
-**Текущее состояние** — что актуально прямо сейчас:
+**Current state** -- what is current right now:
 
 ```cypher
-// Все активные версии на текущий момент
+// All active versions at the current moment
 MATCH (v:NodeVersion)
 WHERE v.status = 'ACTIVE'
   AND v.ttEnd IS NULL
@@ -679,30 +681,30 @@ RETURN v
 ORDER BY v.entityId, v.sequenceNumber DESC
 ```
 
-**As-of запрос (Transaction Time)** — что мы знали на определённую дату:
+**As-of query (Transaction Time)** -- what we knew on a specific date:
 
 ```cypher
-// Состояние графа знаний, каким мы его знали на 2026-02-15
+// State of the knowledge graph as we knew it on 2026-02-15
 MATCH (v:NodeVersion)
 WHERE v.ttStart <= '2026-02-15T00:00:00.000Z'
   AND (v.ttEnd IS NULL OR v.ttEnd > '2026-02-15T00:00:00.000Z')
 RETURN v
 ```
 
-**Valid-at запрос (Valid Time)** — что было реально в определённый период:
+**Valid-at query (Valid Time)** -- what was actually true in a specific period:
 
 ```cypher
-// Какие процедуры реально существовали в январе 2026
+// Which procedures actually existed in January 2026
 MATCH (v:NodeVersion)-[:VERSION_OF]->(e:Procedure)
 WHERE v.vtStart <= '2026-01-31T23:59:59.999Z'
   AND (v.vtEnd IS NULL OR v.vtEnd > '2026-01-01T00:00:00.000Z')
 RETURN e.name, v.sequenceNumber, v.vtStart, v.vtEnd
 ```
 
-**Bi-temporal запрос** — что мы знали о конкретном периоде на конкретную дату:
+**Bi-temporal query** -- what we knew about a specific period on a specific date:
 
 ```cypher
-// Что мы знали на 2026-03-01 о состоянии системы в январе 2026
+// What we knew on 2026-03-01 about the system state in January 2026
 MATCH (v:NodeVersion)
 WHERE v.ttStart <= '2026-03-01T00:00:00.000Z'
   AND (v.ttEnd IS NULL OR v.ttEnd > '2026-03-01T00:00:00.000Z')
@@ -711,32 +713,32 @@ WHERE v.ttStart <= '2026-03-01T00:00:00.000Z'
 RETURN v
 ```
 
-### Правила управления временем
+### Time management rules
 
-| Аспект                       | Transaction Time (tt)                  | Valid Time (vt)                          |
-|------------------------------|----------------------------------------|------------------------------------------|
-| **Кто устанавливает**        | Система автоматически                  | Пайплайн извлечения или пользователь     |
-| **Можно ли изменить?**       | Нет — иммутабельно                    | Да — при ретроспективной коррекции       |
-| **Когда ttEnd/vtEnd задаётся?** | При создании новой версии (SUPERSEDED) | При обнаружении, что факт больше не валиден |
-| **Значение null**            | Текущая (ещё не заменена)              | Бессрочно валиден                        |
-| **Формат**                   | ISO 8601 с timezone (UTC)              | ISO 8601 с timezone (UTC)                |
-| **Гранулярность**            | Миллисекунды                           | Миллисекунды                             |
+| Aspect                       | Transaction Time (tt)                   | Valid Time (vt)                          |
+|------------------------------|-----------------------------------------|------------------------------------------|
+| **Who sets it**              | System automatically                    | Extraction pipeline or user              |
+| **Can it be changed?**       | No -- immutable                         | Yes -- for retrospective corrections     |
+| **When is ttEnd/vtEnd set?** | When a new version is created (SUPERSEDED) | When the fact is found to be no longer valid |
+| **Null value**               | Current (not yet replaced)              | Indefinitely valid                       |
+| **Format**                   | ISO 8601 with timezone (UTC)            | ISO 8601 with timezone (UTC)             |
+| **Granularity**              | Milliseconds                            | Milliseconds                             |
 
-**Инварианты:**
+**Invariants:**
 
-1. `ttStart` всегда задаётся при создании версии и **никогда не меняется**.
-2. `ttEnd` задаётся **только** когда появляется новая версия (`SUPERSEDED`).
-3. `vtStart` задаётся при создании, может быть скорректирована **ретроспективно**.
-4. `vtEnd` может быть `null` (бессрочно) или задаётся при обнаружении устаревания.
-5. Для любой сущности **ровно одна** версия имеет `ttEnd = null` и `status = 'ACTIVE'`.
+1. `ttStart` is always set when the version is created and **never changes**.
+2. `ttEnd` is set **only** when a new version appears (`SUPERSEDED`).
+3. `vtStart` is set on creation, can be corrected **retrospectively**.
+4. `vtEnd` can be `null` (indefinite) or set when obsolescence is detected.
+5. For any entity, **exactly one** version has `ttEnd = null` and `status = 'ACTIVE'`.
 
 ---
 
-## 2.6. extractionCycleId — правила
+## 2.6. extractionCycleId -- rules
 
-### Что такое цикл извлечения
+### What is an extraction cycle
 
-Цикл извлечения (Extraction Cycle) — это один полный проход пайплайна по источнику данных. Один цикл может создать или обновить десятки/сотни узлов в графе знаний.
+An Extraction Cycle is one complete pass of the pipeline over a data source. One cycle can create or update dozens/hundreds of nodes in the knowledge graph.
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
@@ -751,20 +753,20 @@ RETURN v
 │  │Source │   │ Entities │   │ + Enrich  │   │ + Hash Chain │    │
 │  └──────┘   └──────────┘   └───────────┘   └──────────────┘    │
 │                                                                  │
-│  Результат: 47 узлов создано, 12 обновлено, 3 удалено           │
+│  Result: 47 nodes created, 12 updated, 3 deleted                │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-### Генерация extractionCycleId
+### Generating extractionCycleId
 
-`extractionCycleId` генерируется **один раз** при старте пайплайна и передаётся во все последующие шаги:
+`extractionCycleId` is generated **once** at pipeline start and passed to all subsequent steps:
 
 ```javascript
 const { v4: uuidv4 } = require('uuid');
 
 /**
- * Создаёт новый цикл извлечения.
- * Вызывается ОДИН РАЗ при старте пайплайна.
+ * Creates a new extraction cycle.
+ * Called ONCE at pipeline start.
  */
 function createExtractionCycle(previousCycleId = null, cycleNumber = 1) {
   return {
@@ -785,56 +787,56 @@ function createExtractionCycle(previousCycleId = null, cycleNumber = 1) {
 }
 ```
 
-### Использование extractionCycleId
+### Using extractionCycleId
 
-| Сценарий              | Как используется                                                                 | Пример                                                    |
-|-----------------------|---------------------------------------------------------------------------------|------------------------------------------------------------|
-| **Групповой откат**   | Удалить все узлы, созданные в одном цикле                                       | `MATCH (n {extractionCycleId: $cycleId}) DETACH DELETE n`  |
-| **Дебаг пайплайна**   | Найти все факты, извлечённые в конкретном прогоне                                | `MATCH (n {extractionCycleId: $cycleId}) RETURN n`         |
-| **Метрики**           | Подсчитать количество созданных/обновлённых/удалённых узлов за цикл              | Агрегация по `extractionCycleId`                           |
-| **Инкрементальность** | Определить, какие узлы не были затронуты последним циклом (потенциально удалены)  | `WHERE n.extractionCycleId <> $currentCycleId`             |
-| **Аудит**             | Ответить «кто и когда создал этот факт»                                          | Join с `(:ExtractionCycle)` узлом                          |
+| Scenario               | How it is used                                                                  | Example                                                   |
+|------------------------|---------------------------------------------------------------------------------|------------------------------------------------------------|
+| **Bulk rollback**      | Delete all nodes created in one cycle                                           | `MATCH (n {extractionCycleId: $cycleId}) DETACH DELETE n`  |
+| **Pipeline debugging** | Find all facts extracted in a specific run                                      | `MATCH (n {extractionCycleId: $cycleId}) RETURN n`         |
+| **Metrics**            | Count nodes created/updated/deleted per cycle                                   | Aggregate by `extractionCycleId`                           |
+| **Incrementality**     | Determine which nodes were not touched by the last cycle (potentially deleted)  | `WHERE n.extractionCycleId <> $currentCycleId`             |
+| **Audit**              | Answer "who and when created this fact"                                         | Join with `(:ExtractionCycle)` node                        |
 
-### Связь со спиральной моделью извлечения
+### Relationship with the spiral extraction model
 
-Пайплайн PA работает по спиральной модели: каждый цикл уточняет предыдущие результаты.
+The PA pipeline operates on a spiral model: each cycle refines previous results.
 
 ```
   Cycle 1 ──> Cycle 2 ──> Cycle 3 ──> Cycle 4
-  (грубый)    (уточнённый) (обогащённый) (валидированный)
+  (rough)     (refined)   (enriched)  (validated)
 
   confidence:  0.5-0.7     0.7-0.8      0.8-0.9        0.9-1.0
-  метод:       regex       AST+regex    +LLM enrich    +GNN predict
+  method:      regex       AST+regex    +LLM enrich    +GNN predict
 ```
 
-Каждый цикл:
-1. Получает `previousCycleId` — ссылку на предыдущий прогон
-2. Генерирует свой `cycleId` — новый UUID
-3. Увеличивает `cycleNumber` на 1
-4. Для каждого существующего узла сравнивает `contentHash`:
-   - Хеш совпал → `CONFIRMED` (не создаём новую версию, обновляем `extractionCycleId`)
-   - Хеш изменился → `UPDATED` (создаём новую версию, `SUPERSEDED` старую)
-   - Узел не найден в источнике → `DEPRECATED` (устанавливаем `vtEnd`)
-   - Новый узел → `CREATED` (создаём GENESIS версию)
+Each cycle:
+1. Receives `previousCycleId` -- reference to the previous run
+2. Generates its own `cycleId` -- a new UUID
+3. Increments `cycleNumber` by 1
+4. For each existing node compares `contentHash`:
+   - Hash matches → `CONFIRMED` (don't create new version, update `extractionCycleId`)
+   - Hash changed → `UPDATED` (create new version, mark old as `SUPERSEDED`)
+   - Node not found in source → `DEPRECATED` (set `vtEnd`)
+   - New node → `CREATED` (create GENESIS version)
 
 ```javascript
 /**
- * Определяет действие для узла при инкрементальном обновлении.
+ * Determines the action for a node during incremental update.
  */
 function determineAction(existingNode, newContentHash) {
   if (!existingNode) {
-    return 'CREATED';   // Новый узел, ранее не существовал
+    return 'CREATED';   // New node, did not exist before
   }
   if (existingNode.contentHash === newContentHash) {
-    return 'CONFIRMED'; // Содержимое не изменилось
+    return 'CONFIRMED'; // Content unchanged
   }
-  return 'UPDATED';     // Содержимое изменилось, нужна новая версия
+  return 'UPDATED';     // Content changed, new version needed
 }
 
-// Узлы, существующие в графе, но не найденные в текущем цикле:
-// → action: 'DEPRECATED' (устанавливаем vtEnd = now)
+// Nodes existing in the graph but not found in the current cycle:
+// → action: 'DEPRECATED' (set vtEnd = now)
 ```
 
 ---
 
-> **CODEX-META v0.1.0** | Часть **Кодекс UN ProjectAdvisor** | Стандарт метаданных для графа знаний
+> **CODEX-META v0.1.0** | Part **UN ProjectAdvisor Codex** | Metadata Standard for the Knowledge Graph

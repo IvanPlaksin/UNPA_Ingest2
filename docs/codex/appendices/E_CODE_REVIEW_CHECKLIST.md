@@ -1,13 +1,13 @@
-# Приложение E: Code Review Checklist
+# Appendix E: Code Review Checklist
 
-**Статус:** 🔴 Не начат
-**Версия:** -
-**Последнее обновление:** -
+**Status:** 🔴 Not started
+**Version:** -
+**Last updated:** -
 
-## Содержание
+## Contents
 
-Чеклист для code review операций с графом знаний на соответствие Кодексу.
+Checklist for code review of knowledge graph operations for Codex compliance.
 
 ---
 
-*Этот документ является частью [Кодекса UN ProjectAdvisor](../CODEX_INDEX.md)*
+*This document is part of the [UN ProjectAdvisor Codex](../CODEX_INDEX.md)*

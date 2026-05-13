@@ -3,132 +3,132 @@
 
 ---
 
-## Исполнительное резюме
+## Executive Summary
 
-Коммит "Azure PG" вводит **чистую провайдер-агностическую архитектуру** для инфраструктурной гибкости. Проект может работать на:
-- **Docker + Memgraph + Qdrant** (on-premise) — прежняя конфигурация
-- **Azure PostgreSQL + pgvector + Apache AGE** (облако) — новая конфигурация
+The "Azure PG" commit introduces a **clean provider-agnostic architecture** for infrastructure flexibility. The project can run on:
+- **Docker + Memgraph + Qdrant** (on-premise) — previous configuration
+- **Azure PostgreSQL + pgvector + Apache AGE** (cloud) — new configuration
 
-Переключение осуществляется исключительно через **переменные окружения** — изменений кода не требуется.
+Switching is performed exclusively via **environment variables** — no code changes required.
 
 ---
 
-## 1. Сводная таблица изменений инфраструктуры
+## 1. Infrastructure Change Summary Table
 
-| Сервис | Прежняя конфигурация | Новая конфигурация | Метод переключения | Обратимость |
+| Service | Previous Configuration | New Configuration | Switch Method | Reversibility |
 |--------|---------------------|-------------------|-------------------|-------------|
-| **Граф БД** | Memgraph (bolt://localhost:7687) | PostgreSQL + Apache AGE | `GRAPH_DB_BACKEND` env var | ✅ Да |
-| **Вектор БД** | Qdrant (http://localhost:6333) | PostgreSQL + pgvector | `VECTOR_DB_BACKEND` env var | ✅ Да |
-| **Подключение к граф БД** | `MEMGRAPH_URI` / `NEO4J_URI` | `POSTGRES_CONNECTION_STRING` | Env vars | ✅ Да |
-| **Подключение к вектор БД** | `QDRANT_URL` | `POSTGRES_CONNECTION_STRING` (shared) | Env var | ✅ Да |
-| **SSL/TLS** | Не применялось | `POSTGRES_SSL=true/false` | Env var | ✅ Да |
-| **LLM-провайдер** | Anthropic API напрямую | Azure AI Foundry (опционально) | `LLM_PROVIDER` env var | ✅ Да |
+| **Graph DB** | Memgraph (bolt://localhost:7687) | PostgreSQL + Apache AGE | `GRAPH_DB_BACKEND` env var | ✅ Yes |
+| **Vector DB** | Qdrant (http://localhost:6333) | PostgreSQL + pgvector | `VECTOR_DB_BACKEND` env var | ✅ Yes |
+| **Graph DB connection** | `MEMGRAPH_URI` / `NEO4J_URI` | `POSTGRES_CONNECTION_STRING` | Env vars | ✅ Yes |
+| **Vector DB connection** | `QDRANT_URL` | `POSTGRES_CONNECTION_STRING` (shared) | Env var | ✅ Yes |
+| **SSL/TLS** | Not applied | `POSTGRES_SSL=true/false` | Env var | ✅ Yes |
+| **LLM provider** | Anthropic API directly | Azure AI Foundry (optional) | `LLM_PROVIDER` env var | ✅ Yes |
 
 ---
 
-## 2. Новые файлы (адаптеры)
+## 2. New Files (Adapters)
 
-| Файл | Назначение | Объём |
+| File | Purpose | Size |
 |------|-----------|-------|
-| `api/src/services/storage/adapters/PostgresAGEAdapter.js` | Трансляция Cypher → AGE/SQL | ~500 строк |
-| `api/src/services/storage/adapters/PgvectorAdapter.js` | Замена Qdrant API на pgvector | ~350 строк |
-| `api/src/services/storage/GraphDBPort.js` | Фабрика провайдера граф БД | ~110 строк |
-| `api/src/services/storage/VectorDBPort.js` | Фабрика провайдера вектор БД | ~165 строк |
+| `api/src/services/storage/adapters/PostgresAGEAdapter.js` | Cypher → AGE/SQL translation | ~500 lines |
+| `api/src/services/storage/adapters/PgvectorAdapter.js` | Qdrant API replacement with pgvector | ~350 lines |
+| `api/src/services/storage/GraphDBPort.js` | Graph DB provider factory | ~110 lines |
+| `api/src/services/storage/VectorDBPort.js` | Vector DB provider factory | ~165 lines |
 
-Все четыре файла изолированы. **Ни один из 164+ существующих потребителей не изменился.**
+All four files are isolated. **None of the 164+ existing consumers were changed.**
 
 ---
 
-## 3. Изменённые файлы с условной логикой бэкенда
+## 3. Modified Files with Conditional Backend Logic
 
-| Файл | Суть изменения |
+| File | Nature of Change |
 |------|---------------|
-| `api/src/services/memgraph.service.js` | Добавлен шим AGESession/AGEDriver (строки 990-1108) — имитирует neo4j-driver API поверх AGE |
-| `api/src/services/qdrant.service.js` | Экспортирует `PgvectorAdapter` вместо `QdrantService` при `VECTOR_DB_BACKEND=pgvector` |
-| `api/src/services/startup/StartupManager.js` | Пропускает `CREATE INDEX ON :Label(prop)` (синтаксис Memgraph) при AGE-бэкенде |
-| `api/src/services/kb-health/kb-health.service.js` | Переписаны запросы свежести/подключения для совместимости с AGE |
-| `api/src/mcp/tools/graph/FindPathTool.js` | Отключает SHORTEST PATH на AGE (таймаут на больших графах) |
-| `api/src/services/graph/GraphSchemaManager.js` | Пропускает создание схемы на AGE |
-| `api/src/services/graph/community-detector.js` | Отключает community detection на AGE |
-| `api/src/services/graphCatalog.service.js` | Пропускает создание индексов на AGE |
-| `api/src/services/memgraph/schema-loader.service.js` | Пропускает загрузку схемы Memgraph на AGE |
-| `api/src/routes/health.route.js` | Добавлены диагностические endpoints: `/health/age-indexes`, `/health/edge-tables`, `/health/count-ns` |
+| `api/src/services/memgraph.service.js` | Added AGESession/AGEDriver shim (lines 990-1108) — emulates neo4j-driver API on top of AGE |
+| `api/src/services/qdrant.service.js` | Exports `PgvectorAdapter` instead of `QdrantService` when `VECTOR_DB_BACKEND=pgvector` |
+| `api/src/services/startup/StartupManager.js` | Skips `CREATE INDEX ON :Label(prop)` (Memgraph syntax) on AGE backend |
+| `api/src/services/kb-health/kb-health.service.js` | Rewrote freshness/connection queries for AGE compatibility |
+| `api/src/mcp/tools/graph/FindPathTool.js` | Disables SHORTEST PATH on AGE (timeout on large graphs) |
+| `api/src/services/graph/GraphSchemaManager.js` | Skips schema creation on AGE |
+| `api/src/services/graph/community-detector.js` | Disables community detection on AGE |
+| `api/src/services/graphCatalog.service.js` | Skips index creation on AGE |
+| `api/src/services/memgraph/schema-loader.service.js` | Skips Memgraph schema loading on AGE |
+| `api/src/routes/health.route.js` | Added diagnostic endpoints: `/health/age-indexes`, `/health/edge-tables`, `/health/count-ns` |
 
 ---
 
-## 4. Переменные окружения
+## 4. Environment Variables
 
-### Новые переменные (добавлены в `.env.example`)
+### New Variables (added to `.env.example`)
 
 ```bash
-# Граф БД
+# Graph DB
 GRAPH_DB_BACKEND=memgraph          # memgraph | postgres-age
-POSTGRES_CONNECTION_STRING=...     # обязательно для postgres-age
-POSTGRES_SSL=true                  # SSL-режим
-AGE_GRAPH_NAME=unpa               # имя графа в Apache AGE
+POSTGRES_CONNECTION_STRING=...     # required for postgres-age
+POSTGRES_SSL=true                  # SSL mode
+AGE_GRAPH_NAME=unpa               # graph name in Apache AGE
 
-# Вектор БД
+# Vector DB
 VECTOR_DB_BACKEND=qdrant           # qdrant | pgvector
-VECTOR_DIM=1024                    # размерность эмбеддингов
+VECTOR_DIM=1024                    # embedding dimensions
 
-# LLM (независимо от БД)
+# LLM (independent of DB)
 LLM_PROVIDER=anthropic             # anthropic | azure-ai-foundry
 AZURE_AI_ENDPOINT=...
 AZURE_AI_KEY=...
 ```
 
-### Существующие переменные (не изменились, остаются активными при on-prem режиме)
+### Existing Variables (unchanged, remain active in on-prem mode)
 
 ```bash
 MEMGRAPH_URI=bolt://localhost:7687
 QDRANT_URL=http://localhost:6333
 ```
 
-**Жёстко закодированных Azure-специфичных endpoint'ов в коде не обнаружено.** ✅
+**No hardcoded Azure-specific endpoints found in the code.** ✅
 
 ---
 
-## 5. Оценка переключаемости
+## 5. Switchability Assessment
 
-### 5.1 Граф БД: Memgraph ↔ PostgreSQL+AGE — **4/5** ✅
+### 5.1 Graph DB: Memgraph ↔ PostgreSQL+AGE — **4/5** ✅
 
-**Сильные стороны:**
-- Полная прозрачность для 164+ потребителей через шим-адаптер
-- Реализована автоматическая перезапись несовместимых Cypher-паттернов:
+**Strengths:**
+- Full transparency for 164+ consumers via shim adapter
+- Automatic rewriting of incompatible Cypher patterns implemented:
   - `WHERE n:Label` → `WHERE 'Label' IN labels(n)`
   - `ON CREATE SET / ON MATCH SET` → `SET`
-  - Переименование зарезервированных слов в ORDER BY
+  - Reserved word renaming in ORDER BY
 
-**Ограничения (известны, задокументированы в коде):**
-- `SHORTEST PATH` отключён на AGE (производительность) — FindPathTool возвращает пустой результат
-- Community detection отключён на AGE — graph-analyzer возвращает нули
-- Namespace-индексы не создаются автоматически на AGE (скрипт SQL предоставлен отдельно)
+**Limitations (known, documented in code):**
+- `SHORTEST PATH` disabled on AGE (performance) — FindPathTool returns empty result
+- Community detection disabled on AGE — graph-analyzer returns zeros
+- Namespace indexes are not auto-created on AGE (SQL script provided separately)
 
-**Вывод:** Переключение безопасное, ограничения не критичны для основного workflow.
-
----
-
-### 5.2 Вектор БД: Qdrant ↔ PostgreSQL+pgvector — **5/5** ✅
-
-- Полная совместимость API (PgvectorAdapter реализует все 30+ методов QdrantService)
-- 26 файлов-потребителей не изменены
-- Переключение прозрачно на уровне экспорта модуля
-
-**Ограничений не выявлено.**
+**Conclusion:** Switching is safe; limitations are not critical for the main workflow.
 
 ---
 
-### 5.3 LLM-провайдер: Anthropic ↔ Azure AI Foundry — **5/5** ✅
+### 5.2 Vector DB: Qdrant ↔ PostgreSQL+pgvector — **5/5** ✅
 
-- Полностью независим от граф/вектор БД миграции
-- Выбирается через `LLM_PROVIDER`
-- Не влияет на откат инфраструктуры
+- Full API compatibility (PgvectorAdapter implements all 30+ QdrantService methods)
+- 26 consumer files unchanged
+- Switching is transparent at the module export level
+
+**No limitations identified.**
 
 ---
 
-## 6. Инструкция по переключению конфигураций
+### 5.3 LLM Provider: Anthropic ↔ Azure AI Foundry — **5/5** ✅
 
-### Переключение на on-premise (Docker + Memgraph + Qdrant)
+- Fully independent from graph/vector DB migration
+- Selected via `LLM_PROVIDER`
+- Does not affect infrastructure rollback
+
+---
+
+## 6. Configuration Switching Instructions
+
+### Switching to On-Premise (Docker + Memgraph + Qdrant)
 
 ```bash
 # .env
@@ -139,7 +139,7 @@ QDRANT_URL=http://localhost:6333
 LLM_PROVIDER=anthropic
 ANTHROPIC_API_KEY=...
 
-# Убрать или закомментировать:
+# Remove or comment out:
 # POSTGRES_CONNECTION_STRING
 # POSTGRES_SSL
 # AGE_GRAPH_NAME
@@ -149,15 +149,15 @@ ANTHROPIC_API_KEY=...
 ```
 
 ```bash
-# Инфраструктура
+# Infrastructure
 docker-compose up -d memgraph qdrant redis
 ```
 
-**Изменений в коде не требуется.**
+**No code changes required.**
 
 ---
 
-### Переключение на Azure (PostgreSQL + pgvector + AGE)
+### Switching to Azure (PostgreSQL + pgvector + AGE)
 
 ```bash
 # .env
@@ -172,58 +172,58 @@ AZURE_AI_ENDPOINT=https://...
 AZURE_AI_KEY=...
 ```
 
-**Изменений в коде не требуется.**
+**No code changes required.**
 
 ---
 
-## 7. Реестр рисков
+## 7. Risk Register
 
-| Риск | Уровень | Статус | Митигация |
+| Risk | Level | Status | Mitigation |
 |------|---------|--------|-----------|
-| Ошибки в трансляции Cypher (label-предикаты, MERGE) | Средний | ⚠️ Не тестировалось на интеграционных тестах | Написать тесты с `GRAPH_DB_BACKEND=postgres-age` |
-| Деградация производительности на больших графах (AGE) | Средний | ⚠️ Известно, задокументировано | Замеры до продакшн-деплоя |
-| Namespace-индексы не создаются на AGE автоматически | Низкий | ✅ Скрипт SQL предоставлен | Health endpoint `/health/age-indexes` для проверки |
-| Потеря данных при миграции Memgraph → AGE | Низкий | ⚠️ Скрипт миграции отсутствует | Создать `scripts/migrate-to-age.js` |
-| Сложность поддержки двух адаптеров долгосрочно | Низкий | ✅ Адаптеры изолированы | Принять решение о стратегическом направлении |
+| Errors in Cypher translation (label predicates, MERGE) | Medium | ⚠️ Not tested with integration tests | Write tests with `GRAPH_DB_BACKEND=postgres-age` |
+| Performance degradation on large graphs (AGE) | Medium | ⚠️ Known, documented | Benchmarks before production deploy |
+| Namespace indexes not auto-created on AGE | Low | ✅ SQL script provided | Health endpoint `/health/age-indexes` for verification |
+| Data loss during Memgraph → AGE migration | Low | ⚠️ Migration script absent | Create `scripts/migrate-to-age.js` |
+| Long-term maintenance complexity of two adapters | Low | ✅ Adapters are isolated | Decide on strategic direction |
 
 ---
 
-## 8. Необходимые действия для надёжного переключения
+## 8. Required Actions for Reliable Switching
 
-### Критичные (до деплоя в продакшн)
+### Critical (before production deploy)
 
-- [ ] Интеграционные тесты с `GRAPH_DB_BACKEND=postgres-age` — пройти полный test suite
-- [ ] Интеграционные тесты с `VECTOR_DB_BACKEND=pgvector`
-- [ ] Скрипт миграции данных Memgraph → PostgreSQL+AGE
-- [ ] Скрипт миграции данных Qdrant → pgvector
+- [ ] Integration tests with `GRAPH_DB_BACKEND=postgres-age` — run full test suite
+- [ ] Integration tests with `VECTOR_DB_BACKEND=pgvector`
+- [ ] Data migration script Memgraph → PostgreSQL+AGE
+- [ ] Data migration script Qdrant → pgvector
 
-### Важные (следующий спринт)
+### Important (next sprint)
 
-- [ ] Deployment guide: "Azure PostgreSQL деплой"
-- [ ] Performance benchmark: Memgraph vs AGE на графе 100K+ узлов
-- [ ] Docker Compose файл с альтернативной конфигурацией (для тестирования)
-- [ ] End-to-end тест полного workflow на Azure staging
+- [ ] Deployment guide: "Azure PostgreSQL deploy"
+- [ ] Performance benchmark: Memgraph vs AGE on 100K+ node graph
+- [ ] Docker Compose file with alternative configuration (for testing)
+- [ ] End-to-end test of full workflow on Azure staging
 
-### Долгосрочные
+### Long-term
 
-- [ ] IaC (Terraform/Bicep) для Azure PostgreSQL + pgvector provisioning
-- [ ] Принять решение: сохранять ли поддержку Memgraph долгосрочно или полностью переходить на Azure
+- [ ] IaC (Terraform/Bicep) for Azure PostgreSQL + pgvector provisioning
+- [ ] Decision: retain long-term Memgraph support or fully migrate to Azure
 
 ---
 
-## 9. Итоговая оценка
+## 9. Final Assessment
 
-| Критерий | Оценка |
+| Criterion | Assessment |
 |---------|--------|
-| Обратимость изменений | ✅ Полностью обратимые |
-| Жёсткие зависимости от Azure в коде | ✅ Отсутствуют |
-| Влияние на существующих потребителей | ✅ Нулевое (164+ файлов не изменены) |
-| Конфигурируемость через env | ✅ 100% |
-| Готовность к on-prem откату | ✅ 2 переменные окружения |
-| Готовность к продакшн (Azure) | ⚠️ Требуется интеграционное тестирование |
+| Reversibility of changes | ✅ Fully reversible |
+| Hardcoded Azure dependencies in code | ✅ None |
+| Impact on existing consumers | ✅ Zero (164+ files unchanged) |
+| Configurability via env | ✅ 100% |
+| Readiness for on-prem rollback | ✅ 2 environment variables |
+| Readiness for production (Azure) | ⚠️ Integration testing required |
 
-**Архитектура пригодна для двойного деплоя. Переключение on-prem ↔ Azure безопасно и не требует изменений кода.**
+**Architecture is suitable for dual deployment. On-prem ↔ Azure switching is safe and requires no code changes.**
 
 ---
 
-*Отчёт сгенерирован: 2026-05-06 | Ветка: AzureV1 | Коммит: a876996*
+*Report generated: 2026-05-06 | Branch: AzureV1 | Commit: a876996*

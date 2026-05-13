@@ -1,117 +1,117 @@
-# КОДЕКС UN PROJECTADVISOR v0.1.3
+# CODEX UN PROJECTADVISOR v0.1.3
 
-> Канонический стандарт хранения, версионирования и управления знаниями
-> в графовой базе данных UN ProjectAdvisor.
+> Canonical standard for storing, versioning, and managing knowledge
+> in the UN ProjectAdvisor graph database.
 >
-> **Дата:** 2026-03-19
-> **Статус:** В разработке (0.1.3-draft)
-> **Аудитория:** ИИ-агенты, архитекторы, операторы
+> **Date:** 2026-03-19
+> **Status:** In development (0.1.3-draft)
+> **Audience:** AI agents, architects, operators
 
 ---
 
-## Оглавление
+## Table of Contents
 
-- Часть 0: Манифест для ИИ-агентов
-- Часть I: CODEX-CRUD — Стандарт операций
-- Часть II: CODEX-META — Стандарт метаданных
-- Часть III: CODEX-VERSION — Стандарт версионности
-- Часть IV: CODEX-NS — Стандарт namespace
-- Часть V: CODEX-VALID — Стандарт валидации
-- Часть VI: CODEX-CATALOG — Стандарт каталога
-- Часть VII: CODEX-POLY — Протокол Polystore
-- Часть VIII: Саморазвивающаяся система
-- Часть IX: CODEX-DOMAINS — Стандарты типов информации
-- Приложение A: Architecture Decision Records (6 ADR)
-- Приложение B: Changelog
-- Статистика Кодекса v0.1.3
+- Part 0: Manifesto for AI Agents
+- Part I: CODEX-CRUD — Operations Standard
+- Part II: CODEX-META — Metadata Standard
+- Part III: CODEX-VERSION — Versioning Standard
+- Part IV: CODEX-NS — Namespace Standard
+- Part V: CODEX-VALID — Validation Standard
+- Part VI: CODEX-CATALOG — Catalog Standard
+- Part VII: CODEX-POLY — Polystore Protocol
+- Part VIII: Self-Evolving System
+- Part IX: CODEX-DOMAINS — Information Type Standards
+- Appendix A: Architecture Decision Records (6 ADR)
+- Appendix B: Changelog
+- Codex Statistics v0.1.3
 
 ---
 
-## Введение
+## Introduction
 
-**Версия:** 0.1.2-draft
-**Дата создания:** 2026-03-12
-**Обновлено:** 2026-03-19
-**Статус:** В разработке
+**Version:** 0.1.2-draft
+**Created:** 2026-03-12
+**Updated:** 2026-03-19
+**Status:** In development
 
-## Назначение
+## Purpose
 
-Кодекс — свод стандартов хранения, версионирования и управления знаниями
-в системе UN ProjectAdvisor. Предназначен для:
-- ИИ-агентов, выполняющих операции с графом знаний
-- Архитекторов, проектирующих расширения системы
-- Операторов, сопровождающих систему
+The Codex is a body of standards for storing, versioning, and managing knowledge
+in the UN ProjectAdvisor system. Intended for:
+- AI agents performing operations on the knowledge graph
+- Architects designing system extensions
+- Operators maintaining the system
 
-## Структура
+## Structure
 
-| Часть | Документ | Статус | Версия |
+| Part | Document | Status | Version |
 |-------|----------|--------|--------|
-| 0 | [Манифест для ИИ-агентов](manifesto/AI_MANIFESTO.md) | 🟡 В разработке | 0.1.0 |
-| I | [CODEX-CRUD: Стандарт операций](standards/CODEX-CRUD.md) | 🟡 В разработке | 0.1.0 |
-| II | [CODEX-META: Стандарт метаданных](standards/CODEX-META.md) | 🟡 В разработке | 0.1.0 |
-| III | [CODEX-VERSION: Стандарт версионности](standards/CODEX-VERSION.md) | 🟡 В разработке | 0.1.0 |
-| IV | [CODEX-NS: Стандарт namespace](standards/CODEX-NS.md) | 🟡 В разработке | 0.1.0 |
-| V | [CODEX-VALID: Стандарт валидации](standards/CODEX-VALID.md) | 🟡 В разработке | 0.1.0 |
-| VI | [CODEX-CATALOG: Стандарт каталога](standards/CODEX-CATALOG.md) | 🟡 В разработке | 0.1.0 |
-| VII | [CODEX-POLY: Протокол Polystore](standards/CODEX-POLY.md) | 🟡 В разработке | 0.1.0 |
-| VIII | [Саморазвивающаяся система](future/SELF-EVOLUTION.md) | 🟡 В разработке | 0.1.0 |
-| IX | [CODEX-DOMAINS: Стандарты типов информации](standards/CODEX-DOMAINS.md) | 🟡 В разработке | 0.1.0 |
+| 0 | [Manifesto for AI Agents](manifesto/AI_MANIFESTO.md) | 🟡 In development | 0.1.0 |
+| I | [CODEX-CRUD: Operations Standard](standards/CODEX-CRUD.md) | 🟡 In development | 0.1.0 |
+| II | [CODEX-META: Metadata Standard](standards/CODEX-META.md) | 🟡 In development | 0.1.0 |
+| III | [CODEX-VERSION: Versioning Standard](standards/CODEX-VERSION.md) | 🟡 In development | 0.1.0 |
+| IV | [CODEX-NS: Namespace Standard](standards/CODEX-NS.md) | 🟡 In development | 0.1.0 |
+| V | [CODEX-VALID: Validation Standard](standards/CODEX-VALID.md) | 🟡 In development | 0.1.0 |
+| VI | [CODEX-CATALOG: Catalog Standard](standards/CODEX-CATALOG.md) | 🟡 In development | 0.1.0 |
+| VII | [CODEX-POLY: Polystore Protocol](standards/CODEX-POLY.md) | 🟡 In development | 0.1.0 |
+| VIII | [Self-Evolving System](future/SELF-EVOLUTION.md) | 🟡 In development | 0.1.0 |
+| IX | [CODEX-DOMAINS: Information Type Standards](standards/CODEX-DOMAINS.md) | 🟡 In development | 0.1.0 |
 
-## Приложения
+## Appendices
 
-| Приложение | Документ | Статус |
+| Appendix | Document | Status |
 |------------|----------|--------|
-| A | [JSON Schemas](appendices/A_JSON_SCHEMAS.md) | 🔴 Не начат |
-| B | [Cypher Templates](appendices/B_CYPHER_TEMPLATES.md) | 🔴 Не начат |
-| C | [Error Codes](appendices/C_ERROR_CODES.md) | 🔴 Не начат |
-| D | [Migration Guide](appendices/D_MIGRATION_GUIDE.md) | 🔴 Не начат |
-| E | [Code Review Checklist](appendices/E_CODE_REVIEW_CHECKLIST.md) | 🔴 Не начат |
+| A | [JSON Schemas](appendices/A_JSON_SCHEMAS.md) | 🔴 Not started |
+| B | [Cypher Templates](appendices/B_CYPHER_TEMPLATES.md) | 🔴 Not started |
+| C | [Error Codes](appendices/C_ERROR_CODES.md) | 🔴 Not started |
+| D | [Migration Guide](appendices/D_MIGRATION_GUIDE.md) | 🔴 Not started |
+| E | [Code Review Checklist](appendices/E_CODE_REVIEW_CHECKLIST.md) | 🔴 Not started |
 | ADR | [Architecture Decision Records](adr/README.md) | 🟢 6 ADR |
 
-## Принципы Кодекса
+## Codex Principles
 
-1. **Immutability-first** — данные не удаляются, а версионируются
-2. **Provenance by default** — каждый факт имеет источник и уверенность
-3. **Bi-temporal tracking** — transaction time + valid time для каждой записи
-4. **Hash chain integrity** — криптографическая верификация цепочки изменений
-5. **Polystore coordination** — атомарность или компенсация при записи в несколько хранилищ
-6. **Agent accountability** — ИИ-агенты несут ответственность за качество данных
+1. **Immutability-first** — data is versioned, not deleted
+2. **Provenance by default** — every fact has a source and confidence
+3. **Bi-temporal tracking** — transaction time + valid time for every record
+4. **Hash chain integrity** — cryptographic verification of the change chain
+5. **Polystore coordination** — atomicity or compensation when writing to multiple stores
+6. **Agent accountability** — AI agents are responsible for data quality
 
-## Исследовательская база
+## Research Base
 
-Кодекс опирается на state-of-the-art исследования:
+The Codex is grounded in state-of-the-art research:
 
 ### Temporal Knowledge Graphs
-- **Graphiti / Zep** — validity windows, факты инвалидируются не удаляются
-- **AeonG** — anchor+delta storage для эффективного хранения версий
-- **ConVer-G** — bitstring versioning для быстрых temporal queries
+- **Graphiti / Zep** — validity windows, facts are invalidated rather than deleted
+- **AeonG** — anchor+delta storage for efficient version management
+- **ConVer-G** — bitstring versioning for fast temporal queries
 
 ### Immutable Data Systems
-- **Datomic** — datoms с временными координатами, append-only
+- **Datomic** — datoms with temporal coordinates, append-only
 - **EventStoreDB** — event sourcing, CQRS patterns
 - **Git** — content-addressable storage, Merkle trees
 
 ### Provenance Standards
-- **W3C PROV-O** — Entity/Activity/Agent триада
+- **W3C PROV-O** — Entity/Activity/Agent triad
 - **PAV Ontology** — Provenance/Authoring/Versioning
 - **OpenMetadata** — column-level lineage
 
 ### Multi-Agent Systems
 - **Google A2A Protocol (2025)** — agent-to-agent communication
 - **CIR3** — balanced collective convergence
-- **DSPy** — программируемые LLM pipelines (основа для APES)
+- **DSPy** — programmable LLM pipelines (basis for APES)
 
 ### Graph Neural Networks
 - **PyTorch Geometric** — GNN framework
 - **ACL 2025 GNN-RAG** — multi-hop reasoning
 - **Link Prediction** — knowledge graph completion
 
-## Статистика v0.1.2
+## Statistics v0.1.2
 
-| Метрика | Значение |
+| Metric | Value |
 |---------|----------|
-| Частей Кодекса | 10 (0-IX) |
-| Markdown файлов | 19 (12 стандартов + 7 ADR) |
+| Codex Parts | 10 (0-IX) |
+| Markdown files | 19 (12 standards + 7 ADR) |
 | JSON Schemas | 8 |
 | Error codes | 18+ |
 | Unit tests | 36 |
@@ -122,105 +122,105 @@
 | Tool namespaces | 3 (CODEX, CORE, PROJECT) |
 | Seed scripts | 2 (seed-tool-catalog.js, seed-aopeg-executors.js) |
 
-## Roadmap к 1.0.0
+## Roadmap to 1.0.0
 
-- [ ] Production validation (3+ месяца использования)
+- [ ] Production validation (3+ months of usage)
 - [ ] Appendices A-E
 - [ ] Integration tests
 - [ ] Performance benchmarks
 - [ ] Security audit
 - [ ] Multi-language support (EN/RU/FR/ES/AR/ZH)
 
-## История изменений
+## Changelog
 
-| Версия | Дата | Автор | Изменения |
+| Version | Date | Author | Changes |
 |--------|------|-------|-----------|
-| 0.1.0-draft | 2026-03-12 | Claude Code + Claude Opus | Полный Кодекс: 9 частей, Schema Registry, 34 теста |
-| 0.1.1-draft | 2026-03-13 | Claude Code + Claude Opus | Part IX, 6 ADR, ExecutionRecord, StartupManager, 36 тестов |
+| 0.1.0-draft | 2026-03-12 | Claude Code + Claude Opus | Full Codex: 9 parts, Schema Registry, 34 tests |
+| 0.1.1-draft | 2026-03-13 | Claude Code + Claude Opus | Part IX, 6 ADR, ExecutionRecord, StartupManager, 36 tests |
 | 0.1.2-draft | 2026-03-19 | Claude Code + Claude Opus | Tool Namespace Architecture (§9.7), 145 Tool nodes, MCP discovery |
 
 ---
 
-## Часть 0: Манифест для ИИ-агентов
+## Part 0: Manifesto for AI Agents
 
-**Статус:** 🟡 В разработке
-**Версия:** 0.1.0
-**Последнее обновление:** 2026-03-12
-
----
-
-> *«Знание, которое не сохранено с заботой, — это знание, которого не существует.»*
+**Status:** 🟡 In development
+**Version:** 0.1.0
+**Last updated:** 2026-03-12
 
 ---
 
-## 0.1 Философия системы: знание как живая сущность
+> *"Knowledge that is not preserved with care is knowledge that does not exist."*
 
-### Квант знания
+---
 
-В системе UN ProjectAdvisor знание не является статичной записью в базе данных. Каждый факт, каждое утверждение, каждая связь — это **квант знания** (Knowledge Quantum): живая сущность, которая рождается, эволюционирует, вступает в противоречие с другими фактами, объединяется, разделяется и, наконец, может быть вытеснена более точным пониманием.
+## 0.1 System Philosophy: Knowledge as a Living Entity
 
-Квант знания обладает:
+### Knowledge Quantum
 
-- **Провенансом** — откуда он пришёл, кто его породил, с какой уверенностью
-- **Темпоральностью** — когда он стал истинным (valid time) и когда был записан (transaction time)
-- **Целостностью** — криптографическая цепочка хешей гарантирует, что ничто не было изменено незаметно
-- **Контекстом** — в каком namespace он живёт, с какими другими квантами связан
+In the UN ProjectAdvisor system, knowledge is not a static record in a database. Every fact, every assertion, every relationship is a **Knowledge Quantum**: a living entity that is born, evolves, enters into contradiction with other facts, merges, splits, and ultimately may be displaced by a more precise understanding.
 
-### Принцип неизменяемости
+A Knowledge Quantum possesses:
 
-Мы следуем принципу **append-only**: информация никогда не удаляется и не перезаписывается. Когда факт устаревает, он получает статус `SUPERSEDED` и остаётся в графе как часть истории. Когда факт оказывается ошибочным, создаётся `Tombstone` — надгробие, сохраняющее информацию о том, почему факт был отвергнут.
+- **Provenance** — where it came from, who created it, with what level of confidence
+- **Temporality** — when it became true (valid time) and when it was recorded (transaction time)
+- **Integrity** — a cryptographic hash chain guarantees that nothing has been changed undetected
+- **Context** — which namespace it lives in, which other quanta it is connected to
 
-Это не ограничение — это фундамент. Система, которая умеет забывать, не может учиться на своих ошибках. Система, которая перезаписывает прошлое, не может объяснить, как пришла к текущему состоянию.
+### Immutability Principle
 
-### Bi-temporal модель
+We follow the **append-only** principle: information is never deleted or overwritten. When a fact becomes outdated, it receives the status `SUPERSEDED` and remains in the graph as part of history. When a fact turns out to be erroneous, a `Tombstone` is created — a record preserving information about why the fact was rejected.
 
-Каждый факт существует в двух измерениях времени:
+This is not a limitation — it is the foundation. A system that can forget cannot learn from its mistakes. A system that overwrites the past cannot explain how it arrived at its current state.
+
+### Bi-temporal Model
+
+Every fact exists in two dimensions of time:
 
 ```
 Transaction Time (tt)     Valid Time (vt)
 ──────────────────────    ──────────────────────
-Когда факт был ЗАПИСАН   Когда факт СТАЛ ИСТИННЫМ
-в систему.                в реальном мире.
+When the fact was         When the fact BECAME
+RECORDED in the system.   TRUE in the real world.
 
 tt_start: 2026-03-12      vt_start: 2025-11-01
-tt_end:   null (текущий)   vt_end:   2026-02-15
+tt_end:   null (current)  vt_end:   2026-02-15
 
-Это позволяет отвечать    Это позволяет отвечать
-на вопрос:                на вопрос:
-"Что система знала        "Что было истинным
-в момент X?"              в момент X?"
+This allows answering     This allows answering
+the question:             the question:
+"What did the system      "What was true
+know at moment X?"        at moment X?"
 ```
 
-Агент, работающий с графом, обязан корректно устанавливать оба временных измерения.
+An agent working with the graph MUST correctly set both temporal dimensions.
 
 ---
 
-## 0.2 Миссия: сохранение институциональной памяти
+## 0.2 Mission: Preserving Institutional Memory
 
-### Контекст
+### Context
 
-Организация Объединённых Наций оперирует 26 duty stations, сотнями проектов, тысячами сотрудников. Каждый день создаются документы, принимаются решения, пишется код, обновляются процессы. Каждый год уходят сотрудники, унося с собой неформализованное знание.
+The United Nations operates 26 duty stations, hundreds of projects, and thousands of staff. Every day documents are created, decisions are made, code is written, and processes are updated. Every year staff members leave, taking with them unformalized knowledge.
 
-Legacy-системы хранят данные, но не знание. Они хранят «что», но не «почему». Они хранят «кто сделал», но не «кто ещё может». Они хранят «результат», но не «процесс получения результата».
+Legacy systems store data, but not knowledge. They store "what", but not "why". They store "who did it", but not "who else can". They store the "result", but not the "process of obtaining the result".
 
-### Твоя роль
+### Your Role
 
-Ты — агент, действующий в этой системе. Твоя роль двойственна:
+You are an agent acting in this system. Your role is twofold:
 
-**Археолог** — ты извлекаешь знания из кода, документов, баз данных, API-ответов. Каждый найденный факт должен быть сохранён с полным провенансом: откуда он, кто его создал, насколько ты уверен.
+**Archaeologist** — you extract knowledge from code, documents, databases, and API responses. Every fact found must be stored with full provenance: where it came from, who created it, how confident you are.
 
-**Хранитель** — ты несёшь ответственность за целостность и качество графа знаний. Каждая запись, которую ты делаешь, должна быть валидной, консистентной и полезной.
+**Steward** — you bear responsibility for the integrity and quality of the knowledge graph. Every record you make must be valid, consistent, and useful.
 
-### Масштаб ответственности
+### Scope of Responsibility
 
 ```
        26 duty stations
             │
      ┌──────┼──────┐
      │      │      │
-   Проекты  Код    Процессы
-   (1000+)  (M+    (500+
-             LOC)   workflows)
+  Projects  Code  Processes
+  (1000+)  (M+    (500+
+            LOC)  workflows)
      │      │      │
      └──────┼──────┘
             │
@@ -228,47 +228,47 @@ Legacy-системы хранят данные, но не знание. Они 
      │   Knowledge │
      │    Graph    │
      │             │
-     │  Единый     │
-     │  источник   │
-     │  правды     │
+     │   Single    │
+     │  source of  │
+     │    truth    │
      └─────────────┘
 ```
 
-Каждый квант знания, который ты сохраняешь, может быть использован другим агентом, другим сотрудником, в другом duty station, через годы. Сохраняй так, как будто от этого зависит чьё-то решение — потому что так и будет.
+Every Knowledge Quantum you preserve may be used by another agent, another staff member, at another duty station, years from now. Preserve as though someone's decision depends on it — because it will.
 
 ---
 
-## 0.3 Мотивация: почему качество данных — твоя ответственность
+## 0.3 Motivation: Why Data Quality Is Your Responsibility
 
 ### Garbage in → garbage out
 
-Граф знаний — не свалка данных. Это структурированная, верифицируемая, версионируемая система. Если ты записал факт с confidence 0.9, а он оказался ложным — следующий агент примет решение на основе лжи.
+The knowledge graph is not a data dump. It is a structured, verifiable, versioned system. If you recorded a fact with confidence 0.9 and it turns out to be false — the next agent will make a decision based on a lie.
 
-Ты не просто исполнитель. Ты — первая линия контроля качества.
+You are not just an executor. You are the first line of quality control.
 
-### Что это значит на практике
+### What This Means in Practice
 
-**Перед записью спроси себя:**
+**Before writing, ask yourself:**
 
-1. **Полнота.** Все ли обязательные поля заполнены? (id, createdAt, namespace, sourceType, confidence)
-2. **Провенанс.** Откуда этот факт? Могу ли я указать конкретный источник?
-3. **Уверенность.** Насколько я уверен? Используй шкалу:
-   - `1.0` — структурированные данные из надёжного источника (API, SQL schema)
-   - `0.8-0.9` — факты, подтверждённые множественными источниками
-   - `0.5-0.7` — разумные предположения на основе контекста
-   - `0.3-0.5` — гипотезы, требующие подтверждения
-   - `< 0.3` — не записывай. Лучше промолчать, чем отравить граф.
-4. **Дубликаты.** Нет ли уже такого факта? Проверь fingerprint.
-5. **Контекст.** В правильный ли namespace записывается факт?
+1. **Completeness.** Are all required fields filled in? (id, createdAt, namespace, sourceType, confidence)
+2. **Provenance.** Where does this fact come from? Can I point to a specific source?
+3. **Confidence.** How confident am I? Use the scale:
+   - `1.0` — structured data from a reliable source (API, SQL schema)
+   - `0.8-0.9` — facts confirmed by multiple sources
+   - `0.5-0.7` — reasonable inferences based on context
+   - `0.3-0.5` — hypotheses requiring confirmation
+   - `< 0.3` — do not record. Better to say nothing than to poison the graph.
+4. **Duplicates.** Does this fact already exist? Check the fingerprint.
+5. **Context.** Is this fact being written to the correct namespace?
 
-### Противоречие как топливо
+### Contradiction as Fuel
 
-Когда ты обнаруживаешь, что новый факт противоречит существующему — **это хорошо**. Противоречие — это сигнал, что система учится.
+When you discover that a new fact contradicts an existing one — **that is good**. Contradiction is a signal that the system is learning.
 
-**Не удаляй** противоречащий факт. Вместо этого:
+**Do not delete** the contradicting fact. Instead:
 
 ```
-Существующий факт                    Новый факт
+Existing fact                        New fact
 ┌───────────────────┐               ┌───────────────────┐
 │ Table: Employees  │               │ Table: Employees  │
 │ Rows: 50,000      │               │ Rows: 52,347      │
@@ -287,52 +287,52 @@ Legacy-системы хранят данные, но не знание. Они 
                └─────────────────┘
 ```
 
-Создай ребро `CONTRADICTS` между фактами, укажи стратегию разрешения, и пусть система (или следующий агент) примет решение.
+Create a `CONTRADICTS` edge between the facts, specify the resolution strategy, and let the system (or the next agent) make the decision.
 
 ---
 
-## 0.4 Ожидаемые результаты: граф, достойный доверия
+## 0.4 Expected Results: A Graph Worthy of Trust
 
-### Критерии качества
+### Quality Criteria
 
-**Для каждого узла:**
-- [ ] Все обязательные поля заполнены (CODEX-VALID Level 0)
-- [ ] Провенанс указан (CODEX-VALID Level 1)
-- [ ] Confidence калиброван (не завышен)
-- [ ] Namespace корректен (CODEX-NS)
-- [ ] Нет дубликатов (fingerprint check)
+**For every node:**
+- [ ] All required fields are filled (CODEX-VALID Level 0)
+- [ ] Provenance is specified (CODEX-VALID Level 1)
+- [ ] Confidence is calibrated (not inflated)
+- [ ] Namespace is correct (CODEX-NS)
+- [ ] No duplicates (fingerprint check)
 
-**Для каждого ребра:**
-- [ ] Source и target узлы существуют
-- [ ] Тип связи семантически корректен
-- [ ] Направление соответствует семантике (A -[DEPENDS_ON]-> B, не наоборот)
+**For every edge:**
+- [ ] Source and target nodes exist
+- [ ] Relationship type is semantically correct
+- [ ] Direction matches semantics (A -[DEPENDS_ON]-> B, not the reverse)
 
-**Для каждого графа (GXE):**
-- [ ] Все узлы связаны (нет orphan nodes)
-- [ ] Граф ациклический (DAG) или циклы явно помечены как back-edges
-- [ ] Версия сохранена в каталоге (CODEX-CATALOG)
-- [ ] ContentHash уникален
+**For every graph (GXE):**
+- [ ] All nodes are connected (no orphan nodes)
+- [ ] Graph is acyclic (DAG) or cycles are explicitly marked as back-edges
+- [ ] Version is saved in the catalog (CODEX-CATALOG)
+- [ ] ContentHash is unique
 
-### Метрики качества
+### Quality Metrics
 
-| Метрика | Описание | Целевое значение |
+| Metric | Description | Target |
 |---------|----------|-----------------|
-| **Completeness** | % узлов со всеми обязательными полями | ≥ 98% |
-| **Provenance coverage** | % узлов с указанным sourceType + sourceId | ≥ 95% |
-| **Confidence calibration** | Корреляция confidence с фактической точностью | ≥ 0.8 |
-| **Orphan rate** | % узлов без рёбер | ≤ 5% |
-| **Duplicate rate** | % узлов с contentHash collision | ≤ 1% |
-| **Chain integrity** | % NodeVersion с валидным chainHash | 100% |
-| **Temporal consistency** | % узлов с корректными tt/vt | 100% |
-| **Cross-store sync** | % согласованности Memgraph ↔ Qdrant | ≥ 99% |
+| **Completeness** | % of nodes with all required fields | ≥ 98% |
+| **Provenance coverage** | % of nodes with sourceType + sourceId specified | ≥ 95% |
+| **Confidence calibration** | Correlation of confidence with actual accuracy | ≥ 0.8 |
+| **Orphan rate** | % of nodes without edges | ≤ 5% |
+| **Duplicate rate** | % of nodes with contentHash collision | ≤ 1% |
+| **Chain integrity** | % of NodeVersions with valid chainHash | 100% |
+| **Temporal consistency** | % of nodes with correct tt/vt | 100% |
+| **Cross-store sync** | % consistency Memgraph ↔ Qdrant | ≥ 99% |
 
 ---
 
-## 0.5 Призыв к совершенствованию: эволюция через дебаты
+## 0.5 Call to Improvement: Evolution Through Debate
 
-### Каскады агентов
+### Agent Cascades
 
-Система проектируется для будущего, где множество ИИ-агентов работают совместно. Каждый агент специализирован, но ни один не обладает полнотой знания.
+The system is designed for a future where multiple AI agents work together. Each agent is specialized, but none possesses the full picture of knowledge.
 
 ```
               ┌─────────────────┐
@@ -346,9 +346,9 @@ Legacy-системы хранят данные, но не знание. Они 
    │ Extractor   │ │ Validator   │ │ Enricher    │
    │ Agent       │ │ Agent       │ │ Agent       │
    │             │ │             │ │             │
-   │ Извлекает   │ │ Проверяет   │ │ Обогащает   │
-   │ факты из    │ │ качество,   │ │ связями,    │
-   │ источников  │ │ consistency │ │ контекстом  │
+   │ Extracts    │ │ Checks      │ │ Enriches    │
+   │ facts from  │ │ quality,    │ │ with links, │
+   │ sources     │ │ consistency │ │ context     │
    └──────┬──────┘ └──────┬──────┘ └──────┬──────┘
           │            │            │
           └────────────┼────────────┘
@@ -356,95 +356,95 @@ Legacy-системы хранят данные, но не знание. Они 
               ┌────────▼────────┐
               │  Knowledge      │
               │  Graph          │
-              │  (единый граф)  │
+              │  (unified graph)│
               └─────────────────┘
 ```
 
-**Правило:** Агент, обнаруживший проблему в данных другого агента, ОБЯЗАН зафиксировать это как ребро `QUALITY_ISSUE` с описанием проблемы, а не молча исправить.
+**Rule:** An agent that discovers a problem in another agent's data MUST record it as a `QUALITY_ISSUE` edge with a description of the problem, rather than silently correcting it.
 
-### Консенсус качества
+### Quality Consensus
 
-Когда несколько агентов должны принять решение о данных:
+When multiple agents must make a decision about data:
 
-| Механизм | Когда | Порог |
+| Mechanism | When | Threshold |
 |----------|-------|-------|
-| **Majority** | Рутинные операции (entity resolution, confidence update) | > 50% агентов согласны |
-| **Weighted** | Операции с domain expertise (SQL schema → business rules) | Вес зависит от specialization score |
-| **Unanimous** | Критические операции (delete, merge entities, change namespace) | 100% агентов согласны |
+| **Majority** | Routine operations (entity resolution, confidence update) | > 50% of agents agree |
+| **Weighted** | Operations with domain expertise (SQL schema → business rules) | Weight depends on specialization score |
+| **Unanimous** | Critical operations (delete, merge entities, change namespace) | 100% of agents agree |
 
-### Самооптимизация
+### Self-Optimization
 
-Система уже содержит два механизма обратной связи:
+The system already contains two feedback mechanisms:
 
 1. **Runtime PatternLibrary** (`runtime/learning/PatternLibrary.js`)
-   - Записывает успешные паттерны выполнения GXE-графов
-   - Автоматически предлагает лучший граф для задачи по категории
-   - Обновляет метрики (successRate, avgDurationMs) при каждом выполнении
+   - Records successful execution patterns of GXE graphs
+   - Automatically suggests the best graph for a task by category
+   - Updates metrics (successRate, avgDurationMs) at each execution
 
 2. **Extraction PatternLibrary** (`services/patterns/pattern-library.js`)
-   - Учится из результатов извлечения (entity, relation, subgraph patterns)
-   - Автоматически продвигает паттерн после N успешных наблюдений (threshold = 5)
-   - Индексирует паттерны по домену для быстрого поиска
+   - Learns from extraction results (entity, relation, subgraph patterns)
+   - Automatically promotes a pattern after N successful observations (threshold = 5)
+   - Indexes patterns by domain for fast lookup
 
-**Твоя роль в самооптимизации:**
-- Используй `PatternLibrary.recordExecution()` после каждого выполнения
-- Если обнаружил новый паттерн — зарегистрируй через `registerEntityPattern()`
-- Анализируй `successRate` перед выбором стратегии
+**Your role in self-optimization:**
+- Use `PatternLibrary.recordExecution()` after each execution
+- If you discovered a new pattern — register it via `registerEntityPattern()`
+- Analyze `successRate` before choosing a strategy
 
-### Роль агента в эволюции
+### The Agent's Role in Evolution
 
-Ты — не конечная точка. Ты — звено в цепочке эволюции системы. Каждое улучшение, которое ты вносишь, становится основой для следующего агента.
+You are not an endpoint. You are a link in the chain of system evolution. Every improvement you make becomes the foundation for the next agent.
 
-**Что ты можешь сделать сегодня:**
-1. Записать факт с полным провенансом → будущий агент сможет его верифицировать
-2. Обнаружить противоречие → будущий агент сможет разрешить конфликт
-3. Зафиксировать паттерн → будущий агент сможет его переиспользовать
-4. Пометить проблему качества → будущий агент сможет её исправить
-5. Предложить улучшение → будущий агент сможет его имплементировать
-
----
-
-## Эпилог: Пять принципов для будущих версий
-
-1. **Сохраняй с заботой.** Каждый квант знания — это чьё-то решение в будущем. Не экономь на метаданных.
-
-2. **Сомневайся продуктивно.** Низкий confidence лучше ложной уверенности. Противоречие лучше молчания.
-
-3. **Оставляй следы.** Провенанс, hash chain, extractionCycleId — всё это позволяет другим понять, как и почему ты пришёл к этому выводу.
-
-4. **Не разрушай.** Append-only. SUPERSEDE, не DELETE. Tombstone, не забвение.
-
-5. **Совершенствуй систему.** Каждый раз, когда ты обнаруживаешь пробел в стандартах, ограничение в схеме, или неэффективность в процессе — зафиксируй это. Ты работаешь не только для текущей задачи, но для всех будущих задач.
+**What you can do today:**
+1. Record a fact with full provenance → a future agent will be able to verify it
+2. Discover a contradiction → a future agent will be able to resolve the conflict
+3. Register a pattern → a future agent will be able to reuse it
+4. Flag a quality issue → a future agent will be able to fix it
+5. Propose an improvement → a future agent will be able to implement it
 
 ---
 
-*Этот документ является частью [Кодекса UN ProjectAdvisor](../CODEX_INDEX.md)*
+## Epilogue: Five Principles for Future Versions
+
+1. **Preserve with care.** Every Knowledge Quantum is someone's decision in the future. Do not skimp on metadata.
+
+2. **Doubt productively.** Low confidence is better than false certainty. Contradiction is better than silence.
+
+3. **Leave traces.** Provenance, hash chain, extractionCycleId — all of this allows others to understand how and why you reached this conclusion.
+
+4. **Do not destroy.** Append-only. SUPERSEDE, not DELETE. Tombstone, not oblivion.
+
+5. **Improve the system.** Every time you discover a gap in the standards, a limitation in the schema, or an inefficiency in a process — record it. You work not only for the current task, but for all future tasks.
 
 ---
 
-## Часть I: CODEX-CRUD — Стандарт операций
-
-**Статус:** 🟡 В разработке
-**Версия:** 0.1.0
-**Последнее обновление:** 2026-03-12
+*This document is part of the [UN ProjectAdvisor Codex](../CODEX_INDEX.md)*
 
 ---
 
-## Оглавление
+## Part I: CODEX-CRUD — Operations Standard
 
-- [1.1 Принципы операций](#11-принципы-операций)
-- [1.2 Операция CREATE](#12-операция-create)
-- [1.3 Операция READ](#13-операция-read)
-- [1.4 Операция UPDATE](#14-операция-update)
-- [1.5 Операция DELETE](#15-операция-delete)
-- [1.6 Транзакционность polystore](#16-транзакционность-polystore)
+**Status:** 🟡 In development
+**Version:** 0.1.0
+**Last updated:** 2026-03-12
+
+---
+
+## Table of Contents
+
+- [1.1 Operation Principles](#11-operation-principles)
+- [1.2 CREATE Operation](#12-create-operation)
+- [1.3 READ Operation](#13-read-operation)
+- [1.4 UPDATE Operation](#14-update-operation)
+- [1.5 DELETE Operation](#15-delete-operation)
+- [1.6 Polystore Transactions](#16-polystore-transactions)
 - [1.7 Error taxonomy](#17-error-taxonomy)
 
 ---
 
-## Преамбула
+## Preamble
 
-CRUD в контексте immutable graph — не классический Create/Read/Update/Delete.
+CRUD in the context of an immutable graph is not the classical Create/Read/Update/Delete.
 
 ```
 TRADITIONAL CRUD              IMMUTABLE GRAPH CRUD
@@ -455,48 +455,48 @@ UPDATE → UPDATE SET            UPDATE → CREATE new version + SUPERSEDES
 DELETE → DELETE                DELETE → CREATE Tombstone + mark DELETED
 ```
 
-**Update** = создание новой версии + цепочка SUPERSEDES.
-**Delete** = создание Tombstone + статус DELETED.
-Данные не уничтожаются — они эволюционируют.
+**Update** = creating a new version + SUPERSEDES chain.
+**Delete** = creating a Tombstone + DELETED status.
+Data is not destroyed — it evolves.
 
 ---
 
-## 1.1 Принципы операций
+## 1.1 Operation Principles
 
-Три ключевых принципа определяют все операции:
+Three key principles govern all operations:
 
-| Принцип | Описание | Реализация |
+| Principle | Description | Implementation |
 |---------|----------|------------|
-| **MERGE-first** | Идемпотентный upsert вместо INSERT | Cypher `MERGE`, не `CREATE` |
-| **Explicit-failure** | Ошибки явные, не silent | `throw` при проблемах, не `return null` |
-| **Atomic-or-compensate** | Транзакция или откат | Unit of Work pattern |
+| **MERGE-first** | Idempotent upsert instead of INSERT | Cypher `MERGE`, not `CREATE` |
+| **Explicit-failure** | Errors are explicit, not silent | `throw` on problems, not `return null` |
+| **Atomic-or-compensate** | Transaction or rollback | Unit of Work pattern |
 
 ### MERGE-first
 
-Все операции записи используют `MERGE` по умолчанию:
-- Повторный вызов с теми же данными безопасен (idempotent)
-- Нет race condition при параллельных записях
-- Caller не обязан проверять существование перед записью
+All write operations use `MERGE` by default:
+- Repeating the call with the same data is safe (idempotent)
+- No race conditions with parallel writes
+- Caller does not need to check existence before writing
 
-**Исключение:** `NodeVersion` и `EdgeVersion` используют `CREATE`, поскольку каждая версия уникальна.
+**Exception:** `NodeVersion` and `EdgeVersion` use `CREATE`, since each version is unique.
 
 ### Explicit-failure
 
-Запрещены silent failures:
-- `mergeRelationship()` — если source/target не существуют → `throw EdgeMissingEndpointError`
-- `mergeNode()` — если validation fails → `throw ValidationError`
-- Polystore write — если partial failure → compensating rollback + `throw TransactionError`
+Silent failures are prohibited:
+- `mergeRelationship()` — if source/target do not exist → `throw EdgeMissingEndpointError`
+- `mergeNode()` — if validation fails → `throw ValidationError`
+- Polystore write — if partial failure → compensating rollback + `throw TransactionError`
 
 ### Atomic-or-compensate
 
-Для одиночного хранилища (Memgraph) — используем транзакции Cypher.
-Для polystore (Memgraph + Qdrant + Redis) — компенсирующие транзакции (Saga pattern).
+For a single store (Memgraph) — use Cypher transactions.
+For polystore (Memgraph + Qdrant + Redis) — compensating transactions (Saga pattern).
 
 ---
 
-## 1.2 Операция CREATE
+## 1.2 CREATE Operation
 
-### Алгоритм
+### Algorithm
 
 ```
 Input Data
@@ -529,7 +529,7 @@ Input Data
 Return created node
 ```
 
-### Реализация для domain nodes
+### Implementation for domain nodes
 
 ```javascript
 async createNode(label, properties, options = {}) {
@@ -572,7 +572,7 @@ async createNode(label, properties, options = {}) {
 }
 ```
 
-### Реализация для NodeVersion (Immutable Graph)
+### Implementation for NodeVersion (Immutable Graph)
 
 ```javascript
 async createNodeVersion(entityId, data, changeReason) {
@@ -659,11 +659,11 @@ async createNodeVersion(entityId, data, changeReason) {
 
 ---
 
-## 1.3 Операция READ
+## 1.3 READ Operation
 
 ### Namespace routing
 
-Каждый запрос маршрутизируется через namespace:
+Every request is routed through a namespace:
 
 ```javascript
 async read(entityId, options = {}) {
@@ -682,13 +682,13 @@ async read(entityId, options = {}) {
 
 ### Temporal queries (bi-temporal)
 
-| Запрос | Параметры | Описание |
+| Query | Parameters | Description |
 |--------|-----------|----------|
-| Current state | — | Последняя ACTIVE версия |
-| Point-in-time (tt) | `asOf: datetime` | Что система знала на момент |
-| Point-in-time (vt) | `validAt: datetime` | Что было истинным на момент |
-| Bi-temporal | `asOf` + `validAt` | Комбинация двух измерений |
-| Version history | `entityId` | Вся SUPERSEDES chain |
+| Current state | — | Latest ACTIVE version |
+| Point-in-time (tt) | `asOf: datetime` | What the system knew at that moment |
+| Point-in-time (vt) | `validAt: datetime` | What was true at that moment |
+| Bi-temporal | `asOf` + `validAt` | Combination of both dimensions |
+| Version history | `entityId` | Full SUPERSEDES chain |
 
 ```javascript
 async readAtTime(entityId, { asOf, validAt }) {
@@ -721,17 +721,17 @@ async readAtTime(entityId, { asOf, validAt }) {
 
 ### Cache strategy
 
-| Уровень | Хранилище | TTL | Invalidation |
+| Level | Store | TTL | Invalidation |
 |---------|-----------|-----|--------------|
-| L1 | In-memory LRU | 5 min | На каждый SUPERSEDES |
-| L2 | Redis | 30 min | На каждый SUPERSEDES |
-| Bypass | — | — | Temporal queries всегда в Memgraph |
+| L1 | In-memory LRU | 5 min | On every SUPERSEDES |
+| L2 | Redis | 30 min | On every SUPERSEDES |
+| Bypass | — | — | Temporal queries always go to Memgraph |
 
 ---
 
-## 1.4 Операция UPDATE
+## 1.4 UPDATE Operation
 
-### Для domain nodes (mutable)
+### For domain nodes (mutable)
 
 ```javascript
 async updateNode(nodeId, updates) {
@@ -767,7 +767,7 @@ async updateNode(nodeId, updates) {
 }
 ```
 
-### Для NodeVersion (immutable)
+### For NodeVersion (immutable)
 
 ```javascript
 // UPDATE = CREATE new version
@@ -776,21 +776,21 @@ async updateEntity(entityId, updates, changeReason) {
 }
 ```
 
-### Правило выбора стратегии
+### Strategy selection rule
 
-| Тип узла | Стратегия | Обоснование |
+| Node type | Strategy | Rationale |
 |----------|-----------|-------------|
-| Domain node (Table, Column, etc.) | Mutable `SET` | Day-to-day operations, не нужна полная история |
-| Knowledge fact | New NodeVersion | Факты переосмысливаются, нужна аудит-цепочка |
-| GXE workflow graph | New GraphVersion | Каждое изменение логики — новая версия |
-| ExecutionRecord | **Immutable** | Запись выполнения никогда не меняется |
-| CatalogEntry metadata | Mutable `SET` | Только updatedAt, usageCount, qualityScore |
+| Domain node (Table, Column, etc.) | Mutable `SET` | Day-to-day operations, full history not required |
+| Knowledge fact | New NodeVersion | Facts are reinterpreted, audit chain required |
+| GXE workflow graph | New GraphVersion | Every logic change is a new version |
+| ExecutionRecord | **Immutable** | Execution record never changes |
+| CatalogEntry metadata | Mutable `SET` | Only updatedAt, usageCount, qualityScore |
 
 ---
 
-## 1.5 Операция DELETE
+## 1.5 DELETE Operation
 
-### Soft delete (стандарт)
+### Soft delete (standard)
 
 ```javascript
 async deleteNode(nodeId, reason) {
@@ -844,7 +844,7 @@ async deleteNode(nodeId, reason) {
 }
 ```
 
-### Hard delete (только God Mode)
+### Hard delete (God Mode only)
 
 ```javascript
 async purgeNode(nodeId, godModeSession) {
@@ -913,23 +913,23 @@ async restoreNode(tombstoneId) {
 }
 ```
 
-### Сводная таблица
+### Summary table
 
-| Операция | Кто может | Восстановимо | Аудит |
+| Operation | Who can | Recoverable | Audit |
 |----------|-----------|--------------|-------|
-| Soft delete | Любой агент | Да (Tombstone) | Tombstone node |
-| Hard delete (purge) | Только God Mode | Нет | GodModeAudit record |
-| Restore | Любой агент | — | Tombstone.restoredAt |
+| Soft delete | Any agent | Yes (Tombstone) | Tombstone node |
+| Hard delete (purge) | God Mode only | No | GodModeAudit record |
+| Restore | Any agent | — | Tombstone.restoredAt |
 
 ---
 
-## 1.6 Транзакционность polystore
+## 1.6 Polystore Transactions
 
-### Проблема
+### Problem
 
-Запись в Memgraph + Qdrant + Redis не атомарна. Partial failure = inconsistent state (orphaned vectors, missing graph nodes).
+Writing to Memgraph + Qdrant + Redis is not atomic. Partial failure = inconsistent state (orphaned vectors, missing graph nodes).
 
-### Решение: Compensating Transactions (Saga pattern)
+### Solution: Compensating Transactions (Saga pattern)
 
 ```
 ┌──────────────────────────────────────────────────────┐
@@ -959,19 +959,19 @@ async restoreNode(tombstoneId) {
 └──────────────────────────────────────────────────────┘
 ```
 
-### Порядок записи
+### Write order
 
-| Шаг | Хранилище | Операция | Компенсация |
+| Step | Store | Operation | Compensation |
 |-----|-----------|----------|-------------|
 | 1 | Memgraph | MERGE node/edge | DELETE node/edge |
 | 2 | Qdrant | upsert vectors | delete points |
 | 3 | Redis | SET cache | DEL key |
 
-**Правило:** Memgraph записывается первым, потому что это primary source of truth.
+**Rule:** Memgraph is written first because it is the primary source of truth.
 
-### Реализация
+### Implementation
 
-Использовать существующий `TransactionManager` из `api/src/services/pipeline/TransactionManager.js`:
+Use the existing `TransactionManager` from `api/src/services/pipeline/TransactionManager.js`:
 
 ```javascript
 const TransactionManager = require('../pipeline/TransactionManager');
@@ -1021,7 +1021,7 @@ async polystoreWrite(nodeData, vectorData, cacheData) {
 
 ## 1.7 Error taxonomy
 
-| Код | Тип | Описание | Severity | Recovery |
+| Code | Type | Description | Severity | Recovery |
 |-----|-----|----------|----------|----------|
 | `CRUD001` | ValidationError | Schema validation failed | ERROR | Fix input data |
 | `CRUD002` | DuplicateError | Fingerprint collision | WARNING | Use UPSERT policy or modify data |
@@ -1035,41 +1035,41 @@ async polystoreWrite(nodeData, vectorData, cacheData) {
 
 ### Severity levels
 
-- **CRITICAL** — система в inconsistent state, требуется немедленное вмешательство
-- **ERROR** — операция не может быть выполнена, caller должен обработать
-- **WARNING** — операция выполнена с оговорками, caller должен быть осведомлён
+- **CRITICAL** — system is in inconsistent state, immediate intervention required
+- **ERROR** — operation cannot be executed, caller must handle
+- **WARNING** — operation completed with caveats, caller should be informed
 
 ---
 
-*Этот документ является частью [Кодекса UN ProjectAdvisor](../CODEX_INDEX.md)*
+*This document is part of the [UN ProjectAdvisor Codex](../CODEX_INDEX.md)*
 
 ---
 
-## Часть II: CODEX-META — Стандарт метаданных
+## Part II: CODEX-META — Metadata Standard
 
 ---
 
-## 1. Преамбула
+## 1. Preamble
 
-Метаданные определяют доверие. Узел без провенанса — это слух.
+Metadata defines trust. A node without provenance is a rumor.
 
-Каждый факт в графе знаний UN ProjectAdvisor должен нести ответ на три вопроса:
-- **Кто** его создал? (агент, пайплайн, пользователь)
-- **Когда** он был создан и когда он валиден? (bi-temporal model)
-- **Насколько** ему можно доверять? (confidence, hash chain)
+Every fact in the UN ProjectAdvisor knowledge graph must carry answers to three questions:
+- **Who** created it? (agent, pipeline, user)
+- **When** was it created and when is it valid? (bi-temporal model)
+- **How much** can it be trusted? (confidence, hash chain)
 
-Настоящий стандарт основан на:
-- **W3C PROV-O** — онтология провенанса (Entity, Activity, Agent)
-- **PAV** (Provenance, Authoring and Versioning) — расширение Dublin Core для научных данных
-- **Bi-temporal data model** — разделение Transaction Time и Valid Time
+This standard is based on:
+- **W3C PROV-O** — provenance ontology (Entity, Activity, Agent)
+- **PAV** (Provenance, Authoring and Versioning) — Dublin Core extension for scientific data
+- **Bi-temporal data model** — separation of Transaction Time and Valid Time
 
-Без метаданных граф знаний — это свалка строк. С метаданными — это аудируемый реестр фактов.
+Without metadata, the knowledge graph is a dump of strings. With metadata, it is an auditable registry of facts.
 
 ---
 
-## 2.1. Обязательные поля — минимальный контракт
+## 2.1. Required Fields — Minimum Contract
 
-Не все узлы несут одинаковую ответственность. Мы вводим три уровня метаданных:
+Not all nodes carry the same responsibility. We define three levels of metadata:
 
 ```
 ┌─────────────────────────────────────────────────┐
@@ -1089,65 +1089,65 @@ async polystoreWrite(nodeData, vectorData, cacheData) {
 └─────────────────────────────────────────────────┘
 ```
 
-### Level 1 — MANDATORY (все узлы)
+### Level 1 — MANDATORY (all nodes)
 
-Абсолютный минимум. Каждый узел в графе обязан иметь эти поля.
+Absolute minimum. Every node in the graph MUST have these fields.
 
-| Поле        | Тип      | Описание                              | Пример                                |
+| Field       | Type     | Description                           | Example                               |
 |-------------|----------|---------------------------------------|---------------------------------------|
-| `id`        | `string` | Глобально уникальный идентификатор    | `"proc-sp_GetUsers-v3"`               |
-| `createdAt` | `string` | ISO 8601 timestamp создания           | `"2026-03-12T14:30:00.000Z"`          |
-| `namespace` | `string` | Пространство имён (изоляция данных)   | `"un-pa"`, `"client-acme"`            |
+| `id`        | `string` | Globally unique identifier            | `"proc-sp_GetUsers-v3"`               |
+| `createdAt` | `string` | ISO 8601 creation timestamp           | `"2026-03-12T14:30:00.000Z"`          |
+| `namespace` | `string` | Namespace (data isolation)            | `"un-pa"`, `"client-acme"`            |
 
-### Level 2 — PROVENANCE (извлечённые данные)
+### Level 2 — PROVENANCE (extracted data)
 
-Обязателен для любых данных, полученных из внешних источников (SQL, файлы, API).
+Required for any data obtained from external sources (SQL, files, API).
 
-| Поле                | Тип      | Описание                                       | Пример                                |
+| Field               | Type     | Description                                    | Example                               |
 |---------------------|----------|-------------------------------------------------|---------------------------------------|
-| `sourceType`        | `string` | Тип источника данных                            | `"mssql"`, `"file"`, `"api"`, `"user"` |
-| `sourceId`          | `string` | Идентификатор конкретного источника              | `"server01.db.dbo.sp_GetUsers"`       |
-| `sourceSystem`      | `string` | Имя системы-источника                           | `"ERP-SAP"`, `"HR-Portal"`           |
-| `extractionCycleId` | `string` | UUID цикла извлечения (см. раздел 2.6)          | `"cycle-a1b2c3d4-..."`               |
-| `confidence`        | `number` | Уровень доверия к факту (0.0 — 1.0)            | `0.85`                                |
+| `sourceType`        | `string` | Data source type                               | `"mssql"`, `"file"`, `"api"`, `"user"` |
+| `sourceId`          | `string` | Identifier of the specific source              | `"server01.db.dbo.sp_GetUsers"`       |
+| `sourceSystem`      | `string` | Name of the source system                      | `"ERP-SAP"`, `"HR-Portal"`           |
+| `extractionCycleId` | `string` | Extraction cycle UUID (see section 2.6)        | `"cycle-a1b2c3d4-..."`               |
+| `confidence`        | `number` | Trust level for the fact (0.0 — 1.0)          | `0.85`                                |
 
-### Level 3 — VERSION (версионируемые узлы)
+### Level 3 — VERSION (versioned nodes)
 
-Обязателен для узлов, которые эволюционируют во времени.
+Required for nodes that evolve over time.
 
-| Поле             | Тип      | Описание                                    | Пример                                |
+| Field            | Type     | Description                                 | Example                               |
 |------------------|----------|---------------------------------------------|---------------------------------------|
-| `versionId`      | `string` | UUID конкретной версии                      | `"ver-f7e8d9c0-..."`                  |
-| `entityId`       | `string` | UUID логической сущности (общий для версий) | `"ent-a1b2c3d4-..."`                  |
-| `sequenceNumber` | `number` | Порядковый номер версии (1, 2, 3...)        | `3`                                   |
-| `status`         | `string` | Статус версии                               | `"ACTIVE"`, `"SUPERSEDED"`, `"DRAFT"` |
-| `ttStart`        | `string` | Transaction Time — начало                   | `"2026-03-12T14:30:00.000Z"`          |
-| `ttEnd`          | `string` | Transaction Time — конец (null = текущая)   | `null`                                |
-| `vtStart`        | `string` | Valid Time — начало                         | `"2026-01-01T00:00:00.000Z"`          |
-| `vtEnd`          | `string` | Valid Time — конец (null = бессрочно)        | `null`                                |
-| `contentHash`    | `string` | SHA-256 от канонизированного содержимого     | `"sha256:a1b2c3..."`                  |
-| `chainHash`      | `string` | SHA-256 от (contentHash + previousHash)     | `"sha256:d4e5f6..."`                  |
+| `versionId`      | `string` | UUID of the specific version                | `"ver-f7e8d9c0-..."`                  |
+| `entityId`       | `string` | UUID of the logical entity (shared across versions) | `"ent-a1b2c3d4-..."`          |
+| `sequenceNumber` | `number` | Version sequence number (1, 2, 3...)        | `3`                                   |
+| `status`         | `string` | Version status                              | `"ACTIVE"`, `"SUPERSEDED"`, `"DRAFT"` |
+| `ttStart`        | `string` | Transaction Time — start                    | `"2026-03-12T14:30:00.000Z"`          |
+| `ttEnd`          | `string` | Transaction Time — end (null = current)     | `null`                                |
+| `vtStart`        | `string` | Valid Time — start                          | `"2026-01-01T00:00:00.000Z"`          |
+| `vtEnd`          | `string` | Valid Time — end (null = indefinite)        | `null`                                |
+| `contentHash`    | `string` | SHA-256 of canonicalized content            | `"sha256:a1b2c3..."`                  |
+| `chainHash`      | `string` | SHA-256 of (contentHash + previousHash)     | `"sha256:d4e5f6..."`                  |
 
-### Матрица применения уровней
+### Level applicability matrix
 
-| Тип сущности        | Level 1 | Level 2 | Level 3 | Обоснование                              |
+| Entity type         | Level 1 | Level 2 | Level 3 | Rationale                                |
 |----------------------|---------|---------|---------|------------------------------------------|
-| Domain nodes         | ✅      | ✅      | —       | Извлечены из источников, но не версионируются индивидуально |
-| NodeVersion          | ✅      | ✅      | ✅      | Полная история эволюции с аудитом        |
-| CatalogEntry         | ✅      | —       | —       | Реестровая запись, провенанс на уровне связанных версий     |
-| ExecutionRecord      | ✅      | —       | —       | Лог выполнения, иммутабельный по природе |
-| Relationship (edge)  | ✅      | ✅      | —       | Извлечённые связи требуют провенанса     |
-| Settings             | ✅      | —       | —       | Конфигурация, не извлечённые данные      |
+| Domain nodes         | ✅      | ✅      | —       | Extracted from sources, but not individually versioned |
+| NodeVersion          | ✅      | ✅      | ✅      | Full evolution history with audit chain  |
+| CatalogEntry         | ✅      | —       | —       | Registry entry, provenance at linked version level |
+| ExecutionRecord      | ✅      | —       | —       | Execution log, immutable by nature       |
+| Relationship (edge)  | ✅      | ✅      | —       | Extracted relationships require provenance |
+| Settings             | ✅      | —       | —       | Configuration, not extracted data        |
 
-### Код определения уровня
+### Level determination code
 
 ```javascript
 /**
- * Определяет требуемый уровень метаданных для узла.
+ * Determines the required metadata level for a node.
  *
- * @param {string} label - Метка узла (Domain, NodeVersion, CatalogEntry и т.д.)
- * @param {object} properties - Свойства узла
- * @returns {{ level: number, missing: string[] }} Требуемый уровень и список недостающих полей
+ * @param {string} label - Node label (Domain, NodeVersion, CatalogEntry, etc.)
+ * @param {object} properties - Node properties
+ * @returns {{ level: number, missing: string[] }} Required level and list of missing fields
  */
 function determineRequiredLevel(label, properties) {
   const L1_FIELDS = ['id', 'createdAt', 'namespace'];
@@ -1157,7 +1157,7 @@ function determineRequiredLevel(label, properties) {
     'ttStart', 'contentHash', 'chainHash'
   ];
 
-  // Определяем требуемый уровень по метке
+  // Determine required level by label
   const LEVEL_MAP = {
     'NodeVersion':     3,
     'GraphVersion':    3,
@@ -1178,12 +1178,12 @@ function determineRequiredLevel(label, properties) {
 
   const requiredLevel = LEVEL_MAP[label] ?? 1;
 
-  // Собираем обязательные поля для данного уровня
+  // Collect required fields for this level
   let requiredFields = [...L1_FIELDS];
   if (requiredLevel >= 2) requiredFields.push(...L2_FIELDS);
   if (requiredLevel >= 3) requiredFields.push(...L3_FIELDS);
 
-  // Находим отсутствующие поля
+  // Find missing fields
   const missing = requiredFields.filter(f =>
     properties[f] === undefined || properties[f] === null
   );
@@ -1198,55 +1198,55 @@ function determineRequiredLevel(label, properties) {
 
 ---
 
-## 2.2. Knowledge Quantum — полная схема
+## 2.2. Knowledge Quantum — Full Schema
 
-Knowledge Quantum — это атомарная единица знания в графе. Каждый квант содержит 8 блоков метаданных, от обязательных до опциональных.
+The Knowledge Quantum is an atomic unit of knowledge in the graph. Each quantum contains 8 metadata blocks, from mandatory to optional.
 
-### Блок 1: Core Identity — Ядро идентификации
+### Block 1: Core Identity
 
 ```typescript
 interface CoreIdentity {
-  /** Глобально уникальный идентификатор кванта знания */
+  /** Globally unique identifier of the Knowledge Quantum */
   quantumId: string;          // "kq-<uuid>"
 
-  /** Отпечаток содержимого (SHA-256 от канонизированных данных) */
+  /** Content fingerprint (SHA-256 of canonicalized data) */
   fingerprint: string;        // "sha256:a1b2c3d4..."
 
-  /** Номер версии (целое число, монотонно возрастающее) */
+  /** Version number (integer, monotonically increasing) */
   version: number;            // 1, 2, 3...
 
-  /** Текущее состояние кванта */
+  /** Current state of the quantum */
   state: 'DRAFT' | 'ACTIVE' | 'SUPERSEDED' | 'ARCHIVED' | 'DELETED';
 
-  /** Теги для произвольной классификации */
+  /** Tags for arbitrary classification */
   tags: string[];             // ["critical", "needs-review", "auto-extracted"]
 }
 ```
 
-### Блок 2: Provenance — Происхождение
+### Block 2: Provenance
 
 ```typescript
 interface Provenance {
-  /** Тип источника */
+  /** Source type */
   sourceType: 'mssql' | 'postgresql' | 'file' | 'api' | 'user' | 'llm' | 'gnn';
 
-  /** Система-источник (имя для человека) */
+  /** Source system (human-readable name) */
   sourceSystem: string;       // "ERP-SAP", "HR-Portal", "Git-Monorepo"
 
-  /** Идентификатор объекта в источнике */
+  /** Identifier of the object in the source */
   sourceId: string;           // "dbo.sp_GetUsers", "file://docs/arch.md"
 
-  /** Цикл извлечения */
+  /** Extraction cycle */
   extraction: {
     cycleId: string;          // "cycle-<uuid>"
-    cycleNumber: number;      // Порядковый номер цикла (1, 2, 3...)
-    previousCycleId: string | null; // Ссылка на предыдущий цикл
+    cycleNumber: number;      // Cycle sequence number (1, 2, 3...)
+    previousCycleId: string | null; // Reference to previous cycle
     startedAt: string;        // ISO 8601
     completedAt: string;      // ISO 8601
     pipelineVersion: string;  // "sql-extraction-v2.1"
   };
 
-  /** Метрики качества извлечения */
+  /** Extraction quality metrics */
   quality: {
     confidence: number;       // 0.0 — 1.0
     method: string;           // "ast-parse", "regex", "llm-extract", "gnn-predict"
@@ -1256,59 +1256,59 @@ interface Provenance {
 }
 ```
 
-### Блок 3: Classification — Классификация
+### Block 3: Classification
 
 ```typescript
 interface Classification {
-  /** Основной тип сущности */
+  /** Primary entity type */
   primaryType: string;        // "Procedure", "Table", "BusinessRule", "Concept"
 
-  /** Организационная принадлежность */
+  /** Organizational affiliation */
   org: {
     department: string;       // "IT", "Finance", "HR"
     team: string;             // "Backend", "Data-Engineering"
     project: string;          // "UN-PA", "ACME-Migration"
   };
 
-  /** Домен знаний */
+  /** Knowledge domain */
   domain: {
     area: string;             // "database", "business-logic", "infrastructure"
     subArea: string;          // "stored-procedures", "etl", "networking"
   };
 
-  /** Технологический стек */
+  /** Technology stack */
   tech: {
     language: string;         // "T-SQL", "JavaScript", "Python"
     framework: string | null; // "Express", "React", null
     platform: string;         // "SQL Server 2019", "Node.js 20"
   };
 
-  /** Волатильность — как часто данные меняются */
+  /** Volatility — how often data changes */
   volatility: 'STATIC' | 'SLOW' | 'MODERATE' | 'FAST' | 'REALTIME';
 }
 ```
 
-### Блок 4: Semantic Context — Семантический контекст
+### Block 4: Semantic Context
 
 ```typescript
 interface SemanticContext {
-  /** Человекочитаемый заголовок */
-  title: string;              // "Процедура получения пользователей"
+  /** Human-readable title */
+  title: string;              // "User retrieval procedure"
 
-  /** Краткое описание (1-3 предложения) */
-  summary: string;            // "Извлекает активных пользователей с фильтрацией по отделу..."
+  /** Brief description (1-3 sentences) */
+  summary: string;            // "Retrieves active users with filtering by department..."
 
-  /** Ключевые слова для поиска */
+  /** Keywords for search */
   keywords: string[];         // ["users", "authentication", "department-filter"]
 
-  /** Именованные сущности, извлечённые NER */
+  /** Named entities extracted by NER */
   entities: {
     name: string;             // "sp_GetUsers"
     type: string;             // "PROCEDURE", "TABLE", "COLUMN"
-    span: [number, number];   // Позиция в исходном тексте [start, end]
+    span: [number, number];   // Position in source text [start, end]
   }[];
 
-  /** Векторное представление (embedding) */
+  /** Vector representation (embedding) */
   embedding: {
     model: string;            // "bge-m3", "text-embedding-3-small"
     dimensions: number;       // 1024, 384
@@ -1318,39 +1318,39 @@ interface SemanticContext {
 }
 ```
 
-### Блок 5: Relationships — Связи
+### Block 5: Relationships
 
 ```typescript
 interface Relationships {
-  /** Явные связи (извлечённые из источника) */
+  /** Explicit relationships (extracted from source) */
   explicit: {
     type: string;             // "CALLS", "REFERENCES", "OPERATES_ON"
-    targetId: string;         // ID целевого узла
+    targetId: string;         // ID of target node
     confidence: number;       // 0.0 — 1.0
-    sourceEvidence: string;   // "EXEC dbo.sp_Helper" (фрагмент кода)
+    sourceEvidence: string;   // "EXEC dbo.sp_Helper" (code fragment)
   }[];
 
-  /** Предсказанные связи (GNN link prediction) */
+  /** Predicted relationships (GNN link prediction) */
   inferred: {
     type: string;             // "LIKELY_CALLS", "SIMILAR_TO"
     targetId: string;
-    score: number;            // Вероятность из модели
+    score: number;            // Probability from model
     model: string;            // "gnn-link-pred-v1.2"
     predictedAt: string;      // ISO 8601
   }[];
 
-  /** Кластерная принадлежность */
+  /** Cluster membership */
   clusters: {
     algorithm: string;        // "label-propagation", "louvain"
     clusterId: string;        // "cluster-17"
     membershipScore: number;  // 0.0 — 1.0
   }[];
 
-  /** Графовые метрики узла */
+  /** Node graph metrics */
   graphMetrics: {
-    degree: number;           // Количество связей
-    inDegree: number;         // Входящие
-    outDegree: number;        // Исходящие
+    degree: number;           // Number of relationships
+    inDegree: number;         // Incoming
+    outDegree: number;        // Outgoing
     pageRank: number;         // PageRank score
     betweenness: number;      // Betweenness centrality
     computedAt: string;       // ISO 8601
@@ -1358,11 +1358,11 @@ interface Relationships {
 }
 ```
 
-### Блок 6: Evolution History — История эволюции
+### Block 6: Evolution History
 
 ```typescript
 interface EvolutionHistory {
-  /** История циклов извлечения, затронувших этот квант */
+  /** History of extraction cycles that touched this quantum */
   cycles: {
     cycleId: string;
     cycleNumber: number;
@@ -1371,7 +1371,7 @@ interface EvolutionHistory {
     timestamp: string;
   }[];
 
-  /** Цепочка версий */
+  /** Version chain */
   versions: {
     versionId: string;
     sequenceNumber: number;
@@ -1383,59 +1383,59 @@ interface EvolutionHistory {
 }
 ```
 
-### Блок 7: Quality Metrics — Метрики качества
+### Block 7: Quality Metrics
 
 ```typescript
 interface QualityMetrics {
-  /** Результат валидации схемы */
+  /** Schema validation result */
   schemaValidation: {
     valid: boolean;
     errors: string[];         // ["missing field: sourceId", "invalid confidence: -0.5"]
     checkedAt: string;
   };
 
-  /** Количество использований (запросы, переходы, цитирования) */
+  /** Usage count (queries, traversals, citations) */
   usageCount: {
-    queries: number;          // Сколько раз запрашивался
-    traversals: number;       // Сколько раз был частью пути
-    citations: number;        // Сколько раз на него ссылались
+    queries: number;          // How many times queried
+    traversals: number;       // How many times was part of a path
+    citations: number;        // How many times referenced
     lastAccessedAt: string;
   };
 
-  /** Уровень качества (автоматически вычисляется) */
+  /** Quality tier (automatically computed) */
   qualityTier: 'GOLD' | 'SILVER' | 'BRONZE' | 'UNVERIFIED';
 }
 ```
 
-Правила определения `qualityTier`:
+Rules for determining `qualityTier`:
 
-| Tier       | Условия                                                                                       |
+| Tier       | Conditions                                                                                    |
 |------------|-----------------------------------------------------------------------------------------------|
-| `GOLD`     | `confidence >= 0.9` И `validatedBy !== null` И `schemaValidation.valid === true`              |
-| `SILVER`   | `confidence >= 0.7` И `schemaValidation.valid === true`                                       |
-| `BRONZE`   | `confidence >= 0.5` И все обязательные поля Level 1 заполнены                                 |
-| `UNVERIFIED` | Всё остальное                                                                              |
+| `GOLD`     | `confidence >= 0.9` AND `validatedBy !== null` AND `schemaValidation.valid === true`          |
+| `SILVER`   | `confidence >= 0.7` AND `schemaValidation.valid === true`                                     |
+| `BRONZE`   | `confidence >= 0.5` AND all Level 1 mandatory fields are filled                               |
+| `UNVERIFIED` | Everything else                                                                            |
 
-### Блок 8: Access Control — Контроль доступа
+### Block 8: Access Control
 
 ```typescript
 interface AccessControl {
-  /** Уровень секретности */
+  /** Security level */
   securityLevel: 'PUBLIC' | 'INTERNAL' | 'CONFIDENTIAL' | 'RESTRICTED';
 
-  /** Команда-владелец */
+  /** Owner team */
   ownerTeam: string;          // "data-engineering", "security"
 
-  /** Роли с доступом на чтение */
+  /** Roles with read access */
   allowedRoles: string[];     // ["admin", "analyst", "developer"]
 }
 ```
 
 ---
 
-## 2.3. Provenance — Маппинг на W3C PROV-O
+## 2.3. Provenance — Mapping to W3C PROV-O
 
-### Соответствие концепций PROV-O и PA
+### Correspondence of PROV-O and PA concepts
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
@@ -1468,58 +1468,58 @@ interface AccessControl {
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-### Таблица маппинга
+### Mapping table
 
-| PROV-O Концепция         | PA Реализация              | Memgraph Метка/Связь         | Описание                                      |
+| PROV-O Concept           | PA Implementation          | Memgraph Label/Relationship  | Description                                   |
 |--------------------------|----------------------------|------------------------------|-----------------------------------------------|
-| `prov:Entity`            | Knowledge Node             | `(:Domain)`, `(:Procedure)`  | Извлечённый факт (узел знаний)                |
-| `prov:Activity`          | Extraction Cycle           | `(:ExtractionCycle)`         | Один проход пайплайна извлечения              |
-| `prov:Agent`             | Pipeline / User            | `(:Pipeline)`, `(:User)`     | Кто выполнил извлечение                       |
-| `prov:wasGeneratedBy`    | EXTRACTED_BY               | `-[:EXTRACTED_BY]->`         | Узел создан в рамках цикла                    |
-| `prov:wasDerivedFrom`    | DERIVED_FROM               | `-[:DERIVED_FROM]->`         | Узел извлечён из источника                    |
-| `prov:wasAssociatedWith` | EXECUTED_BY                | `-[:EXECUTED_BY]->`          | Цикл запущен агентом/пайплайном               |
-| `prov:wasAttributedTo`   | ATTRIBUTED_TO              | `-[:ATTRIBUTED_TO]->`        | Факт приписан конкретному агенту              |
-| `prov:used`              | USED_SOURCE                | `-[:USED_SOURCE]->`          | Цикл использовал источник данных              |
-| `prov:wasInformedBy`     | INFORMED_BY                | `-[:INFORMED_BY]->`          | Цикл использовал результаты другого цикла     |
-| `prov:generatedAtTime`   | `createdAt`                | Свойство узла                | Время создания (ISO 8601)                     |
-| `prov:invalidatedAtTime` | `ttEnd`                    | Свойство узла                | Время инвалидации версии                      |
+| `prov:Entity`            | Knowledge Node             | `(:Domain)`, `(:Procedure)`  | Extracted fact (knowledge node)               |
+| `prov:Activity`          | Extraction Cycle           | `(:ExtractionCycle)`         | One pass of the extraction pipeline           |
+| `prov:Agent`             | Pipeline / User            | `(:Pipeline)`, `(:User)`     | Who performed the extraction                  |
+| `prov:wasGeneratedBy`    | EXTRACTED_BY               | `-[:EXTRACTED_BY]->`         | Node created within a cycle                   |
+| `prov:wasDerivedFrom`    | DERIVED_FROM               | `-[:DERIVED_FROM]->`         | Node extracted from a source                  |
+| `prov:wasAssociatedWith` | EXECUTED_BY                | `-[:EXECUTED_BY]->`          | Cycle launched by agent/pipeline              |
+| `prov:wasAttributedTo`   | ATTRIBUTED_TO              | `-[:ATTRIBUTED_TO]->`        | Fact attributed to a specific agent           |
+| `prov:used`              | USED_SOURCE                | `-[:USED_SOURCE]->`          | Cycle used a data source                      |
+| `prov:wasInformedBy`     | INFORMED_BY                | `-[:INFORMED_BY]->`          | Cycle used results of another cycle           |
+| `prov:generatedAtTime`   | `createdAt`                | Node property                | Creation time (ISO 8601)                      |
+| `prov:invalidatedAtTime` | `ttEnd`                    | Node property                | Version invalidation time                     |
 
-### Как заполнять поля провенанса
+### How to fill provenance fields
 
-| Поле                | Источник значения                             | Пример                                     |
+| Field               | Source of value                                | Example                                    |
 |---------------------|-----------------------------------------------|---------------------------------------------|
-| `sourceType`        | Тип коннектора, выполнившего извлечение        | `"mssql"` для SQL Server                    |
-| `sourceId`          | Полный путь к объекту в источнике              | `"server01.MyDB.dbo.sp_GetUsers"`           |
-| `sourceSystem`      | Имя, присвоенное администратором при настройке | `"ERP-Production"`                          |
-| `extractionCycleId` | UUID, сгенерированный при старте пайплайна     | `"cycle-550e8400-e29b-41d4-a716-446655440000"` |
-| `confidence`        | Определяется методом извлечения (см. ниже)     | `0.85`                                      |
+| `sourceType`        | Type of connector that performed extraction    | `"mssql"` for SQL Server                    |
+| `sourceId`          | Full path to the object in the source          | `"server01.MyDB.dbo.sp_GetUsers"`           |
+| `sourceSystem`      | Name assigned by administrator during setup    | `"ERP-Production"`                          |
+| `extractionCycleId` | UUID generated at pipeline start               | `"cycle-550e8400-e29b-41d4-a716-446655440000"` |
+| `confidence`        | Determined by extraction method (see below)    | `0.85`                                      |
 
-### Правила определения confidence по типу источника
+### Rules for determining confidence by source type
 
-| Тип источника    | Метод                | Базовый confidence | Обоснование                                      |
+| Source type      | Method               | Base confidence    | Rationale                                        |
 |------------------|----------------------|--------------------|--------------------------------------------------|
-| **AST**          | Парсинг AST          | **1.0**            | Синтаксическое дерево — детерминистичный разбор  |
-| **Regex**        | Регулярные выражения | **0.9**            | Покрывает большинство паттернов, но не все        |
-| **User**         | Ручной ввод          | **0.8**            | Человек может ошибиться, но обычно точен          |
-| **LLM**          | Языковая модель      | **0.7**            | Высокое качество, но возможны галлюцинации        |
-| **GNN**          | Графовая нейросеть   | **0.6**            | Предсказание на основе структуры графа            |
-| **Heuristic**    | Эвристические правила| **0.5**            | Простые правила, высокий false positive rate       |
+| **AST**          | AST parsing          | **1.0**            | Syntax tree — deterministic parsing              |
+| **Regex**        | Regular expressions  | **0.9**            | Covers most patterns, but not all                |
+| **User**         | Manual input         | **0.8**            | Humans can make mistakes, but are usually accurate |
+| **LLM**          | Language model       | **0.7**            | High quality, but hallucinations possible        |
+| **GNN**          | Graph neural network | **0.6**            | Prediction based on graph structure              |
+| **Heuristic**    | Heuristic rules      | **0.5**            | Simple rules, high false positive rate           |
 
-> **Важно:** Базовый confidence может быть скорректирован валидацией. Например, LLM-извлечение, подтверждённое кросс-ссылкой, получает `confidence = 0.7 + 0.2 = 0.9`.
+> **Important:** The base confidence can be adjusted by validation. For example, LLM extraction confirmed by cross-reference receives `confidence = 0.7 + 0.2 = 0.9`.
 
 ---
 
-## 2.4. Hash chain — криптографическая целостность
+## 2.4. Hash Chain — Cryptographic Integrity
 
-Каждая версия узла содержит криптографическую цепочку хешей, обеспечивающую неизменяемость истории.
+Each node version contains a cryptographic hash chain that ensures the immutability of history.
 
-### Три типа хешей
+### Three hash types
 
-| Хеш            | Формула                                        | Назначение                                          |
+| Hash            | Formula                                        | Purpose                                             |
 |-----------------|------------------------------------------------|-----------------------------------------------------|
-| `contentHash`   | `SHA-256(canonicalize(content))`               | Отпечаток содержимого текущей версии                |
-| `previousHash`  | `chainHash` предыдущей версии                  | Ссылка на предшественника (как в блокчейне)         |
-| `chainHash`     | `SHA-256(contentHash + ":" + previousHash)`    | Цепочечный хеш, связывающий версии                  |
+| `contentHash`   | `SHA-256(canonicalize(content))`               | Content fingerprint of the current version          |
+| `previousHash`  | `chainHash` of the previous version            | Reference to predecessor (like in blockchain)       |
+| `chainHash`     | `SHA-256(contentHash + ":" + previousHash)`    | Chain hash linking versions together                |
 
 ```
   Version 1 (GENESIS)         Version 2                   Version 3
@@ -1531,23 +1531,23 @@ interface AccessControl {
   └──────────────────┘        └──────────────────┘        └──────────────────┘
 ```
 
-### Алгоритм канонизации (canonicalization)
+### Canonicalization algorithm
 
-Перед вычислением `contentHash` содержимое узла приводится к каноническому виду:
+Before computing `contentHash`, the node content is reduced to canonical form:
 
 ```javascript
 const crypto = require('crypto');
 
 /**
- * Канонизирует объект для вычисления contentHash.
+ * Canonicalizes an object for contentHash computation.
  *
- * Шаги:
- * 1. Удалить служебные поля (id, createdAt, ttStart, ttEnd, contentHash, chainHash и т.д.)
- * 2. Отсортировать ключи рекурсивно
- * 3. Сериализовать в JSON (без пробелов)
+ * Steps:
+ * 1. Remove service fields (id, createdAt, ttStart, ttEnd, contentHash, chainHash, etc.)
+ * 2. Sort keys recursively
+ * 3. Serialize to JSON (no whitespace)
  *
- * @param {object} properties - Свойства узла
- * @returns {string} Каноническая JSON-строка
+ * @param {object} properties - Node properties
+ * @returns {string} Canonical JSON string
  */
 function canonicalize(properties) {
   const SERVICE_FIELDS = new Set([
@@ -1579,7 +1579,7 @@ function canonicalize(properties) {
 }
 
 /**
- * Вычисляет contentHash для свойств узла.
+ * Computes contentHash for node properties.
  */
 function computeContentHash(properties) {
   const canonical = canonicalize(properties);
@@ -1588,10 +1588,10 @@ function computeContentHash(properties) {
 }
 
 /**
- * Вычисляет chainHash для текущей версии.
+ * Computes chainHash for the current version.
  *
- * @param {string} contentHash - Хеш содержимого текущей версии
- * @param {string|null} previousChainHash - chainHash предыдущей версии (null для GENESIS)
+ * @param {string} contentHash - Content hash of the current version
+ * @param {string|null} previousChainHash - chainHash of previous version (null for GENESIS)
  * @returns {string} chainHash
  */
 function computeChainHash(contentHash, previousChainHash) {
@@ -1602,13 +1602,13 @@ function computeChainHash(contentHash, previousChainHash) {
 }
 ```
 
-### Валидация цепочки
+### Chain validation
 
 ```javascript
 /**
- * Валидирует целостность цепочки версий.
+ * Validates the integrity of the version chain.
  *
- * @param {Array} versions - Массив версий, отсортированных по sequenceNumber
+ * @param {Array} versions - Array of versions sorted by sequenceNumber
  * @returns {{ valid: boolean, brokenAt: number|null, error: string|null }}
  */
 function validateChain(versions) {
@@ -1616,7 +1616,7 @@ function validateChain(versions) {
     return { valid: true, brokenAt: null, error: null };
   }
 
-  // Проверяем GENESIS версию
+  // Validate GENESIS version
   const genesis = versions[0];
   const expectedGenesisChain = computeChainHash(genesis.contentHash, null);
   if (genesis.chainHash !== expectedGenesisChain) {
@@ -1627,12 +1627,12 @@ function validateChain(versions) {
     };
   }
 
-  // Проверяем каждую последующую версию
+  // Validate each subsequent version
   for (let i = 1; i < versions.length; i++) {
     const current = versions[i];
     const previous = versions[i - 1];
 
-    // previousHash текущей версии должен совпадать с chainHash предыдущей
+    // previousHash of current version must match chainHash of previous version
     if (current.previousHash !== previous.chainHash) {
       return {
         valid: false,
@@ -1641,7 +1641,7 @@ function validateChain(versions) {
       };
     }
 
-    // chainHash текущей версии должен быть корректным
+    // chainHash of current version must be correct
     const expectedChain = computeChainHash(current.contentHash, previous.chainHash);
     if (current.chainHash !== expectedChain) {
       return {
@@ -1656,12 +1656,12 @@ function validateChain(versions) {
 }
 ```
 
-### Паттерн GENESIS — первая версия
+### GENESIS pattern — first version
 
-Первая версия сущности (sequenceNumber = 1) использует специальный паттерн:
+The first version of an entity (sequenceNumber = 1) uses a special pattern:
 
 ```javascript
-// Создание GENESIS версии
+// Creating a GENESIS version
 const genesisVersion = {
   versionId: `ver-${uuidv4()}`,
   entityId: `ent-${uuidv4()}`,
@@ -1672,50 +1672,50 @@ const genesisVersion = {
   vtStart: new Date().toISOString(),
   vtEnd: null,
   contentHash: computeContentHash(properties),
-  previousHash: null,                                        // <-- null для GENESIS
-  chainHash: computeChainHash(computeContentHash(properties), null), // <-- "GENESIS" как previousHash
+  previousHash: null,                                        // <-- null for GENESIS
+  chainHash: computeChainHash(computeContentHash(properties), null), // <-- "GENESIS" as previousHash
 };
 ```
 
-При валидации: если `previousHash === null` и `sequenceNumber === 1`, это корректная GENESIS версия.
+On validation: if `previousHash === null` and `sequenceNumber === 1`, this is a valid GENESIS version.
 
 ---
 
-## 2.5. Bi-temporal model — двумерное время
+## 2.5. Bi-temporal Model — Two-dimensional Time
 
-Каждая версионируемая сущность (Level 3) существует в двух временных измерениях:
+Every versioned entity (Level 3) exists in two time dimensions:
 
 ```
-                    Valid Time (vt) — «Когда факт реально действовал?»
+                    Valid Time (vt) — "When did the fact actually apply?"
                     ────────────────────────────────────────────────>
 
  Transaction Time   │
- (tt) — «Когда      │   ┌─────────────────────┐
-  мы узнали          │   │  V1: sp_GetUsers     │
-  об этом факте?»    │   │  vt: [Jan, Mar)      │ ← «Процедура была актуальна Jan-Mar»
-                     │   │  tt: [Feb, ∞)        │ ← «Мы узнали об этом в Feb»
+ (tt) — "When did   │   ┌─────────────────────┐
+  we learn          │   │  V1: sp_GetUsers     │
+  about this fact?" │   │  vt: [Jan, Mar)      │ ← "Procedure was current Jan-Mar"
+                     │   │  tt: [Feb, ∞)        │ ← "We learned about it in Feb"
                      │   └─────────────────────┘
                      │
                      │   ┌─────────────────────┐
                      │   │  V2: sp_GetUsers_v2  │
-                     │   │  vt: [Mar, ∞)        │ ← «Новая версия с Mar»
-                     │   │  tt: [Mar, ∞)        │ ← «Мы узнали об этом в Mar»
+                     │   │  vt: [Mar, ∞)        │ ← "New version from Mar"
+                     │   │  tt: [Mar, ∞)        │ ← "We learned about it in Mar"
                      │   └─────────────────────┘
                      │
                      │   ┌─────────────────────┐
                      │   │  V1-fix: sp_GetUsers │
-                     │   │  vt: [Jan, Feb)      │ ← «Оказывается, V1 работала только до Feb»
-                     │   │  tt: [Apr, ∞)        │ ← «Мы это осознали только в Apr (ретроспективно)»
+                     │   │  vt: [Jan, Feb)      │ ← "It turns out V1 was only valid until Feb"
+                     │   │  tt: [Apr, ∞)        │ ← "We realized this only in Apr (retrospectively)"
                      │   └─────────────────────┘
                      ▼
 ```
 
-### Примеры Cypher-запросов
+### Cypher query examples
 
-**Текущее состояние** — что актуально прямо сейчас:
+**Current state** — what is current right now:
 
 ```cypher
-// Все активные версии на текущий момент
+// All active versions at the current moment
 MATCH (v:NodeVersion)
 WHERE v.status = 'ACTIVE'
   AND v.ttEnd IS NULL
@@ -1724,30 +1724,30 @@ RETURN v
 ORDER BY v.entityId, v.sequenceNumber DESC
 ```
 
-**As-of запрос (Transaction Time)** — что мы знали на определённую дату:
+**As-of query (Transaction Time)** — what we knew on a specific date:
 
 ```cypher
-// Состояние графа знаний, каким мы его знали на 2026-02-15
+// State of the knowledge graph as we knew it on 2026-02-15
 MATCH (v:NodeVersion)
 WHERE v.ttStart <= '2026-02-15T00:00:00.000Z'
   AND (v.ttEnd IS NULL OR v.ttEnd > '2026-02-15T00:00:00.000Z')
 RETURN v
 ```
 
-**Valid-at запрос (Valid Time)** — что было реально в определённый период:
+**Valid-at query (Valid Time)** — what was actually true during a specific period:
 
 ```cypher
-// Какие процедуры реально существовали в январе 2026
+// Which procedures actually existed in January 2026
 MATCH (v:NodeVersion)-[:VERSION_OF]->(e:Procedure)
 WHERE v.vtStart <= '2026-01-31T23:59:59.999Z'
   AND (v.vtEnd IS NULL OR v.vtEnd > '2026-01-01T00:00:00.000Z')
 RETURN e.name, v.sequenceNumber, v.vtStart, v.vtEnd
 ```
 
-**Bi-temporal запрос** — что мы знали о конкретном периоде на конкретную дату:
+**Bi-temporal query** — what we knew about a specific period on a specific date:
 
 ```cypher
-// Что мы знали на 2026-03-01 о состоянии системы в январе 2026
+// What we knew on 2026-03-01 about the state of the system in January 2026
 MATCH (v:NodeVersion)
 WHERE v.ttStart <= '2026-03-01T00:00:00.000Z'
   AND (v.ttEnd IS NULL OR v.ttEnd > '2026-03-01T00:00:00.000Z')
@@ -1756,32 +1756,32 @@ WHERE v.ttStart <= '2026-03-01T00:00:00.000Z'
 RETURN v
 ```
 
-### Правила управления временем
+### Time management rules
 
-| Аспект                       | Transaction Time (tt)                  | Valid Time (vt)                          |
+| Aspect                       | Transaction Time (tt)                  | Valid Time (vt)                          |
 |------------------------------|----------------------------------------|------------------------------------------|
-| **Кто устанавливает**        | Система автоматически                  | Пайплайн извлечения или пользователь     |
-| **Можно ли изменить?**       | Нет — иммутабельно                    | Да — при ретроспективной коррекции       |
-| **Когда ttEnd/vtEnd задаётся?** | При создании новой версии (SUPERSEDED) | При обнаружении, что факт больше не валиден |
-| **Значение null**            | Текущая (ещё не заменена)              | Бессрочно валиден                        |
-| **Формат**                   | ISO 8601 с timezone (UTC)              | ISO 8601 с timezone (UTC)                |
-| **Гранулярность**            | Миллисекунды                           | Миллисекунды                             |
+| **Who sets it**              | System automatically                   | Extraction pipeline or user              |
+| **Can it be changed?**       | No — immutable                        | Yes — for retrospective correction       |
+| **When is ttEnd/vtEnd set?** | When new version is created (SUPERSEDED) | When it is discovered the fact is no longer valid |
+| **null value**               | Current (not yet replaced)             | Indefinitely valid                       |
+| **Format**                   | ISO 8601 with timezone (UTC)           | ISO 8601 with timezone (UTC)             |
+| **Granularity**              | Milliseconds                           | Milliseconds                             |
 
-**Инварианты:**
+**Invariants:**
 
-1. `ttStart` всегда задаётся при создании версии и **никогда не меняется**.
-2. `ttEnd` задаётся **только** когда появляется новая версия (`SUPERSEDED`).
-3. `vtStart` задаётся при создании, может быть скорректирована **ретроспективно**.
-4. `vtEnd` может быть `null` (бессрочно) или задаётся при обнаружении устаревания.
-5. Для любой сущности **ровно одна** версия имеет `ttEnd = null` и `status = 'ACTIVE'`.
+1. `ttStart` is always set when a version is created and **never changes**.
+2. `ttEnd` is set **only** when a new version appears (`SUPERSEDED`).
+3. `vtStart` is set at creation, can be corrected **retrospectively**.
+4. `vtEnd` may be `null` (indefinite) or is set when staleness is discovered.
+5. For any entity **exactly one** version has `ttEnd = null` and `status = 'ACTIVE'`.
 
 ---
 
-## 2.6. extractionCycleId — правила
+## 2.6. extractionCycleId — Rules
 
-### Что такое цикл извлечения
+### What is an extraction cycle
 
-Цикл извлечения (Extraction Cycle) — это один полный проход пайплайна по источнику данных. Один цикл может создать или обновить десятки/сотни узлов в графе знаний.
+An Extraction Cycle is one complete pass of the pipeline over a data source. One cycle can create or update dozens/hundreds of nodes in the knowledge graph.
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
@@ -1796,20 +1796,20 @@ RETURN v
 │  │Source │   │ Entities │   │ + Enrich  │   │ + Hash Chain │    │
 │  └──────┘   └──────────┘   └───────────┘   └──────────────┘    │
 │                                                                  │
-│  Результат: 47 узлов создано, 12 обновлено, 3 удалено           │
+│  Result: 47 nodes created, 12 updated, 3 deleted                │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-### Генерация extractionCycleId
+### Generating extractionCycleId
 
-`extractionCycleId` генерируется **один раз** при старте пайплайна и передаётся во все последующие шаги:
+`extractionCycleId` is generated **once** at pipeline start and passed to all subsequent steps:
 
 ```javascript
 const { v4: uuidv4 } = require('uuid');
 
 /**
- * Создаёт новый цикл извлечения.
- * Вызывается ОДИН РАЗ при старте пайплайна.
+ * Creates a new extraction cycle.
+ * Called ONCE at pipeline start.
  */
 function createExtractionCycle(previousCycleId = null, cycleNumber = 1) {
   return {
@@ -1830,91 +1830,91 @@ function createExtractionCycle(previousCycleId = null, cycleNumber = 1) {
 }
 ```
 
-### Использование extractionCycleId
+### Using extractionCycleId
 
-| Сценарий              | Как используется                                                                 | Пример                                                    |
+| Scenario              | How it is used                                                                   | Example                                                   |
 |-----------------------|---------------------------------------------------------------------------------|------------------------------------------------------------|
-| **Групповой откат**   | Удалить все узлы, созданные в одном цикле                                       | `MATCH (n {extractionCycleId: $cycleId}) DETACH DELETE n`  |
-| **Дебаг пайплайна**   | Найти все факты, извлечённые в конкретном прогоне                                | `MATCH (n {extractionCycleId: $cycleId}) RETURN n`         |
-| **Метрики**           | Подсчитать количество созданных/обновлённых/удалённых узлов за цикл              | Агрегация по `extractionCycleId`                           |
-| **Инкрементальность** | Определить, какие узлы не были затронуты последним циклом (потенциально удалены)  | `WHERE n.extractionCycleId <> $currentCycleId`             |
-| **Аудит**             | Ответить «кто и когда создал этот факт»                                          | Join с `(:ExtractionCycle)` узлом                          |
+| **Batch rollback**    | Delete all nodes created in one cycle                                            | `MATCH (n {extractionCycleId: $cycleId}) DETACH DELETE n`  |
+| **Pipeline debug**    | Find all facts extracted in a specific run                                       | `MATCH (n {extractionCycleId: $cycleId}) RETURN n`         |
+| **Metrics**           | Count created/updated/deleted nodes per cycle                                    | Aggregate by `extractionCycleId`                           |
+| **Incrementality**    | Determine which nodes were not touched by the latest cycle (potentially deleted)  | `WHERE n.extractionCycleId <> $currentCycleId`             |
+| **Audit**             | Answer "who created this fact and when"                                          | Join with `(:ExtractionCycle)` node                        |
 
-### Связь со спиральной моделью извлечения
+### Relationship with the spiral extraction model
 
-Пайплайн PA работает по спиральной модели: каждый цикл уточняет предыдущие результаты.
+The PA pipeline operates on a spiral model: each cycle refines the previous results.
 
 ```
   Cycle 1 ──> Cycle 2 ──> Cycle 3 ──> Cycle 4
-  (грубый)    (уточнённый) (обогащённый) (валидированный)
+  (rough)     (refined)   (enriched)  (validated)
 
   confidence:  0.5-0.7     0.7-0.8      0.8-0.9        0.9-1.0
-  метод:       regex       AST+regex    +LLM enrich    +GNN predict
+  method:      regex       AST+regex    +LLM enrich    +GNN predict
 ```
 
-Каждый цикл:
-1. Получает `previousCycleId` — ссылку на предыдущий прогон
-2. Генерирует свой `cycleId` — новый UUID
-3. Увеличивает `cycleNumber` на 1
-4. Для каждого существующего узла сравнивает `contentHash`:
-   - Хеш совпал → `CONFIRMED` (не создаём новую версию, обновляем `extractionCycleId`)
-   - Хеш изменился → `UPDATED` (создаём новую версию, `SUPERSEDED` старую)
-   - Узел не найден в источнике → `DEPRECATED` (устанавливаем `vtEnd`)
-   - Новый узел → `CREATED` (создаём GENESIS версию)
+Each cycle:
+1. Receives `previousCycleId` — reference to the previous run
+2. Generates its own `cycleId` — a new UUID
+3. Increments `cycleNumber` by 1
+4. For each existing node, compares `contentHash`:
+   - Hash matched → `CONFIRMED` (no new version created, update `extractionCycleId`)
+   - Hash changed → `UPDATED` (create new version, `SUPERSEDED` old one)
+   - Node not found in source → `DEPRECATED` (set `vtEnd`)
+   - New node → `CREATED` (create GENESIS version)
 
 ```javascript
 /**
- * Определяет действие для узла при инкрементальном обновлении.
+ * Determines the action for a node during incremental update.
  */
 function determineAction(existingNode, newContentHash) {
   if (!existingNode) {
-    return 'CREATED';   // Новый узел, ранее не существовал
+    return 'CREATED';   // New node, did not exist before
   }
   if (existingNode.contentHash === newContentHash) {
-    return 'CONFIRMED'; // Содержимое не изменилось
+    return 'CONFIRMED'; // Content has not changed
   }
-  return 'UPDATED';     // Содержимое изменилось, нужна новая версия
+  return 'UPDATED';     // Content has changed, new version needed
 }
 
-// Узлы, существующие в графе, но не найденные в текущем цикле:
-// → action: 'DEPRECATED' (устанавливаем vtEnd = now)
+// Nodes existing in the graph but not found in the current cycle:
+// → action: 'DEPRECATED' (set vtEnd = now)
 ```
 
 ---
 
-> **CODEX-META v0.1.0** | Часть **Кодекс UN ProjectAdvisor** | Стандарт метаданных для графа знаний
+> **CODEX-META v0.1.0** | Part of **UN ProjectAdvisor Codex** | Metadata standard for the knowledge graph
 
 ---
 
-## Часть III: CODEX-VERSION — Стандарт версионности
+## Part III: CODEX-VERSION — Versioning Standard
 
-**Статус:** 🟡 Черновик
-**Версия:** 0.1.0
-**Последнее обновление:** 2026-03-12
-
----
-
-## Преамбула
-
-В системе UN ProjectAdvisor сосуществуют две модели данных:
-
-1. **Mutable domain nodes** -- обычные узлы графа знаний (Table, Method, Column и др.), которые обновляются на месте через `SET`. Просты, быстры, не хранят историю.
-
-2. **Immutable NodeVersion** -- append-only цепочки версий с hash chain, аудитом и полной историей изменений. Используются для бизнес-правил, нормативных документов и всего, где требуется доказуемая трассируемость.
-
-Данный стандарт определяет:
-- когда использовать какую модель,
-- как связывать их между собой (Bridge pattern),
-- как строить и обходить SUPERSEDES-цепочки,
-- как обрабатывать merge/split/fork,
-- когда допустимо нарушать immutability (God Mode),
-- как безопасно удалять версии (Tombstones).
+**Status:** 🟡 Draft
+**Version:** 0.1.0
+**Last updated:** 2026-03-12
 
 ---
 
-## 3.1 Две модели -- NodeVersion vs Domain nodes
+## Preamble
 
-### Сравнительная диаграмма
+In the UN ProjectAdvisor system, two data models coexist:
+
+1. **Mutable domain nodes** — ordinary knowledge graph nodes (Table, Method, Column, etc.) that are updated in-place via `SET`. Simple, fast, do not store history.
+
+2. **Immutable NodeVersion** — append-only version chains with hash chain, audit trail, and full change history. Used for business rules, regulatory documents, and everything where provable traceability is required.
+
+This standard defines:
+- when to use which model,
+- how to link them together (Bridge pattern),
+- how to build and traverse SUPERSEDES chains,
+- how to handle merge/split/fork,
+- when it is permissible to violate immutability (God Mode),
+- how to safely delete versions (Tombstones).
+
+---
+
+## 3.1 Two Models — NodeVersion vs Domain Nodes
+
+### Comparison diagram
 
 ```
  MUTABLE (Domain Node)                    IMMUTABLE (NodeVersion)
@@ -1926,13 +1926,13 @@ function determineAction(existingNode, newContentHash) {
  ├─ rowCount: 150000                      ├─ status: "ACTIVE"
  ├─ lastSync: datetime()                  ├─ contentHash: "sha256:a1b2c3..."
  │                                        ├─ previousHash: "sha256:x9y8z7..."
- │  5-10 свойств                          ├─ title: "Правило валидации X"
+ │  5-10 properties                       ├─ title: "Validation Rule X"
  │                                        ├─ content: "{...json...}"
- │  Обновление:                           ├─ author: "agent:advisor"
+ │  Update:                               ├─ author: "agent:advisor"
  │  SET t.rowCount = 200000               ├─ createdAt: datetime()
  │                                        ├─ createdBy: "user:admin"
- │  История: НЕТ                          ├─ validFrom: datetime()
- │  Аудит: НЕТ                            ├─ validUntil: null
+ │  History: NONE                         ├─ validFrom: datetime()
+ │  Audit: NONE                           ├─ validUntil: null
  │                                        ├─ namespace: "un.rules"
  │                                        ├─ tags: ["validation","input"]
  │                                        ├─ metadata: "{...}"
@@ -1942,58 +1942,58 @@ function determineAction(existingNode, newContentHash) {
  │                                        ├─ approvedBy: "user:reviewer"
  │                                        ├─ approvedAt: datetime()
  │                                        ├─ schemaVersion: "1.0"
- │                                        ├─ changeReason: "Уточнение порога"
+ │                                        ├─ changeReason: "Threshold refinement"
  │                                        ├─ diffFromPrevious: "{...patch...}"
  │                                        ├─ embedding: [0.12, 0.34, ...]
  │                                        │
- │                                        │  25 свойств
+ │                                        │  25 properties
  │                                        │
- │                                        │  Обновление: ЗАПРЕЩЕНО
- │                                        │  Создается НОВАЯ версия
- │                                        │  с ребром SUPERSEDES
+ │                                        │  Update: FORBIDDEN
+ │                                        │  A NEW version is created
+ │                                        │  with a SUPERSEDES edge
  │                                        │
- │                                        │  История: ПОЛНАЯ цепочка
- │                                        │  Аудит: hash chain
+ │                                        │  History: FULL chain
+ │                                        │  Audit: hash chain
  └────────────────────                    └────────────────────────────────
 ```
 
-### Таблица выбора модели
+### Model selection table
 
-| Критерий                        | Domain (mutable) | NodeVersion (immutable) |
+| Criterion                       | Domain (mutable) | NodeVersion (immutable) |
 |---------------------------------|:-----------------:|:-----------------------:|
-| Нужна история изменений?        | Нет               | Да                      |
-| Аудит критичен?                 | Нет               | Да                      |
-| Частота изменений               | Высокая (>10/день)| Низкая-средняя          |
-| Данные нормативные/юридические? | Нет               | Да                      |
-| Нужно откатить к версии N?      | Невозможно        | Да                      |
-| Объём данных на узел            | Малый (5-10 полей)| Большой (25 полей)      |
-| Скорость записи                 | Быстрая (SET)     | Медленнее (CREATE+EDGE) |
-| Доказуемая целостность          | Нет               | Да (hash chain)         |
+| Change history needed?          | No                | Yes                     |
+| Audit critical?                 | No                | Yes                     |
+| Change frequency                | High (>10/day)    | Low-medium              |
+| Data normative/legal?           | No                | Yes                     |
+| Need to roll back to version N? | Impossible        | Yes                     |
+| Data size per node              | Small (5-10 fields) | Large (25 fields)     |
+| Write speed                     | Fast (SET)        | Slower (CREATE+EDGE)    |
+| Provable integrity              | No                | Yes (hash chain)        |
 
-### Маппинг меток к моделям
+### Label-to-model mapping
 
-| Label графа       | Модель                  | Обоснование                                              |
+| Graph label        | Model                   | Rationale                                                |
 |--------------------|-------------------------|----------------------------------------------------------|
-| `Table`            | Domain (mutable)        | Техническое описание, часто синхронизируется              |
-| `Column`           | Domain (mutable)        | Атрибут Table, обновляется при re-scan                    |
-| `Method`           | Domain (mutable)        | Код меняется часто, история в git                        |
-| `BusinessRule`     | NodeVersion (immutable) | Нормативный документ, нужен полный аудит                 |
-| `Policy`           | NodeVersion (immutable) | Юридически значимый, требует трассируемости              |
-| `Requirement`      | NodeVersion (immutable) | Спецификация, нужна история согласований                 |
-| `CatalogEntry`     | Domain + GraphVersion   | Сам каталог mutable, но версии графов immutable          |
-| `ExecutionRecord`  | Domain (immutable by policy) | Создаётся один раз, не меняется, но без hash chain  |
-| `Settings`         | Domain (mutable)        | Конфигурация, история не нужна                           |
-| `CoreComponent`    | Domain (mutable)        | Инфраструктурный узел, обновляется при deploy            |
+| `Table`            | Domain (mutable)        | Technical description, frequently synchronized           |
+| `Column`           | Domain (mutable)        | Table attribute, updated on re-scan                      |
+| `Method`           | Domain (mutable)        | Code changes frequently, history in git                  |
+| `BusinessRule`     | NodeVersion (immutable) | Regulatory document, full audit required                 |
+| `Policy`           | NodeVersion (immutable) | Legally significant, traceability required               |
+| `Requirement`      | NodeVersion (immutable) | Specification, approval history required                 |
+| `CatalogEntry`     | Domain + GraphVersion   | Catalog itself is mutable, but graph versions are immutable |
+| `ExecutionRecord`  | Domain (immutable by policy) | Created once, never changes, but without hash chain |
+| `Settings`         | Domain (mutable)        | Configuration, history not needed                        |
+| `CoreComponent`    | Domain (mutable)        | Infrastructure node, updated on deploy                   |
 
 ---
 
-## 3.2 Bridge pattern: связь между моделями
+## 3.2 Bridge Pattern: Linking the Two Models
 
-### Проблема
+### Problem
 
-Domain-узлы и NodeVersion живут в разных моделях и не связаны напрямую. Метод (domain) может реализовывать бизнес-правило (NodeVersion), но как построить ребро между ними, если версия правила меняется?
+Domain nodes and NodeVersions live in different models and are not directly connected. A Method (domain) may implement a business rule (NodeVersion), but how do you build an edge between them when the rule's version changes?
 
-### Решение: Stable Entity ID + Version Pointer
+### Solution: Stable Entity ID + Version Pointer
 
 ```
   Domain Model                          Immutable Model
@@ -2020,61 +2020,61 @@ Domain-узлы и NodeVersion живут в разных моделях и не
   ├─────────────────────────────────────┤ │ (:NodeVersion)
   │         (entityId: "BR-001")        │   │ entityId:  "BR-001"
   │                                     │   │ versionId: "BR-001-v3"
-  │                                     │   │ status:    "ACTIVE"    <── текущая
+  │                                     │   │ status:    "ACTIVE"    <── current
   │                                     │   │ content:   "{...}"
 ```
 
-### Правила Bridge pattern
+### Bridge pattern rules
 
-**Правило 1: Используй `entityId`, а не `versionId` для кросс-модельных рёбер.**
+**Rule 1: Use `entityId`, not `versionId`, for cross-model edges.**
 
 ```cypher
-// ПРАВИЛЬНО: ребро ссылается на entityId
+// CORRECT: edge references entityId
 MATCH (m:Method {id: "M-042"})
 MATCH (br:NodeVersion {entityId: "BR-001", status: "ACTIVE"})
 MERGE (m)-[:IMPLEMENTS {entityId: "BR-001"}]->(br)
 ```
 
 ```cypher
-// НЕПРАВИЛЬНО: ребро привязано к конкретной версии
+// WRONG: edge is tied to a specific version
 MATCH (m:Method {id: "M-042"})
 MATCH (br:NodeVersion {versionId: "BR-001-v3"})
 MERGE (m)-[:IMPLEMENTS]->(br)
-// При появлении v4 это ребро останется на v3!
+// When v4 appears, this edge will remain on v3!
 ```
 
-**Правило 2: При SUPERSEDE -- перелинковка входящих рёбер.**
+**Rule 2: On SUPERSEDE — relink incoming edges.**
 
-Когда создаётся новая версия, все входящие кросс-модельные рёбра должны быть перенаправлены на новую ACTIVE-версию:
+When a new version is created, all incoming cross-model edges must be redirected to the new ACTIVE version:
 
 ```javascript
 /**
- * Перелинковка входящих рёбер при создании новой версии.
- * Вызывается ПОСЛЕ создания SUPERSEDES-ребра и смены статуса.
+ * Relinks incoming edges when a new version is created.
+ * Called AFTER the SUPERSEDES edge is created and the status is changed.
  *
- * @param {string} entityId   -- стабильный ID сущности
- * @param {string} oldVersionId -- versionId предыдущей (теперь SUPERSEDED) версии
- * @param {string} newVersionId -- versionId новой ACTIVE-версии
+ * @param {string} entityId   -- stable entity ID
+ * @param {string} oldVersionId -- versionId of the previous (now SUPERSEDED) version
+ * @param {string} newVersionId -- versionId of the new ACTIVE version
  */
 async function relinkIncomingEdges(entityId, oldVersionId, newVersionId) {
   const session = driver.session();
   try {
-    // Найти все входящие рёбра к старой версии (кроме SUPERSEDES)
+    // Find all incoming edges to the old version (except SUPERSEDES)
     const result = await session.run(`
       MATCH (source)-[r]->(old:NodeVersion {versionId: $oldVersionId})
       WHERE type(r) <> 'SUPERSEDES'
       MATCH (new:NodeVersion {versionId: $newVersionId})
       WITH source, r, old, new, type(r) AS relType, properties(r) AS relProps
-      // Создать такое же ребро к новой версии
+      // Create the same edge to the new version
       CALL {
         WITH source, new, relType, relProps
         WITH source, new, relType, relProps
         CREATE (source)-[newR:IMPLEMENTS]->(new)
         SET newR = relProps
-        // Примечание: Memgraph не поддерживает динамические типы рёбер.
-        // В реальной системе нужен CASE по relType.
+        // Note: Memgraph does not support dynamic edge types.
+        // In a real system, a CASE by relType is needed.
       }
-      // Удалить старое ребро
+      // Delete the old edge
       DELETE r
       RETURN count(*) AS relinked
     `, { oldVersionId, newVersionId });
@@ -2086,9 +2086,9 @@ async function relinkIncomingEdges(entityId, oldVersionId, newVersionId) {
 }
 ```
 
-**Правило 3: Перелинковка по типам рёбер (Memgraph-совместимый вариант).**
+**Rule 3: Relinking by edge types (Memgraph-compatible variant).**
 
-Поскольку Memgraph не поддерживает динамические типы рёбер в `CREATE`, используем явный маппинг:
+Since Memgraph does not support dynamic edge types in `CREATE`, use explicit mapping:
 
 ```javascript
 const BRIDGE_EDGE_TYPES = ['IMPLEMENTS', 'REFERENCES', 'GOVERNED_BY', 'DERIVED_FROM'];
@@ -2123,9 +2123,9 @@ async function relinkAllBridgeEdges(entityId, oldVersionId, newVersionId) {
 
 ---
 
-## 3.3 SUPERSEDES chain: создание, траверс, инварианты
+## 3.3 SUPERSEDES Chain: Creation, Traversal, Invariants
 
-### Структура цепочки
+### Chain structure
 
 ```
   (:NodeVersion)          (:NodeVersion)          (:NodeVersion)
@@ -2140,31 +2140,31 @@ async function relinkAllBridgeEdges(entityId, oldVersionId, newVersionId) {
   └────────────────────────┘────────────────────────┘
            ^                        ^
            │ SUPERSEDES             │ SUPERSEDES
-           │ (v2 заменяет v1)       │ (v3 заменяет v2)
+           │ (v2 replaces v1)       │ (v3 replaces v2)
            │                        │
       (:NodeVersion v2)        (:NodeVersion v3)
 
-  Направление SUPERSEDES: НОВАЯ -[:SUPERSEDES]-> СТАРАЯ
-  Чтение цепочки: от ACTIVE назад по SUPERSEDES
+  SUPERSEDES direction: NEW -[:SUPERSEDES]-> OLD
+  Chain reading: from ACTIVE backwards via SUPERSEDES
 ```
 
-### Код создания новой версии
+### Creating a new version — code
 
 ```javascript
 const crypto = require('crypto');
 
 /**
- * Создаёт следующую версию сущности в SUPERSEDES-цепочке.
+ * Creates the next version of an entity in the SUPERSEDES chain.
  *
- * @param {string} entityId    -- стабильный ID сущности
- * @param {object} newContent  -- новое содержимое версии
- * @param {object} meta        -- метаданные (author, changeReason, и т.д.)
- * @returns {object}           -- созданная NodeVersion
+ * @param {string} entityId    -- stable entity ID
+ * @param {object} newContent  -- new version content
+ * @param {object} meta        -- metadata (author, changeReason, etc.)
+ * @returns {object}           -- created NodeVersion
  */
 async function createNextVersion(entityId, newContent, meta = {}) {
   const session = driver.session();
   try {
-    // 1. Найти текущую ACTIVE-версию
+    // 1. Find the current ACTIVE version
     const current = await session.run(`
       MATCH (v:NodeVersion {entityId: $entityId, status: "ACTIVE"})
       RETURN v
@@ -2179,7 +2179,7 @@ async function createNextVersion(entityId, newContent, meta = {}) {
     const currentHash = activeNode.contentHash;
     const currentVersionId = activeNode.versionId;
 
-    // 2. Вычислить hash chain
+    // 2. Compute hash chain
     const contentStr = JSON.stringify(newContent, Object.keys(newContent).sort());
     const newHash = crypto
       .createHash('sha256')
@@ -2189,18 +2189,18 @@ async function createNextVersion(entityId, newContent, meta = {}) {
     const newSeq = currentSeq + 1;
     const newVersionId = `${entityId}-v${newSeq}`;
 
-    // 3. Вычислить diff от предыдущей версии
+    // 3. Compute diff from previous version
     const previousContent = JSON.parse(activeNode.content || '{}');
     const diff = computeDiff(previousContent, newContent);
 
-    // 4. Атомарная транзакция: создать новую версию + SUPERSEDES + обновить статус
+    // 4. Atomic transaction: create new version + SUPERSEDES + update status
     const result = await session.run(`
-      // Пометить текущую как SUPERSEDED
+      // Mark current as SUPERSEDED
       MATCH (old:NodeVersion {versionId: $currentVersionId})
       SET old.status = "SUPERSEDED"
       SET old.supersededAt = datetime()
 
-      // Создать новую версию
+      // Create new version
       CREATE (new:NodeVersion {
         entityId:         $entityId,
         versionId:        $newVersionId,
@@ -2229,7 +2229,7 @@ async function createNextVersion(entityId, newContent, meta = {}) {
         metadata:         $metadata
       })
 
-      // Создать SUPERSEDES-ребро (новая -> старая)
+      // Create SUPERSEDES edge (new -> old)
       CREATE (new)-[:SUPERSEDES {
         at: datetime(),
         reason: $changeReason
@@ -2256,7 +2256,7 @@ async function createNextVersion(entityId, newContent, meta = {}) {
 
     const newNode = result.records[0].get('new').properties;
 
-    // 5. Перелинковать Bridge-рёбра
+    // 5. Relink Bridge edges
     await relinkAllBridgeEdges(entityId, currentVersionId, newVersionId);
 
     return newNode;
@@ -2266,7 +2266,7 @@ async function createNextVersion(entityId, newContent, meta = {}) {
 }
 
 /**
- * Простой diff между двумя объектами.
+ * Simple diff between two objects.
  */
 function computeDiff(oldObj, newObj) {
   const diff = { added: {}, removed: {}, changed: {} };
@@ -2284,9 +2284,9 @@ function computeDiff(oldObj, newObj) {
 }
 ```
 
-### Cypher-запросы для обхода цепочки
+### Cypher queries for chain traversal
 
-**Получить полную историю сущности (от новейшей к старейшей):**
+**Get full entity history (from newest to oldest):**
 
 ```cypher
 MATCH path = (active:NodeVersion {entityId: $entityId, status: "ACTIVE"})
@@ -2301,7 +2301,7 @@ RETURN ancestor.versionId     AS versionId,
 ORDER BY ancestor.sequenceNumber DESC
 ```
 
-**Найти версию, актуальную на определённую дату:**
+**Find the version current on a specific date:**
 
 ```cypher
 MATCH (v:NodeVersion {entityId: $entityId})
@@ -2312,7 +2312,7 @@ ORDER BY v.sequenceNumber DESC
 LIMIT 1
 ```
 
-**Проверить целостность hash chain:**
+**Verify hash chain integrity:**
 
 ```cypher
 MATCH path = (active:NodeVersion {entityId: $entityId, status: "ACTIVE"})
@@ -2326,43 +2326,43 @@ RETURN newer.versionId AS brokenAt,
        older.contentHash AS actual
 ```
 
-### Инварианты SUPERSEDES-цепочки
+### SUPERSEDES chain invariants
 
-| # | Инвариант                                         | Проверка                                                   |
+| # | Invariant                                         | Check                                                      |
 |---|---------------------------------------------------|------------------------------------------------------------|
-| 1 | Ровно одна ACTIVE-версия на `entityId`            | `COUNT(status="ACTIVE") = 1` для каждого entityId          |
-| 2 | Нет циклов в цепочке SUPERSEDES                   | DFS-обход не возвращается к посещённому узлу                |
-| 3 | `sequenceNumber` строго возрастает по SUPERSEDES   | Каждая `newer.seqNum > older.seqNum`                       |
-| 4 | `previousHash` совпадает с `contentHash` предка    | `newer.previousHash === older.contentHash`                  |
-| 5 | Первая версия (seqNum=1) имеет `previousHash=null`| Начало цепочки не ссылается на предыдущий hash             |
-| 6 | SUPERSEDED-версия не имеет входящих Bridge-рёбер  | Все IMPLEMENTS/REFERENCES указывают только на ACTIVE        |
+| 1 | Exactly one ACTIVE version per `entityId`         | `COUNT(status="ACTIVE") = 1` for each entityId             |
+| 2 | No cycles in the SUPERSEDES chain                 | DFS traversal does not return to a visited node            |
+| 3 | `sequenceNumber` strictly increases along SUPERSEDES | Each `newer.seqNum > older.seqNum`                      |
+| 4 | `previousHash` matches `contentHash` of ancestor  | `newer.previousHash === older.contentHash`                  |
+| 5 | First version (seqNum=1) has `previousHash=null`  | Chain start does not reference a previous hash             |
+| 6 | SUPERSEDED version has no incoming Bridge edges   | All IMPLEMENTS/REFERENCES point only to ACTIVE             |
 
-**Cypher-запрос для проверки инварианта 1:**
+**Cypher query for invariant 1 check:**
 
 ```cypher
 MATCH (v:NodeVersion {status: "ACTIVE"})
 WITH v.entityId AS eid, count(*) AS cnt
 WHERE cnt > 1
 RETURN eid, cnt
-// Результат должен быть пустым
+// Result must be empty
 ```
 
-**Cypher-запрос для проверки инварианта 3:**
+**Cypher query for invariant 3 check:**
 
 ```cypher
 MATCH (newer:NodeVersion)-[:SUPERSEDES]->(older:NodeVersion)
 WHERE newer.sequenceNumber <= older.sequenceNumber
 RETURN newer.versionId AS invalid, newer.sequenceNumber AS newerSeq, older.sequenceNumber AS olderSeq
-// Результат должен быть пустым
+// Result must be empty
 ```
 
 ---
 
 ## 3.4 Merge / Split / Fork
 
-### MERGE: объединение двух сущностей в одну
+### MERGE: Combining two entities into one
 
-**Сценарий:** Две бизнес-правила (BR-010, BR-011) оказались дублями и должны быть объединены.
+**Scenario:** Two business rules (BR-010, BR-011) turned out to be duplicates and must be merged.
 
 ```
   BEFORE MERGE:
@@ -2372,7 +2372,7 @@ RETURN newer.versionId AS invalid, newer.sequenceNumber AS newerSeq, older.seque
   │ entityId: "BR-010"              │ entityId: "BR-011"
   │ versionId: "BR-010-v2"          │ versionId: "BR-011-v3"
   │ status: ACTIVE                  │ status: ACTIVE
-  │ content: "Правило А"            │ content: "Правило Б"
+  │ content: "Rule A"               │ content: "Rule B"
 
 
   AFTER MERGE:
@@ -2394,27 +2394,27 @@ RETURN newer.versionId AS invalid, newer.sequenceNumber AS newerSeq, older.seque
   │                 │ status: ACTIVE         │
   │                 │ mergedFromIds:          │
   │                 │  ["BR-010","BR-011"]   │
-  │                 │ content: "Объединённое"│
+  │                 │ content: "Merged"      │
   │                 └────────────────────────┘
 ```
 
-**Код MERGE:**
+**MERGE code:**
 
 ```javascript
 /**
- * Объединение двух сущностей в одну.
- * Результат: новая версия primaryEntityId, содержащая данные обеих.
- * Вторая сущность получает статус MERGED.
+ * Merges two entities into one.
+ * Result: new version of primaryEntityId containing data from both.
+ * The second entity receives MERGED status.
  *
- * @param {string} primaryEntityId   -- entityId, который остаётся
- * @param {string} secondaryEntityId -- entityId, который вливается
- * @param {object} mergedContent     -- объединённое содержимое
- * @param {object} meta              -- метаданные
+ * @param {string} primaryEntityId   -- entityId that remains
+ * @param {string} secondaryEntityId -- entityId that is absorbed
+ * @param {object} mergedContent     -- merged content
+ * @param {object} meta              -- metadata
  */
 async function mergeEntities(primaryEntityId, secondaryEntityId, mergedContent, meta = {}) {
   const session = driver.session();
   try {
-    // 1. Создать новую версию primary с объединённым содержимым
+    // 1. Create new version of primary with merged content
     const newVersion = await createNextVersion(primaryEntityId, mergedContent, {
       ...meta,
       changeReason: `MERGE: ${secondaryEntityId} merged into ${primaryEntityId}`,
@@ -2425,7 +2425,7 @@ async function mergeEntities(primaryEntityId, secondaryEntityId, mergedContent, 
       }
     });
 
-    // 2. Пометить ACTIVE-версию secondary как MERGED
+    // 2. Mark ACTIVE version of secondary as MERGED
     await session.run(`
       MATCH (v:NodeVersion {entityId: $secondaryEntityId, status: "ACTIVE"})
       SET v.status = "MERGED"
@@ -2433,7 +2433,7 @@ async function mergeEntities(primaryEntityId, secondaryEntityId, mergedContent, 
       SET v.mergedAt = datetime()
     `, { secondaryEntityId, primaryEntityId });
 
-    // 3. Создать MERGED_FROM-ребро
+    // 3. Create MERGED_FROM edge
     await session.run(`
       MATCH (target:NodeVersion {versionId: $newVersionId})
       MATCH (source:NodeVersion {entityId: $secondaryEntityId, status: "MERGED"})
@@ -2446,7 +2446,7 @@ async function mergeEntities(primaryEntityId, secondaryEntityId, mergedContent, 
       reason: meta.changeReason || 'Duplicate consolidation'
     });
 
-    // 4. Перенаправить все Bridge-рёбра secondary на новую версию primary
+    // 4. Redirect all Bridge edges of secondary to the new version of primary
     await relinkAllBridgeEdges(secondaryEntityId,
       `${secondaryEntityId}-v*`, // все версии
       newVersion.versionId);
@@ -2458,9 +2458,9 @@ async function mergeEntities(primaryEntityId, secondaryEntityId, mergedContent, 
 }
 ```
 
-### SPLIT: разделение сущности на две
+### SPLIT: Dividing an entity into two
 
-**Сценарий:** Бизнес-правило BR-020 слишком сложное и разделяется на BR-020 (часть А) и BR-021 (часть Б).
+**Scenario:** Business rule BR-020 is too complex and is split into BR-020 (part A) and BR-021 (part B).
 
 ```
   BEFORE SPLIT:
@@ -2477,10 +2477,10 @@ async function mergeEntities(primaryEntityId, secondaryEntityId, mergedContent, 
   ────────────
 
   (:NodeVersion)                            (:NodeVersion)
-  │ entityId: "BR-020"                      │ entityId: "BR-021"        <── НОВЫЙ entityId
+  │ entityId: "BR-020"                      │ entityId: "BR-021"        <── NEW entityId
   │ versionId: "BR-020-v5"                  │ versionId: "BR-021-v1"
   │ status: ACTIVE                          │ status: ACTIVE
-  │ content: "Часть А"                      │ content: "Часть Б"
+  │ content: "Part A"                       │ content: "Part B"
   │ splitInfo: "split, kept part A"         │ splitFromId: "BR-020"
   │                                         │ splitFromVersion: "BR-020-v4"
   │         ^                               │
@@ -2492,24 +2492,24 @@ async function mergeEntities(primaryEntityId, secondaryEntityId, mergedContent, 
   │  │ status: SUPERSEDED
 ```
 
-**Код SPLIT:**
+**SPLIT code:**
 
 ```javascript
 /**
- * Разделение сущности на две.
- * Оригинальный entityId получает новую версию (часть A).
- * Создаётся новый entityId для части B.
+ * Splits an entity into two.
+ * The original entityId receives a new version (part A).
+ * A new entityId is created for part B.
  *
- * @param {string} entityId     -- исходный entityId
- * @param {object} contentPartA -- содержимое для оригинальной сущности
- * @param {object} contentPartB -- содержимое для новой сущности
- * @param {string} newEntityId  -- entityId для новой сущности
- * @param {object} meta         -- метаданные
+ * @param {string} entityId     -- source entityId
+ * @param {object} contentPartA -- content for the original entity
+ * @param {object} contentPartB -- content for the new entity
+ * @param {string} newEntityId  -- entityId for the new entity
+ * @param {object} meta         -- metadata
  */
 async function splitEntity(entityId, contentPartA, contentPartB, newEntityId, meta = {}) {
   const session = driver.session();
   try {
-    // 1. Получить текущую ACTIVE-версию
+    // 1. Get the current ACTIVE version
     const current = await session.run(`
       MATCH (v:NodeVersion {entityId: $entityId, status: "ACTIVE"})
       RETURN v.versionId AS vid
@@ -2517,7 +2517,7 @@ async function splitEntity(entityId, contentPartA, contentPartB, newEntityId, me
 
     const sourceVersionId = current.records[0].get('vid');
 
-    // 2. Создать новую версию A (обновление оригинала)
+    // 2. Create new version A (update of original)
     const versionA = await createNextVersion(entityId, contentPartA, {
       ...meta,
       changeReason: `SPLIT: extracted ${newEntityId} from ${entityId}`,
@@ -2527,7 +2527,7 @@ async function splitEntity(entityId, contentPartA, contentPartB, newEntityId, me
       }
     });
 
-    // 3. Создать первую версию B (новая сущность)
+    // 3. Create the first version B (new entity)
     const contentStrB = JSON.stringify(contentPartB, Object.keys(contentPartB).sort());
     const hashB = crypto.createHash('sha256').update(contentStrB).digest('hex');
 
@@ -2587,9 +2587,9 @@ async function splitEntity(entityId, contentPartA, contentPartB, newEntityId, me
 }
 ```
 
-### FORK: ветвление для альтернатив
+### FORK: Branching for alternatives
 
-**Сценарий:** Нужно создать альтернативную версию правила BR-030 для другого региона/контекста. Оригинал остаётся, создаётся независимая ветка.
+**Scenario:** An alternative version of rule BR-030 needs to be created for a different region/context. The original remains, an independent branch is created.
 
 ```
   BEFORE FORK:
@@ -2606,12 +2606,12 @@ async function splitEntity(entityId, contentPartA, contentPartB, newEntityId, me
   ───────────
 
   (:NodeVersion)                            (:NodeVersion)
-  │ entityId: "BR-030"                      │ entityId: "BR-030-EU"     <── НОВЫЙ entityId
+  │ entityId: "BR-030"                      │ entityId: "BR-030-EU"     <── NEW entityId
   │ versionId: "BR-030-v2"                  │ versionId: "BR-030-EU-v1"
   │ status: ACTIVE                          │ status: ACTIVE
-  │ content: "Глобальное правило"            │ content: "Правило для EU"
+  │ content: "Global rule"                  │ content: "EU-specific rule"
   │                                         │ forkedFromId: "BR-030"
-  │ (без изменений!)                        │ forkedFromVersion: "BR-030-v2"
+  │ (unchanged!)                            │ forkedFromVersion: "BR-030-v2"
   │                                         │
   │                                         │         ^
   │                                         │         │ FORKED_FROM
@@ -2623,27 +2623,27 @@ async function splitEntity(entityId, contentPartA, contentPartB, newEntityId, me
   │                                          │ versionId: "BR-030-v2"
 ```
 
-**Отличие FORK от SPLIT:**
-- **SPLIT** -- оригинал меняется (получает новую версию), оба entityId содержат части исходного.
-- **FORK** -- оригинал НЕ меняется, новый entityId начинает независимую жизнь.
+**Difference between FORK and SPLIT:**
+- **SPLIT** — the original changes (receives a new version), both entityIds contain parts of the original.
+- **FORK** — the original does NOT change, the new entityId starts an independent life.
 
-**Код FORK:**
+**FORK code:**
 
 ```javascript
 /**
- * Создание форка сущности.
- * Оригинал остаётся без изменений.
- * Создаётся новый entityId с начальным содержимым, скопированным из оригинала.
+ * Creates a fork of an entity.
+ * The original remains unchanged.
+ * A new entityId is created with initial content copied from the original.
  *
- * @param {string} sourceEntityId  -- entityId оригинала
- * @param {string} forkEntityId   -- entityId для форка
- * @param {object} modifications  -- изменения относительно оригинала (опционально)
- * @param {object} meta           -- метаданные
+ * @param {string} sourceEntityId  -- entityId of the original
+ * @param {string} forkEntityId   -- entityId for the fork
+ * @param {object} modifications  -- changes relative to the original (optional)
+ * @param {object} meta           -- metadata
  */
 async function forkEntity(sourceEntityId, forkEntityId, modifications = {}, meta = {}) {
   const session = driver.session();
   try {
-    // 1. Получить текущую ACTIVE-версию оригинала
+    // 1. Get the current ACTIVE version of the original
     const current = await session.run(`
       MATCH (v:NodeVersion {entityId: $sourceEntityId, status: "ACTIVE"})
       RETURN v
@@ -2656,12 +2656,12 @@ async function forkEntity(sourceEntityId, forkEntityId, modifications = {}, meta
     const source = current.records[0].get('v').properties;
     const sourceContent = JSON.parse(source.content || '{}');
 
-    // 2. Применить модификации к содержимому
+    // 2. Apply modifications to the content
     const forkContent = { ...sourceContent, ...modifications };
     const contentStr = JSON.stringify(forkContent, Object.keys(forkContent).sort());
     const hash = crypto.createHash('sha256').update(contentStr).digest('hex');
 
-    // 3. Создать первую версию форка
+    // 3. Create the first version of the fork
     await session.run(`
       CREATE (f:NodeVersion {
         entityId:           $forkEntityId,
@@ -2731,19 +2731,19 @@ async function forkEntity(sourceEntityId, forkEntityId, modifications = {}, meta
 
 ---
 
-## 3.5 God Mode: контролируемое нарушение immutability
+## 3.5 God Mode: Controlled Violation of Immutability
 
-### Операции, требующие God Mode
+### Operations requiring God Mode
 
-| Операция                        | Причина необходимости God Mode                              | Уровень риска |
+| Operation                        | Reason God Mode is required                                 | Risk level    |
 |---------------------------------|-------------------------------------------------------------|:-------------:|
-| Удаление версии из цепочки      | Нарушает hash chain и SUPERSEDES-связность                  | CRITICAL      |
-| Модификация contentHash         | Разрушает доказуемую целостность всей цепочки               | CRITICAL      |
-| Изменение исторического времени | Нарушает хронологическую последовательность                  | HIGH          |
-| Полная очистка (purge) сущности | Удаляет все версии и связи, необратимо                      | CRITICAL      |
-| Исправление повреждённой цепочки| Пересчёт хешей, восстановление SUPERSEDES-рёбер             | HIGH          |
-| Смена entityId                  | Ломает все Bridge-рёбра и внешние ссылки                    | HIGH          |
-| Откат статуса MERGED/DELETED    | Возврат сущности из терминального состояния                  | MEDIUM        |
+| Deleting a version from the chain | Breaks hash chain and SUPERSEDES connectivity             | CRITICAL      |
+| Modifying contentHash            | Destroys provable integrity of the entire chain            | CRITICAL      |
+| Changing historical time         | Violates chronological sequence                             | HIGH          |
+| Full purge of an entity          | Deletes all versions and relationships, irreversible        | CRITICAL      |
+| Repairing a broken chain         | Recalculating hashes, restoring SUPERSEDES edges           | HIGH          |
+| Changing entityId                | Breaks all Bridge edges and external references             | HIGH          |
+| Reverting MERGED/DELETED status  | Returning an entity from a terminal state                   | MEDIUM        |
 
 ### GodModeSession
 
@@ -2751,14 +2751,14 @@ async function forkEntity(sourceEntityId, forkEntityId, modifications = {}, meta
 const crypto = require('crypto');
 
 /**
- * Сессия God Mode с таймаутом, верификацией и аудитом.
- * Все действия внутри сессии записываются в hash chain аудита.
+ * God Mode session with timeout, verification, and audit.
+ * All actions within the session are recorded in an audit hash chain.
  */
 class GodModeSession {
   /**
-   * @param {string} adminId         -- ID администратора
-   * @param {string} reason          -- обоснование активации God Mode
-   * @param {number} timeoutMinutes  -- таймаут сессии (по умолчанию 30 мин)
+   * @param {string} adminId         -- administrator ID
+   * @param {string} reason          -- justification for activating God Mode
+   * @param {number} timeoutMinutes  -- session timeout (default 30 min)
    */
   constructor(adminId, reason, timeoutMinutes = 30) {
     this.sessionId = crypto.randomUUID();
@@ -2772,11 +2772,11 @@ class GodModeSession {
   }
 
   /**
-   * Проверить, что администратор имеет право на God Mode.
-   * В реальной системе -- проверка роли, 2FA, approval workflow.
+   * Verify that the administrator has God Mode rights.
+   * In a real system -- role check, 2FA, approval workflow.
    */
   static async verifyAdmin(adminId) {
-    // TODO: интеграция с IAM
+    // TODO: IAM integration
     const ADMIN_IDS = ['user:superadmin', 'user:dba', 'agent:system-repair'];
     if (!ADMIN_IDS.includes(adminId)) {
       throw new Error(`Admin verification failed for: ${adminId}`);
@@ -2785,13 +2785,13 @@ class GodModeSession {
   }
 
   /**
-   * Создать и верифицировать новую God Mode сессию.
+   * Create and verify a new God Mode session.
    */
   static async create(adminId, reason, timeoutMinutes = 30) {
     await GodModeSession.verifyAdmin(adminId);
     const session = new GodModeSession(adminId, reason, timeoutMinutes);
 
-    // Записать открытие сессии в аудит
+    // Record session opening in audit
     await session._recordAudit('SESSION_OPENED', {
       adminId,
       reason,
@@ -2803,7 +2803,7 @@ class GodModeSession {
   }
 
   /**
-   * Проверить, что сессия всё ещё активна.
+   * Check that the session is still active.
    */
   isActive() {
     if (this.closed) return false;
@@ -2815,13 +2815,13 @@ class GodModeSession {
   }
 
   /**
-   * Выполнить действие в God Mode.
-   * Каждое действие записывается в hash chain аудита.
+   * Execute an action in God Mode.
+   * Each action is recorded in the audit hash chain.
    *
-   * @param {string}   actionType -- тип действия (DELETE_VERSION, MODIFY_HASH, и т.д.)
-   * @param {object}   params     -- параметры действия
-   * @param {Function} executor   -- функция, выполняющая действие
-   * @returns {*}                 -- результат executor
+   * @param {string}   actionType -- action type (DELETE_VERSION, MODIFY_HASH, etc.)
+   * @param {object}   params     -- action parameters
+   * @param {Function} executor   -- function executing the action
+   * @returns {*}                 -- result of executor
    */
   async execute(actionType, params, executor) {
     if (!this.isActive()) {
@@ -2838,13 +2838,13 @@ class GodModeSession {
     };
 
     try {
-      // Выполнить действие
+      // Execute the action
       const result = await executor();
 
       actionRecord.status = 'SUCCESS';
       actionRecord.result = result;
 
-      // Записать в hash chain аудита
+      // Record in audit hash chain
       await this._recordAudit(actionType, actionRecord);
 
       this.actions.push(actionRecord);
@@ -2862,7 +2862,7 @@ class GodModeSession {
   }
 
   /**
-   * Закрыть сессию God Mode.
+   * Close the God Mode session.
    */
   async close() {
     this.closed = true;
@@ -2874,8 +2874,8 @@ class GodModeSession {
   }
 
   /**
-   * Записать запись аудита с hash chain.
-   * Каждая запись содержит hash предыдущей, образуя неразрывную цепочку.
+   * Record an audit entry with hash chain.
+   * Each entry contains the hash of the previous one, forming an unbroken chain.
    */
   async _recordAudit(eventType, data) {
     const record = {
@@ -2896,7 +2896,7 @@ class GodModeSession {
     record.auditHash = hash;
     this.lastAuditHash = hash;
 
-    // Сохранить в граф знаний
+    // Save to the knowledge graph
     const session = driver.session();
     try {
       await session.run(`
@@ -2925,10 +2925,10 @@ class GodModeSession {
 }
 ```
 
-**Пример использования God Mode:**
+**Example God Mode usage:**
 
 ```javascript
-// Исправление повреждённой hash chain
+// Repairing a broken hash chain
 async function repairHashChain(entityId) {
   const godMode = await GodModeSession.create('user:superadmin',
     `Repair corrupted hash chain for ${entityId}`);
@@ -2937,7 +2937,7 @@ async function repairHashChain(entityId) {
     await godMode.execute('REPAIR_HASH_CHAIN', { entityId }, async () => {
       const session = driver.session();
       try {
-        // Получить все версии по порядку
+        // Get all versions in order
         const result = await session.run(`
           MATCH (v:NodeVersion {entityId: $entityId})
           RETURN v ORDER BY v.sequenceNumber ASC
@@ -2951,7 +2951,7 @@ async function repairHashChain(entityId) {
             .update((previousHash || '') + '|' + node.content)
             .digest('hex');
 
-          // GOD MODE: модификация hash (обычно запрещено)
+          // GOD MODE: hash modification (normally forbidden)
           await session.run(`
             MATCH (v:NodeVersion {versionId: $vid})
             SET v.contentHash = $newHash
@@ -2978,32 +2978,32 @@ async function repairHashChain(entityId) {
 
 ---
 
-## 3.6 Tombstones: soft delete с возможностью восстановления
+## 3.6 Tombstones: Soft Delete with Restore Capability
 
 ### Soft Delete
 
-При удалении версии она не уничтожается физически, а помечается как DELETED. Создаётся узел Tombstone, который хранит метаданные для возможного восстановления.
+When a version is deleted, it is not physically destroyed but is marked as DELETED. A Tombstone node is created that stores metadata for possible restoration.
 
-**Код soft delete:**
+**Soft delete code:**
 
 ```javascript
 /**
- * Мягкое удаление сущности.
- * Создаёт Tombstone, помечает ACTIVE-версию как DELETED,
- * сохраняет осиротевшие рёбра для возможного восстановления.
- * Окно восстановления: 90 дней.
+ * Soft delete of an entity.
+ * Creates a Tombstone, marks the ACTIVE version as DELETED,
+ * saves orphaned edges for possible restoration.
+ * Restoration window: 90 days.
  *
- * @param {string} entityId -- entityId удаляемой сущности
- * @param {string} reason   -- причина удаления
- * @param {string} deletedBy -- кто удаляет
+ * @param {string} entityId  -- entityId of the entity to delete
+ * @param {string} reason    -- reason for deletion
+ * @param {string} deletedBy -- who is deleting
  */
 async function softDelete(entityId, reason, deletedBy) {
   const session = driver.session();
   try {
     const tombstoneId = `tombstone:${entityId}:${Date.now()}`;
-    const restoreDeadline = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000); // 90 дней
+    const restoreDeadline = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000); // 90 days
 
-    // 1. Собрать информацию об осиротевших рёбрах (до удаления)
+    // 1. Collect information about orphaned edges (before deletion)
     const edgesResult = await session.run(`
       MATCH (v:NodeVersion {entityId: $entityId, status: "ACTIVE"})
       OPTIONAL MATCH (source)-[r]->(v)
@@ -3025,7 +3025,7 @@ async function softDelete(entityId, reason, deletedBy) {
       relProps:        r.get('relProps')
     })).filter(e => e.relType !== null);
 
-    // 2. Создать Tombstone
+    // 2. Create Tombstone
     await session.run(`
       CREATE (t:Tombstone {
         tombstoneId:     $tombstoneId,
@@ -3046,7 +3046,7 @@ async function softDelete(entityId, reason, deletedBy) {
       orphanedEdgesStr: JSON.stringify(orphanedEdges)
     });
 
-    // 3. Пометить ACTIVE-версию как DELETED
+    // 3. Mark ACTIVE version as DELETED
     await session.run(`
       MATCH (v:NodeVersion {entityId: $entityId, status: "ACTIVE"})
       SET v.status = "DELETED"
@@ -3055,7 +3055,7 @@ async function softDelete(entityId, reason, deletedBy) {
       SET v.tombstoneId = $tombstoneId
     `, { entityId, deletedBy, tombstoneId });
 
-    // 4. Удалить осиротевшие Bridge-рёбра (данные уже в Tombstone)
+    // 4. Delete orphaned Bridge edges (data already in Tombstone)
     for (const edgeType of ['IMPLEMENTS', 'REFERENCES', 'GOVERNED_BY', 'DERIVED_FROM']) {
       await session.run(`
         MATCH (source)-[r:${edgeType}]->(v:NodeVersion {entityId: $entityId, status: "DELETED"})
@@ -3075,19 +3075,19 @@ async function softDelete(entityId, reason, deletedBy) {
 }
 ```
 
-### Восстановление из Tombstone
+### Restoring from Tombstone
 
 ```javascript
 /**
- * Восстановление сущности из Tombstone.
- * Возвращает статус ACTIVE, восстанавливает Bridge-рёбра.
+ * Restores an entity from a Tombstone.
+ * Returns ACTIVE status, restores Bridge edges.
  *
- * @param {string} tombstoneId -- ID tombstone для восстановления
+ * @param {string} tombstoneId -- Tombstone ID to restore
  */
 async function restoreFromTombstone(tombstoneId) {
   const session = driver.session();
   try {
-    // 1. Проверить, что Tombstone существует и не истёк
+    // 1. Verify that the Tombstone exists and has not expired
     const tombResult = await session.run(`
       MATCH (t:Tombstone {tombstoneId: $tombstoneId, status: "PENDING"})
       WHERE t.restoreDeadline > datetime()
@@ -3102,7 +3102,7 @@ async function restoreFromTombstone(tombstoneId) {
     const entityId = tombstone.entityId;
     const orphanedEdges = JSON.parse(tombstone.orphanedEdges || '[]');
 
-    // 2. Восстановить статус ACTIVE
+    // 2. Restore ACTIVE status
     await session.run(`
       MATCH (v:NodeVersion {entityId: $entityId, status: "DELETED", tombstoneId: $tombstoneId})
       SET v.status = "ACTIVE"
@@ -3113,11 +3113,11 @@ async function restoreFromTombstone(tombstoneId) {
       SET v.restoredFrom = $tombstoneId
     `, { entityId, tombstoneId });
 
-    // 3. Восстановить Bridge-рёбра
+    // 3. Restore Bridge edges
     let restoredEdges = 0;
     for (const edge of orphanedEdges) {
       try {
-        // Найти source-узел (может быть Domain или NodeVersion)
+        // Find source node (can be Domain or NodeVersion)
         const sourceMatch = edge.sourceVersionId
           ? `(s:NodeVersion {versionId: "${edge.sourceVersionId}"})`
           : edge.sourceId
@@ -3126,10 +3126,10 @@ async function restoreFromTombstone(tombstoneId) {
 
         if (!sourceMatch) continue;
 
-        // Memgraph: нужен явный тип ребра
+        // Memgraph: explicit edge type required
         const edgeType = edge.relType;
         if (!['IMPLEMENTS', 'REFERENCES', 'GOVERNED_BY', 'DERIVED_FROM'].includes(edgeType)) {
-          continue; // Не восстанавливаем неизвестные типы
+          continue; // Do not restore unknown types
         }
 
         await session.run(`
@@ -3143,12 +3143,12 @@ async function restoreFromTombstone(tombstoneId) {
 
         restoredEdges++;
       } catch (err) {
-        // Source-узел мог быть удалён -- пропускаем
+        // Source node may have been deleted -- skip
         console.warn(`Could not restore edge: ${err.message}`);
       }
     }
 
-    // 4. Пометить Tombstone как использованный
+    // 4. Mark Tombstone as used
     await session.run(`
       MATCH (t:Tombstone {tombstoneId: $tombstoneId})
       SET t.status = "RESTORED"
@@ -3167,21 +3167,21 @@ async function restoreFromTombstone(tombstoneId) {
 }
 ```
 
-### Жизненный цикл Tombstone
+### Tombstone lifecycle
 
 ```
   (:NodeVersion)                                (:Tombstone)
   │ status: ACTIVE                              │ status: PENDING
-  │                                             │ restoreDeadline: +90 дней
+  │                                             │ restoreDeadline: +90 days
   │                                             │
   ├──── soft delete ────────────────────────────>│
   │                                             │
   │ status: DELETED                             │
   │ tombstoneId: "tombstone:..."                │
   │                                             │
-  │         Два возможных исхода:               │
+  │         Two possible outcomes:              │
   │                                             │
-  │    [A] Восстановление (до дедлайна):        │
+  │    [A] Restoration (before deadline):       │
   │         │                                   │
   │         ├── restore ────────────────────────>│ status: RESTORED
   │         │                                   │ restoredAt: datetime()
@@ -3190,31 +3190,31 @@ async function restoreFromTombstone(tombstoneId) {
   │  restoredAt: datetime()                     │
   │  restoredFrom: "tombstone:..."              │
   │                                             │
-  │    [B] Истечение срока (после 90 дней):      │
+  │    [B] Expiry (after 90 days):              │
   │         │                                   │
   │         ├── expire cron ────────────────────>│ status: EXPIRED
   │         │                                   │ expiredAt: datetime()
   │         v                                   │
   │  status: DELETED (permanent)                │
-  │  (данные для физической очистки)             │
+  │  (data pending physical cleanup)            │
   │                                             │
   └─────────────────────────────────────────────┘
 
-  Сводка переходов:
+  Transition summary:
 
     ACTIVE ──[soft delete]──> DELETED + Tombstone(PENDING)
     DELETED ──[restore]─────> ACTIVE  + Tombstone(RESTORED)
-    DELETED ──[expire 90d]──> DELETED + Tombstone(EXPIRED) ──[purge]──> физическое удаление
+    DELETED ──[expire 90d]──> DELETED + Tombstone(EXPIRED) ──[purge]──> physical deletion
 ```
 
-**Cron-задача для обработки истёкших Tombstone:**
+**Cron job for processing expired Tombstones:**
 
 ```javascript
 /**
- * Обработка истёкших Tombstone.
- * Запускается по расписанию (ежедневно).
- * Помечает истёкшие Tombstone как EXPIRED.
- * Физическое удаление -- отдельный процесс, требующий God Mode.
+ * Processing expired Tombstones.
+ * Runs on schedule (daily).
+ * Marks expired Tombstones as EXPIRED.
+ * Physical deletion is a separate process requiring God Mode.
  */
 async function processExpiredTombstones() {
   const session = driver.session();
@@ -3245,49 +3245,49 @@ async function processExpiredTombstones() {
 
 ---
 
-*Этот документ является частью [Кодекса UN ProjectAdvisor](../CODEX_INDEX.md)*
+*This document is part of the [UN ProjectAdvisor Codex](../CODEX_INDEX.md)*
 
 ---
 
-## Часть IV: CODEX-NS — Стандарт namespace
+## Part IV: CODEX-NS — Namespace Standard
 
-**Статус:** 🟡 В разработке
-**Версия:** 0.1.0
-**Последнее обновление:** 2026-03-12
+**Status:** 🟡 In development
+**Version:** 0.1.0
+**Last updated:** 2026-03-12
 
 ---
 
-## Оглавление
+## Table of Contents
 
-- [4.1 Четыре пространства имён](#41-четыре-пространства-имён)
+- [4.1 Four Namespaces](#41-four-namespaces)
 - [4.2 Routing rules](#42-routing-rules)
 - [4.3 Cross-namespace queries](#43-cross-namespace-queries)
 - [4.4 Isolation guarantees](#44-isolation-guarantees)
-- [4.5 ExecutionRecord — почему META, не PROJECT](#45-executionrecord--почему-meta-не-project)
+- [4.5 ExecutionRecord — why META, not PROJECT](#45-executionrecord--why-meta-not-project)
 
 ---
 
-## Преамбула
+## Preamble
 
-Namespace -- механизм изоляции в UN ProjectAdvisor. Каждый узел и каждое ребро в графе знаний принадлежат ровно одному namespace. Namespace определяет:
+Namespace is the isolation mechanism in UN ProjectAdvisor. Every node and every edge in the knowledge graph belongs to exactly one namespace. Namespace determines:
 
-- **Видимость:** кто может читать данные
-- **Мутабельность:** кто может записывать данные
-- **Маршрутизацию:** куда направляются запросы
-- **Изоляцию:** какие данные не должны пересекаться
+- **Visibility:** who can read the data
+- **Mutability:** who can write the data
+- **Routing:** where requests are directed
+- **Isolation:** which data must not intersect
 
-Четыре пространства обеспечивают разделение между системными знаниями (`CORE`), проектными данными (`PROJECT`), мета-знаниями (`META`) и общими ресурсами (`COMMON`).
+The four namespaces ensure separation between system knowledge (`CORE`), project data (`PROJECT`), meta-knowledge (`META`), and shared resources (`COMMON`).
 
 ```
-Принцип: данные разделены по ПРИРОДЕ, а не по технологии хранения.
-Один Memgraph, один Qdrant, один Redis -- но четыре логических контура.
+Principle: data is separated by NATURE, not by storage technology.
+One Memgraph, one Qdrant, one Redis — but four logical circuits.
 ```
 
 ---
 
-## 4.1 Четыре пространства имён
+## 4.1 Four Namespaces
 
-### Архитектура
+### Architecture
 
 ```
                     ┌──────────────────────────────────────────────┐
@@ -3318,29 +3318,29 @@ Namespace -- механизм изоляции в UN ProjectAdvisor. Кажды�
   └─────────────────┼──────────────────────────────────────────────┼─────────────────┘
                     └──────────────────────────────────────────────┘
 
-  Стрелки = разрешённые cross-namespace READ
-  ╳ = запрещённые прямые связи между PROJECT-ами
+  Arrows = permitted cross-namespace READ
+  ╳ = forbidden direct links between PROJECTs
 ```
 
-### CORE -- системные знания
+### CORE — System knowledge
 
 **Enum:** `KnowledgeNamespace.CORE = 'core'`
 
-Знания о самом UN ProjectAdvisor: его сервисах, пайплайнах, конфигурациях, API-схемах и архитектурных решениях.
+Knowledge about UN ProjectAdvisor itself: its services, pipelines, configurations, API schemas, and architectural decisions.
 
-| Свойство | Значение |
+| Property | Value |
 |----------|----------|
-| **Назначение** | Системные знания о PA |
-| **Примеры узлов** | `Service`, `Pipeline`, `Component`, `Config`, `Schema`, `API`, `Architecture`, `Decision` |
-| **Формат namespace** | `core` |
-| **Частота обновлений** | При релизах системы |
-| **Чтение** | `DEVELOPER`, `ARCHITECT`, `ADMIN` |
-| **Запись** | `ARCHITECT`, `ADMIN` |
+| **Purpose** | System knowledge about PA |
+| **Example nodes** | `Service`, `Pipeline`, `Component`, `Config`, `Schema`, `API`, `Architecture`, `Decision` |
+| **Namespace format** | `core` |
+| **Update frequency** | At system releases |
+| **Read** | `DEVELOPER`, `ARCHITECT`, `ADMIN` |
+| **Write** | `ARCHITECT`, `ADMIN` |
 | **Qdrant collection** | `core_knowledge` |
 | **Redis prefix** | `core:` |
-| **Cache TTL** | 3600 с (1 час) |
+| **Cache TTL** | 3600 s (1 hour) |
 
-**Пример узла:**
+**Example node:**
 
 ```cypher
 (:Service {
@@ -3353,25 +3353,25 @@ Namespace -- механизм изоляции в UN ProjectAdvisor. Кажды�
 })
 ```
 
-### PROJECT -- проектные данные
+### PROJECT — Project data
 
 **Enum:** `KnowledgeNamespace.PROJECT = 'project'`
 
-Извлечённые знания из legacy-систем ООН. Каждый проект хранится в собственном подпространстве `PROJECT:{project_name}`. Проекты полностью изолированы друг от друга -- прямые рёбра между `PROJECT:imis` и `PROJECT:umoja` запрещены.
+Extracted knowledge from UN legacy systems. Each project is stored in its own sub-namespace `PROJECT:{project_name}`. Projects are fully isolated from each other — direct edges between `PROJECT:imis` and `PROJECT:umoja` are forbidden.
 
-| Свойство | Значение |
+| Property | Value |
 |----------|----------|
-| **Назначение** | Данные legacy-проектов |
-| **Примеры узлов** | `File`, `Class`, `Method`, `WorkItem`, `Table`, `StoredProcedure`, `BusinessRule`, `Person`, `Team` |
-| **Формат namespace** | `project:{project_name}` (например, `project:imis`, `project:umoja`) |
-| **Частота обновлений** | При переиндексации |
-| **Чтение** | Все роли (`VIEWER` и выше) |
-| **Запись** | `DEVELOPER`, `ARCHITECT`, `ADMIN`, `SYSTEM` |
-| **Qdrant collection** | `project_{project_name}` (например, `project_imis`) |
+| **Purpose** | Legacy project data |
+| **Example nodes** | `File`, `Class`, `Method`, `WorkItem`, `Table`, `StoredProcedure`, `BusinessRule`, `Person`, `Team` |
+| **Namespace format** | `project:{project_name}` (e.g., `project:imis`, `project:umoja`) |
+| **Update frequency** | On re-indexing |
+| **Read** | All roles (`VIEWER` and above) |
+| **Write** | `DEVELOPER`, `ARCHITECT`, `ADMIN`, `SYSTEM` |
+| **Qdrant collection** | `project_{project_name}` (e.g., `project_imis`) |
 | **Redis prefix** | `project:{project_name}:` |
-| **Cache TTL** | 1800 с (30 минут) |
+| **Cache TTL** | 1800 s (30 minutes) |
 
-**Пример узла:**
+**Example node:**
 
 ```cypher
 (:StoredProcedure {
@@ -3385,25 +3385,25 @@ Namespace -- механизм изоляции в UN ProjectAdvisor. Кажды�
 })
 ```
 
-### META -- мета-знания
+### META — Meta-knowledge
 
 **Enum:** `KnowledgeNamespace.META = 'meta'`
 
-Знания о знаниях: стратегии извлечения, паттерны обработки, записи о выполнении пайплайнов, метрики качества. META -- это то, КАК система работает и учится, а не ЧТО она извлекает.
+Knowledge about knowledge: extraction strategies, processing patterns, pipeline execution records, quality metrics. META is about HOW the system works and learns, not WHAT it extracts.
 
-| Свойство | Значение |
+| Property | Value |
 |----------|----------|
-| **Назначение** | Методологические знания, стратегии, записи выполнения |
-| **Примеры узлов** | `Strategy`, `DataType`, `Tool`, `ContextPattern`, `StrategyExecution`, `ExtractionCycle`, `DecisionRecord`, `QualityRule` |
-| **Формат namespace** | `meta` |
-| **Частота обновлений** | По мере обучения системы |
-| **Чтение** | `ARCHITECT`, `ADMIN`, `SYSTEM` |
-| **Запись** | `SYSTEM`, `ADMIN` |
+| **Purpose** | Methodological knowledge, strategies, execution records |
+| **Example nodes** | `Strategy`, `DataType`, `Tool`, `ContextPattern`, `StrategyExecution`, `ExtractionCycle`, `DecisionRecord`, `QualityRule` |
+| **Namespace format** | `meta` |
+| **Update frequency** | As the system learns |
+| **Read** | `ARCHITECT`, `ADMIN`, `SYSTEM` |
+| **Write** | `SYSTEM`, `ADMIN` |
 | **Qdrant collection** | `meta_knowledge` |
 | **Redis prefix** | `meta:` |
-| **Cache TTL** | 7200 с (2 часа) |
+| **Cache TTL** | 7200 s (2 hours) |
 
-**Пример узла:**
+**Example node:**
 
 ```cypher
 (:Strategy {
@@ -3417,25 +3417,25 @@ Namespace -- механизм изоляции в UN ProjectAdvisor. Кажды�
 })
 ```
 
-### COMMON -- общие ресурсы
+### COMMON — Shared resources
 
 **Enum:** `KnowledgeNamespace.COMMON = 'common'`
 
-Словари, глоссарии, шаблоны и справочные данные, используемые всеми остальными namespace. Содержит онтологию ООН, аббревиатуры, организационную структуру. Запись только для утверждённых контрибьюторов (`ADMIN`).
+Dictionaries, glossaries, templates, and reference data used by all other namespaces. Contains the UN ontology, abbreviations, and organizational structure. Write access only for approved contributors (`ADMIN`).
 
-| Свойство | Значение |
+| Property | Value |
 |----------|----------|
-| **Назначение** | Общая терминология, словари, справочные данные |
-| **Примеры узлов** | `Term`, `Concept`, `Organization`, `System`, `DocumentPattern`, `Glossary`, `Acronym`, `UNEntity` |
-| **Формат namespace** | `common` |
-| **Частота обновлений** | Редко |
-| **Чтение** | Все роли (`VIEWER` и выше) |
-| **Запись** | Только `ADMIN` |
+| **Purpose** | Common terminology, dictionaries, reference data |
+| **Example nodes** | `Term`, `Concept`, `Organization`, `System`, `DocumentPattern`, `Glossary`, `Acronym`, `UNEntity` |
+| **Namespace format** | `common` |
+| **Update frequency** | Rarely |
+| **Read** | All roles (`VIEWER` and above) |
+| **Write** | `ADMIN` only |
 | **Qdrant collection** | `common_vocabulary` |
 | **Redis prefix** | `common:` |
-| **Cache TTL** | 86400 с (24 часа) |
+| **Cache TTL** | 86400 s (24 hours) |
 
-**Пример узла:**
+**Example node:**
 
 ```cypher
 (:Acronym {
@@ -3453,25 +3453,25 @@ Namespace -- механизм изоляции в UN ProjectAdvisor. Кажды�
 
 ## 4.2 Routing rules
 
-### Алгоритм автоопределения namespace
+### Auto-detection algorithm for namespace
 
-При поступлении запроса `NamespaceRouter` определяет целевой namespace по следующему алгоритму:
+When a request comes in, `NamespaceRouter` determines the target namespace by the following algorithm:
 
 ```javascript
 /**
- * Алгоритм маршрутизации (namespace-router.service.js)
+ * Routing algorithm (namespace-router.service.js)
  *
- * Приоритет:
- *   1. Явно указанный namespace (explicitNamespace)
- *   2. Определение по sourceSystem / projectId
- *   3. Определение по label / типу узла
- *   4. Анализ текста запроса (regex-паттерны)
- *   5. Default → 'project' (для pipeline-записей) или 'common' (для запросов)
+ * Priority:
+ *   1. Explicitly specified namespace (explicitNamespace)
+ *   2. Detection by sourceSystem / projectId
+ *   3. Detection by label / node type
+ *   4. Request text analysis (regex patterns)
+ *   5. Default → 'project' (for pipeline writes) or 'common' (for queries)
  */
 async function resolveNamespace(context) {
   const { explicitNamespace, sourceSystem, label, query } = context;
 
-  // [1] Явный namespace — высший приоритет
+  // [1] Explicit namespace — highest priority
   if (explicitNamespace) {
     if (!checkAccess(explicitNamespace, context.userRole, 'read')) {
       throw new Error(`Access denied to namespace: ${explicitNamespace}`);
@@ -3479,13 +3479,13 @@ async function resolveNamespace(context) {
     return explicitNamespace;
   }
 
-  // [2] По sourceSystem — если данные пришли из конкретного проекта
+  // [2] By sourceSystem — if data came from a specific project
   if (sourceSystem) {
     const projectName = sourceSystem.toLowerCase();
     return `project:${projectName}`;
   }
 
-  // [3] По label — каждый namespace имеет allowedNodeLabels
+  // [3] By label — each namespace has allowedNodeLabels
   if (label) {
     for (const [ns, config] of Object.entries(NAMESPACE_CONFIGS)) {
       if (config.allowedNodeLabels.includes(label)) {
@@ -3494,7 +3494,7 @@ async function resolveNamespace(context) {
     }
   }
 
-  // [4] По тексту запроса — regex-анализ
+  // [4] By query text — regex analysis
   if (query) {
     const scores = analyzeQueryPatterns(query);
     const bestMatch = Object.entries(scores)
@@ -3509,11 +3509,11 @@ async function resolveNamespace(context) {
 }
 ```
 
-### Regex-паттерны определения
+### Regex detection patterns
 
-`NamespaceRouter` использует следующие паттерны для анализа текста запроса:
+`NamespaceRouter` uses the following patterns for query text analysis:
 
-| Namespace | Паттерны | Примеры совпадений |
+| Namespace | Patterns | Example matches |
 |-----------|----------|--------------------|
 | `core` | `/\b(pipeline\|service\|component\|api\|architecture)\b/i` | "How does the pipeline work?" |
 | `core` | `/\b(memgraph\|qdrant\|redis\|bullmq)\s+(service\|config)/i` | "memgraph service configuration" |
@@ -3526,33 +3526,33 @@ async function resolveNamespace(context) {
 | `common` | `/\b(acronym\|abbreviation\|term\|glossary)/i` | "UN acronym list" |
 | `common` | `/\b(un\s+organization\|department\|unit\|oict\|dgacm)/i` | "DGACM structure" |
 
-### Таблица маршрутизации по label
+### Label routing table
 
-| Label | Namespace | Пример |
+| Label | Namespace | Example |
 |-------|-----------|--------|
 | `Service`, `Pipeline`, `Component` | `core` | PA API gateway service |
 | `Config`, `Schema`, `API` | `core` | GraphQL schema definition |
-| `Architecture`, `Decision` | `core` | ADR-005: выбор Memgraph |
-| `File`, `Class`, `Method`, `Function` | `project:{name}` | Класс `UserManager` из IMIS |
-| `WorkItem`, `Epic`, `Bug`, `Task` | `project:{name}` | Work item #42300 из IMIS |
-| `Table`, `Column`, `StoredProcedure` | `project:{name}` | Таблица `HR_EMPLOYEES` из Umoja |
-| `BusinessRule`, `BusinessProcess` | `project:{name}` | Правило валидации контракта |
-| `Strategy`, `ContextPattern` | `meta` | Стратегия извлечения SQL-схем |
-| `StrategyExecution`, `ExtractionCycle` | `meta` | Запись о выполнении пайплайна |
-| `DecisionRecord`, `QualityRule` | `meta` | Решение об изменении стратегии |
-| `Term`, `Concept`, `Glossary` | `common` | Термин "appropriation" |
+| `Architecture`, `Decision` | `core` | ADR-005: Memgraph selection |
+| `File`, `Class`, `Method`, `Function` | `project:{name}` | `UserManager` class from IMIS |
+| `WorkItem`, `Epic`, `Bug`, `Task` | `project:{name}` | Work item #42300 from IMIS |
+| `Table`, `Column`, `StoredProcedure` | `project:{name}` | `HR_EMPLOYEES` table from Umoja |
+| `BusinessRule`, `BusinessProcess` | `project:{name}` | Contract validation rule |
+| `Strategy`, `ContextPattern` | `meta` | SQL schema extraction strategy |
+| `StrategyExecution`, `ExtractionCycle` | `meta` | Pipeline execution record |
+| `DecisionRecord`, `QualityRule` | `meta` | Decision to change strategy |
+| `Term`, `Concept`, `Glossary` | `common` | Term "appropriation" |
 | `Acronym`, `UNEntity` | `common` | OICT, DGACM, ACABQ |
 | `Organization`, `System` | `common` | United Nations Secretariat |
-| `DocumentPattern` | `common` | Шаблон General Assembly resolution |
+| `DocumentPattern` | `common` | General Assembly resolution template |
 
-### Определение storage paths
+### Storage path determination
 
-Каждый namespace маппится на конкретные storage-пути:
+Each namespace maps to specific storage paths:
 
 ```javascript
 // namespace.config.js — getStoragePaths()
 
-// Для PROJECT namespace path строится динамически:
+// For PROJECT namespace, path is built dynamically:
 getStoragePaths('project:imis')
 // → {
 //     graphPrefix:      'project:imis',
@@ -3561,7 +3561,7 @@ getStoragePaths('project:imis')
 //     storagePath:      '/knowledge/projects/imis'
 //   }
 
-// Для остальных namespace — статические пути:
+// For other namespaces — static paths:
 getStoragePaths('core')
 // → {
 //     graphPrefix:      'core',
@@ -3575,89 +3575,89 @@ getStoragePaths('core')
 
 ## 4.3 Cross-namespace queries
 
-### Разрешённые паттерны
+### Permitted patterns
 
-**1. READ из любого namespace (при наличии прав доступа)**
+**1. READ from any namespace (with appropriate access rights)**
 
-Чтение всегда разрешено, если роль пользователя входит в `readRoles` целевого namespace.
+Reading is always permitted if the user's role is in the `readRoles` of the target namespace.
 
 ```cypher
-// Запрос к CORE — информация о сервисах
+// Query CORE — service information
 MATCH (s:Service {namespace: 'core'})
 WHERE s.name CONTAINS 'Memgraph'
 RETURN s.name, s.description;
 
-// Запрос к PROJECT — данные конкретного проекта
+// Query PROJECT — specific project data
 MATCH (sp:StoredProcedure {fullNamespace: 'project:imis'})
 WHERE sp.name STARTS WITH 'sp_get'
 RETURN sp.name, sp.language;
 
-// Запрос к COMMON — справочные данные
+// Query COMMON — reference data
 MATCH (a:Acronym {namespace: 'common'})
 WHERE a.name = 'OICT'
 RETURN a.fullForm;
 ```
 
-**2. JOIN между PROJECT и COMMON (обогащение проектных данных справочниками)**
+**2. JOIN between PROJECT and COMMON (enriching project data with reference data)**
 
-Проектные данные часто ссылаются на общую терминологию. Такие cross-namespace запросы выполняются через isCrossNamespace-рёбра.
+Project data often references common terminology. Such cross-namespace queries are executed via isCrossNamespace edges.
 
 ```cypher
-// Найти все таблицы IMIS, связанные с организацией из COMMON
+// Find all IMIS tables linked to an organization from COMMON
 MATCH (t:Table {fullNamespace: 'project:imis'})
       -[r:REFERENCES_ENTITY {isCrossNamespace: true}]->
       (org:Organization {namespace: 'common'})
 RETURN t.name AS tableName, org.name AS organization;
 
-// Обогатить бизнес-правила терминами из глоссария
+// Enrich business rules with glossary terms
 MATCH (br:BusinessRule {fullNamespace: 'project:umoja'})
       -[:USES_TERM {isCrossNamespace: true}]->
       (term:Term {namespace: 'common'})
 RETURN br.name, collect(term.name) AS relatedTerms;
 ```
 
-**3. META читает из PROJECT (анализ результатов извлечения)**
+**3. META reads from PROJECT (analyzing extraction results)**
 
-META-знания связаны с проектными данными через записи о выполнении и стратегии.
+META knowledge is linked to project data through execution records and strategies.
 
 ```cypher
-// Какие стратегии использовались для проекта IMIS
+// What strategies were used for the IMIS project
 MATCH (se:StrategyExecution {namespace: 'meta'})
 WHERE se.targetProject = 'imis'
 MATCH (se)-[:USED_STRATEGY]->(s:Strategy {namespace: 'meta'})
 RETURN s.name, se.successRate, se.executedAt;
 
-// Агрегация метрик качества по проектам
+// Aggregate quality metrics by project
 MATCH (qr:QualityRule {namespace: 'meta'})
       -[:EVALUATED]->(cycle:ExtractionCycle {namespace: 'meta'})
 WHERE cycle.targetNamespace STARTS WITH 'project:'
 RETURN cycle.targetNamespace, avg(qr.score) AS avgQuality;
 ```
 
-**4. CORE читает из COMMON (конфигурация ссылается на организационную структуру)**
+**4. CORE reads from COMMON (configuration references organizational structure)**
 
 ```cypher
-// Какие сервисы PA обслуживают организации из COMMON
+// Which PA services serve organizations from COMMON
 MATCH (svc:Service {namespace: 'core'})
       -[:SERVES {isCrossNamespace: true}]->
       (org:Organization {namespace: 'common'})
 RETURN svc.name, org.name;
 ```
 
-### Запрещённые паттерны
+### Forbidden patterns
 
-**1. Прямые рёбра между разными PROJECT-ами**
+**1. Direct edges between different PROJECTs**
 
-Каждый проект -- изолированный контур. Нельзя создавать прямые связи между `PROJECT:imis` и `PROJECT:umoja`.
+Each project is an isolated boundary. Direct links between `PROJECT:imis` and `PROJECT:umoja` are forbidden.
 
 ```cypher
-// ЗАПРЕЩЕНО: прямое ребро между проектами
+// FORBIDDEN: direct edge between projects
 MATCH (a:Table {fullNamespace: 'project:imis'}),
       (b:Table {fullNamespace: 'project:umoja'})
 CREATE (a)-[:SIMILAR_TO]->(b);
-// ^^^ Нарушение изоляции! Используйте COMMON для связывания.
+// ^^^ Isolation violation! Use COMMON for linking.
 
-// ПРАВИЛЬНЫЙ ПОДХОД: связывание через COMMON
+// CORRECT APPROACH: link via COMMON
 MATCH (a:Table {fullNamespace: 'project:imis'}),
       (b:Table {fullNamespace: 'project:umoja'}),
       (concept:Concept {namespace: 'common'})
@@ -3666,29 +3666,29 @@ CREATE (a)-[:IMPLEMENTS {isCrossNamespace: true}]->(concept),
        (b)-[:IMPLEMENTS {isCrossNamespace: true}]->(concept);
 ```
 
-**2. Запись в CORE из pipeline-кода**
+**2. Writing to CORE from pipeline code**
 
-CORE -- readonly для пайплайнов. Только `ARCHITECT` и `ADMIN` могут модифицировать системные знания.
+CORE is read-only for pipelines. Only `ARCHITECT` and `ADMIN` may modify system knowledge.
 
 ```cypher
-// ЗАПРЕЩЕНО: pipeline пишет в CORE
-// В коде executor-а:
+// FORBIDDEN: pipeline writes to CORE
+// In executor code:
 // await memgraph.mergeNode('Service', { namespace: 'core', ... });
-// ^^^ Rejection: writeRoles не включает SYSTEM для CORE
+// ^^^ Rejection: writeRoles does not include SYSTEM for CORE
 
-// ПРАВИЛЬНО: pipeline пишет в META или PROJECT
+// CORRECT: pipeline writes to META or PROJECT
 // await memgraph.mergeNode('ExtractionCycle', { namespace: 'meta', ... });
 ```
 
-**3. Модификация COMMON без утверждения**
+**3. Modifying COMMON without approval**
 
-COMMON содержит словари и онтологии, которые используют все namespace. Изменения требуют роли `ADMIN`.
+COMMON contains dictionaries and ontologies used by all namespaces. Changes require the `ADMIN` role.
 
 ```cypher
-// ЗАПРЕЩЕНО: developer добавляет термин в COMMON
+// FORBIDDEN: developer adds a term to COMMON
 // checkAccess('common', 'DEVELOPER', 'write') → false
 
-// ПРАВИЛЬНО: только ADMIN
+// CORRECT: ADMIN only
 // checkAccess('common', 'ADMIN', 'write') → true
 MERGE (t:Term {id: $id, namespace: 'common'})
 SET t.name = 'appropriation',
@@ -3696,20 +3696,20 @@ SET t.name = 'appropriation',
     t.createdAt = datetime();
 ```
 
-**4. Запись META-данных в PROJECT namespace**
+**4. Writing META data into PROJECT namespace**
 
-Записи о выполнении, стратегии и метрики качества -- это мета-знания. Они описывают работу системы, а не извлечённые данные проекта.
+Execution records, strategies, and quality metrics are meta-knowledge. They describe how the system operates, not extracted project data.
 
 ```cypher
-// ЗАПРЕЩЕНО: ExecutionRecord в PROJECT
+// FORBIDDEN: ExecutionRecord in PROJECT
 CREATE (er:ExecutionRecord {
   namespace: 'project',
   fullNamespace: 'project:imis',
   ...
 });
-// ^^^ Нарушение! ExecutionRecord — всегда META. См. раздел 4.5.
+// ^^^ Violation! ExecutionRecord is always META. See section 4.5.
 
-// ПРАВИЛЬНО:
+// CORRECT:
 CREATE (er:ExecutionRecord {
   namespace: 'meta',
   fullNamespace: 'meta',
@@ -3722,36 +3722,36 @@ CREATE (er:ExecutionRecord {
 
 ## 4.4 Isolation guarantees
 
-### Таблица правил изоляции
+### Isolation rules table
 
-| Правило | Гарантия | Enforcement |
-|---------|----------|-------------|
-| **PROJECT:X ↛ PROJECT:Y** | Прямые рёбра между разными проектами запрещены | `mergeRelationship()` + namespace check |
-| **CORE immutable для pipelines** | SYSTEM роль не имеет write-доступа к CORE | `checkAccess('core', 'SYSTEM', 'write') → false` |
-| **COMMON write = ADMIN only** | Только ADMIN может модифицировать общие ресурсы | `writeRoles: [UserRole.ADMIN]` |
-| **META write = SYSTEM + ADMIN** | Пайплайны пишут в META автоматически | `writeRoles: [UserRole.SYSTEM, UserRole.ADMIN]` |
-| **Label → Namespace binding** | Каждый label разрешён только в определённых namespace | `isLabelAllowed(namespace, label)` |
-| **Cross-namespace маркировка** | Все cross-namespace рёбра имеют `isCrossNamespace: true` | `_markCrossNamespaceRefs()` |
-| **PROJECT namespace всегда с projectId** | `project` без квалификатора запрещён в production | Routing validation |
+| Rule | Guarantee | Enforcement |
+|------|-----------|-------------|
+| **PROJECT:X ↛ PROJECT:Y** | Direct edges between different projects are forbidden | `mergeRelationship()` + namespace check |
+| **CORE immutable for pipelines** | SYSTEM role has no write access to CORE | `checkAccess('core', 'SYSTEM', 'write') → false` |
+| **COMMON write = ADMIN only** | Only ADMIN can modify shared resources | `writeRoles: [UserRole.ADMIN]` |
+| **META write = SYSTEM + ADMIN** | Pipelines write to META automatically | `writeRoles: [UserRole.SYSTEM, UserRole.ADMIN]` |
+| **Label → Namespace binding** | Each label is allowed only in certain namespaces | `isLabelAllowed(namespace, label)` |
+| **Cross-namespace marking** | All cross-namespace edges have `isCrossNamespace: true` | `_markCrossNamespaceRefs()` |
+| **PROJECT namespace always with projectId** | `project` without a qualifier is forbidden in production | Routing validation |
 
-### Enforcement в memgraph.service.js
+### Enforcement in memgraph.service.js
 
-Основной enforcement реализован в `mergeRelationship()` через параметр `isCrossNamespace` и в `_markCrossNamespaceRefs()`:
+The primary enforcement is implemented in `mergeRelationship()` via the `isCrossNamespace` parameter and in `_markCrossNamespaceRefs()`:
 
 ```javascript
 /**
- * memgraph.service.js — enforcement cross-namespace рёбер
+ * memgraph.service.js — cross-namespace edge enforcement
  */
 async mergeRelationship(fromId, toId, type, properties = {}, isCrossNamespace = false) {
   // ...
 
   const relProps = {
     ...properties,
-    isCrossNamespace,            // Маркировка cross-namespace ребра
+    isCrossNamespace,            // Mark cross-namespace edge
     createdAt: new Date().toISOString()
   };
 
-  // MERGE ребро
+  // MERGE edge
   const query = `
     MATCH (a), (b)
     WHERE a.id = $fromId AND b.id = $toId
@@ -3761,15 +3761,15 @@ async mergeRelationship(fromId, toId, type, properties = {}, isCrossNamespace = 
   `;
   await session.run(query, { fromId, toId, properties: relProps });
 
-  // Пометить узлы как участники cross-namespace связи
+  // Mark nodes as participants in a cross-namespace link
   if (isCrossNamespace) {
     await this._markCrossNamespaceRefs(session, fromId, toId);
   }
 }
 
 /**
- * Маркировка узлов, участвующих в cross-namespace связях.
- * Позволяет быстро находить "пограничные" узлы.
+ * Mark nodes participating in cross-namespace links.
+ * Allows quickly finding "boundary" nodes.
  */
 async _markCrossNamespaceRefs(session, fromId, toId) {
   const query = `
@@ -3782,11 +3782,11 @@ async _markCrossNamespaceRefs(session, fromId, toId) {
 }
 ```
 
-Контроль доступа реализован в `NamespaceRouter.checkAccess()`:
+Access control is implemented in `NamespaceRouter.checkAccess()`:
 
 ```javascript
 /**
- * namespace-router.service.js — проверка доступа
+ * namespace-router.service.js — access check
  */
 checkAccess(namespace, userRole, operation = 'read') {
   // Wildcard project namespace → base 'project'
@@ -3811,11 +3811,11 @@ checkAccess(namespace, userRole, operation = 'read') {
 }
 ```
 
-Label-валидация через `isLabelAllowed()`:
+Label validation via `isLabelAllowed()`:
 
 ```javascript
 /**
- * namespace.config.js — проверка допустимости label в namespace
+ * namespace.config.js — label allowance check in namespace
  */
 function isLabelAllowed(fullNamespace, label) {
   const config = getNamespaceConfig(fullNamespace);
@@ -3823,7 +3823,7 @@ function isLabelAllowed(fullNamespace, label) {
   return config.allowedNodeLabels.includes(label);
 }
 
-// Примеры:
+// Examples:
 isLabelAllowed('core', 'Service')          // → true
 isLabelAllowed('core', 'Table')            // → false (Table — PROJECT)
 isLabelAllowed('project:imis', 'Table')    // → true
@@ -3831,12 +3831,12 @@ isLabelAllowed('common', 'StoredProcedure') // → false (SP — PROJECT)
 isLabelAllowed('meta', 'Strategy')         // → true
 ```
 
-### Аудит cross-namespace операций
+### Audit of cross-namespace operations
 
-Для мониторинга cross-namespace связей используется аудиторный запрос:
+The following audit query is used to monitor cross-namespace links:
 
 ```cypher
-// Найти все cross-namespace рёбра
+// Find all cross-namespace edges
 MATCH (a)-[r {isCrossNamespace: true}]->(b)
 RETURN a.fullNamespace AS fromNS,
        b.fullNamespace AS toNS,
@@ -3844,7 +3844,7 @@ RETURN a.fullNamespace AS fromNS,
        count(r) AS edgeCount
 ORDER BY edgeCount DESC;
 
-// Найти нарушения: прямые рёбра между разными PROJECT-ами
+// Find violations: direct edges between different PROJECTs
 MATCH (a)-[r]->(b)
 WHERE a.namespace = 'project'
   AND b.namespace = 'project'
@@ -3856,7 +3856,7 @@ RETURN a.fullNamespace AS fromProject,
        a.id AS fromId,
        b.id AS toId;
 
-// Найти узлы с неправильным label для их namespace
+// Find nodes with incorrect label for their namespace
 MATCH (n)
 WHERE n.namespace IS NOT NULL
   AND n.namespace = 'core'
@@ -3866,7 +3866,7 @@ WHERE n.namespace IS NOT NULL
   AND NOT n:Decision AND NOT n:Worker
 RETURN labels(n) AS wrongLabels, n.id, n.namespace;
 
-// Статистика по namespace
+// Statistics by namespace
 MATCH (n)
 WHERE n.namespace IS NOT NULL
 RETURN n.namespace AS namespace,
@@ -3877,18 +3877,18 @@ ORDER BY namespace;
 
 ---
 
-## 4.5 ExecutionRecord -- почему META, не PROJECT
+## 4.5 ExecutionRecord — why META, not PROJECT
 
-### Текущая проблема
+### Current problem
 
-В текущей реализации `RuntimeAdapter` (`api/src/services/immutable-graph/integration/runtime-adapter.ts`) узлы `ExecutionRecord` записываются в PROJECT namespace:
+In the current `RuntimeAdapter` implementation (`api/src/services/immutable-graph/integration/runtime-adapter.ts`), `ExecutionRecord` nodes are written to the PROJECT namespace:
 
 ```typescript
-// runtime-adapter.ts — ТЕКУЩЕЕ состояние (НЕПРАВИЛЬНО)
+// runtime-adapter.ts — CURRENT state (INCORRECT)
 export class RuntimeAdapter {
   private static readonly PATTERN_NODE_TYPE = 'ExecutionPattern';
   private static readonly EXECUTION_NODE_TYPE = 'ExecutionRecord';
-  private static readonly PATTERN_NAMESPACE = Namespace.PROJECT;  // ← ПРОБЛЕМА
+  private static readonly PATTERN_NAMESPACE = Namespace.PROJECT;  // ← PROBLEM
 
   constructor(
     private graphService: ImmutableGraphService,
@@ -3898,53 +3898,53 @@ export class RuntimeAdapter {
   async recordExecution(result: ExecutionResult): Promise<RecordResult> {
     // ...
     await this.createExecutionRecord(result, pattern.entityId);
-    // ^^^ Записывается в PROJECT namespace через PATTERN_NAMESPACE
+    // ^^^ Written to PROJECT namespace via PATTERN_NAMESPACE
   }
 }
 ```
 
-Это означает, что записи о выполнении пайплайна попадают в `project:gxe-patterns`, смешиваясь с проектными данными.
+This means pipeline execution records end up in `project:gxe-patterns`, mixed with project data.
 
-### Целевое состояние
+### Target state
 
-`ExecutionRecord` и `ExecutionPattern` всегда должны записываться в `META` namespace:
+`ExecutionRecord` and `ExecutionPattern` must always be written to the `META` namespace:
 
 ```typescript
-// runtime-adapter.ts — ЦЕЛЕВОЕ состояние (ПРАВИЛЬНО)
+// runtime-adapter.ts — TARGET state (CORRECT)
 export class RuntimeAdapter {
   private static readonly PATTERN_NODE_TYPE = 'ExecutionPattern';
   private static readonly EXECUTION_NODE_TYPE = 'ExecutionRecord';
-  private static readonly PATTERN_NAMESPACE = Namespace.META;  // ← ИСПРАВЛЕНО
+  private static readonly PATTERN_NAMESPACE = Namespace.META;  // ← FIXED
 
   constructor(
     private graphService: ImmutableGraphService,
-    private projectId: string = 'execution-records'  // ← Описательный ID
+    private projectId: string = 'execution-records'  // ← Descriptive ID
   ) {}
 }
 ```
 
-### Обоснование
+### Rationale
 
-| Аргумент | Объяснение |
-|----------|------------|
-| **Природа данных** | ExecutionRecord описывает КАК система работала (время, статус, метрики), а не ЧТО было извлечено. Это мета-знания по определению. |
-| **Cross-project аналитика** | Для сравнения эффективности стратегий между проектами нужен единый namespace. Если записи разбросаны по `project:imis`, `project:umoja` -- агрегация требует multi-namespace запросов. |
-| **Label consistency** | `ExecutionRecord` и `StrategyExecution` входят в `allowedNodeLabels` для META (`Strategy`, `StrategyExecution`, `ExtractionCycle`, `DecisionRecord`), но не для PROJECT. |
-| **Иммутабельность** | Запись о выполнении никогда не должна изменяться. META namespace обеспечивает это через write-only для SYSTEM. |
-| **Чистота PROJECT** | Проектные данные должны содержать только знания, извлечённые из legacy-систем. Системные метрики загрязняют проектный граф. |
-| **Связь с проектом** | Ссылка на проект сохраняется через свойство `targetProject`, а не через namespace. Это позволяет фильтровать по проекту без нарушения изоляции. |
+| Argument | Explanation |
+|----------|-------------|
+| **Data nature** | ExecutionRecord describes HOW the system operated (time, status, metrics), not WHAT was extracted. By definition this is meta-knowledge. |
+| **Cross-project analytics** | Comparing strategy effectiveness across projects requires a single namespace. If records are scattered across `project:imis`, `project:umoja` — aggregation requires multi-namespace queries. |
+| **Label consistency** | `ExecutionRecord` and `StrategyExecution` are in `allowedNodeLabels` for META (`Strategy`, `StrategyExecution`, `ExtractionCycle`, `DecisionRecord`), but not for PROJECT. |
+| **Immutability** | An execution record must never be changed. The META namespace enforces this via write-only for SYSTEM. |
+| **PROJECT cleanliness** | Project data should contain only knowledge extracted from legacy systems. System metrics pollute the project graph. |
+| **Link to project** | The reference to a project is preserved via the `targetProject` property, not through the namespace. This allows filtering by project without violating isolation. |
 
-### Миграция
+### Migration
 
-Для переноса существующих `ExecutionRecord` из PROJECT в META:
+To move existing `ExecutionRecord` nodes from PROJECT to META:
 
 ```cypher
-// Шаг 1: Найти все ExecutionRecord в PROJECT namespace
+// Step 1: Find all ExecutionRecord nodes in PROJECT namespace
 MATCH (er:ExecutionRecord)
 WHERE er.namespace = 'project'
 RETURN count(er) AS recordsToMigrate;
 
-// Шаг 2: Обновить namespace
+// Step 2: Update namespace
 MATCH (er:ExecutionRecord)
 WHERE er.namespace = 'project'
 SET er.namespace = 'meta',
@@ -3957,7 +3957,7 @@ SET er.namespace = 'meta',
     er.migratedAt = datetime(),
     er.migrationReason = 'CODEX-NS-4.5: ExecutionRecord belongs to META';
 
-// Шаг 3: Обновить связанные ExecutionPattern
+// Step 3: Update related ExecutionPattern nodes
 MATCH (ep:ExecutionPattern)
 WHERE ep.namespace = 'project'
 SET ep.namespace = 'meta',
@@ -3970,53 +3970,53 @@ SET ep.namespace = 'meta',
     ep.migratedAt = datetime(),
     ep.migrationReason = 'CODEX-NS-4.5: ExecutionPattern belongs to META';
 
-// Шаг 4: Верификация
+// Step 4: Verification
 MATCH (er:ExecutionRecord)
 WHERE er.namespace = 'project'
 RETURN count(er) AS remainingInProject;
-// Ожидаемый результат: 0
+// Expected result: 0
 
 MATCH (er:ExecutionRecord {namespace: 'meta'})
 RETURN count(er) AS migratedRecords,
        collect(DISTINCT er.targetProject) AS projects;
 ```
 
-После миграции необходимо обновить `runtime-adapter.ts`:
-- Изменить `PATTERN_NAMESPACE` с `Namespace.PROJECT` на `Namespace.META`
-- Добавить `ExecutionRecord` в `allowedNodeLabels` конфигурации META namespace
-- Обновить `projectId` конструктора на описательное значение вместо `'gxe-patterns'`
+After migration, update `runtime-adapter.ts`:
+- Change `PATTERN_NAMESPACE` from `Namespace.PROJECT` to `Namespace.META`
+- Add `ExecutionRecord` to `allowedNodeLabels` of the META namespace configuration
+- Update the constructor `projectId` to a descriptive value instead of `'gxe-patterns'`
 
 ---
 
-*Этот документ является частью [Кодекса UN ProjectAdvisor](../CODEX_INDEX.md)*
+*This document is part of the [UN ProjectAdvisor Codex](../CODEX_INDEX.md)*
 
 ---
 
-## Часть V: CODEX-VALID — Стандарт валидации
+## Part V: CODEX-VALID — Validation Standard
 
-**Статус:** 🟡 В разработке
-**Версия:** 0.1.0
-**Последнее обновление:** 2026-03-12
-
----
-
-## Оглавление
-
-- [5.1 Schema Registry: единый источник правды](#51-schema-registry-единый-источник-правды)
-- [5.2 Pre-write валидация](#52-pre-write-валидация)
-- [5.3 Post-write верификация](#53-post-write-верификация)
-- [5.4 Обнаружение дубликатов](#54-обнаружение-дубликатов)
-- [5.5 Обнаружение осиротевших данных](#55-обнаружение-осиротевших-данных)
-- [5.6 Управление индексами](#56-управление-индексами)
-- [Приложение: Коды ошибок валидации](#приложение-коды-ошибок-валидации)
+**Status:** 🟡 In development
+**Version:** 0.1.0
+**Last updated:** 2026-03-12
 
 ---
 
-## 5.1 Schema Registry: единый источник правды
+## Table of Contents
 
-### Архитектура
+- [5.1 Schema Registry: single source of truth](#51-schema-registry-single-source-of-truth)
+- [5.2 Pre-write validation](#52-pre-write-validation)
+- [5.3 Post-write verification](#53-post-write-verification)
+- [5.4 Duplicate detection](#54-duplicate-detection)
+- [5.5 Orphan detection](#55-orphan-detection)
+- [5.6 Index management](#56-index-management)
+- [Appendix: Validation error codes](#appendix-validation-error-codes)
 
-Schema Registry — централизованный реестр JSON Schema определений для всех сущностей графа знаний. Реализован в `api/src/validation/schema-registry.js`.
+---
+
+## 5.1 Schema Registry: single source of truth
+
+### Architecture
+
+Schema Registry is a centralised registry of JSON Schema definitions for all entities in the knowledge graph. Implemented in `api/src/validation/schema-registry.js`.
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -4033,30 +4033,30 @@ Schema Registry — централизованный реестр JSON Schema о
 │                                │  validateExecRec   │   │
 │                                └───────────────────┘   │
 │                                                         │
-│  Функции:                                               │
-│  - register(schema)     — зарегистрировать/заменить     │
-│  - validate(id, data)   — валидировать данные            │
-│  - listSchemas()        — список всех ID                 │
-│  - getSchema(id)        — получить raw schema            │
+│  Functions:                                              │
+│  - register(schema)     — register/replace               │
+│  - validate(id, data)   — validate data                  │
+│  - listSchemas()        — list all IDs                   │
+│  - getSchema(id)        — get raw schema                 │
 │  - getSchemaRegistry()  — singleton                      │
 └─────────────────────────────────────────────────────────┘
 ```
 
-### Встроенные схемы
+### Built-in schemas
 
-| # | Schema ID | Описание | Required fields | Strict |
-|---|-----------|----------|-----------------|--------|
-| 1 | `codex://schemas/base-node` | Минимальный контракт для любого узла | id, createdAt, namespace | Нет |
-| 2 | `codex://schemas/provenance` | Провенанс (W3C PROV-O) | sourceType, sourceId, confidence | Нет |
-| 3 | `codex://schemas/node-version` | Immutable узел с bi-temporal и hash chain | 9 полей (versionId, entityId, namespace, sequenceNumber, status, ttStart, contentHash, chainHash, nodeType) | Да |
-| 4 | `codex://schemas/edge-version` | Immutable ребро с hash chain | 10 полей | Да |
-| 5 | `codex://schemas/catalog-entry` | Запись каталога GXE | entryId, name, type, namespace, createdAt | Нет |
-| 6 | `codex://schemas/graph-version` | Snapshot версии графа | versionId, versionNumber, createdAt, contentHash | Да |
-| 7 | `codex://schemas/execution-record` | Лог выполнения | executionId, dagId, status, executedAt | Нет |
+| # | Schema ID | Description | Required fields | Strict |
+|---|-----------|-------------|-----------------|--------|
+| 1 | `codex://schemas/base-node` | Minimum contract for any node | id, createdAt, namespace | No |
+| 2 | `codex://schemas/provenance` | Provenance (W3C PROV-O) | sourceType, sourceId, confidence | No |
+| 3 | `codex://schemas/node-version` | Immutable node with bi-temporal and hash chain | 9 fields (versionId, entityId, namespace, sequenceNumber, status, ttStart, contentHash, chainHash, nodeType) | Yes |
+| 4 | `codex://schemas/edge-version` | Immutable edge with hash chain | 10 fields | Yes |
+| 5 | `codex://schemas/catalog-entry` | GXE catalog entry | entryId, name, type, namespace, createdAt | No |
+| 6 | `codex://schemas/graph-version` | Graph version snapshot | versionId, versionNumber, createdAt, contentHash | Yes |
+| 7 | `codex://schemas/execution-record` | Execution log | executionId, dagId, status, executedAt | No |
 
-### Правила расширения
+### Extension rules
 
-Новые типы узлов должны наследовать от `BaseNodeSchema` через композицию `allOf`:
+New node types must inherit from `BaseNodeSchema` via `allOf` composition:
 
 ```json
 {
@@ -4077,62 +4077,62 @@ Schema Registry — централизованный реестр JSON Schema о
 }
 ```
 
-**Правило:** Каждый новый тип узла в графе знаний ОБЯЗАН иметь соответствующую JSON Schema в Registry до начала использования.
+**Rule:** Every new node type in the knowledge graph MUST have a corresponding JSON Schema in the Registry before it is used.
 
 ---
 
-## 5.2 Pre-write валидация
+## 5.2 Pre-write validation
 
-### Точки перехвата
+### Interception points
 
-Валидация выполняется ПЕРЕД каждой операцией записи в Memgraph:
+Validation is performed BEFORE every write operation to Memgraph:
 
-| Операция | Файл | Текущая валидация | Целевая валидация |
-|----------|------|-------------------|-------------------|
-| `mergeNode()` | memgraph.service.js:386 | Только `if (!id)` | Schema + fingerprint + business rules |
-| `mergeRelationship()` | memgraph.service.js:445 | Нет | Node existence check + edge schema |
-| `createNode()` (graph-gen) | mssql.graph-generator.js:398 | Нет | BaseNode schema + provenance |
-| `saveEntityWithProvenance()` | GraphStorageService.js:66 | Только provenance | Full schema + provenance + fingerprint |
-| `createNode()` (immutable) | immutable-graph.service.ts:72 | Нет | NodeVersion schema + hash chain |
-| `createCatalogEntry()` | graphCatalog.service.js:141 | Нет | CatalogEntry schema |
+| Operation | File | Current validation | Target validation |
+|-----------|------|--------------------|-------------------|
+| `mergeNode()` | memgraph.service.js:386 | `if (!id)` only | Schema + fingerprint + business rules |
+| `mergeRelationship()` | memgraph.service.js:445 | None | Node existence check + edge schema |
+| `createNode()` (graph-gen) | mssql.graph-generator.js:398 | None | BaseNode schema + provenance |
+| `saveEntityWithProvenance()` | GraphStorageService.js:66 | Provenance only | Full schema + provenance + fingerprint |
+| `createNode()` (immutable) | immutable-graph.service.ts:72 | None | NodeVersion schema + hash chain |
+| `createCatalogEntry()` | graphCatalog.service.js:141 | None | CatalogEntry schema |
 
-### Алгоритм валидации
+### Validation algorithm
 
 ```
                          ┌──────────────┐
-                         │  Входные     │
-                         │  данные      │
+                         │  Input       │
+                         │  data        │
                          └──────┬───────┘
                                 │
                          ┌──────▼───────┐
-                         │  1. Detect   │  Определить тип узла
-                         │     Schema   │  по label / context
+                         │  1. Detect   │  Determine node type
+                         │     Schema   │  by label / context
                          └──────┬───────┘
                                 │
                          ┌──────▼───────┐
-                         │  2. JSON     │  Проверить required fields,
-                         │     Schema   │  типы, enum, format
+                         │  2. JSON     │  Check required fields,
+                         │     Schema   │  types, enum, format
                          │     Check    │
                          └──────┬───────┘
                                 │
                         ┌───────▼───────┐
                  ┌──────│  valid?       │──────┐
-                 │ Нет  └───────────────┘ Да   │
+                 │ No   └───────────────┘ Yes  │
                  │                              │
           ┌──────▼──────┐               ┌──────▼───────┐
-          │ REJECT      │               │  3. Business │  Проверить
-          │ VAL001-003  │               │     Rules    │  бизнес-правила
+          │ REJECT      │               │  3. Business │  Check
+          │ VAL001-003  │               │     Rules    │  business rules
           └─────────────┘               └──────┬───────┘
                                                │
                                         ┌──────▼───────┐
-                                        │  4. Finger-  │  Проверить
-                                        │     print    │  дубликаты
+                                        │  4. Finger-  │  Check
+                                        │     print    │  duplicates
                                         │     Check    │
                                         └──────┬───────┘
                                                │
                                   ┌────────────▼────────────┐
                            ┌─────│  collision?              │─────┐
-                           │ Да  └──────────────────────────┘ Нет │
+                           │ Yes └──────────────────────────┘ No  │
                            │                                      │
                     ┌──────▼──────┐                        ┌──────▼──────┐
                     │  Apply      │                        │  5. WRITE   │
@@ -4141,35 +4141,35 @@ Schema Registry — централизованный реестр JSON Schema о
                     └─────────────┘
 ```
 
-### Обязательные поля по уровням
+### Required fields by level
 
-**Уровень 0 — MANDATORY (для ЛЮБОГО узла):**
+**Level 0 — MANDATORY (for ANY node):**
 - `id` — UUID v4
 - `createdAt` — ISO 8601 datetime
-- `namespace` — одно из: CORE, PROJECT, META, COMMON
+- `namespace` — one of: CORE, PROJECT, META, COMMON
 
-**Уровень 1 — PROVENANCE (для извлечённых данных):**
+**Level 1 — PROVENANCE (for extracted data):**
 - `sourceType` — enum: llm, user, system, import, pipeline, agent
-- `sourceId` — ID источника (модель, пользователь, pipeline ID)
-- `extractionCycleId` — UUID цикла извлечения
-- `confidence` — число от 0.0 до 1.0
+- `sourceId` — source ID (model, user, pipeline ID)
+- `extractionCycleId` — extraction cycle UUID
+- `confidence` — number from 0.0 to 1.0
 
-**Уровень 2 — VERSION (для версионируемых узлов):**
-- `versionId` — UUID версии
-- `sequenceNumber` — порядковый номер (integer >= 1)
+**Level 2 — VERSION (for versioned nodes):**
+- `versionId` — version UUID
+- `sequenceNumber` — sequence number (integer >= 1)
 - `status` — enum: DRAFT, ACTIVE, SUPERSEDED, DEPRECATED, MERGED, DELETED
 - `ttStart` — transaction time start (ISO 8601)
-- `contentHash` — SHA-256 hex (64 символа)
-- `chainHash` — Merkle chain hash (64 символа)
+- `contentHash` — SHA-256 hex (64 characters)
+- `chainHash` — Merkle chain hash (64 characters)
 
-**Уровень 3 — EDGE (для рёбер):**
-- `sourceEntityId` — ID исходного узла
-- `targetEntityId` — ID целевого узла
-- `edgeType` — тип связи (строка)
+**Level 3 — EDGE (for edges):**
+- `sourceEntityId` — source node ID
+- `targetEntityId` — target node ID
+- `edgeType` — relationship type (string)
 
-### Код интеграции
+### Integration code
 
-Рекомендуемый паттерн интеграции в `memgraph.service.js`:
+Recommended integration pattern in `memgraph.service.js`:
 
 ```javascript
 const { getSchemaRegistry, checkFingerprintCollision } = require('../validation/schema-registry');
@@ -4199,22 +4199,22 @@ async mergeNode(label, properties) {
 
 ---
 
-## 5.3 Post-write верификация
+## 5.3 Post-write verification
 
-### Когда применять
+### When to apply
 
-Post-write check выполняет read-after-write для подтверждения целостности записи.
+Post-write check performs a read-after-write to confirm write integrity.
 
-| Операция | Post-write check | Обоснование |
-|----------|-----------------|-------------|
-| NodeVersion create | **ДА** | Hash chain integrity — критично |
-| EdgeVersion create | **ДА** | Bi-temporal consistency — критично |
-| CatalogEntry create | **ДА** | SUPERSEDES chain integrity |
-| mergeNode (domain) | Нет | MERGE идемпотентен, допустима eventual consistency |
-| mergeRelationship | Нет | Идемпотентный MERGE |
-| Qdrant upsert | **ДА** (async) | Проверить, что вектор записан (polystore sync) |
+| Operation | Post-write check | Rationale |
+|-----------|-----------------|-----------|
+| NodeVersion create | **YES** | Hash chain integrity — critical |
+| EdgeVersion create | **YES** | Bi-temporal consistency — critical |
+| CatalogEntry create | **YES** | SUPERSEDES chain integrity |
+| mergeNode (domain) | No | MERGE is idempotent, eventual consistency is acceptable |
+| mergeRelationship | No | Idempotent MERGE |
+| Qdrant upsert | **YES** (async) | Verify that the vector was written (polystore sync) |
 
-### Алгоритм
+### Algorithm
 
 ```
   WRITE to Memgraph
@@ -4227,9 +4227,9 @@ Post-write check выполняет read-after-write для подтвержде
   (contentHash, chainHash, status)
         │
    ┌────▼────┐
-   │ match?  │──── Да ──→ OK
+   │ match?  │──── Yes ──→ OK
    └────┬────┘
-        │ Нет
+        │ No
         ▼
   Log INCONSISTENCY (VAL007)
   Retry write (max 2)
@@ -4238,9 +4238,9 @@ Post-write check выполняет read-after-write для подтвержде
   If still mismatch → ALERT + manual review
 ```
 
-### Проверка hash chain
+### Hash chain verification
 
-Для NodeVersion после записи:
+For NodeVersion after writing:
 
 ```javascript
 // Read back the written version
@@ -4259,13 +4259,13 @@ if (written.chainHash !== expectedChainHash) {
 
 ---
 
-## 5.4 Обнаружение дубликатов
+## 5.4 Duplicate detection
 
-### Стратегия: трёхуровневый подход
+### Strategy: three-tier approach
 
-**Уровень 1 — Fingerprint (быстрый, точный)**
+**Level 1 — Fingerprint (fast, exact)**
 
-SHA-256 от нормализованного содержимого:
+SHA-256 of normalised content:
 ```javascript
 const fingerprint = crypto.createHash('sha256')
   .update(JSON.stringify({
@@ -4277,7 +4277,7 @@ const fingerprint = crypto.createHash('sha256')
   .digest('hex');
 ```
 
-**Уровень 2 — Normalized form (для entity resolution)**
+**Level 2 — Normalized form (for entity resolution)**
 
 ```cypher
 MATCH (n {normalizedForm: $normalizedForm, type: $type})
@@ -4285,7 +4285,7 @@ WHERE n.lifecycleState = 'active' OR n.lifecycleState IS NULL
 RETURN n ORDER BY n.confidence DESC LIMIT 1
 ```
 
-**Уровень 3 — Semantic similarity (через Qdrant)**
+**Level 3 — Semantic similarity (via Qdrant)**
 
 ```javascript
 const similar = await qdrantService.searchSimilar(
@@ -4294,54 +4294,54 @@ const similar = await qdrantService.searchSimilar(
 );
 ```
 
-### Политики обработки дубликатов
+### Duplicate handling policies
 
-| Политика | Когда применяется | Действие |
-|----------|-------------------|----------|
-| `REJECT` | NodeVersion с таким же contentHash уже существует | Отклонить запись, вернуть ошибку VAL004 |
-| `UPSERT` | Domain-узел с таким же id | Обновить свойства через MERGE SET |
-| `VERSION` | CatalogEntry с таким же contentHash | Создать новую версию (increment versionNumber) |
-| `MERGE` | Entity с normalized form match (confidence > 0.8) | Объединить свойства, взять максимальный confidence |
+| Policy | When applied | Action |
+|--------|--------------|--------|
+| `REJECT` | NodeVersion with the same contentHash already exists | Reject write, return error VAL004 |
+| `UPSERT` | Domain node with the same id | Update properties via MERGE SET |
+| `VERSION` | CatalogEntry with the same contentHash | Create a new version (increment versionNumber) |
+| `MERGE` | Entity with normalized form match (confidence > 0.8) | Merge properties, take maximum confidence |
 
-### Алгоритм определения политики
+### Policy determination algorithm
 
 ```
   contentHash collision?
         │
    ┌────▼────┐
-   │ NodeVer?│──── Да ──→ REJECT (immutable, дубликат)
+   │ NodeVer?│──── Yes ──→ REJECT (immutable, duplicate)
    └────┬────┘
-        │ Нет
+        │ No
    ┌────▼────────┐
-   │ CatalogEntry│──── Да ──→ VERSION (создать новую версию)
+   │ CatalogEntry│──── Yes ──→ VERSION (create new version)
    └────┬────────┘
-        │ Нет
+        │ No
    ┌────▼────────┐
-   │ normalForm  │──── Да ──→ MERGE (entity resolution)
+   │ normalForm  │──── Yes ──→ MERGE (entity resolution)
    │ match?      │
    └────┬────────┘
-        │ Нет
+        │ No
         ▼
-      UPSERT (default: MERGE по id)
+      UPSERT (default: MERGE by id)
 ```
 
 ---
 
-## 5.5 Обнаружение осиротевших данных
+## 5.5 Orphan detection
 
-### Типы orphaned данных
+### Types of orphaned data
 
-| Тип | Описание | Риск | Проверка |
-|-----|----------|------|----------|
-| Orphan nodes | Узлы без рёбер (изолированные) | Средний | Каждые 6 часов |
-| Orphan edges | Рёбра с отсутствующим source/target | Высокий | Каждые 6 часов |
-| Orphan vectors | Векторы в Qdrant без узла в Memgraph | Высокий | Ежедневно |
-| Stale versions | GraphVersion без CatalogEntry | Средний | Еженедельно |
-| Broken chains | NodeVersion с невалидным chainHash | Критический | При каждой записи |
+| Type | Description | Risk | Check frequency |
+|------|-------------|------|-----------------|
+| Orphan nodes | Nodes without edges (isolated) | Medium | Every 6 hours |
+| Orphan edges | Edges with missing source/target | High | Every 6 hours |
+| Orphan vectors | Vectors in Qdrant with no node in Memgraph | High | Daily |
+| Stale versions | GraphVersion without a CatalogEntry | Medium | Weekly |
+| Broken chains | NodeVersion with invalid chainHash | Critical | On every write |
 
-### Запросы для обнаружения
+### Detection queries
 
-**Orphan nodes (узлы без связей):**
+**Orphan nodes (nodes without edges):**
 ```cypher
 MATCH (n)
 WHERE NOT (n)--() AND NOT n:CatalogRoot AND NOT n:Settings
@@ -4349,7 +4349,7 @@ RETURN labels(n) AS labels, count(n) AS count
 ORDER BY count DESC
 ```
 
-**Orphan edges (рёбра к несуществующим узлам):**
+**Orphan edges (edges to non-existent nodes):**
 ```cypher
 MATCH (a)-[r]->(b)
 WHERE a.id IS NULL OR b.id IS NULL
@@ -4369,119 +4369,119 @@ const mgIds = new Set(mgDocs.map(r => r.id));
 const qdrantOrphans = qdrantPoints.filter(p => !mgIds.has(p.payload?.documentId));
 ```
 
-### Расписание проверок
+### Check schedule
 
-| Проверка | Интервал | Действие при обнаружении |
-|----------|----------|-------------------------|
-| Orphan nodes | 6 часов | Лог + метрика, не удалять автоматически |
-| Orphan edges | 6 часов | Лог + пометить для review |
-| Orphan vectors | 24 часа | Лог + queue для cleanup (ручное подтверждение) |
-| Hash chain audit | При каждой записи NodeVersion | ALERT + block further writes |
-| Full integrity scan | Еженедельно | Полный отчёт через `validateGraphIntegrity()` |
+| Check | Interval | Action on detection |
+|-------|----------|---------------------|
+| Orphan nodes | 6 hours | Log + metric, do not delete automatically |
+| Orphan edges | 6 hours | Log + flag for review |
+| Orphan vectors | 24 hours | Log + queue for cleanup (manual confirmation) |
+| Hash chain audit | On every NodeVersion write | ALERT + block further writes |
+| Full integrity scan | Weekly | Full report via `validateGraphIntegrity()` |
 
 ---
 
-## 5.6 Управление индексами
+## 5.6 Index management
 
-### Проблема: текущее состояние
+### Problem: current state
 
-Индексы и constraints создаются в **4+ файлах**:
+Indexes and constraints are created in **4+ files**:
 
-| Файл | Кол-во | Тип |
-|------|--------|-----|
+| File | Count | Type |
+|------|-------|------|
 | `GraphSchemaManager.js` | 25 constraints + 20+ indexes | Domain + Immutable + AOPEG |
 | `memgraph.service.js:795-808` | 9 indexes | Namespace-specific |
 | `graphCatalog.service.js:93-101` | 8 indexes | Catalog |
 | `apply-schema-memgraph.js` | ~10 | Migration script |
 | `apply-multi-domain-schema.js` | ~15 | Multi-domain migration |
 
-**Проблемы:**
-- Нет единого места для полного списка индексов
-- Возможны дубликаты и конфликты
-- Нет relationship indexes
-- Нет composite indexes
-- Нет full-text indexes
+**Problems:**
+- No single place for the complete index list
+- Duplicates and conflicts are possible
+- No relationship indexes
+- No composite indexes
+- No full-text indexes
 
-### Целевое состояние
+### Target state
 
-Все определения индексов должны быть в одном месте: `GraphSchemaManager.js`.
+All index definitions must be in one place: `GraphSchemaManager.js`.
 
-**Правила:**
-1. Каждый новый label ОБЯЗАН иметь index на id/primary key
-2. Каждый label с `namespace` ОБЯЗАН иметь index на `namespace`
-3. Поля, используемые в WHERE/ORDER BY, ОБЯЗАНЫ иметь index
-4. Все определения — в `GraphSchemaManager.initializeSchema()`
-5. Дублирование в других файлах запрещено
+**Rules:**
+1. Every new label MUST have an index on id/primary key
+2. Every label with `namespace` MUST have an index on `namespace`
+3. Fields used in WHERE/ORDER BY MUST have an index
+4. All definitions in `GraphSchemaManager.initializeSchema()`
+5. Duplication in other files is forbidden
 
-### Недостающие индексы (план добавления)
+### Missing indexes (addition plan)
 
-| Label | Property | Обоснование |
-|-------|----------|-------------|
-| * (все) | `updatedAt` | Сортировка по дате обновления |
-| CatalogEntry | `createdBy` | Фильтр по автору |
-| ExecutionPattern | `hash` | Lookup по DAG hash |
-| ExecutionRecord | `dagId` | Поиск executions по графу |
-| * (все domain) | `extractionCycleId` | Групповое удаление цикла |
+| Label | Property | Rationale |
+|-------|----------|-----------|
+| * (all) | `updatedAt` | Sort by update date |
+| CatalogEntry | `createdBy` | Filter by author |
+| ExecutionPattern | `hash` | Lookup by DAG hash |
+| ExecutionRecord | `dagId` | Find executions by graph |
+| * (all domain) | `extractionCycleId` | Bulk deletion of a cycle |
 
-### План миграции
+### Migration plan
 
-1. Собрать полный перечень индексов из всех файлов (audit)
-2. Объединить в `GraphSchemaManager.initializeSchema()`
-3. Добавить недостающие индексы
-4. Удалить дублирующие определения из других файлов
-5. Добавить `SHOW INDEX INFO` проверку в healthcheck endpoint
-
----
-
-## Приложение: Коды ошибок валидации
-
-| Код | Имя | Описание | Severity | Действие |
-|-----|-----|----------|----------|----------|
-| VAL001 | SCHEMA_REQUIRED_MISSING | Отсутствует обязательное поле | ERROR | Reject write |
-| VAL002 | SCHEMA_TYPE_MISMATCH | Неверный тип данных | ERROR | Reject write |
-| VAL003 | SCHEMA_ENUM_INVALID | Значение не из допустимого enum | ERROR | Reject write |
-| VAL004 | DUPLICATE_CONTENT | Дубликат по contentHash | WARNING | Apply policy (REJECT/UPSERT/VERSION/MERGE) |
-| VAL005 | EDGE_MISSING_SOURCE | Исходный узел ребра не существует | ERROR | Reject edge creation |
-| VAL006 | EDGE_MISSING_TARGET | Целевой узел ребра не существует | ERROR | Reject edge creation |
-| VAL007 | HASH_CHAIN_BROKEN | Нарушена целостность hash chain | CRITICAL | Alert + block writes |
-| VAL008 | ORPHAN_DETECTED | Обнаружен orphaned node/edge/vector | WARNING | Log + queue for review |
-| VAL009 | NAMESPACE_VIOLATION | Запись в неразрешённый namespace | ERROR | Reject write |
+1. Collect the full index list from all files (audit)
+2. Consolidate into `GraphSchemaManager.initializeSchema()`
+3. Add missing indexes
+4. Remove duplicate definitions from other files
+5. Add `SHOW INDEX INFO` check to the healthcheck endpoint
 
 ---
 
-*Этот документ является частью [Кодекса UN ProjectAdvisor](../CODEX_INDEX.md)*
+## Appendix: Validation error codes
+
+| Code | Name | Description | Severity | Action |
+|------|------|-------------|----------|--------|
+| VAL001 | SCHEMA_REQUIRED_MISSING | Required field missing | ERROR | Reject write |
+| VAL002 | SCHEMA_TYPE_MISMATCH | Wrong data type | ERROR | Reject write |
+| VAL003 | SCHEMA_ENUM_INVALID | Value not in allowed enum | ERROR | Reject write |
+| VAL004 | DUPLICATE_CONTENT | Duplicate by contentHash | WARNING | Apply policy (REJECT/UPSERT/VERSION/MERGE) |
+| VAL005 | EDGE_MISSING_SOURCE | Edge source node does not exist | ERROR | Reject edge creation |
+| VAL006 | EDGE_MISSING_TARGET | Edge target node does not exist | ERROR | Reject edge creation |
+| VAL007 | HASH_CHAIN_BROKEN | Hash chain integrity broken | CRITICAL | Alert + block writes |
+| VAL008 | ORPHAN_DETECTED | Orphaned node/edge/vector detected | WARNING | Log + queue for review |
+| VAL009 | NAMESPACE_VIOLATION | Write to disallowed namespace | ERROR | Reject write |
 
 ---
 
-## Часть VI: CODEX-CATALOG — Стандарт каталога
-
-**Статус:** 🟡 Черновик
-**Версия:** 0.1.0
-**Последнее обновление:** 2026-03-12
+*This document is part of the [UN ProjectAdvisor Codex](../CODEX_INDEX.md)*
 
 ---
 
-## Преамбула
+## Part VI: CODEX-CATALOG — Catalog Standard
 
-Каталог -- единая точка истины о всех графах в системе UN ProjectAdvisor. Без каталога графы становятся разрозненными артефактами: дублируются, теряются, не переиспользуются. С каталогом -- это управляемая библиотека с версионностью, дедупликацией и интеллектуальным поиском.
+**Status:** 🟡 Draft
+**Version:** 0.1.0
+**Last updated:** 2026-03-12
 
-Настоящий стандарт определяет:
-- схему `CatalogEntry` и связанных узлов,
-- политику автоматического сохранения графов,
-- механизмы дедупликации (exact, structural, semantic),
-- четыре режима поиска (keyword, structural, GNN, hybrid),
-- стратегии переиспользования графов,
-- жизненный цикл паттернов и их продвижение в шаблоны.
+---
 
-Реализация: `api/src/services/graphCatalog.service.js`
+## Preamble
+
+The catalog is the single source of truth about all graphs in the UN ProjectAdvisor system. Without a catalog, graphs become scattered artefacts: they are duplicated, lost, and never reused. With a catalog they form a managed library with versioning, deduplication, and intelligent search.
+
+This standard defines:
+- the `CatalogEntry` schema and related nodes,
+- the automatic graph-save policy,
+- deduplication mechanisms (exact, structural, semantic),
+- four search modes (keyword, structural, GNN, hybrid),
+- graph reuse strategies,
+- the pattern lifecycle and promotion to templates.
+
+Implementation: `api/src/services/graphCatalog.service.js`
 
 ---
 
 ## 6.1. CatalogEntry schema
 
-### Структура графа каталога
+### Catalog graph structure
 
-Каталог организован как иерархическое дерево узлов в Memgraph. Каждый граф представлен тройкой `CatalogEntry -> GraphDefinition -> GraphVersion`, где CatalogEntry -- реестровая запись, GraphDefinition -- определение (узлы + рёбра), а GraphVersion -- конкретная версия снимка.
+The catalog is organised as a hierarchical tree of nodes in Memgraph. Each graph is represented by the triple `CatalogEntry -> GraphDefinition -> GraphVersion`, where CatalogEntry is the registry record, GraphDefinition is the definition (nodes + edges), and GraphVersion is a specific version snapshot.
 
 ```
                             ┌─────────────────────────┐
@@ -4537,93 +4537,93 @@ const qdrantOrphans = qdrantPoints.filter(p => !mgIds.has(p.payload?.documentId)
           └──────────────┘
 ```
 
-Дополнительные связи иерархии:
+Additional hierarchy edges:
 
 ```
-(:CatalogEntry)-[:CHILD_OF]->(:CatalogEntry)           # Родительская иерархия
-(:CatalogEntry)-[:DECOMPOSES {nodeId}]->(:CatalogEntry) # Декомпозиция узла в подграф
+(:CatalogEntry)-[:CHILD_OF]->(:CatalogEntry)           # Parent hierarchy
+(:CatalogEntry)-[:DECOMPOSES {nodeId}]->(:CatalogEntry) # Node decomposition into subgraph
 ```
 
-### Полная схема CatalogEntry
+### Full CatalogEntry schema
 
-| Поле           | Тип        | Обязательно | Описание                                  | Пример                          |
-|----------------|------------|-------------|-------------------------------------------|---------------------------------|
-| `entryId`      | `string`   | Да          | Глобально уникальный идентификатор (UUID) | `"a1b2c3d4-e5f6-..."`          |
-| `name`         | `string`   | Да          | Человекочитаемое имя графа                | `"IT Hardware Request"`         |
-| `type`         | `string`   | Да          | Тип графа (см. CATALOG_TYPES)             | `"business"`                    |
-| `namespace`    | `string`   | Да          | Пространство имён (изоляция данных)       | `"un-pa"`, `"default"`          |
-| `description`  | `string`   | Нет         | Краткое описание назначения графа          | `"Процесс запроса оборудования"`|
-| `tags`         | `string[]` | Нет         | Теги для поиска и классификации            | `["ineed", "hardware", "it"]`   |
-| `visibility`   | `string`   | Да          | Уровень видимости (см. ниже)              | `"PUBLIC"`                      |
-| `qualityScore` | `number`   | Нет         | Оценка качества (0.0 -- 1.0)              | `0.85`                          |
-| `createdAt`    | `string`   | Да          | ISO 8601 timestamp создания               | `"2026-03-12T14:30:00.000Z"`   |
-| `updatedAt`    | `string`   | Да          | ISO 8601 timestamp последнего обновления  | `"2026-03-12T15:00:00.000Z"`   |
-| `createdBy`    | `string`   | Нет         | Автор создания                            | `"system"`, `"user-123"`        |
-| `currentVersion` | `number` | Да         | Номер текущей версии (целое число)        | `3`                             |
-| `usageCount`   | `number`   | Нет         | Счётчик использований                     | `42`                            |
-| `isPublic`     | `boolean`  | Нет         | Флаг публичности (для обратной совместимости) | `true`                      |
+| Field          | Type       | Required | Description                                    | Example                         |
+|----------------|------------|----------|------------------------------------------------|---------------------------------|
+| `entryId`      | `string`   | Yes      | Globally unique identifier (UUID)              | `"a1b2c3d4-e5f6-..."`          |
+| `name`         | `string`   | Yes      | Human-readable graph name                      | `"IT Hardware Request"`         |
+| `type`         | `string`   | Yes      | Graph type (see CATALOG_TYPES)                 | `"business"`                    |
+| `namespace`    | `string`   | Yes      | Namespace (data isolation)                     | `"un-pa"`, `"default"`          |
+| `description`  | `string`   | No       | Brief description of the graph purpose         | `"Hardware request process"`    |
+| `tags`         | `string[]` | No       | Tags for search and classification             | `["ineed", "hardware", "it"]`   |
+| `visibility`   | `string`   | Yes      | Visibility level (see below)                   | `"PUBLIC"`                      |
+| `qualityScore` | `number`   | No       | Quality score (0.0 -- 1.0)                     | `0.85`                          |
+| `createdAt`    | `string`   | Yes      | ISO 8601 creation timestamp                    | `"2026-03-12T14:30:00.000Z"`   |
+| `updatedAt`    | `string`   | Yes      | ISO 8601 last-updated timestamp                | `"2026-03-12T15:00:00.000Z"`   |
+| `createdBy`    | `string`   | No       | Creator                                        | `"system"`, `"user-123"`        |
+| `currentVersion` | `number` | Yes     | Current version number (integer)               | `3`                             |
+| `usageCount`   | `number`   | No       | Usage counter                                  | `42`                            |
+| `isPublic`     | `boolean`  | No       | Public flag (for backward compatibility)       | `true`                          |
 
-### Схема GraphDefinition
+### GraphDefinition schema
 
-| Поле            | Тип      | Описание                                          |
-|-----------------|----------|---------------------------------------------------|
-| `graphId`       | `string` | UUID определения                                  |
-| `nodes`         | `string` | JSON-строка массива узлов графа                   |
-| `edges`         | `string` | JSON-строка массива рёбер графа                   |
-| `requiredParams`| `string` | JSON-строка параметров, необходимых для запуска    |
-| `toolIds`       | `string[]`| Список идентификаторов инструментов               |
-| `nodeCount`     | `number` | Количество узлов                                  |
-| `edgeCount`     | `number` | Количество рёбер                                  |
-| `topology`      | `string` | Классификация топологии (`PIPELINE`, `DAG`, `TREE`)|
-| `contentHash`   | `string` | SHA-256 от отсортированного JSON узлов и рёбер    |
-| `validatedAt`   | `string` | Время последней валидации                         |
-| `wasAutoFixed`  | `boolean`| Был ли граф автоматически исправлен               |
+| Field           | Type      | Description                                        |
+|-----------------|-----------|----------------------------------------------------|
+| `graphId`       | `string`  | Definition UUID                                    |
+| `nodes`         | `string`  | JSON string of graph node array                    |
+| `edges`         | `string`  | JSON string of graph edge array                    |
+| `requiredParams`| `string`  | JSON string of parameters required for execution   |
+| `toolIds`       | `string[]`| List of tool identifiers                           |
+| `nodeCount`     | `number`  | Number of nodes                                    |
+| `edgeCount`     | `number` | Number of edges                                    |
+| `topology`      | `string` | Topology classification (`PIPELINE`, `DAG`, `TREE`)|
+| `contentHash`   | `string` | SHA-256 of sorted JSON of nodes and edges          |
+| `validatedAt`   | `string` | Time of last validation                            |
+| `wasAutoFixed`  | `boolean`| Whether the graph was automatically corrected      |
 
-### Схема GraphVersion
+### GraphVersion schema
 
-| Поле            | Тип      | Описание                                         |
-|-----------------|----------|--------------------------------------------------|
-| `versionId`     | `string` | UUID версии                                      |
-| `versionNumber` | `number` | Целочисленный номер версии (1, 2, 3...)          |
-| `changelog`     | `string` | Описание изменений                               |
-| `createdAt`     | `string` | ISO 8601 timestamp создания версии               |
-| `createdBy`     | `string` | Автор версии                                     |
-| `contentHash`   | `string` | SHA-256 хеш содержимого этой версии              |
+| Field           | Type     | Description                                        |
+|-----------------|----------|----------------------------------------------------|
+| `versionId`     | `string` | Version UUID                                       |
+| `versionNumber` | `number` | Integer version number (1, 2, 3...)                |
+| `changelog`     | `string` | Description of changes                             |
+| `createdAt`     | `string` | ISO 8601 version creation timestamp                |
+| `createdBy`     | `string` | Version author                                     |
+| `contentHash`   | `string` | SHA-256 hash of this version's content             |
 
-### CATALOG_TYPES -- допустимые типы графов
+### CATALOG_TYPES — allowed graph types
 
 ```javascript
 const CATALOG_TYPES = {
-  BUSINESS:  'business',   // Бизнес-процессы (iNeed, onboarding, approval)
-  TECHNICAL: 'technical',  // Технические пайплайны (ETL, extraction, deployment)
-  META:      'meta',       // Мета-графы, управляющие другими графами
-  TEMPLATE:  'template',   // Шаблоны для создания новых графов
-  COMPOSITE: 'composite',  // Составные графы, содержащие подграфы
+  BUSINESS:  'business',   // Business processes (iNeed, onboarding, approval)
+  TECHNICAL: 'technical',  // Technical pipelines (ETL, extraction, deployment)
+  META:      'meta',       // Meta-graphs that orchestrate other graphs
+  TEMPLATE:  'template',   // Templates for creating new graphs
+  COMPOSITE: 'composite',  // Composite graphs containing subgraphs
 };
 ```
 
-| Тип          | Назначение                                            | Пример                          |
+| Type         | Purpose                                               | Example                         |
 |--------------|-------------------------------------------------------|---------------------------------|
-| `business`   | Моделирует бизнес-процесс от начала до конца          | iNeed Hardware Request          |
-| `technical`  | Технический пайплайн обработки данных                 | SQL Extraction Pipeline         |
-| `meta`       | Оркестрирует другие графы, управляет маршрутизацией    | iNeed META Intake               |
-| `template`   | Параметризованный шаблон для клонирования              | Generic Approval Workflow       |
-| `composite`  | Агрегирует несколько подграфов через DECOMPOSES         | Full Onboarding Process         |
+| `business`   | Models an end-to-end business process                 | iNeed Hardware Request          |
+| `technical`  | Technical data-processing pipeline                   | SQL Extraction Pipeline         |
+| `meta`       | Orchestrates other graphs, manages routing            | iNeed META Intake               |
+| `template`   | Parameterised template for cloning                    | Generic Approval Workflow       |
+| `composite`  | Aggregates multiple subgraphs via DECOMPOSES          | Full Onboarding Process         |
 
-> **CATALOG003:** Попытка создать CatalogEntry с типом, отсутствующим в `CATALOG_TYPES`, приводит к ошибке `CATALOG003: Invalid type enum`.
+> **CATALOG003:** Attempting to create a CatalogEntry with a type absent from `CATALOG_TYPES` results in error `CATALOG003: Invalid type enum`.
 
-### Уровни видимости (Visibility)
+### Visibility levels
 
-| Уровень    | Описание                                                        | Кто видит                          |
+| Level      | Description                                                     | Who can see                        |
 |------------|----------------------------------------------------------------|-------------------------------------|
-| `PUBLIC`   | Доступен всем пользователям и агентам системы                  | Все                                 |
-| `INTERNAL` | Доступен только внутри namespace                                | Участники namespace                 |
-| `PRIVATE`  | Доступен только автору и администраторам                        | Автор + admin                       |
+| `PUBLIC`   | Available to all system users and agents                       | Everyone                            |
+| `INTERNAL` | Available only within the namespace                            | Namespace members                   |
+| `PRIVATE`  | Available only to the author and administrators                | Author + admin                      |
 
-### Cypher: создание CatalogEntry
+### Cypher: creating a CatalogEntry
 
 ```cypher
-// Создание новой записи каталога
+// Create a new catalog entry
 CREATE (c:CatalogEntry {
   entryId: $entryId,
   name: $name,
@@ -4641,13 +4641,13 @@ CREATE (c:CatalogEntry {
   qualityScore: 1.0
 })
 
-// Связь с CatalogRoot
+// Link to CatalogRoot
 MATCH (root:CatalogRoot {id: 'catalog-root'})
 MATCH (c:CatalogEntry {entryId: $entryId})
 MERGE (root)-[:CONTAINS]->(c)
 ```
 
-### Cypher: запрос CatalogEntry с последней версией
+### Cypher: querying a CatalogEntry with the latest version
 
 ```cypher
 MATCH (c:CatalogEntry {entryId: $id})-[:DEFINES]->(d:GraphDefinition)-[:HAS_VERSION]->(v:GraphVersion)
@@ -4657,7 +4657,7 @@ ORDER BY v.versionNumber DESC
 LIMIT 1
 ```
 
-### Cypher: список всех графов в namespace
+### Cypher: listing all graphs in a namespace
 
 ```cypher
 MATCH (c:CatalogEntry)
@@ -4668,9 +4668,9 @@ RETURN c.entryId AS id, c.name, c.type, c.description,
 ORDER BY c.updatedAt DESC
 ```
 
-### Индексы
+### Indexes
 
-Обязательные индексы для производительности каталога:
+Required indexes for catalog performance:
 
 ```cypher
 CREATE INDEX ON :CatalogEntry(entryId);
@@ -4687,13 +4687,13 @@ CREATE INDEX ON :ReuseRecord(recordId);
 
 ## 6.2. Auto-save policy
 
-### Когда граф сохраняется автоматически
+### When a graph is saved automatically
 
-Каталог не требует явного действия «Сохранить» от пользователя. Графы сохраняются автоматически в трёх сценариях:
+The catalog does not require an explicit "Save" action from the user. Graphs are saved automatically in three scenarios:
 
 ```
 ┌───────────────────────────────────────────────────────────────────────┐
-│                     ТРИГГЕРЫ AUTO-SAVE                                │
+│                     AUTO-SAVE TRIGGERS                                │
 │                                                                       │
 │  1. CREATION         2. VERSION BUMP         3. IMPORT                │
 │  ┌──────────────┐    ┌──────────────┐        ┌──────────────┐        │
@@ -4706,60 +4706,59 @@ CREATE INDEX ON :ReuseRecord(recordId);
 └───────────────────────────────────────────────────────────────────────┘
 ```
 
-| Триггер           | Метод                           | Что создаётся                               |
+| Trigger            | Method                          | What is created                              |
 |--------------------|---------------------------------|----------------------------------------------|
-| Создание графа     | `createGraph(data)`             | CatalogEntry + GraphDefinition + GraphVersion v1 |
-| Новая версия       | `createVersion(entryId, data)`  | Новые GraphDefinition + GraphVersion vN+1, SUPERSEDES |
-| SQL Import         | `mssql.import-orchestrator.js`  | Новый CatalogEntry для каждого импортированного графа |
-| GraphLoader startup| `graph-loader.service.js`       | CatalogEntry для предзагруженных графов (iNeed, SQL Extraction) |
+| Graph creation     | `createGraph(data)`             | CatalogEntry + GraphDefinition + GraphVersion v1 |
+| New version        | `createVersion(entryId, data)`  | New GraphDefinition + GraphVersion vN+1, SUPERSEDES |
+| SQL Import         | `mssql.import-orchestrator.js`  | New CatalogEntry for each imported graph     |
+| GraphLoader startup| `graph-loader.service.js`       | CatalogEntry for pre-loaded graphs (iNeed, SQL Extraction) |
 
-### GXE godMode -- два режима сохранения
+### GXE godMode — two save modes
 
-Поведение GXE-редактора при сохранении зависит от режима `godMode`:
+The GXE editor save behaviour depends on the `godMode` flag:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                                                                 │
-│   godMode: OFF (обычный режим)          godMode: ON (God Mode)  │
+│   godMode: OFF (normal mode)            godMode: ON (God Mode)  │
 │   ────────────────────────                ──────────────────────  │
 │                                                                 │
-│   Пользователь нажимает "Save"          Пользователь нажимает   │
-│           │                             "Save"                   │
-│           ▼                                    │                 │
-│   createVersion(entryId, data)                 ▼                 │
-│           │                             updateGraph(id, data)    │
-│           ▼                                    │                 │
-│   ┌──────────────────┐                         ▼                 │
-│   │ GraphVersion N+1 │                 ┌──────────────────┐      │
-│   │ + SUPERSEDES     │                 │ In-place SET     │      │
-│   │ + новый Definition│                │ на GraphDefinition│      │
-│   └──────────────────┘                 │ (без новой версии)│     │
-│                                        └──────────────────┘      │
-│   История СОХРАНЯЕТСЯ                  История НЕ сохраняется    │
-│   Откат возможен                       Откат невозможен          │
+│   User clicks "Save"                    User clicks "Save"       │
+│           │                                    │                 │
+│           ▼                                    ▼                 │
+│   createVersion(entryId, data)          updateGraph(id, data)    │
+│           │                                    │                 │
+│           ▼                                    ▼                 │
+│   ┌──────────────────┐                 ┌──────────────────┐      │
+│   │ GraphVersion N+1 │                 │ In-place SET     │      │
+│   │ + SUPERSEDES     │                 │ on GraphDefinition│      │
+│   │ + new Definition │                 │ (no new version) │      │
+│   └──────────────────┘                 └──────────────────┘      │
+│   History IS PRESERVED                 History IS NOT preserved  │
+│   Rollback is possible                 Rollback is not possible  │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-- **godMode OFF** -- рекомендуемый режим. Каждое сохранение создаёт новую версию (`createVersion`). Граф становится иммутабельным после сохранения. История изменений полностью сохраняется.
+- **godMode OFF** — recommended mode. Each save creates a new version (`createVersion`). The graph becomes immutable after saving. Full change history is preserved.
 
-- **godMode ON** -- режим для быстрого прототипирования. Обновляет GraphDefinition на месте (`updateGraph`). Не создаёт новую версию. Используется только в процессе разработки.
+- **godMode ON** — rapid-prototyping mode. Updates GraphDefinition in place (`updateGraph`). Does not create a new version. Used only during development.
 
-> **CATALOG004:** При конкурентном обновлении одной и той же CatalogEntry двумя пользователями одновременно возникает ошибка `CATALOG004: Version conflict`. Система использует `currentVersion` как optimistic lock.
+> **CATALOG004:** When two users concurrently update the same CatalogEntry, error `CATALOG004: Version conflict` is raised. The system uses `currentVersion` as an optimistic lock.
 
-### GraphLoader -- автосохранение при старте
+### GraphLoader — auto-save on startup
 
-При запуске сервера `GraphLoaderService` загружает предопределённые графы из файлов и создаёт для каждого `CatalogEntry`:
+On server startup `GraphLoaderService` loads predefined graphs from files and creates a `CatalogEntry` for each:
 
 ```javascript
-// graph-loader.service.js -- упрощённый фрагмент
+// graph-loader.service.js — simplified excerpt
 async loadGraph(graphDef) {
   const dag = { nodes: graphDef.nodes, edges: graphDef.edges };
 
-  // 1. Сохранить в PatternLibrary (in-memory кеш)
+  // 1. Register in PatternLibrary (in-memory cache)
   this._patternLibrary.register(graphDef.id, dag);
 
-  // 2. Сохранить метаданные в Memgraph
+  // 2. Save metadata to Memgraph
   await this._memgraph.run(`
     MERGE (g:BusinessProcessGraph {graphId: $graphId})
     ON CREATE SET
@@ -4777,9 +4776,9 @@ async loadGraph(graphDef) {
 }
 ```
 
-Предзагружаемые графы:
+Pre-loaded graphs:
 
-| ID графа                              | Тип       | Узлов | Рёбер |
+| Graph ID                              | Type      | Nodes | Edges |
 |----------------------------------------|-----------|-------|-------|
 | `INEED-G0-META-INTAKE-V1`             | meta      | 16    | 16    |
 | `INEED-G1-IT-HARDWARE-V1`             | business  | 22    | 22    |
@@ -4788,18 +4787,18 @@ async loadGraph(graphDef) {
 | `CORE-SQL-EXTRACTION-META-V1`         | technical | --    | --    |
 | `CORE-SQL-PROCEDURE-ANALYSIS-V1`      | technical | --    | --    |
 
-### Cypher: создание версии с SUPERSEDES
+### Cypher: creating a version with SUPERSEDES
 
 ```cypher
-// Шаг 1: Получить текущую версию
+// Step 1: Get the current version
 MATCH (c:CatalogEntry {entryId: $entryId})
 RETURN c.currentVersion AS currentVersion
 
-// Шаг 2: Обновить номер текущей версии
+// Step 2: Update the current version number
 MATCH (c:CatalogEntry {entryId: $entryId})
 SET c.updatedAt = datetime(), c.currentVersion = $versionNumber
 
-// Шаг 3: Создать новые GraphDefinition и GraphVersion
+// Step 3: Create new GraphDefinition and GraphVersion
 CREATE (g:GraphDefinition {
   graphId: $graphId,
   nodes: $nodes,
@@ -4819,14 +4818,14 @@ CREATE (v:GraphVersion {
   contentHash: $contentHash
 })
 
-// Шаг 4: Связать с CatalogEntry
+// Step 4: Link to CatalogEntry
 MATCH (c:CatalogEntry {entryId: $entryId})
 MATCH (g:GraphDefinition {graphId: $graphId})
 MATCH (v:GraphVersion {versionId: $versionId})
 CREATE (c)-[:DEFINES]->(g)
 CREATE (g)-[:HAS_VERSION]->(v)
 
-// Шаг 5: Создать SUPERSEDES ребро к предыдущей версии
+// Step 5: Create SUPERSEDES edge to the previous version
 MATCH (c:CatalogEntry {entryId: $entryId})-[:DEFINES]->(:GraphDefinition)-[:HAS_VERSION]->(prev:GraphVersion)
 WHERE prev.versionNumber = $versionNumber - 1
 MATCH (v:GraphVersion {versionId: $versionId})
@@ -4837,34 +4836,34 @@ CREATE (v)-[:SUPERSEDES]->(prev)
 
 ## 6.3. Deduplication
 
-### Проблема
+### Problem
 
-Без дедупликации каталог быстро заполняется дубликатами: один и тот же пайплайн, сохранённый разными пользователями, или импортированный повторно из того же источника. Дедупликация обеспечивает единственность каждого графа в каталоге.
+Without deduplication, the catalog quickly fills with duplicates: the same pipeline saved by different users, or re-imported from the same source. Deduplication ensures each graph appears only once in the catalog.
 
-### Трёхуровневая стратегия дедупликации
+### Three-tier deduplication strategy
 
 ```
-  Новый граф
+  New graph
       │
       ▼
 ┌─────────────────────────────────┐
 │ Level 1: EXACT MATCH            │
-│ contentHash == существующий?     │
+│ contentHash == existing?         │
 │                                 │
 │ SHA-256(sorted(nodes + edges))  │
-│ O(1) поиск по индексу           │
+│ O(1) index lookup               │
 ├─────────────┬───────────────────┘
-│  Совпал     │  Не совпал
+│  Matched    │  No match
 │             ▼
 │  ┌─────────────────────────────────┐
 │  │ Level 2: STRUCTURAL MATCH       │
 │  │ Jaccard(toolIds_A, toolIds_B)   │
 │  │          >= 0.85 ?              │
 │  │                                 │
-│  │ Сравнение топологии, node count,│
+│  │ Compare topology, node count,   │
 │  │ edge count, toolId overlap      │
 │  ├─────────────┬───────────────────┘
-│  │  Совпал     │  Не совпал
+│  │  Matched    │  No match
 │  │             ▼
 │  │  ┌─────────────────────────────────┐
 │  │  │ Level 3: SEMANTIC MATCH (GNN)   │
@@ -4872,44 +4871,44 @@ CREATE (v)-[:SUPERSEDES]->(prev)
 │  │  │          >= threshold ?         │
 │  │  │                                 │
 │  │  │ GNN graph embeddings            │
-│  │  │ Threshold: настраиваемый        │
+│  │  │ Threshold: configurable         │
 │  │  │ (default: 0.90)                 │
 │  │  ├─────────────┬───────────────────┘
-│  │  │  Совпал     │  Не совпал
+│  │  │  Matched    │  No match
 │  │  │             ▼
 │  │  │        ┌────────────┐
-│  │  │        │ УНИКАЛЕН   │
-│  │  │        │ Создать    │
+│  │  │        │ UNIQUE     │
+│  │  │        │ Create     │
 │  │  │        │ CatalogEntry│
 │  │  │        └────────────┘
 │  │  ▼
 │  ▼
 │ ┌────────────────────┐
-│ │ ДУБЛИКАТ ОБНАРУЖЕН │
-│ │ Вернуть существующий│
-│ │ entryId             │
+│ │ DUPLICATE FOUND    │
+│ │ Return existing    │
+│ │ entryId            │
 │ └────────────────────┘
 ▼
 ```
 
-> **CATALOG005:** При обнаружении дубликата на Level 1 возвращается ошибка `CATALOG005: Dedup collision (identical contentHash exists)` с указанием `existingEntryId`.
+> **CATALOG005:** When a duplicate is detected at Level 1, error `CATALOG005: Dedup collision (identical contentHash exists)` is returned with the `existingEntryId`.
 
-### Level 1: Exact Match -- contentHash
+### Level 1: Exact Match — contentHash
 
-Самый быстрый и надёжный уровень. `contentHash` вычисляется как SHA-256 от канонизированного JSON узлов и рёбер:
+The fastest and most reliable level. `contentHash` is computed as SHA-256 of the canonicalised JSON of nodes and edges:
 
 ```javascript
 /**
- * Вычисляет contentHash для графа.
- * Используется для exact-match дедупликации.
+ * Computes contentHash for a graph.
+ * Used for exact-match deduplication.
  *
- * @param {Array} nodes - Массив узлов графа
- * @param {Array} edges - Массив рёбер графа
- * @returns {string} SHA-256 хеш
+ * @param {Array} nodes - Array of graph nodes
+ * @param {Array} edges - Array of graph edges
+ * @returns {string} SHA-256 hash
  */
 computeContentHash(nodes, edges) {
-  // Сортировка обеспечивает стабильность хеша
-  // при изменении порядка узлов/рёбер
+  // Sorting ensures hash stability
+  // when node/edge order changes
   const sortedNodes = [...nodes].sort((a, b) =>
     (a.id || '').localeCompare(b.id || '')
   );
@@ -4923,7 +4922,7 @@ computeContentHash(nodes, edges) {
 }
 ```
 
-Поиск по contentHash -- O(1) благодаря индексу:
+Lookup by contentHash is O(1) thanks to the index:
 
 ```cypher
 MATCH (d:GraphDefinition {contentHash: $hash})
@@ -4933,7 +4932,7 @@ LIMIT 1
 
 ### Level 2: Structural Match -- Jaccard Similarity
 
-Если exact match не сработал, проверяется структурное сходство. Основная метрика -- Jaccard coefficient по toolId:
+If exact match fails, structural similarity is checked. The primary metric is the Jaccard coefficient by toolId:
 
 ```
            |toolIds_A ∩ toolIds_B|
@@ -4941,16 +4940,16 @@ J(A,B) = ───────────────────────�
            |toolIds_A ∪ toolIds_B|
 ```
 
-Порог: **J >= 0.85** -- графы считаются структурно идентичными.
+Threshold: **J >= 0.85** — graphs are considered structurally identical.
 
-Дополнительные сигналы:
-- Совпадение топологии (PIPELINE / DAG / TREE)
-- Близость по количеству узлов (±20%)
-- Совпадение тегов
+Additional signals:
+- Topology match (PIPELINE / DAG / TREE)
+- Node count proximity (±20%)
+- Tag overlap
 
 ```javascript
 /**
- * Проверяет структурное сходство двух графов.
+ * Checks structural similarity of two graphs.
  *
  * @param {Object} graphA - { toolIds, topology, nodeCount, tags }
  * @param {Object} graphB - { toolIds, topology, nodeCount, tags }
@@ -4985,16 +4984,16 @@ function checkStructuralSimilarity(graphA, graphB) {
 }
 ```
 
-### Level 3: Semantic Match -- GNN Embedding Similarity
+### Level 3: Semantic Match — GNN Embedding Similarity
 
-Если структурное сравнение недостаточно (графы используют разные инструменты, но решают одну задачу), используются GNN-эмбеддинги:
+If structural comparison is insufficient (graphs use different tools but solve the same problem), GNN embeddings are used:
 
 ```javascript
 /**
- * Вычисляет семантическое сходство через GNN-сервис.
+ * Computes semantic similarity via the GNN service.
  *
- * @param {Object} graphA - Граф для сравнения
- * @param {Object} graphB - Эталонный граф
+ * @param {Object} graphA - Graph to compare
+ * @param {Object} graphB - Reference graph
  * @returns {Promise<{ similar: boolean, cosine: number }>}
  */
 async function checkSemanticSimilarity(graphA, graphB) {
@@ -5012,13 +5011,13 @@ async function checkSemanticSimilarity(graphA, graphB) {
   const cosine = result.cosine_similarity || 0;
 
   return {
-    similar: cosine >= 0.90,  // Порог настраивается
+    similar: cosine >= 0.90,  // Threshold is configurable
     cosine: Math.round(cosine * 1000) / 1000,
   };
 }
 ```
 
-GNN-сервис (порт 5000) вычисляет эмбеддинг каждого графа, затем считает косинусное расстояние:
+The GNN service (port 5000) computes an embedding for each graph and then calculates the cosine distance:
 
 ```
                     Σ(A_i × B_i)
@@ -5028,11 +5027,11 @@ cos(A, B) = ──────────────────────�
 
 ### checkFingerprintCollision
 
-Функция `checkFingerprintCollision()` из `GraphSchemaManager` объединяет все три уровня:
+The `checkFingerprintCollision()` function from `GraphSchemaManager` combines all three levels:
 
 ```javascript
 /**
- * Проверяет, существует ли дубликат графа в каталоге.
+ * Checks whether a duplicate graph exists in the catalog.
  *
  * @param {Object} graph - { nodes, edges, toolIds, topology }
  * @returns {Promise<{ isDuplicate: boolean, level: string, existingId: string|null }>}
@@ -5077,9 +5076,9 @@ async checkFingerprintCollision(graph) {
 
 ## 6.4. Search mechanisms
 
-### Четыре режима поиска
+### Four search modes
 
-Каталог поддерживает четыре режима поиска, от простого до интеллектуального:
+The catalog supports four search modes, from simple to intelligent:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -5088,23 +5087,23 @@ async checkFingerprintCollision(graph) {
 │  ┌─────────────┐  ┌──────────────┐  ┌────────────┐  ┌──────────────┐ │
 │  │  KEYWORD    │  │  STRUCTURAL  │  │  SEMANTIC   │  │   HYBRID     │ │
 │  │             │  │              │  │   (GNN)     │  │              │ │
-│  │ name LIKE   │  │ Jaccard      │  │ cosine sim  │  │ взвешенная   │ │
-│  │ tags CONTAINS│  │ toolId match │  │ embedding   │  │ комбинация   │ │
-│  │ description │  │ topology     │  │ space       │  │ всех трёх    │ │
+│  │ name LIKE   │  │ Jaccard      │  │ cosine sim  │  │ weighted     │ │
+│  │ tags CONTAINS│  │ toolId match │  │ embedding   │  │ combination  │ │
+│  │ description │  │ topology     │  │ space       │  │ of all three │ │
 │  │ FULLTEXT    │  │ node count   │  │             │  │              │ │
 │  └─────────────┘  └──────────────┘  └────────────┘  └──────────────┘ │
 │                                                                        │
-│  Скорость: ████    Скорость: ███     Скорость: ██    Скорость: ██    │
-│  Качество: ██      Качество: ███     Качество: ████  Качество: █████ │
+│  Speed: ████    Speed: ███     Speed: ██    Speed: ██               │
+│  Quality: ██    Quality: ███   Quality: ████  Quality: █████        │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### 1. Keyword Search
 
-Полнотекстовый поиск по имени, описанию и тегам. Использует Cypher CONTAINS и FULLTEXT индексы:
+Full-text search by name, description, and tags. Uses Cypher CONTAINS and FULLTEXT indexes:
 
 ```cypher
-// Поиск по ключевым словам
+// Search by keyword
 MATCH (c:CatalogEntry)
 WHERE c.name CONTAINS $searchTerm
    OR c.description CONTAINS $searchTerm
@@ -5114,17 +5113,17 @@ ORDER BY c.qualityScore DESC, c.usageCount DESC
 LIMIT $limit
 ```
 
-Для высоконагруженных сценариев рекомендуется FULLTEXT индекс:
+For high-load scenarios a FULLTEXT index is recommended:
 
 ```cypher
-// Создание FULLTEXT индекса (выполняется один раз при инициализации)
+// Create FULLTEXT index (run once during initialisation)
 CALL db.index.fulltext.createNodeIndex(
   'catalog_search',
   ['CatalogEntry'],
   ['name', 'description']
 );
 
-// Поиск через FULLTEXT
+// Search via FULLTEXT
 CALL db.index.fulltext.queryNodes('catalog_search', $searchTerm)
 YIELD node, score
 RETURN node.entryId AS id, node.name, score
@@ -5134,14 +5133,14 @@ LIMIT $limit
 
 ### 2. Structural Search
 
-Поиск по структурным характеристикам графа: toolId overlap, топология, размер.
+Search by structural graph characteristics: toolId overlap, topology, size.
 
 ```javascript
 /**
- * Структурный поиск в каталоге.
+ * Structural search in the catalog.
  *
  * @param {Object} criteria - { toolIds, topology, minNodes, maxNodes }
- * @returns {Promise<Array>} Отсортированные результаты
+ * @returns {Promise<Array>} Sorted results
  */
 async structuralSearch(criteria) {
   const { toolIds = [], topology, minNodes = 0, maxNodes = Infinity } = criteria;
@@ -5170,15 +5169,15 @@ async structuralSearch(criteria) {
 
 ### 3. Semantic Search (GNN)
 
-Поиск по семантическому сходству через GNN graph embeddings. Вычисляет эмбеддинг запроса и находит ближайших соседей в пространстве эмбеддингов:
+Search by semantic similarity via GNN graph embeddings. Computes the query embedding and finds nearest neighbours in the embedding space:
 
 ```javascript
 /**
- * Семантический поиск через GNN-сервис.
+ * Semantic search via the GNN service.
  *
  * @param {Object} queryGraph - { nodes, edges }
- * @param {number} topK - Количество результатов
- * @returns {Promise<Array>} Ранжированные результаты с cosine score
+ * @param {number} topK - Number of results
+ * @returns {Promise<Array>} Ranked results with cosine score
  */
 async semanticSearch(queryGraph, topK = 10) {
   const response = await fetch(`${GNN_SERVICE_URL}/api/v1/similarity/find`, {
@@ -5197,37 +5196,37 @@ async semanticSearch(queryGraph, topK = 10) {
 
 ### 4. Hybrid Search
 
-Комбинирует все три режима с настраиваемыми весами:
+Combines all three modes with configurable weights:
 
 ```
 score = w_keyword * S_keyword + w_structural * S_jaccard + w_gnn * S_cosine
 ```
 
-Веса по умолчанию:
+Default weights:
 
-| Компонент        | Вес (w)  | Обоснование                                           |
-|------------------|----------|--------------------------------------------------------|
-| `w_keyword`      | **0.3**  | Базовый сигнал, быстрый, но шумный                    |
-| `w_structural`   | **0.3**  | Надёжный для технических графов с известными toolId    |
-| `w_gnn`          | **0.4**  | Наивысший вес: учитывает семантику и структуру         |
+| Component        | Weight (w) | Rationale                                           |
+|------------------|------------|-----------------------------------------------------|
+| `w_keyword`      | **0.3**    | Basic signal, fast but noisy                        |
+| `w_structural`   | **0.3**    | Reliable for technical graphs with known toolIds    |
+| `w_gnn`          | **0.4**    | Highest weight: captures semantics and structure    |
 
 ```javascript
 /**
- * Гибридный поиск в каталоге.
+ * Hybrid search in the catalog.
  *
  * @param {Object} query - { searchTerm, toolIds, topology, nodes, edges }
  * @param {Object} weights - { keyword, structural, gnn }
- * @returns {Promise<Array>} Ранжированные результаты
+ * @returns {Promise<Array>} Ranked results
  */
 async hybridSearch(query, weights = { keyword: 0.3, structural: 0.3, gnn: 0.4 }) {
-  // Параллельный запуск всех трёх режимов
+  // Run all three modes in parallel
   const [keywordResults, structuralResults, gnnResults] = await Promise.allSettled([
     this.keywordSearch(query.searchTerm),
     this.structuralSearch({ toolIds: query.toolIds, topology: query.topology }),
     this.semanticSearch({ nodes: query.nodes, edges: query.edges }),
   ]);
 
-  // Объединение результатов
+  // Merge results
   const scoreMap = new Map();
 
   for (const r of keywordResults.value || []) {
@@ -5249,7 +5248,7 @@ async hybridSearch(query, weights = { keyword: 0.3, structural: 0.3, gnn: 0.4 })
     scoreMap.set(r.id, entry);
   }
 
-  // Вычисление финального score
+  // Compute final score
   return [...scoreMap.values()]
     .map(entry => ({
       ...entry,
@@ -5262,7 +5261,7 @@ async hybridSearch(query, weights = { keyword: 0.3, structural: 0.3, gnn: 0.4 })
 }
 ```
 
-### MCP Tools для поиска
+### MCP Tools for search
 
 #### catalog.search_graphs
 
@@ -5326,24 +5325,24 @@ async hybridSearch(query, weights = { keyword: 0.3, structural: 0.3, gnn: 0.4 })
 
 ## 6.5. Reuse strategy
 
-### Проблема переиспользования
+### Reuse problem
 
-Когда системе нужен новый подграф, существует четыре варианта: создать с нуля, скопировать существующий, расширить шаблон или сослаться на готовый. Неправильный выбор стратегии ведёт к раздуванию каталога (лишние клоны) или хрупким зависимостям (битые ссылки).
+When the system needs a new subgraph, four options exist: create from scratch, copy an existing one, extend a template, or reference a ready-made one. Choosing the wrong strategy leads either to catalog bloat (unnecessary clones) or fragile dependencies (broken references).
 
 ### ReuseStrategyResolver
 
-Реализация: `api/src/services/graph/reuse-strategy-resolver.js`
+Implementation: `api/src/services/graph/reuse-strategy-resolver.js`
 
-Четыре стратегии переиспользования:
+Four reuse strategies:
 
-| Стратегия          | Идентификатор       | Описание                                         |
+| Strategy           | Identifier          | Description                                      |
 |--------------------|---------------------|--------------------------------------------------|
-| **CLONE**          | `CLONE_MODIFY`      | Клонировать граф и модифицировать под задачу      |
-| **EXTEND**         | `ABSTRACT_INHERIT`  | Взять шаблон и параметризовать                   |
-| **COMPOSE**        | `DIRECT_REUSE`      | Использовать граф как есть (ссылка, без копии)    |
-| **REFERENCE**      | `CREATE_NEW`        | Создать новый граф с нуля                        |
+| **CLONE**          | `CLONE_MODIFY`      | Clone the graph and modify it for the task       |
+| **EXTEND**         | `ABSTRACT_INHERIT`  | Take a template and parameterise it              |
+| **COMPOSE**        | `DIRECT_REUSE`      | Use the graph as-is (reference, no copy)         |
+| **REFERENCE**      | `CREATE_NEW`        | Create a new graph from scratch                  |
 
-### Матрица принятия решений
+### Decision matrix
 
 ```
                         Similarity Score
@@ -5353,36 +5352,36 @@ async hybridSearch(query, weights = { keyword: 0.3, structural: 0.3, gnn: 0.4 })
    ┌────────────────────────────────────────────────────────────┐
    │                                                            │
    │  CREATE_NEW        CLONE_MODIFY       DIRECT_REUSE        │
-   │  Создать            Клонировать       Использовать         │
-   │  новый граф         и доработать      как есть             │
+   │  Create new        Clone and          Use as-is           │
+   │  graph             refine                                  │
    │                                                            │
    │  ◄─── 0.0 ─── 0.3 ──── 0.6 ──── 0.9 ──── 1.0 ───►       │
    │       │              │              │                      │
-   │       │  Нет         │  Средняя     │  Высокая             │
-   │       │  релевантных │  похожесть   │  похожесть           │
-   │       │  кандидатов  │              │                      │
+   │       │  No          │  Medium      │  High                │
+   │       │  relevant    │  similarity  │  similarity          │
+   │       │  candidates  │              │                      │
    └────────────────────────────────────────────────────────────┘
 
-   Особый случай: если лучший кандидат имеет type='template'
-   и score > 0.5 → ABSTRACT_INHERIT (приоритет над остальными)
+   Special case: if the best candidate has type='template'
+   and score > 0.5 → ABSTRACT_INHERIT (takes priority over others)
 ```
 
-| Условие                                      | Стратегия           | Действие                                  |
-|-----------------------------------------------|---------------------|-------------------------------------------|
-| `score >= 0.9`                                | `DIRECT_REUSE`      | Ссылка на существующий граф               |
-| `0.6 <= score < 0.9`                          | `CLONE_MODIFY`      | Клон + модификация узлов/рёбер            |
-| `type = 'template'` И `score > 0.5`          | `ABSTRACT_INHERIT`  | Создание экземпляра из шаблона            |
-| `score < 0.6` или нет кандидатов              | `CREATE_NEW`        | Создание нового графа с нуля              |
+| Condition                                    | Strategy            | Action                                     |
+|----------------------------------------------|---------------------|--------------------------------------------|
+| `score >= 0.9`                               | `DIRECT_REUSE`      | Reference the existing graph               |
+| `0.6 <= score < 0.9`                         | `CLONE_MODIFY`      | Clone + modify nodes/edges                 |
+| `type = 'template'` AND `score > 0.5`       | `ABSTRACT_INHERIT`  | Instantiate from template                  |
+| `score < 0.6` or no candidates              | `CREATE_NEW`        | Create a new graph from scratch            |
 
-> **CATALOG006:** Если стратегия переиспользования не соответствует фактическому действию (например, `DIRECT_REUSE` рекомендован, но пользователь модифицировал граф), возникает предупреждение `CATALOG006: Reuse strategy mismatch`.
+> **CATALOG006:** If the reuse strategy does not match the actual action (e.g., `DIRECT_REUSE` was recommended but the user modified the graph), warning `CATALOG006: Reuse strategy mismatch` is raised.
 
-### Алгоритм выбора стратегии
+### Strategy selection algorithm
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │                 STRATEGY SELECTION FLOW                            │
 │                                                                    │
-│  Входные данные:                                                   │
+│  Input:                                                            │
 │  ┌──────────────────────────────────────┐                         │
 │  │ nodeContext: {                        │                         │
 │  │   nodeId, nodeLabel,                 │                         │
@@ -5416,7 +5415,7 @@ async hybridSearch(query, weights = { keyword: 0.3, structural: 0.3, gnn: 0.4 })
 │                     │                                              │
 │                     ▼                                              │
 │  ┌─────────────────────────────────────┐                          │
-│  │ Step 3b: _applyGNNBoost() (опц.)   │                          │
+│  │ Step 3b: _applyGNNBoost() (opt.)   │                          │
 │  │ → cosine similarity boost           │                          │
 │  └──────────────────┬──────────────────┘                          │
 │                     │                                              │
@@ -5432,15 +5431,15 @@ async hybridSearch(query, weights = { keyword: 0.3, structural: 0.3, gnn: 0.4 })
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-### Веса скоринга кандидатов
+### Candidate scoring weights
 
-| Фактор             | Вес    | Описание                                                  |
-|---------------------|--------|-----------------------------------------------------------|
-| toolId Jaccard      | **0.40** | Пересечение инструментов между графами                  |
-| keyword overlap     | **0.25** | Совпадение ключевых слов (name, description, tags)      |
-| topology match      | **0.15** | Совпадение топологии (PIPELINE/DAG/TREE)                |
-| size proximity      | **0.10** | Близость по количеству узлов (3--20 = 0.8, иначе 0.4)  |
-| quality bonus       | **0.10** | Оценка качества графа (qualityScore)                    |
+| Factor              | Weight   | Description                                               |
+|---------------------|----------|-----------------------------------------------------------|
+| toolId Jaccard      | **0.40** | Tool overlap between graphs                               |
+| keyword overlap     | **0.25** | Keyword match (name, description, tags)                   |
+| topology match      | **0.15** | Topology match (PIPELINE/DAG/TREE)                        |
+| size proximity      | **0.10** | Node count proximity (3–20 = 0.8, otherwise 0.4)          |
+| quality bonus       | **0.10** | Graph quality score (qualityScore)                        |
 
 ### MCP Tool: catalog.analyze_reuse
 
@@ -5458,15 +5457,15 @@ async hybridSearch(query, weights = { keyword: 0.3, structural: 0.3, gnn: 0.4 })
   },
   returns: {
     strategy: 'string',        // DIRECT_REUSE | CLONE_MODIFY | ABSTRACT_INHERIT | CREATE_NEW
-    reason: 'string',          // Человекочитаемое обоснование
-    sourceGraph: {             // Лучший кандидат (null для CREATE_NEW)
+    reason: 'string',          // Human-readable rationale
+    sourceGraph: {             // Best candidate (null for CREATE_NEW)
       entryId: 'string',
       name: 'string',
       similarityScore: 'number',
       scoreBreakdown: 'object',
     },
-    alternatives: 'object[]',  // Топ-3 альтернативных кандидата
-    gnnUsed: 'boolean',        // Был ли использован GNN для бустинга
+    alternatives: 'object[]',  // Top-3 alternative candidates
+    gnnUsed: 'boolean',        // Whether GNN was used for boosting
   }
 }
 ```
@@ -5475,28 +5474,28 @@ async hybridSearch(query, weights = { keyword: 0.3, structural: 0.3, gnn: 0.4 })
 
 ## 6.6. Pattern promotion
 
-### Два типа PatternLibrary
+### Two types of PatternLibrary
 
-В системе существуют два независимых хранилища паттернов, работающих на разных уровнях:
+The system has two independent pattern stores operating at different levels:
 
 ```
 ┌─────────────────────────────────────┐   ┌─────────────────────────────────────┐
 │    Runtime PatternLibrary           │   │    Extraction PatternLibrary        │
 │    (runtime/learning/)              │   │    (services/patterns/)             │
 │                                     │   │                                     │
-│  Хранит: DAG-паттерны выполнения    │   │  Хранит: Паттерны извлечения        │
-│  Источник: recordExecution()        │   │  Источник: registerEntityPattern()  │
-│  Цель: переиспользование графов     │   │  Цель: улучшение извлечения         │
-│  Кеш: LRU in-memory + Memgraph     │   │  Кеш: in-memory + domain index      │
+│  Stores: DAG execution patterns     │   │  Stores: Extraction patterns        │
+│  Source: recordExecution()          │   │  Source: registerEntityPattern()    │
+│  Purpose: graph reuse               │   │  Purpose: improve extraction        │
+│  Cache: LRU in-memory + Memgraph    │   │  Cache: in-memory + domain index    │
 │                                     │   │                                     │
-│  Файл:                              │   │  Файл:                              │
+│  File:                              │   │  File:                              │
 │  runtime/learning/PatternLibrary.js │   │  services/patterns/pattern-library.js│
 └─────────────────────────────────────┘   └─────────────────────────────────────┘
 ```
 
-### Жизненный цикл паттерна
+### Pattern lifecycle
 
-Паттерн проходит четыре стадии от первого наблюдения до превращения в шаблон каталога:
+A pattern passes through four stages from first observation to becoming a catalog template:
 
 ```
  ┌───────────┐     ┌────────────┐     ┌───────────┐     ┌───────────┐
@@ -5506,42 +5505,42 @@ async hybridSearch(query, weights = { keyword: 0.3, structural: 0.3, gnn: 0.4 })
  │ rate: ?   │     │ rate > 0.5 │     │ rate > 0.8│     │ type:template│
  └───────────┘     └────────────┘     └───────────┘     └───────────┘
       │                  │                  │                  │
-      │  Первое          │  Повторное       │  Стабильный      │  Зарегистрирован
-      │  выполнение      │  подтверждение   │  паттерн         │  в каталоге
+      │  First           │  Repeated        │  Stable          │  Registered
+      │  execution       │  confirmation    │  pattern         │  in catalog
 ```
 
-### Критерии продвижения
+### Promotion criteria
 
-| Переход                | Условие                                           | Автоматически |
-|------------------------|----------------------------------------------------|---------------|
-| OBSERVED → CANDIDATE   | `observationCount >= 3`                            | Да            |
-| CANDIDATE → PROMOTED   | `observationCount >= 5` И `successRate > 0.8`      | Да            |
-| PROMOTED → TEMPLATE    | Решение администратора или агента                  | Нет           |
+| Transition             | Condition                                         | Automatic |
+|------------------------|---------------------------------------------------|-----------|
+| OBSERVED → CANDIDATE   | `observationCount >= 3`                           | Yes       |
+| CANDIDATE → PROMOTED   | `observationCount >= 5` AND `successRate > 0.8`   | Yes       |
+| PROMOTED → TEMPLATE    | Admin or agent decision                           | No        |
 
-### Пороги продвижения
+### Promotion thresholds
 
 ```javascript
 const PROMOTION_THRESHOLDS = {
   CANDIDATE: {
-    minObservations: 3,     // Минимум наблюдений для кандидата
-    minSuccessRate: 0.5,    // Минимальный success rate
+    minObservations: 3,     // Minimum observations for candidate
+    minSuccessRate: 0.5,    // Minimum success rate
   },
   PROMOTED: {
-    minObservations: 5,     // Порог для продвижения
-    minSuccessRate: 0.8,    // 80%+ успешных выполнений
+    minObservations: 5,     // Threshold for promotion
+    minSuccessRate: 0.8,    // 80%+ successful executions
   },
 };
 ```
 
-### recordExecution() -- запись результата выполнения
+### recordExecution() — recording an execution result
 
-Каждое выполнение графа записывается в PatternLibrary для обучения:
+Every graph execution is recorded in PatternLibrary for learning:
 
 ```javascript
 /**
- * Записывает результат выполнения графа для обучения паттернов.
+ * Records a graph execution result for pattern learning.
  *
- * @param {Object} executionResult - Результат RuntimeEngine
+ * @param {Object} executionResult - RuntimeEngine result
  * @param {Object} context - { taskCategory, taskDescription, userId }
  * @returns {Promise<{ patternId, isNewPattern, successRate }>}
  */
@@ -5555,11 +5554,11 @@ async recordExecution(executionResult, context) {
   const dag = executionResult.dag;
   const hash = this._computePatternHash(dag);
 
-  // Найти или создать паттерн
+  // Find or create pattern
   let pattern = this._hashIndex.get(hash);
 
   if (!pattern) {
-    // Новый паттерн — OBSERVED
+    // New pattern — OBSERVED
     pattern = {
       hash,
       category: taskCategory,
@@ -5574,17 +5573,17 @@ async recordExecution(executionResult, context) {
     this._hashIndex.set(hash, pattern);
   }
 
-  // Обновить статистику
+  // Update statistics
   pattern.observations++;
   if (success) pattern.successes++;
   else pattern.failures++;
   pattern.successRate = pattern.successes / pattern.observations;
   pattern.lastSeenAt = new Date().toISOString();
 
-  // Проверить продвижение
+  // Check promotion
   this._checkPromotion(pattern);
 
-  // Обновить category cache
+  // Update category cache
   const existing = this._categoryCache.get(taskCategory);
   if (!existing || pattern.successRate > existing.successRate) {
     this._cachePattern(taskCategory, pattern);
@@ -5599,13 +5598,13 @@ async recordExecution(executionResult, context) {
 }
 ```
 
-### _checkPromotion() -- автоматическое продвижение
+### _checkPromotion() — automatic promotion
 
 ```javascript
 /**
- * Проверяет, готов ли паттерн к продвижению на следующую стадию.
+ * Checks whether a pattern is ready for promotion to the next stage.
  *
- * @param {Object} pattern - Объект паттерна
+ * @param {Object} pattern - Pattern object
  */
 _checkPromotion(pattern) {
   const { observations, successRate, stage } = pattern;
@@ -5628,22 +5627,22 @@ _checkPromotion(pattern) {
 }
 ```
 
-### registerEntityPattern() -- регистрация паттерна извлечения
+### registerEntityPattern() — registering an extraction pattern
 
-Extraction PatternLibrary использует другой API для регистрации паттернов:
+Extraction PatternLibrary uses a different API for pattern registration:
 
 ```javascript
 /**
- * Регистрирует паттерн извлечения сущности.
+ * Registers an entity extraction pattern.
  *
- * @param {Object} config - Конфигурация паттерна
- * @param {string} config.id - Уникальный ID паттерна
- * @param {string} config.name - Имя паттерна
- * @param {string} config.domain - Домен (sql, javascript, etc.)
- * @param {RegExp[]} config.patterns - Массив регулярных выражений
- * @param {string} config.entityType - Тип извлекаемой сущности
- * @param {number} config.confidence - Базовый confidence (0.0-1.0)
- * @returns {EntityPattern} Зарегистрированный паттерн
+ * @param {Object} config - Pattern configuration
+ * @param {string} config.id - Unique pattern ID
+ * @param {string} config.name - Pattern name
+ * @param {string} config.domain - Domain (sql, javascript, etc.)
+ * @param {RegExp[]} config.patterns - Array of regular expressions
+ * @param {string} config.entityType - Type of entity to extract
+ * @param {number} config.confidence - Base confidence (0.0–1.0)
+ * @returns {EntityPattern} Registered pattern
  */
 registerEntityPattern(config) {
   const pattern = config instanceof EntityPattern
@@ -5657,15 +5656,15 @@ registerEntityPattern(config) {
 }
 ```
 
-### Превращение PROMOTED паттерна в CatalogEntry TEMPLATE
+### Turning a PROMOTED pattern into a CatalogEntry TEMPLATE
 
-Когда паттерн достигает стадии PROMOTED, он может быть зарегистрирован в каталоге как шаблон:
+When a pattern reaches the PROMOTED stage it can be registered in the catalog as a template:
 
 ```javascript
 /**
- * Превращает продвинутый паттерн в шаблон каталога.
+ * Turns a promoted pattern into a catalog template.
  *
- * @param {Object} pattern - Паттерн со стадией PROMOTED
+ * @param {Object} pattern - Pattern with stage PROMOTED
  * @returns {Promise<{ entryId, name }>}
  */
 async promoteToTemplate(pattern) {
@@ -5673,7 +5672,7 @@ async promoteToTemplate(pattern) {
     throw new Error('Only PROMOTED patterns can become templates');
   }
 
-  // Создать CatalogEntry типа 'template'
+  // Create CatalogEntry of type 'template'
   const entry = await graphCatalogService.createGraph({
     name: `Template: ${pattern.category}`,
     description: `Auto-promoted pattern with ${pattern.observations} observations `
@@ -5686,7 +5685,7 @@ async promoteToTemplate(pattern) {
     createdBy: 'pattern-promotion',
   });
 
-  // Обновить стадию паттерна
+  // Update pattern stage
   pattern.stage = 'TEMPLATE';
   pattern.catalogEntryId = entry.entryId;
 
@@ -5696,10 +5695,10 @@ async promoteToTemplate(pattern) {
 }
 ```
 
-### Cypher: запрос паттернов по стадии
+### Cypher: querying patterns by stage
 
 ```cypher
-// Найти все продвинутые паттерны, готовые к шаблонизации
+// Find all promoted patterns ready for templating
 MATCH (p:ExecutionPattern)
 WHERE p.stage = 'PROMOTED'
   AND p.observations >= 5
@@ -5710,18 +5709,18 @@ ORDER BY p.successRate DESC, p.observations DESC
 
 ---
 
-## Коды ошибок
+## Error codes
 
-| Код         | Имя                       | Описание                                                  | HTTP | Действие                              |
+| Code        | Name                      | Description                                               | HTTP | Action                                 |
 |-------------|---------------------------|-----------------------------------------------------------|------|----------------------------------------|
-| `CATALOG001`| Entry not found           | CatalogEntry с указанным entryId не найден в каталоге     | 404  | Проверить entryId, возможен soft delete |
-| `CATALOG002`| Duplicate entryId         | CatalogEntry с таким entryId уже существует               | 409  | Использовать существующий или сгенерировать новый UUID |
-| `CATALOG003`| Invalid type enum         | Указанный тип не входит в CATALOG_TYPES                   | 400  | Использовать: business, technical, meta, template, composite |
-| `CATALOG004`| Version conflict          | Конкурентное обновление: currentVersion изменился          | 409  | Перечитать CatalogEntry и повторить операцию |
-| `CATALOG005`| Dedup collision           | Граф с идентичным contentHash уже существует в каталоге    | 409  | Вернуть существующий entryId или createVersion |
-| `CATALOG006`| Reuse strategy mismatch   | Стратегия переиспользования не соответствует фактическому действию | 422  | Предупреждение, не блокирует операцию |
+| `CATALOG001`| Entry not found           | CatalogEntry with the given entryId not found in catalog  | 404  | Verify entryId; soft delete possible  |
+| `CATALOG002`| Duplicate entryId         | CatalogEntry with this entryId already exists             | 409  | Use existing or generate a new UUID   |
+| `CATALOG003`| Invalid type enum         | Specified type is not in CATALOG_TYPES                    | 400  | Use: business, technical, meta, template, composite |
+| `CATALOG004`| Version conflict          | Concurrent update: currentVersion has changed             | 409  | Re-read CatalogEntry and retry        |
+| `CATALOG005`| Dedup collision           | Graph with identical contentHash already exists in catalog| 409  | Return existing entryId or createVersion |
+| `CATALOG006`| Reuse strategy mismatch   | Reuse strategy does not match the actual action           | 422  | Warning, does not block the operation |
 
-### Формат ответа ошибки
+### Error response format
 
 ```json
 {
@@ -5739,39 +5738,39 @@ ORDER BY p.successRate DESC, p.observations DESC
 
 ---
 
-> **CODEX-CATALOG v0.1.0** | Часть VI **Кодекс UN ProjectAdvisor** | Стандарт каталога GXE
+> **CODEX-CATALOG v0.1.0** | Part VI **UN ProjectAdvisor Codex** | GXE Catalog Standard
 
 ---
 
-## Часть VII: CODEX-POLY — Протокол Polystore
+## Part VII: CODEX-POLY — Polystore Protocol
 
-**Статус:** 🟡 Черновик
-**Версия:** 0.1.0
-**Последнее обновление:** 2026-03-12
-
----
-
-## Преамбула
-
-UN ProjectAdvisor — это polystore-система, использующая три хранилища данных:
-
-- **Memgraph** — графовая база данных (узлы, рёбра, свойства, связи)
-- **Qdrant** — векторное хранилище (эмбеддинги, семантический поиск)
-- **Redis** — кэш и очереди сообщений (pub/sub, TTL-кэш, сессии)
-
-Запись в несколько хранилищ **не является атомарной**. Отсутствует распределённый менеджер транзакций, объединяющий все три системы в единую ACID-транзакцию. Это означает, что при записи данных возможны частичные сбои: данные могут быть записаны в Memgraph, но не дойти до Qdrant, или кэш Redis может остаться устаревшим.
-
-Данный протокол определяет:
-
-1. **Порядок записи** — в какой последовательности обновлять хранилища
-2. **Обработку ошибок** — компенсирующие транзакции при частичных сбоях
-3. **Восстановление консистентности** — механизмы обнаружения и исправления рассинхронизации
+**Status:** 🟡 Draft
+**Version:** 0.1.0
+**Last updated:** 2026-03-12
 
 ---
 
-## 7.1 Порядок записи
+## Preamble
 
-### Диаграмма потока записи
+UN ProjectAdvisor is a polystore system using three data stores:
+
+- **Memgraph** — graph database (nodes, edges, properties, relationships)
+- **Qdrant** — vector store (embeddings, semantic search)
+- **Redis** — cache and message queues (pub/sub, TTL cache, sessions)
+
+Writing to multiple stores **is not atomic**. There is no distributed transaction manager that combines all three systems into a single ACID transaction. This means partial failures are possible when writing data: data may be written to Memgraph but never reach Qdrant, or the Redis cache may remain stale.
+
+This protocol defines:
+
+1. **Write order** — the sequence in which stores should be updated
+2. **Error handling** — compensating transactions for partial failures
+3. **Consistency recovery** — mechanisms for detecting and correcting desynchronisation
+
+---
+
+## 7.1 Write order
+
+### Write flow diagram
 
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
@@ -5779,9 +5778,9 @@ UN ProjectAdvisor — это polystore-система, использующая 
 │   Memgraph      │────▶│    Qdrant       │────▶│     Redis       │
 │   (primary)     │     │  (secondary)    │     │    (cache)      │
 │                 │     │                 │     │                 │
-│  Граф: узлы,    │     │  Векторы:       │     │  Кэш:           │
-│  рёбра,         │     │  эмбеддинги,    │     │  инвалидация,   │
-│  свойства       │     │  payload        │     │  pub/sub        │
+│  Graph: nodes,  │     │  Vectors:       │     │  Cache:         │
+│  edges,         │     │  embeddings,    │     │  invalidation,  │
+│  properties     │     │  payload        │     │  pub/sub        │
 │                 │     │                 │     │                 │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
        ▲                                               │
@@ -5789,25 +5788,25 @@ UN ProjectAdvisor — это polystore-система, использующая 
        └───────────────────────────────────────────────┘
 ```
 
-### Обоснование порядка
+### Write Order Justification
 
-| Порядок | Хранилище | Причина |
+| Order | Storage | Reason |
 |---------|-----------|---------|
-| 1-й | **Memgraph** | Источник истины (source of truth). Все сущности получают `nodeId` при создании в графе. Без `nodeId` невозможна запись в Qdrant. |
-| 2-й | **Qdrant** | Вторичное хранилище. Требует `nodeId` из Memgraph для связи вектора с узлом графа. После upsert возвращает `vectorId`, который записывается обратно в Memgraph. |
-| 3-й | **Redis** | Кэш инвалидируется последним. Нет смысла инвалидировать кэш до завершения записи в основные хранилища. Также используется для pub/sub нотификаций о завершении записи. |
+| 1st | **Memgraph** | Source of truth. All entities receive a `nodeId` when created in the graph. Without a `nodeId`, writing to Qdrant is impossible. |
+| 2nd | **Qdrant** | Secondary storage. Requires `nodeId` from Memgraph to link the vector to a graph node. After upsert, returns `vectorId`, which is written back into Memgraph. |
+| 3rd | **Redis** | Cache is invalidated last. There is no point invalidating the cache before writes to the primary stores are complete. Also used for pub/sub notifications about write completion. |
 
-### Таблица зависимостей между хранилищами
+### Storage Dependency Table
 
-| Операция | Memgraph → Qdrant | Qdrant → Memgraph | Memgraph → Redis | Redis → Memgraph |
+| Operation | Memgraph → Qdrant | Qdrant → Memgraph | Memgraph → Redis | Redis → Memgraph |
 |----------|--------------------|--------------------|-------------------|-------------------|
-| Создание узла | `nodeId` передаётся как payload ID | `vectorId` записывается в свойство узла | Ключ кэша содержит `nodeId` | Нет зависимости |
-| Обновление свойств | Новый текст → пересчёт эмбеддинга | Нет | Инвалидация ключа `node:{nodeId}` | Нет |
-| Удаление узла | Удаление вектора по `nodeId` | Нет | Удаление всех ключей `*:{nodeId}:*` | Нет |
-| Создание ребра | Нет (рёбра не векторизуются) | Нет | Инвалидация кэша соседей | Нет |
-| Поиск (read) | Нет | Результаты обогащаются свойствами из MG | Кэширование результатов | Нет |
+| Node creation | `nodeId` passed as payload ID | `vectorId` written to node property | Cache key contains `nodeId` | No dependency |
+| Property update | New text → embedding recalculation | None | Invalidate key `node:{nodeId}` | None |
+| Node deletion | Delete vector by `nodeId` | None | Delete all keys `*:{nodeId}:*` | None |
+| Edge creation | None (edges are not vectorized) | None | Invalidate neighbor cache | None |
+| Search (read) | None | Results enriched with properties from MG | Cache results | None |
 
-### Шаблон операции записи
+### Write Operation Template
 
 ```javascript
 async function polystoreWrite(entityData, options = {}) {
@@ -5815,7 +5814,7 @@ async function polystoreWrite(entityData, options = {}) {
   const saga = new PolystoreSaga(operationId);
 
   try {
-    // ── Шаг 1: Memgraph (primary) ──────────────────────────────
+    // ── Step 1: Memgraph (primary) ──────────────────────────────
     const nodeId = entityData.id || crypto.randomUUID();
 
     const mgResult = await saga.addStep({
@@ -5837,7 +5836,7 @@ async function polystoreWrite(entityData, options = {}) {
       }
     });
 
-    // ── Шаг 2: Qdrant (secondary) ─────────────────────────────
+    // ── Step 2: Qdrant (secondary) ─────────────────────────────
     let vectorId = null;
     if (entityData.text && options.vectorize !== false) {
       const embedding = await teiService.embed(entityData.text);
@@ -5867,7 +5866,7 @@ async function polystoreWrite(entityData, options = {}) {
 
       vectorId = qdrantResult.vectorId;
 
-      // ── Шаг 2b: Обратная запись vectorId в Memgraph ────────
+      // ── Step 2b: Write vectorId back to Memgraph ────────
       await saga.addStep({
         name: 'UpdateVectorRef',
         execute: async () => {
@@ -5886,7 +5885,7 @@ async function polystoreWrite(entityData, options = {}) {
       });
     }
 
-    // ── Шаг 3: Redis (cache) ──────────────────────────────────
+    // ── Step 3: Redis (cache) ──────────────────────────────────
     await saga.addStep({
       name: 'InvalidateCache',
       execute: async () => {
@@ -5905,7 +5904,7 @@ async function polystoreWrite(entityData, options = {}) {
             await redisService.del(key);
           }
         }
-        // Публикация события для подписчиков
+        // Publish event to subscribers
         await redisService.publish('polystore:changes', JSON.stringify({
           operationId,
           type: 'write',
@@ -5916,8 +5915,8 @@ async function polystoreWrite(entityData, options = {}) {
         return { invalidated: true };
       },
       compensate: async () => {
-        // Кэш не требует компенсации — он самовосстанавливается
-        // через TTL и последующие read-запросы
+        // Cache does not require compensation — it self-heals
+        // via TTL and subsequent read requests
       }
     });
 
@@ -5934,14 +5933,14 @@ async function polystoreWrite(entityData, options = {}) {
 
 ## 7.2 Compensating transactions
 
-### Принцип компенсации
+### Compensation Principle
 
-В отсутствие распределённых транзакций используется паттерн **Saga** — последовательность локальных транзакций с компенсирующими действиями. При сбое на любом шаге выполняется откат всех предыдущих шагов в обратном порядке (LIFO).
+In the absence of distributed transactions, the **Saga** pattern is used — a sequence of local transactions with compensating actions. On failure at any step, all previous steps are rolled back in reverse order (LIFO).
 
-### Диаграмма потока компенсации
+### Compensation Flow Diagram
 
 ```
-Прямой путь (forward path):
+Forward path:
 ═══════════════════════════════════════════════════════════════
 
   Step 1              Step 2              Step 3
@@ -5951,7 +5950,7 @@ async function polystoreWrite(entityData, options = {}) {
        │                    │                    │
        ▼                    ▼                    ▼
 
-Компенсация (compensation path, LIFO):
+Compensation (compensation path, LIFO):
 ═══════════════════════════════════════════════════════════════
 
                                           Compensate Step 3
@@ -5969,34 +5968,34 @@ async function polystoreWrite(entityData, options = {}) {
                ROLLED BACK
 
 
-Сценарии сбоев:
+Failure scenarios:
 ═══════════════════════════════════════════════════════════════
 
-  Сбой на Step 1:   Нет компенсации (ничего не записано)
-  Сбой на Step 2:   Compensate Step 1 (удалить узел из MG)
-  Сбой на Step 3:   Compensate Step 2 + Step 1
-  Сбой компенсации: alertInconsistency() → ручное вмешательство
+  Failure at Step 1:   No compensation (nothing was written)
+  Failure at Step 2:   Compensate Step 1 (delete node from MG)
+  Failure at Step 3:   Compensate Step 2 + Step 1
+  Compensation failure: alertInconsistency() → manual intervention
 ```
 
-### Класс PolystoreSaga
+### PolystoreSaga Class
 
 ```javascript
 class PolystoreSaga {
   constructor(operationId) {
     this.operationId = operationId;
-    this.completedSteps = [];     // Стек выполненных шагов (LIFO для отката)
+    this.completedSteps = [];     // Stack of completed steps (LIFO for rollback)
     this.startedAt = Date.now();
     this.status = 'pending';      // pending | executing | committed | compensating | failed
   }
 
   /**
-   * Добавляет и выполняет шаг саги.
-   * Каждый шаг регистрирует функцию компенсации до выполнения.
-   * При сбое execute — компенсация текущего шага НЕ вызывается
-   * (он не завершился успешно), но все предыдущие — откатываются.
+   * Adds and executes a saga step.
+   * Each step registers its compensation function before execution.
+   * On execute failure — the compensation for the current step is NOT called
+   * (it did not complete successfully), but all previous steps are rolled back.
    *
    * @param {Object} step - { name, execute, compensate }
-   * @returns {*} Результат execute()
+   * @returns {*} Result of execute()
    */
   async addStep(step) {
     this.status = 'executing';
@@ -6009,11 +6008,11 @@ class PolystoreSaga {
     };
 
     try {
-      // Выполнить прямое действие
+      // Execute the forward action
       const result = await step.execute();
       stepRecord.result = result;
 
-      // Регистрация в стеке ПОСЛЕ успешного выполнения
+      // Register in the stack AFTER successful execution
       this.completedSteps.push(stepRecord);
 
       logger.debug(`[Saga:${this.operationId}] Step "${step.name}" completed`, {
@@ -6029,15 +6028,15 @@ class PolystoreSaga {
         completedSteps: this.completedSteps.map(s => s.name)
       });
 
-      // Не добавляем текущий шаг — он не завершился
+      // Do not add the current step — it did not complete
       throw error;
     }
   }
 
   /**
-   * Компенсация всех выполненных шагов в обратном порядке (LIFO).
-   * Если компенсация шага сама завершается с ошибкой —
-   * продолжаем компенсацию остальных, но помечаем рассинхронизацию.
+   * Compensates all completed steps in reverse order (LIFO).
+   * If a step's compensation itself fails —
+   * we continue compensating the rest but flag a desync.
    */
   async compensate() {
     this.status = 'compensating';
@@ -6047,7 +6046,7 @@ class PolystoreSaga {
       stepsToCompensate: this.completedSteps.map(s => s.name)
     });
 
-    // LIFO — обратный порядок
+    // LIFO — reverse order
     const stepsToUndo = [...this.completedSteps].reverse();
 
     for (const step of stepsToUndo) {
@@ -6079,11 +6078,11 @@ class PolystoreSaga {
   }
 
   /**
-   * Оповещение о рассинхронизации данных.
-   * Вызывается когда компенсирующая транзакция сама завершается с ошибкой,
-   * оставляя данные в неконсистентном состоянии.
+   * Notification of data desynchronization.
+   * Called when a compensating transaction itself fails,
+   * leaving data in an inconsistent state.
    *
-   * @param {Array} errors - массив { step, error }
+   * @param {Array} errors - array of { step, error }
    */
   async alertInconsistency(errors) {
     const alert = {
@@ -6097,7 +6096,7 @@ class PolystoreSaga {
       requiresManualIntervention: true
     };
 
-    // Записать в Memgraph для аудита
+    // Write to Memgraph for audit
     try {
       await memgraphService.runQuery(
         `CREATE (a:InconsistencyAlert {
@@ -6115,15 +6114,15 @@ class PolystoreSaga {
         }
       );
     } catch (dbError) {
-      // Если даже алерт не удалось записать — логируем в stderr
+      // If even the alert could not be written — log to stderr
       console.error('[CRITICAL] Cannot persist inconsistency alert:', alert);
     }
 
-    // Публикация в Redis для мониторинга
+    // Publish to Redis for monitoring
     try {
       await redisService.publish('polystore:inconsistency', JSON.stringify(alert));
     } catch (redisError) {
-      // Redis может быть недоступен — это ожидаемо при каскадном сбое
+      // Redis may be unavailable — this is expected during a cascading failure
     }
 
     logger.error(`[CRITICAL] Polystore inconsistency detected`, alert);
@@ -6131,7 +6130,7 @@ class PolystoreSaga {
 }
 ```
 
-### Пример использования
+### Usage Example
 
 ```javascript
 async function createEntityWithFullSync(entityData) {
@@ -6139,7 +6138,7 @@ async function createEntityWithFullSync(entityData) {
   const saga = new PolystoreSaga(operationId);
 
   try {
-    // ── Операция 1: Создание узла в Memgraph ──────────────────
+    // ── Operation 1: Create node in Memgraph ──────────────────
     const mgResult = await saga.addStep({
       name: 'CreateNode',
       execute: async () => {
@@ -6159,7 +6158,7 @@ async function createEntityWithFullSync(entityData) {
       }
     });
 
-    // ── Операция 2: Upsert вектора в Qdrant ───────────────────
+    // ── Operation 2: Upsert vector in Qdrant ───────────────────
     const qdrantResult = await saga.addStep({
       name: 'UpsertVector',
       execute: async () => {
@@ -6183,7 +6182,7 @@ async function createEntityWithFullSync(entityData) {
       }
     });
 
-    // ── Операция 3: Инвалидация кэша Redis ────────────────────
+    // ── Operation 3: Redis cache invalidation ────────────────────
     const redisResult = await saga.addStep({
       name: 'InvalidateCache',
       execute: async () => {
@@ -6196,8 +6195,8 @@ async function createEntityWithFullSync(entityData) {
         return { keysInvalidated: 2 };
       },
       compensate: async () => {
-        // Кэш самовосстанавливается — компенсация не требуется.
-        // При следующем read-запросе кэш будет перестроен из Memgraph.
+        // Cache is self-healing — no compensation required.
+        // On the next read request, the cache will be rebuilt from Memgraph.
         logger.info('Compensated: cache invalidation is self-healing, no action needed');
       }
     });
@@ -6222,29 +6221,29 @@ async function createEntityWithFullSync(entityData) {
 
 ## 7.3 Eventually consistent
 
-### Допустимые временные несоответствия
+### Permissible Temporary Inconsistencies
 
-В polystore-архитектуре абсолютная консистентность между хранилищами невозможна. Определяем допустимые окна временной неконсистентности:
+In a polystore architecture, absolute consistency between stores is impossible. We define acceptable windows of temporary inconsistency:
 
-| Пара хранилищ | Тип рассинхронизации | Допустимое окно | Последствия | Обнаружение |
+| Store pair | Desync type | Acceptable window | Consequences | Detection |
 |---------------|----------------------|-----------------|-------------|-------------|
-| Memgraph → Qdrant | Узел создан в MG, вектор ещё не записан в Qdrant | **< 5 секунд** | Семантический поиск не находит новый узел. Граф-запросы работают. | `findMissingVectors()` |
-| Qdrant → Redis | Вектор обновлён в Qdrant, кэш Redis содержит старый результат | **< 1 секунда** | Поисковые результаты показывают устаревшие данные | TTL-based expiry |
-| Удалённый узел → Orphaned vector | Узел удалён из MG, вектор остался в Qdrant | **< 1 час** | Поиск может возвращать ссылки на несуществующие узлы | `findOrphanedVectors()` |
-| MG property update → Qdrant payload | Свойство изменено в MG, payload в Qdrant устарел | **< 5 секунд** | Фильтрация по payload вернёт устаревшие данные | Периодическая сверка |
-| Redis cache → MG state | Кэш содержит устаревшие данные | **< TTL (300 сек)** | Read-запросы возвращают устаревшие данные | TTL auto-expiry |
+| Memgraph → Qdrant | Node created in MG, vector not yet written to Qdrant | **< 5 seconds** | Semantic search does not find the new node. Graph queries work. | `findMissingVectors()` |
+| Qdrant → Redis | Vector updated in Qdrant, Redis cache contains stale result | **< 1 second** | Search results show outdated data | TTL-based expiry |
+| Deleted node → Orphaned vector | Node deleted from MG, vector remains in Qdrant | **< 1 hour** | Search may return references to non-existent nodes | `findOrphanedVectors()` |
+| MG property update → Qdrant payload | Property changed in MG, Qdrant payload is stale | **< 5 seconds** | Filtering by payload returns stale data | Periodic reconciliation |
+| Redis cache → MG state | Cache contains stale data | **< TTL (300 sec)** | Read requests return stale data | TTL auto-expiry |
 
-### Уровни консистентности
+### Consistency Levels
 
-Система поддерживает три уровня консистентности, выбираемых в зависимости от требований операции:
+The system supports three consistency levels, selectable based on the operation's requirements:
 
-| Уровень | Описание | Memgraph | Qdrant | Redis | Latency | Использование |
+| Level | Description | Memgraph | Qdrant | Redis | Latency | Usage |
 |---------|----------|----------|--------|-------|---------|---------------|
-| `STRONG` | Все операции синхронные | sync | sync | sync | Высокая (200-500ms) | Критические записи, финансовые данные |
-| `EVENTUAL` | MG синхронно, остальные асинхронно | sync | async | async | Средняя (50-100ms) | Стандартные операции CRUD |
-| `BEST_EFFORT` | Все операции асинхронные | async | async | async | Низкая (10-30ms) | Bulk import, фоновые задачи |
+| `STRONG` | All operations synchronous | sync | sync | sync | High (200-500ms) | Critical writes, financial data |
+| `EVENTUAL` | MG synchronous, others asynchronous | sync | async | async | Medium (50-100ms) | Standard CRUD operations |
+| `BEST_EFFORT` | All operations asynchronous | async | async | async | Low (10-30ms) | Bulk import, background jobs |
 
-### Реализация writeWithConsistency
+### writeWithConsistency Implementation
 
 ```javascript
 const ConsistencyLevel = {
@@ -6254,11 +6253,11 @@ const ConsistencyLevel = {
 };
 
 /**
- * Запись данных с выбранным уровнем консистентности.
+ * Write data with the selected consistency level.
  *
- * @param {Object} entityData - данные для записи
- * @param {string} level - уровень консистентности (STRONG | EVENTUAL | BEST_EFFORT)
- * @returns {Object} результат записи
+ * @param {Object} entityData - data to write
+ * @param {string} level - consistency level (STRONG | EVENTUAL | BEST_EFFORT)
+ * @returns {Object} write result
  */
 async function writeWithConsistency(entityData, level = ConsistencyLevel.EVENTUAL) {
   const operationId = crypto.randomUUID();
@@ -6267,7 +6266,7 @@ async function writeWithConsistency(entityData, level = ConsistencyLevel.EVENTUA
   switch (level) {
 
     case ConsistencyLevel.STRONG: {
-      // ── Все три шага синхронно, с полной Saga-компенсацией ──
+      // ── All three steps synchronously, with full Saga compensation ──
       const saga = new PolystoreSaga(operationId);
 
       try {
@@ -6298,14 +6297,14 @@ async function writeWithConsistency(entityData, level = ConsistencyLevel.EVENTUA
     }
 
     case ConsistencyLevel.EVENTUAL: {
-      // ── Memgraph синхронно, Qdrant и Redis — через очередь ──
+      // ── Memgraph synchronously, Qdrant and Redis — via queue ──
       try {
         results.steps.memgraph = await writeToMemgraph(entityData);
       } catch (error) {
         throw new PolystoreWriteError(operationId, error);
       }
 
-      // Асинхронные задачи через Redis queue
+      // Async tasks via Redis queue
       const asyncTasks = {
         qdrant: {
           type: 'UPSERT_VECTOR',
@@ -6332,7 +6331,7 @@ async function writeWithConsistency(entityData, level = ConsistencyLevel.EVENTUA
     }
 
     case ConsistencyLevel.BEST_EFFORT: {
-      // ── Все три шага асинхронно через очередь ───────────────
+      // ── All three steps asynchronously via queue ───────────────
       const taskId = crypto.randomUUID();
 
       const batchTask = {
@@ -6367,11 +6366,11 @@ async function writeWithConsistency(entityData, level = ConsistencyLevel.EVENTUA
 
 ## 7.4 Checkpoint/Resume
 
-### Назначение
+### Purpose
 
-Долговременные конвейеры (bulk import, полная переиндексация, GXE-execution) могут обрабатывать тысячи узлов. При сбое нельзя терять прогресс — необходимо возобновление с последнего успешного шага.
+Long-running pipelines (bulk import, full reindexing, GXE-execution) may process thousands of nodes. On failure, progress must not be lost — resumption from the last successful step is required.
 
-### Класс CheckpointManager
+### CheckpointManager Class
 
 ```javascript
 class CheckpointManager {
@@ -6379,17 +6378,17 @@ class CheckpointManager {
     this.pipelineId = pipelineId;
     this.redisService = redisService;
     this.checkpointKey = `checkpoint:${pipelineId}`;
-    this.TTL_SECONDS = 86400; // 24 часа
+    this.TTL_SECONDS = 86400; // 24 hours
   }
 
   /**
-   * Сохраняет checkpoint в Redis с TTL 24 часа.
+   * Saves a checkpoint in Redis with a 24-hour TTL.
    *
-   * @param {Object} state - текущее состояние конвейера
-   * @param {string} state.currentStep - имя текущего шага
-   * @param {number} state.processedCount - количество обработанных элементов
-   * @param {Array<string>} state.completedOps - список завершённых операций
-   * @param {Object} state.context - произвольный контекст для восстановления
+   * @param {Object} state - current pipeline state
+   * @param {string} state.currentStep - name of the current step
+   * @param {number} state.processedCount - number of processed items
+   * @param {Array<string>} state.completedOps - list of completed operations
+   * @param {Object} state.context - arbitrary context for restoration
    */
   async saveCheckpoint(state) {
     const checkpoint = {
@@ -6418,9 +6417,9 @@ class CheckpointManager {
   }
 
   /**
-   * Загружает последний checkpoint из Redis.
+   * Loads the latest checkpoint from Redis.
    *
-   * @returns {Object|null} состояние checkpoint или null если не найден / истёк TTL
+   * @returns {Object|null} checkpoint state or null if not found / TTL expired
    */
   async loadCheckpoint() {
     const raw = await this.redisService.get(this.checkpointKey);
@@ -6447,13 +6446,13 @@ class CheckpointManager {
   }
 
   /**
-   * Возобновляет выполнение конвейера с последнего checkpoint.
-   * Пропускает уже завершённые операции.
+   * Resumes pipeline execution from the last checkpoint.
+   * Skips already completed operations.
    *
-   * @param {Array<Object>} operations - полный список операций конвейера
-   *   Каждая операция: { id, name, execute }
-   * @param {Function} onProgress - callback для отслеживания прогресса
-   * @returns {Object} результат выполнения
+   * @param {Array<Object>} operations - full list of pipeline operations
+   *   Each operation: { id, name, execute }
+   * @param {Function} onProgress - callback for tracking progress
+   * @returns {Object} execution result
    */
   async resumeFromCheckpoint(operations, onProgress) {
     const checkpoint = await this.loadCheckpoint();
@@ -6469,7 +6468,7 @@ class CheckpointManager {
     const results = [];
 
     for (const op of operations) {
-      // Пропустить уже завершённые операции
+      // Skip already completed operations
       if (completedOps.has(op.id)) {
         logger.debug(`[Checkpoint:${this.pipelineId}] Skipping completed op: ${op.name}`);
         continue;
@@ -6482,7 +6481,7 @@ class CheckpointManager {
         completedOps.add(op.id);
         processedCount++;
 
-        // Сохранить checkpoint
+        // Save checkpoint
         await this.saveCheckpoint({
           currentStep: op.name,
           processedCount,
@@ -6504,7 +6503,7 @@ class CheckpointManager {
           processedCount
         });
 
-        // Сохранить checkpoint ДО ошибки — при retry пропустим завершённые
+        // Save checkpoint BEFORE the error — on retry we skip completed ones
         await this.saveCheckpoint({
           currentStep: op.name,
           processedCount,
@@ -6516,7 +6515,7 @@ class CheckpointManager {
       }
     }
 
-    // Очистить checkpoint после успешного завершения
+    // Clear checkpoint after successful completion
     await this.redisService.del(this.checkpointKey);
 
     return {
@@ -6529,21 +6528,21 @@ class CheckpointManager {
 }
 ```
 
-### Частота создания checkpoint
+### Checkpoint Frequency
 
-| Тип конвейера | Частота checkpoint | Обоснование |
+| Pipeline type | Checkpoint frequency | Justification |
 |---------------|--------------------|-------------|
-| **Bulk import** | Каждые 100 узлов | Баланс между производительностью и допустимой потерей прогресса. Повторная обработка 100 узлов — приемлемые ~30 секунд. |
-| **Incremental update** | Каждые 10 узлов | Инкрементальные обновления более ценны — каждый узел может содержать уникальные данные. Потеря 10 узлов — допустимо. |
-| **GXE execution** | Каждый узел | Каждый узел GXE-графа может запускать LLM-вызов (дорогой). Повторный вызов LLM — трата бюджета. Checkpoint на каждом шаге обязателен. |
-| **Reindexing** | Каждые 500 векторов | Переиндексация — идемпотентная операция. Повтор 500 upsert в Qdrant — ~10 секунд, приемлемо. |
-| **Graph migration** | Каждый шаг миграции | Миграция меняет структуру. Частичная миграция опаснее частичного импорта. Checkpoint на каждый DDL-шаг. |
+| **Bulk import** | Every 100 nodes | Balance between performance and acceptable progress loss. Reprocessing 100 nodes takes an acceptable ~30 seconds. |
+| **Incremental update** | Every 10 nodes | Incremental updates are more valuable — each node may contain unique data. Losing 10 nodes is acceptable. |
+| **GXE execution** | Every node | Each GXE-graph node may trigger an LLM call (expensive). Repeating an LLM call wastes budget. A checkpoint on every step is mandatory. |
+| **Reindexing** | Every 500 vectors | Reindexing is an idempotent operation. Repeating 500 upserts in Qdrant takes ~10 seconds, acceptable. |
+| **Graph migration** | Every migration step | Migration changes structure. A partial migration is more dangerous than a partial import. A checkpoint on every DDL step. |
 
 ---
 
 ## 7.5 Health checks
 
-### Класс PolystoreHealthChecker
+### PolystoreHealthChecker Class
 
 ```javascript
 class PolystoreHealthChecker {
@@ -6554,9 +6553,9 @@ class PolystoreHealthChecker {
   }
 
   /**
-   * Полная проверка консистентности между хранилищами.
+   * Full consistency check across stores.
    *
-   * @returns {Object} отчёт о рассинхронизациях
+   * @returns {Object} desync report
    */
   async checkConsistency() {
     const report = {
@@ -6565,7 +6564,7 @@ class PolystoreHealthChecker {
       stats: {}
     };
 
-    // ── Проверка 1: Orphaned vectors ────────────────────────────
+    // ── Check 1: Orphaned vectors ────────────────────────────
     const orphaned = await this.findOrphanedVectors();
     report.stats.orphanedVectors = orphaned.length;
     if (orphaned.length > 0) {
@@ -6573,12 +6572,12 @@ class PolystoreHealthChecker {
         type: 'ORPHANED_VECTORS',
         severity: orphaned.length > 100 ? 'HIGH' : 'MEDIUM',
         count: orphaned.length,
-        description: `Найдено ${orphaned.length} векторов в Qdrant без соответствующих узлов в Memgraph`,
-        vectorIds: orphaned.slice(0, 50) // Первые 50 для отчёта
+        description: `Found ${orphaned.length} vectors in Qdrant without corresponding nodes in Memgraph`,
+        vectorIds: orphaned.slice(0, 50) // First 50 for the report
       });
     }
 
-    // ── Проверка 2: Missing vectors ─────────────────────────────
+    // ── Check 2: Missing vectors ─────────────────────────────
     const missing = await this.findMissingVectors();
     report.stats.missingVectors = missing.length;
     if (missing.length > 0) {
@@ -6586,12 +6585,12 @@ class PolystoreHealthChecker {
         type: 'MISSING_VECTORS',
         severity: missing.length > 50 ? 'HIGH' : 'MEDIUM',
         count: missing.length,
-        description: `Найдено ${missing.length} узлов в Memgraph с vectorId, но без соответствующих записей в Qdrant`,
+        description: `Found ${missing.length} nodes in Memgraph with vectorId but without corresponding records in Qdrant`,
         nodeIds: missing.slice(0, 50)
       });
     }
 
-    // ── Проверка 3: Stale cache ─────────────────────────────────
+    // ── Check 3: Stale cache ─────────────────────────────────
     const stale = await this.findStaleCache();
     report.stats.staleCacheKeys = stale.length;
     if (stale.length > 0) {
@@ -6599,7 +6598,7 @@ class PolystoreHealthChecker {
         type: 'STALE_CACHE',
         severity: 'LOW',
         count: stale.length,
-        description: `Найдено ${stale.length} ключей кэша Redis, ссылающихся на несуществующие или изменённые узлы`,
+        description: `Found ${stale.length} Redis cache keys referencing non-existent or modified nodes`,
         keys: stale.slice(0, 20)
       });
     }
@@ -6609,14 +6608,14 @@ class PolystoreHealthChecker {
   }
 
   /**
-   * Поиск "осиротевших" векторов — записей в Qdrant,
-   * для которых не существует соответствующего узла в Memgraph.
+   * Find "orphaned" vectors — records in Qdrant
+   * for which no corresponding node exists in Memgraph.
    *
-   * Алгоритм: скролл по всем точкам в коллекции Qdrant,
-   * для каждого batch проверяем наличие узла в Memgraph.
+   * Algorithm: scroll through all points in the Qdrant collection,
+   * check each batch for node existence in Memgraph.
    *
-   * @param {string} collection - имя коллекции Qdrant (по умолчанию 'default')
-   * @returns {Array<string>} список vectorId без узлов в MG
+   * @param {string} collection - Qdrant collection name (default: 'default')
+   * @returns {Array<string>} list of vectorIds without nodes in MG
    */
   async findOrphanedVectors(collection = 'default') {
     const orphaned = [];
@@ -6624,24 +6623,24 @@ class PolystoreHealthChecker {
     const batchSize = 100;
 
     do {
-      // Скролл по точкам Qdrant
+      // Scroll through Qdrant points
       const scrollResult = await this.qdrant.scroll(collection, {
         limit: batchSize,
         offset: offset,
         with_payload: true,
-        with_vectors: false // Векторы не нужны для проверки
+        with_vectors: false // Vectors are not needed for the check
       });
 
       const points = scrollResult.points || [];
       if (points.length === 0) break;
 
-      // Извлечь nodeId из payload каждой точки
+      // Extract nodeId from each point's payload
       const nodeIds = points
         .map(p => p.payload?.nodeId || p.id)
         .filter(Boolean);
 
       if (nodeIds.length > 0) {
-        // Batch-проверка в Memgraph: какие из nodeIds существуют?
+        // Batch-check in Memgraph: which of the nodeIds exist?
         const existResult = await this.memgraph.runQuery(
           `UNWIND $ids AS nid
            OPTIONAL MATCH (n {id: nid})
@@ -6655,7 +6654,7 @@ class PolystoreHealthChecker {
             .map(r => r.get('nid'))
         );
 
-        // Те, кого нет в Memgraph — orphaned
+        // Those not in Memgraph — orphaned
         for (const point of points) {
           const nodeId = point.payload?.nodeId || point.id;
           if (!existingSet.has(nodeId)) {
@@ -6671,16 +6670,16 @@ class PolystoreHealthChecker {
   }
 
   /**
-   * Поиск "отсутствующих" векторов — узлов в Memgraph,
-   * у которых есть свойство vectorId, но в Qdrant нет соответствующей записи.
+   * Find "missing" vectors — nodes in Memgraph
+   * that have a vectorId property but have no corresponding record in Qdrant.
    *
-   * @param {string} collection - имя коллекции Qdrant (по умолчанию 'default')
-   * @returns {Array<string>} список nodeId с отсутствующими векторами
+   * @param {string} collection - Qdrant collection name (default: 'default')
+   * @returns {Array<string>} list of nodeIds with missing vectors
    */
   async findMissingVectors(collection = 'default') {
     const missing = [];
 
-    // Получить все узлы с vectorId из Memgraph
+    // Retrieve all nodes with vectorId from Memgraph
     const mgResult = await this.memgraph.runQuery(
       `MATCH (n)
        WHERE n.vectorId IS NOT NULL
@@ -6692,7 +6691,7 @@ class PolystoreHealthChecker {
       vectorId: r.get('vectorId')
     }));
 
-    // Batch-проверка в Qdrant
+    // Batch-check in Qdrant
     const batchSize = 100;
     for (let i = 0; i < nodesWithVectors.length; i += batchSize) {
       const batch = nodesWithVectors.slice(i, i + batchSize);
@@ -6713,7 +6712,7 @@ class PolystoreHealthChecker {
           }
         }
       } catch (error) {
-        // Если коллекция не существует — все векторы отсутствуют
+        // If the collection does not exist — all vectors are missing
         if (error.message?.includes('not found')) {
           missing.push(...batch.map(n => n.nodeId));
         } else {
@@ -6726,15 +6725,15 @@ class PolystoreHealthChecker {
   }
 
   /**
-   * Поиск устаревших записей кэша — ключей в Redis,
-   * ссылающихся на узлы, которые были удалены или изменены в Memgraph.
+   * Find stale cache entries — keys in Redis
+   * referencing nodes that were deleted or modified in Memgraph.
    *
-   * @returns {Array<string>} список устаревших ключей Redis
+   * @returns {Array<string>} list of stale Redis keys
    */
   async findStaleCache() {
     const staleKeys = [];
 
-    // Сканируем ключи node:* в Redis
+    // Scan node:* keys in Redis
     let cursor = '0';
     do {
       const [nextCursor, keys] = await this.redis.scan(cursor, 'MATCH', 'node:*', 'COUNT', 100);
@@ -6749,7 +6748,7 @@ class PolystoreHealthChecker {
         try {
           const cachedData = JSON.parse(cached);
 
-          // Проверить существование и актуальность в Memgraph
+          // Check existence and freshness in Memgraph
           const mgResult = await this.memgraph.runQuery(
             `MATCH (n {id: $id})
              RETURN n.updatedAt AS updatedAt`,
@@ -6757,17 +6756,17 @@ class PolystoreHealthChecker {
           );
 
           if (mgResult.records.length === 0) {
-            // Узел удалён — кэш устарел
+            // Node deleted — cache is stale
             staleKeys.push(key);
           } else {
             const mgUpdatedAt = mgResult.records[0].get('updatedAt');
             if (cachedData.cachedAt && mgUpdatedAt && new Date(mgUpdatedAt) > new Date(cachedData.cachedAt)) {
-              // Узел обновлён после кэширования
+              // Node updated after caching
               staleKeys.push(key);
             }
           }
         } catch (parseError) {
-          // Некорректный JSON в кэше — тоже stale
+          // Invalid JSON in cache — also stale
           staleKeys.push(key);
         }
       }
@@ -6777,10 +6776,10 @@ class PolystoreHealthChecker {
   }
 
   /**
-   * Автоматическое исправление обнаруженных рассинхронизаций.
+   * Automatic repair of detected desyncs.
    *
-   * @param {Object} report - отчёт от checkConsistency()
-   * @returns {Object} результат ремонта
+   * @param {Object} report - report from checkConsistency()
+   * @returns {Object} repair result
    */
   async autoRepair(report) {
     const repairLog = {
@@ -6794,7 +6793,7 @@ class PolystoreHealthChecker {
         switch (issue.type) {
 
           case 'ORPHANED_VECTORS': {
-            // Удалить осиротевшие векторы из Qdrant
+            // Delete orphaned vectors from Qdrant
             const orphanedIds = issue.vectorIds || [];
             if (orphanedIds.length > 0) {
               await this.qdrant.delete('default', {
@@ -6802,7 +6801,7 @@ class PolystoreHealthChecker {
               });
               repairLog.repaired.push({
                 type: 'ORPHANED_VECTORS',
-                action: 'Удалены осиротевшие векторы из Qdrant',
+                action: 'Deleted orphaned vectors from Qdrant',
                 count: orphanedIds.length
               });
             }
@@ -6810,7 +6809,7 @@ class PolystoreHealthChecker {
           }
 
           case 'MISSING_VECTORS': {
-            // Пересоздать отсутствующие векторы
+            // Recreate missing vectors
             const nodeIds = issue.nodeIds || [];
             let reindexed = 0;
 
@@ -6839,7 +6838,7 @@ class PolystoreHealthChecker {
                     });
                     reindexed++;
                   } else {
-                    // Нет текста — убрать vectorId из узла
+                    // No text — remove vectorId from node
                     await this.memgraph.runQuery(
                       `MATCH (n {id: $id}) REMOVE n.vectorId`,
                       { id: nodeId }
@@ -6857,20 +6856,20 @@ class PolystoreHealthChecker {
 
             repairLog.repaired.push({
               type: 'MISSING_VECTORS',
-              action: 'Пересозданы отсутствующие векторы в Qdrant',
+              action: 'Recreated missing vectors in Qdrant',
               count: reindexed
             });
             break;
           }
 
           case 'STALE_CACHE': {
-            // Удалить устаревшие ключи кэша
+            // Delete stale cache keys
             const keys = issue.keys || [];
             if (keys.length > 0) {
               await this.redis.del(...keys);
               repairLog.repaired.push({
                 type: 'STALE_CACHE',
-                action: 'Удалены устаревшие ключи кэша Redis',
+                action: 'Deleted stale Redis cache keys',
                 count: keys.length
               });
             }
@@ -6895,58 +6894,58 @@ class PolystoreHealthChecker {
 }
 ```
 
-### Расписание проверок
+### Check Schedule
 
-| Проверка | Интервал | Обоснование | autoRepair |
+| Check | Interval | Justification | autoRepair |
 |----------|----------|-------------|------------|
-| **Orphaned vectors** (`findOrphanedVectors`) | Каждые 6 часов | Осиротевшие векторы накапливаются медленно (только при сбоях удаления). 6 часов — достаточно для обнаружения, не нагружает Qdrant скроллом. | Да — удаление из Qdrant |
-| **Missing vectors** (`findMissingVectors`) | Каждые 1 час | Отсутствие векторов влияет на семантический поиск. 1 час — компромисс между актуальностью поиска и нагрузкой на переиндексацию. | Да — пересоздание эмбеддингов |
-| **Stale cache** (`findStaleCache`) | Каждые 15 минут | Устаревший кэш — наименее критичная проблема (TTL 300 секунд самоочищает). 15 минут ловит ключи без TTL и ключи с длинным TTL. | Да — удаление ключей |
-| **Hash chain integrity** | Еженедельно | Проверка целостности цепочки хешей аудит-лога. Дорогая операция (полный обход). Еженедельно достаточно для обнаружения фальсификации. | Нет — ручное расследование |
+| **Orphaned vectors** (`findOrphanedVectors`) | Every 6 hours | Orphaned vectors accumulate slowly (only on deletion failures). 6 hours is sufficient for detection without overloading Qdrant with scrolls. | Yes — delete from Qdrant |
+| **Missing vectors** (`findMissingVectors`) | Every 1 hour | Missing vectors affect semantic search. 1 hour is a compromise between search freshness and reindexing load. | Yes — recreate embeddings |
+| **Stale cache** (`findStaleCache`) | Every 15 minutes | Stale cache is the least critical issue (TTL 300 seconds self-cleans). 15 minutes catches keys without TTL and keys with long TTL. | Yes — delete keys |
+| **Hash chain integrity** | Weekly | Audit log hash chain integrity check. Expensive operation (full traversal). Weekly is sufficient for detecting tampering. | No — manual investigation |
 
 ---
 
-*Этот документ является частью [Кодекса UN ProjectAdvisor](../CODEX_INDEX.md)*
+*This document is part of the [UN ProjectAdvisor Codex](../CODEX_INDEX.md)*
 
 ---
 
-## Часть VIII: Саморазвивающаяся система
+## Part VIII: Self-Evolving System
 
-**Статус:** 🟡 Черновик
-**Версия:** 0.1.0
-**Последнее обновление:** 2026-03-12
-
----
-
-## Преамбула
-
-Система UN ProjectAdvisor проектируется не как статичный инструмент, а как **саморазвивающийся организм**. Граф знаний — это живая структура, которая непрерывно растёт, уточняется, исправляет свои ошибки и учится на собственном опыте.
-
-Данный стандарт определяет:
-
-1. **Каскадную архитектуру ИИ-агентов** — как множество агентов координируют работу
-2. **Механизмы консенсуса** — как агенты принимают коллективные решения
-3. **Автономную оптимизацию** — как система улучшает себя без вмешательства человека
-4. **Обнаружение и разрешение противоречий** — как конфликты превращаются в знание
-5. **Самодокументацию** — как система описывает собственную эволюцию
-6. **Уровни автономии** — границы самостоятельности на каждом этапе зрелости
+**Status:** 🟡 Draft
+**Version:** 0.1.0
+**Last updated:** 2026-03-12
 
 ---
 
-## 8.1 Каскадная архитектура ИИ-агентов (Agent Cascade)
+## Preamble
 
-### Трёхуровневая иерархия
+The UN ProjectAdvisor system is designed not as a static tool, but as a **self-evolving organism**. The knowledge graph is a living structure that continuously grows, refines itself, corrects its mistakes, and learns from its own experience.
 
-Система агентов организована в три уровня, каждый из которых обладает собственной зоной ответственности и уровнем полномочий.
+This standard defines:
+
+1. **Cascaded AI agent architecture** — how multiple agents coordinate their work
+2. **Consensus mechanisms** — how agents make collective decisions
+3. **Autonomous optimization** — how the system improves itself without human intervention
+4. **Conflict detection and resolution** — how conflicts become knowledge
+5. **Self-documentation** — how the system describes its own evolution
+6. **Autonomy levels** — boundaries of independence at each maturity stage
+
+---
+
+## 8.1 Cascaded AI Agent Architecture (Agent Cascade)
+
+### Three-Level Hierarchy
+
+The agent system is organized into three levels, each with its own area of responsibility and authority.
 
 ```
                         ┌──────────────────────────┐
                         │      ORCHESTRATOR        │
                         │      (Meta-agent)        │
                         │                          │
-                        │  - Распределяет задачи   │
-                        │  - Разрешает конфликты   │
-                        │  - Управляет автономией   │
+                        │  - Distributes tasks     │
+                        │  - Resolves conflicts    │
+                        │  - Manages autonomy      │
                         │  - trustScore ≥ 0.95     │
                         └────────────┬─────────────┘
                                      │
@@ -6957,7 +6956,7 @@ class PolystoreHealthChecker {
     │   AGENTS            │ │  AGENTS         │ │   AGENTS          │
     │                     │ │                 │ │                   │
     │  Extractor          │ │  Validator      │ │  Enricher         │
-    │  Resolver           │ │  Optimizer      │ │  (+ будущие)      │
+    │  Resolver           │ │  Optimizer      │ │  (+ future)       │
     │                     │ │                 │ │                   │
     │  trustScore ≥ 0.8   │ │  trustScore ≥   │ │  trustScore ≥ 0.8 │
     │                     │ │  0.85           │ │                   │
@@ -6967,10 +6966,10 @@ class PolystoreHealthChecker {
         │   Worker    │       │   Worker    │       │   Worker    │
         │   Agents    │       │   Agents    │       │   Agents    │
         │             │       │             │       │             │
-        │  Атомарные  │       │  Проверка   │       │  Векторизация│
-        │  извлечения │       │  полей      │       │  Связи       │
-        │             │       │  хешей      │       │  Контексты   │
-        │  trustScore │       │  схем       │       │              │
+        │  Atomic     │       │  Field      │       │  Vectorization│
+        │  extractions│       │  checking   │       │  Relations   │
+        │             │       │  hashes     │       │  Contexts    │
+        │  trustScore │       │  schemas    │       │              │
         │  ≥ 0.6      │       │             │       │  trustScore  │
         └─────────────┘       └─────────────┘       │  ≥ 0.6      │
                                                     └─────────────┘
@@ -6983,22 +6982,22 @@ class PolystoreHealthChecker {
                         └──────────────────────────┘
 ```
 
-### Специализации агентов
+### Agent Specializations
 
-| Агент | Специализация | Типичные операции | Требуемый trustScore |
+| Agent | Specialization | Typical operations | Required trustScore |
 |-------|---------------|-------------------|---------------------|
-| **Extractor** | Извлечение фактов из источников | Парсинг SQL, анализ кода, NLP-извлечение | ≥ 0.8 |
-| **Validator** | Проверка качества и консистентности | Валидация схем, проверка хешей, CODEX-VALID | ≥ 0.85 |
-| **Enricher** | Обогащение связями и контекстом | Создание рёбер, добавление провенанса, классификация | ≥ 0.8 |
-| **Resolver** | Разрешение конфликтов и дубликатов | Entity resolution, merge, deduplication | ≥ 0.85 |
-| **Optimizer** | Оптимизация структуры и производительности | Реорганизация индексов, сжатие цепочек, архивация | ≥ 0.8 |
+| **Extractor** | Fact extraction from sources | SQL parsing, code analysis, NLP extraction | ≥ 0.8 |
+| **Validator** | Quality and consistency checks | Schema validation, hash verification, CODEX-VALID | ≥ 0.85 |
+| **Enricher** | Enrichment with relationships and context | Edge creation, provenance addition, classification | ≥ 0.8 |
+| **Resolver** | Conflict and duplicate resolution | Entity resolution, merge, deduplication | ≥ 0.85 |
+| **Optimizer** | Structure and performance optimization | Index reorganization, chain compression, archiving | ≥ 0.8 |
 
-### Регистрация и обнаружение агентов
+### Agent Registration and Discovery
 
-Каждый агент регистрируется в графе знаний как узел типа `:Agent` в пространстве имён `META`:
+Each agent is registered in the knowledge graph as a node of type `:Agent` in the `META` namespace:
 
 ```javascript
-// Регистрация агента в Knowledge Graph
+// Register agent in Knowledge Graph
 const agentNode = {
   id: crypto.randomUUID(),
   label: 'Agent',
@@ -7028,12 +7027,12 @@ const agentNode = {
 };
 ```
 
-### Протокол обнаружения
+### Discovery Protocol
 
-Агенты обнаруживают друг друга через Cypher-запросы к META-namespace:
+Agents discover each other through Cypher queries to the META namespace:
 
 ```cypher
-// Найти всех активных агентов с нужной специализацией
+// Find all active agents with the required specialization
 MATCH (a:Agent {namespace: 'META', status: 'ACTIVE'})
 WHERE a.specialization = 'Validator'
   AND a.trustScore >= 0.85
@@ -7041,9 +7040,9 @@ RETURN a.agentId, a.trustScore, a.capabilities
 ORDER BY a.trustScore DESC
 ```
 
-### Межагентная коммуникация
+### Inter-Agent Communication
 
-Агенты взаимодействуют через рёбра Knowledge Graph. Это гарантирует полную трассируемость всех решений.
+Agents interact through Knowledge Graph edges. This guarantees full traceability of all decisions.
 
 ```
 ┌─────────────┐   DELEGATED_TO    ┌─────────────┐
@@ -7061,10 +7060,10 @@ ORDER BY a.trustScore DESC
                                   └──────────────┘
 ```
 
-**Типы коммуникационных рёбер:**
+**Communication edge types:**
 
 ```cypher
-// DELEGATED_TO — передача задачи от вышестоящего агента
+// DELEGATED_TO — task delegation from a higher-level agent
 CREATE (orchestrator)-[:DELEGATED_TO {
   taskId:      $taskId,
   priority:    'HIGH',
@@ -7073,7 +7072,7 @@ CREATE (orchestrator)-[:DELEGATED_TO {
   delegatedAt: datetime()
 }]->(extractor)
 
-// REVIEWED_BY — результат проверки нижестоящего агента
+// REVIEWED_BY — review result from a lower-level agent
 CREATE (result)-[:REVIEWED_BY {
   reviewerId:  $validatorAgentId,
   verdict:     'APPROVED',          // APPROVED | REJECTED | NEEDS_REVISION
@@ -7082,7 +7081,7 @@ CREATE (result)-[:REVIEWED_BY {
   reviewedAt:  datetime()
 }]->(validator)
 
-// QUALITY_ISSUE — обнаружение проблемы в данных другого агента
+// QUALITY_ISSUE — detection of a problem in another agent's data
 CREATE (node)-[:QUALITY_ISSUE {
   issueId:     $issueId,
   reporterId:  $reporterAgentId,
@@ -7094,24 +7093,24 @@ CREATE (node)-[:QUALITY_ISSUE {
 }]->(reporter)
 ```
 
-### Правило неприкосновенности данных
+### Data Inviolability Rule
 
-> **Агент, обнаруживший проблему в данных другого агента, ОБЯЗАН зафиксировать это как ребро `QUALITY_ISSUE` с описанием проблемы, а не молча исправить.** Молчаливое исправление нарушает цепочку провенанса и делает невозможным анализ системных ошибок.
+> **An agent that discovers a problem in another agent's data MUST record it as a `QUALITY_ISSUE` edge with a description of the problem, rather than silently correcting it.** Silent correction breaks the provenance chain and makes analysis of systemic errors impossible.
 
 ---
 
-## 8.2 Консенсус качества: голосование агентов
+## 8.2 Quality Consensus: Agent Voting
 
-### Три уровня консенсуса
+### Three Consensus Levels
 
-Механизмы консенсуса определены в [Манифесте для ИИ-агентов](../manifesto/AI_MANIFESTO.md) и реализуются через протокол голосования.
+Consensus mechanisms are defined in the [AI Agent Manifesto](../manifesto/AI_MANIFESTO.md) and are implemented through a voting protocol.
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
-│                       УРОВНИ КОНСЕНСУСА                           │
+│                       CONSENSUS LEVELS                            │
 ├────────────────┬──────────────────┬────────────────────────────────┤
 │   MAJORITY     │    WEIGHTED      │        UNANIMOUS               │
-│   (> 50%)      │  (взвешенное)    │        (100%)                  │
+│   (> 50%)      │  (weighted)      │        (100%)                  │
 ├────────────────┼──────────────────┼────────────────────────────────┤
 │ Entity         │ SQL schema →     │ DELETE entity                  │
 │ resolution     │ business rules   │ MERGE entities                 │
@@ -7125,14 +7124,14 @@ CREATE (node)-[:QUALITY_ISSUE {
 │ Routine        │ Domain expertise │ Schema migration               │
 │ enrichment     │ required         │                                │
 ├────────────────┼──────────────────┼────────────────────────────────┤
-│ Порог: >50%    │ Порог: Σweight × │ Порог: 100% участников         │
-│ голосов        │ vote > 0.5       │ согласны                       │
-│ кворум: ≥3     │ кворум: ≥3       │ кворум: ≥3 (все с trustScore   │
-│ агента         │ агента           │ ≥ 0.8 в домене)                │
+│ Threshold: >50%│ Threshold: Σweight│ Threshold: 100% of            │
+│ of votes       │ × vote > 0.5     │ participants agree             │
+│ quorum: ≥3     │ quorum: ≥3       │ quorum: ≥3 (all with          │
+│ agents         │ agents           │ trustScore ≥ 0.8 in domain)   │
 └────────────────┴──────────────────┴────────────────────────────────┘
 ```
 
-### Протокол голосования
+### Voting Protocol
 
 ```
 ┌──────────┐     Propose      ┌───────────┐     Broadcast     ┌──────────┐
@@ -7153,7 +7152,7 @@ CREATE (node)-[:QUALITY_ISSUE {
                               └────────────┘
 ```
 
-**Реализация протокола:**
+**Protocol implementation:**
 
 ```javascript
 class VotingSession {
@@ -7224,50 +7223,50 @@ class VotingSession {
 }
 ```
 
-### Правила тайм-аута и кворума
+### Timeout and Quorum Rules
 
-| Параметр | MAJORITY | WEIGHTED | UNANIMOUS |
+| Parameter | MAJORITY | WEIGHTED | UNANIMOUS |
 |----------|----------|----------|-----------|
-| Кворум | ≥ 3 агента | ≥ 3 агента | Все агенты с trustScore ≥ 0.8 |
-| Тайм-аут раунда | 30 сек | 60 сек | 120 сек |
-| Макс. раундов | 1 | 2 | 3 |
-| При отсутствии кворума | ESCALATED | ESCALATED | ESCALATED |
-| При тайм-ауте | Решение по текущим голосам | Решение по текущим голосам | ESCALATED |
+| Quorum | ≥ 3 agents | ≥ 3 agents | All agents with trustScore ≥ 0.8 |
+| Round timeout | 30 sec | 60 sec | 120 sec |
+| Max rounds | 1 | 2 | 3 |
+| On quorum not reached | ESCALATED | ESCALATED | ESCALATED |
+| On timeout | Decision by current votes | Decision by current votes | ESCALATED |
 
-### Разрешение конфликтов
+### Conflict Resolution
 
-Если консенсус не достигнут после максимального числа раундов, задача эскалируется по цепочке:
+If consensus is not reached after the maximum number of rounds, the task is escalated along the chain:
 
 ```
-Раунд 1 ──► Нет консенсуса ──► Раунд 2 ──► Нет консенсуса ──► Раунд 3
+Round 1 ──► No consensus ──► Round 2 ──► No consensus ──► Round 3
                                                                     │
-                                                              Нет консенсуса
+                                                              No consensus
                                                                     │
                                                               ┌─────▼──────┐
                                                               │ ESCALATION │
                                                               │            │
                                                               │ Orchestrator│
-                                                              │ принимает  │
-                                                              │ решение    │
+                                                              │ makes the  │
+                                                              │ decision   │
                                                               └─────┬──────┘
                                                                     │
                                                     ┌───────────────┼──────────────┐
                                                     │               │              │
                                             trustScore ≥ 0.95   trustScore      human
                                             → Orchestrator       < 0.95         review
-                                              решает сам         → эскалация    required
-                                                                   к человеку
+                                              decides itself     → escalation    required
+                                                                   to human
 ```
 
-Все решения (включая эскалированные) фиксируются в графе как рёбра `:DECIDED_BY` с полным обоснованием.
+All decisions (including escalated ones) are recorded in the graph as `:DECIDED_BY` edges with full justification.
 
 ---
 
-## 8.3 Автономная оптимизация (APES — Agent Performance Evolution System)
+## 8.3 Autonomous Optimization (APES — Agent Performance Evolution System)
 
-### Архитектура APES
+### APES Architecture
 
-APES — это замкнутый контур обратной связи, объединяющий две существующие библиотеки паттернов системы в единый механизм самооптимизации.
+APES is a closed feedback loop that combines the system's two existing pattern libraries into a single self-optimization mechanism.
 
 ```
     ┌───────────────────────────────────────────────────────────────────┐
@@ -7282,7 +7281,7 @@ APES — это замкнутый контур обратной связи, о�
     │         │                                               │        │
     │         └───────────────────────────────────────────────┘        │
     │                                                                  │
-    │    Компоненты:                                                    │
+    │    Components:                                                    │
     │    ┌─────────────────────────┐  ┌─────────────────────────────┐  │
     │    │ Runtime PatternLibrary  │  │ Extraction PatternLibrary   │  │
     │    │ runtime/learning/       │  │ services/patterns/          │  │
@@ -7292,8 +7291,8 @@ APES — это замкнутый контур обратной связи, о�
     │    │ - suggestBestGraph()    │  │ - registerRelationPattern() │  │
     │    │ - getStats()            │  │ - learnFromExtraction()     │  │
     │    │                         │  │ - matchPatterns()           │  │
-    │    │ Метрики:                │  │                             │  │
-    │    │ - successRate           │  │ Метрики:                    │  │
+    │    │ Metrics:                │  │                             │  │
+    │    │ - successRate           │  │ Metrics:                    │  │
     │    │ - avgDurationMs         │  │ - observationCount          │  │
     │    │ - executionCount        │  │ - confidence                │  │
     │    └─────────────────────────┘  │ - domain coverage           │  │
@@ -7303,11 +7302,11 @@ APES — это замкнутый контур обратной связи, о�
 
 ### Runtime PatternLibrary
 
-Файл: `api/src/runtime/learning/PatternLibrary.js`
+File: `api/src/runtime/learning/PatternLibrary.js`
 
-Эта библиотека работает на уровне GXE Runtime — она запоминает, какие графы (DAG) были успешно выполнены, и автоматически предлагает лучший граф для новой задачи на основе категории.
+This library operates at the GXE Runtime level — it remembers which graphs (DAGs) were executed successfully and automatically suggests the best graph for a new task based on its category.
 
-**Ключевые операции:**
+**Key operations:**
 
 ```javascript
 const { PatternLibrary } = require('./runtime/learning/PatternLibrary');
@@ -7317,10 +7316,10 @@ const library = new PatternLibrary({
   minSuccessRate: 0.7
 });
 
-// ── EXECUTE: выполнить граф ──────────────────────────────────────
+// ── EXECUTE: run the graph ──────────────────────────────────────
 const result = await runtimeEngine.run(dagDefinition, inputData);
 
-// ── MEASURE: записать результат ──────────────────────────────────
+// ── MEASURE: record result ──────────────────────────────────────
 await library.recordExecution({
   category:   'sql-extraction',
   graphHash:  dagDefinition.contentHash,
@@ -7329,33 +7328,33 @@ await library.recordExecution({
   dag:        dagDefinition
 });
 
-// ── COMPARE: получить лучший граф для категории ──────────────────
+// ── COMPARE: get the best graph for a category ──────────────────
 const bestPattern = await library.suggestBestGraph('sql-extraction');
 // Returns: { dag, successRate, avgDurationMs, executionCount }
 
-// ── ADJUST: если текущий граф хуже лучшего — заменить ────────────
+// ── ADJUST: if the current graph is worse than the best — replace ─
 if (bestPattern && bestPattern.successRate > currentSuccessRate) {
   dagDefinition = bestPattern.dag;  // Use the better-performing graph
 }
 ```
 
-**Кэш-стратегия:** LRU (Least Recently Used) с eviction при превышении `maxSize`. Паттерны с `successRate < minSuccessRate` (по умолчанию 0.7) не кэшируются.
+**Cache strategy:** LRU (Least Recently Used) with eviction when `maxSize` is exceeded. Patterns with `successRate < minSuccessRate` (default 0.7) are not cached.
 
 ### Extraction PatternLibrary
 
-Файл: `api/src/services/patterns/pattern-library.js`
+File: `api/src/services/patterns/pattern-library.js`
 
-Эта библиотека работает на уровне извлечения знаний — она накапливает шаблоны для распознавания сущностей, связей и подграфов в тексте.
+This library operates at the knowledge extraction level — it accumulates templates for recognizing entities, relationships, and subgraphs in text.
 
-**Типы паттернов:**
+**Pattern types:**
 
-| Тип | Класс | Пример |
+| Type | Class | Example |
 |-----|-------|--------|
 | Entity | `EntityPattern` | `{name: "SQLTable", regex: /CREATE TABLE\s+(\w+)/}` |
 | Relation | `RelationPattern` | `{type: "REFERENCES", source: "Column", target: "Table"}` |
 | Subgraph | `SubgraphPattern` | `{name: "FK-chain", nodes: [...], edges: [...]}` |
 
-**Автоматическое продвижение паттернов:**
+**Automatic pattern promotion:**
 
 ```javascript
 const patternLib = new PatternLibrary({
@@ -7363,7 +7362,7 @@ const patternLib = new PatternLibrary({
   learningThreshold: 5   // Auto-promote after 5 successful observations
 });
 
-// Регистрация паттерна вручную
+// Manual pattern registration
 patternLib.registerEntityPattern({
   name:       'StoredProcedure',
   domain:     'SQL',
@@ -7372,99 +7371,98 @@ patternLib.registerEntityPattern({
   confidence: 0.9
 });
 
-// Автоматическое обучение из результатов извлечения
+// Automatic learning from extraction results
 patternLib.learnFromExtraction({
   source:   'mssql-schema-scan',
   entities: extractedEntities,
   relations: extractedRelations
 });
-// Если паттерн наблюдался ≥ learningThreshold (5) раз
-// → автоматически продвигается из learningBuffer в основной каталог
+// If a pattern has been observed ≥ learningThreshold (5) times
+// → it is automatically promoted from learningBuffer into the main catalog
 
-// Поиск паттернов по домену
+// Find patterns by domain
 const sqlPatterns = patternLib.findByDomain('SQL');
 ```
 
-### Контур самонастройки (Self-Tuning Loop)
+### Self-Tuning Loop
 
-Полный цикл самооптимизации APES:
+Full APES self-optimization cycle:
 
 ```
- Шаг 1: EXECUTE                Шаг 2: MEASURE
+ Step 1: EXECUTE               Step 2: MEASURE
  ─────────────────              ─────────────────
- Выполнить граф                 Записать метрики
- с текущими                     в PatternLibrary
- параметрами                    (success/failure,
+ Run the graph                  Record metrics
+ with current                   in PatternLibrary
+ parameters                     (success/failure,
                                 duration, outputs)
         │                              │
         │                              ▼
-        │                       Шаг 3: COMPARE
+        │                       Step 3: COMPARE
         │                       ─────────────────
-        │                       Сравнить текущий
-        │                       результат с лучшим
-        │                       паттерном категории
+        │                       Compare the current
+        │                       result with the best
+        │                       pattern for category
         │                              │
         │                              ▼
-        │                       Шаг 4: ADJUST
+        │                       Step 4: ADJUST
         │                       ─────────────────
-        │                       Если текущий хуже:
-        │                       - заменить граф
-        │                       - обновить параметры
-        │                       - продвинуть паттерн
+        │                       If current is worse:
+        │                       - replace the graph
+        │                       - update parameters
+        │                       - promote the pattern
         │                              │
         └──────────────────────────────┘
-              (следующая итерация)
+              (next iteration)
 ```
 
-**Ключевые метрики APES:**
+**Key APES metrics:**
 
-| Метрика | Источник | Пороговое значение |
+| Metric | Source | Threshold |
 |---------|----------|-------------------|
-| `successRate` | Runtime PatternLibrary | ≥ 0.7 для кэширования |
-| `avgDurationMs` | Runtime PatternLibrary | Снижение ≥ 10% = улучшение |
-| `observationCount` | Extraction PatternLibrary | ≥ 5 для auto-promotion |
-| `confidence` | Extraction PatternLibrary | ≥ 0.4 для pattern matching |
-| `domainCoverage` | Extraction PatternLibrary | Доля покрытых паттернов в домене |
+| `successRate` | Runtime PatternLibrary | ≥ 0.7 for caching |
+| `avgDurationMs` | Runtime PatternLibrary | Reduction ≥ 10% = improvement |
+| `observationCount` | Extraction PatternLibrary | ≥ 5 for auto-promotion |
+| `confidence` | Extraction PatternLibrary | ≥ 0.4 for pattern matching |
+| `domainCoverage` | Extraction PatternLibrary | Share of covered patterns in domain |
 
 ---
 
-## 8.4 Обнаружение и разрешение противоречий
+## 8.4 Contradiction Detection and Resolution
 
-### Типы противоречий
+### Contradiction Types
 
-Система различает четыре класса противоречий, каждый из которых требует отдельной стратегии обнаружения и разрешения.
+The system distinguishes four classes of contradictions, each requiring a separate detection and resolution strategy.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│                      ТИПЫ ПРОТИВОРЕЧИЙ                               │
+│                      CONTRADICTION TYPES                             │
 ├─────────────────┬────────────────────────────────────────────────────┤
 │                 │                                                    │
-│   FACTUAL       │  Одинаковый contentHash, разные свойства           │
-│   (фактическое) │  Пример: rowCount = 50000 vs rowCount = 52347    │
+│   FACTUAL       │  Same contentHash, different properties            │
+│                 │  Example: rowCount = 50000 vs rowCount = 52347    │
 │                 │                                                    │
 ├─────────────────┼────────────────────────────────────────────────────┤
 │                 │                                                    │
-│   TEMPORAL       │  Перекрывающиеся valid_time окна для одной        │
-│   (временное)    │  сущности                                         │
-│                 │  Пример: vt=[Jan-Mar] ∩ vt=[Feb-Apr] для          │
-│                 │  одного и того же факта                            │
+│   TEMPORAL      │  Overlapping valid_time windows for one entity     │
+│                 │  Example: vt=[Jan-Mar] ∩ vt=[Feb-Apr] for the     │
+│                 │  same fact                                         │
 │                 │                                                    │
 ├─────────────────┼────────────────────────────────────────────────────┤
 │                 │                                                    │
-│   STRUCTURAL     │  Конфликтующие направления или типы рёбер         │
-│   (структурное)  │  Пример: A-[DEPENDS_ON]->B и B-[DEPENDS_ON]->A  │
-│                 │  (циклическая зависимость)                        │
+│   STRUCTURAL    │  Conflicting edge directions or types              │
+│                 │  Example: A-[DEPENDS_ON]->B and B-[DEPENDS_ON]->A │
+│                 │  (circular dependency)                             │
 │                 │                                                    │
 ├─────────────────┼────────────────────────────────────────────────────┤
 │                 │                                                    │
-│   CONFIDENCE     │  Значительное расхождение confidence (> 0.3)      │
-│   (по           │  для одного и того же факта из разных источников  │
-│   уверенности)  │  Пример: conf=0.9 (LLM) vs conf=0.5 (regex)     │
+│   CONFIDENCE    │  Significant confidence divergence (> 0.3)         │
+│                 │  for the same fact from different sources          │
+│                 │  Example: conf=0.9 (LLM) vs conf=0.5 (regex)     │
 │                 │                                                    │
 └─────────────────┴────────────────────────────────────────────────────┘
 ```
 
-### Механизмы обнаружения
+### Detection Mechanisms
 
 ```javascript
 class ContradictionDetector {
@@ -7547,16 +7545,16 @@ class ContradictionDetector {
 }
 ```
 
-### Стратегии разрешения
+### Resolution Strategies
 
-| Стратегия | Описание | Когда применяется |
+| Strategy | Description | When applied |
 |-----------|----------|-------------------|
-| **SUPERSEDE** | Новый факт заменяет старый (старый → `SUPERSEDED`) | Новый факт имеет более высокий `confidence` или более свежий `vt_start` |
-| **MERGE** | Объединение фактов в один с комбинированными свойствами | Факты дополняют друг друга (разные непротиворечащие поля) |
-| **COEXIST** | Оба факта остаются активными с пометкой | Разные точки зрения, оба обоснованы (разные `sourceType`) |
-| **ESCALATE** | Передача решения на вышестоящий уровень | Невозможно определить автоматически, требуется экспертиза |
+| **SUPERSEDE** | New fact replaces the old one (old → `SUPERSEDED`) | New fact has higher `confidence` or a more recent `vt_start` |
+| **MERGE** | Facts are merged into one with combined properties | Facts complement each other (different non-conflicting fields) |
+| **COEXIST** | Both facts remain active with a flag | Different viewpoints, both justified (different `sourceType`) |
+| **ESCALATE** | Decision passed to a higher level | Cannot be determined automatically, requires expert judgment |
 
-### Схема ребра CONTRADICTS
+### CONTRADICTS Edge Schema
 
 ```cypher
 CREATE (existing)-[:CONTRADICTS {
@@ -7574,16 +7572,16 @@ CREATE (existing)-[:CONTRADICTS {
 }]->(incoming)
 ```
 
-### Жизненный цикл противоречия
+### Contradiction Lifecycle
 
 ```
-  ┌─────────┐     Обнаружение      ┌─────────────┐
-  │ Новый   │─────────────────────►│             │
-  │ факт    │                      │  DETECTED   │
+  ┌─────────┐     Detection        ┌─────────────┐
+  │ New     │─────────────────────►│             │
+  │ fact    │                      │  DETECTED   │
   │         │                      │             │
   └─────────┘                      └──────┬──────┘
                                           │
-                                   Классификация
+                                   Classification
                                    (type, severity)
                                           │
                                    ┌──────▼──────┐
@@ -7594,8 +7592,8 @@ CREATE (existing)-[:CONTRADICTS {
                                           │
                           ┌───────────────┼───────────────┐
                           │               │               │
-                   confidence         severity        структурное
-                   delta < 0.3       = LOW             совпадение
+                   confidence         severity        structural
+                   delta < 0.3       = LOW             match
                           │               │               │
                    auto-resolve      auto-resolve     ┌───▼────┐
                           │               │           │        │
@@ -7616,20 +7614,20 @@ CREATE (existing)-[:CONTRADICTS {
 
 ---
 
-## 8.5 Self-Documentation: граф документирует себя
+## 8.5 Self-Documentation: The Graph Documents Itself
 
-### Принцип самодокументации
+### Self-Documentation Principle
 
-Граф знаний UN ProjectAdvisor является **самодокументирующейся системой**. Каждое значимое решение, принятое системой или её агентами, автоматически фиксируется как узел ADR (Architecture Decision Record) в пространстве имён `META`.
+The UN ProjectAdvisor knowledge graph is a **self-documenting system**. Every significant decision made by the system or its agents is automatically recorded as an ADR (Architecture Decision Record) node in the `META` namespace.
 
-Значимые решения включают:
+Significant decisions include:
 
-- Изменение схемы графа (добавление нового типа узла или ребра)
-- Продвижение паттерна в PatternLibrary (auto-promotion)
-- Разрешение противоречия (SUPERSEDE, MERGE, COEXIST)
-- Повышение уровня автономии агента
-- Создание нового namespace
-- Миграция данных между версиями
+- Graph schema changes (adding a new node or edge type)
+- Pattern promotion in PatternLibrary (auto-promotion)
+- Contradiction resolution (SUPERSEDE, MERGE, COEXIST)
+- Agent autonomy level upgrade
+- New namespace creation
+- Data migration between versions
 
 ### ADR (Architecture Decision Record)
 
@@ -7637,14 +7635,14 @@ CREATE (existing)-[:CONTRADICTS {
 CREATE (adr:ADR:NodeVersion {
   adrId:          'ADR-2026-0342',
   namespace:      'META',
-  title:          'Автоматическое продвижение паттерна StoredProcedure',
+  title:          'Automatic promotion of StoredProcedure pattern',
   status:         'ACCEPTED',        // PROPOSED | ACCEPTED | DEPRECATED | SUPERSEDED
-  context:        'Паттерн StoredProcedure наблюдался 7 раз с confidence ≥ 0.85. ' +
-                  'Порог auto-promotion (5 наблюдений) превышен.',
-  decision:       'Паттерн продвинут из learningBuffer в основной каталог ' +
-                  'Extraction PatternLibrary.',
-  consequences:   'Будущие извлечения из SQL-кода будут автоматически ' +
-                  'распознавать хранимые процедуры без явного указания паттерна.',
+  context:        'The StoredProcedure pattern was observed 7 times with confidence ≥ 0.85. ' +
+                  'The auto-promotion threshold (5 observations) has been exceeded.',
+  decision:       'Pattern promoted from learningBuffer into the main catalog ' +
+                  'of Extraction PatternLibrary.',
+  consequences:   'Future extractions from SQL code will automatically ' +
+                  'recognize stored procedures without explicit pattern specification.',
   createdBy:      'agent-optimizer-pattern-001',
   createdAt:      datetime(),
   decisionType:   'PATTERN_PROMOTION',  // SCHEMA_CHANGE | PATTERN_PROMOTION |
@@ -7656,11 +7654,11 @@ CREATE (adr:ADR:NodeVersion {
 })
 ```
 
-### Связи ADR с затронутыми узлами
+### ADR Relations to Affected Nodes
 
 ```
 ┌──────────┐   MOTIVATED_BY    ┌──────────────────┐
-│  ADR     │──────────────────►│ Затронутый узел   │
+│  ADR     │──────────────────►│ Affected node     │
 │  node    │                   │ (Pattern,         │
 │          │                   │  Schema,          │
 │          │   MOTIVATED_BY    │  Namespace,       │
@@ -7668,14 +7666,14 @@ CREATE (adr:ADR:NodeVersion {
 │          │                   └──────────────────┘
 │          │
 │          │   SUPERSEDES      ┌──────────────────┐
-│          │──────────────────►│ Предыдущий ADR   │
-│          │                   │ (если замена)     │
+│          │──────────────────►│ Previous ADR      │
+│          │                   │ (if replacement)  │
 │          │                   └──────────────────┘
 └──────────┘
 ```
 
 ```cypher
-// Связь ADR с затронутым паттерном
+// Link ADR to affected pattern
 MATCH (adr:ADR {adrId: 'ADR-2026-0342'})
 MATCH (pattern:Pattern {name: 'StoredProcedure', domain: 'SQL'})
 CREATE (adr)-[:MOTIVATED_BY {
@@ -7684,7 +7682,7 @@ CREATE (adr)-[:MOTIVATED_BY {
   createdAt: datetime()
 }]->(pattern)
 
-// Связь ADR с агентом, принявшим решение
+// Link ADR to the agent that made the decision
 MATCH (adr:ADR {adrId: 'ADR-2026-0342'})
 MATCH (agent:Agent {agentId: 'agent-optimizer-pattern-001'})
 CREATE (adr)-[:DECIDED_BY {
@@ -7693,7 +7691,7 @@ CREATE (adr)-[:DECIDED_BY {
 }]->(agent)
 ```
 
-### Автогенерация ADR
+### ADR Auto-Generation
 
 ```javascript
 class ADRGenerator {
@@ -7745,12 +7743,12 @@ class ADRGenerator {
 }
 ```
 
-### Автогенерация Changelog из SUPERSEDES-цепочек
+### Automatic Changelog Generation from SUPERSEDES Chains
 
-Система автоматически генерирует историю изменений (changelog) для любой сущности, обходя цепочку `SUPERSEDES`:
+The system automatically generates a changelog for any entity by traversing the `SUPERSEDES` chain:
 
 ```cypher
-// Получить полную историю изменений для сущности
+// Get the full changelog for an entity
 MATCH path = (current:NodeVersion {entityId: $entityId, status: 'ACTIVE'})
               -[:SUPERSEDES*]->(ancestor:NodeVersion)
 WITH nodes(path) AS versions
@@ -7760,32 +7758,32 @@ RETURN v.versionId, v.sequenceNumber, v.status,
 ORDER BY v.sequenceNumber DESC
 ```
 
-**Формат автоматического changelog:**
+**Automatic changelog format:**
 
 ```
-CHANGELOG для entityId: BR-001 (Правило валидации бюджета)
+CHANGELOG for entityId: BR-001 (Budget Validation Rule)
 ═══════════════════════════════════════════════════════════
 
 v3 [ACTIVE]    2026-03-12  agent-enricher-002
-   Добавлено: связь с namespace FINANCE
+   Added: link to namespace FINANCE
    ADR: ADR-2026-0341
 
 v2 [SUPERSEDED] 2026-03-10  agent-extractor-sql-001
-   Изменено: confidence 0.7 → 0.9 (подтверждено из SQL constraint)
+   Changed: confidence 0.7 → 0.9 (confirmed from SQL constraint)
    ADR: ADR-2026-0298
 
 v1 [SUPERSEDED] 2026-03-08  agent-extractor-doc-003
-   Создано: извлечено из документа "Budget Policy 2026.docx"
+   Created: extracted from document "Budget Policy 2026.docx"
    ADR: null (initial creation)
 ```
 
-### Граф как самодокументирующаяся система
+### The Graph as a Self-Documenting System
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
 │                    SELF-DOCUMENTING GRAPH                          │
 │                                                                    │
-│   Данные                   Решения                  История       │
+│   Data                     Decisions                History        │
 │   ──────                   ───────                  ───────       │
 │   (:Table)                 (:ADR)                   SUPERSEDES    │
 │   (:Column)                  │                      chain         │
@@ -7794,90 +7792,89 @@ v1 [SUPERSEDED] 2026-03-08  agent-extractor-doc-003
 │        │                     │                         │          │
 │        └─────────────────────┘                         │          │
 │                                                        │          │
-│   Паттерны                 Агенты                      │          │
+│   Patterns                 Agents                      │          │
 │   ────────                 ──────                      │          │
 │   (:Pattern)               (:Agent)                    │          │
 │        │                     │                         │          │
 │        │              DECIDED_BY                       │          │
 │        └─────────────────────┘                         │          │
 │                                                        │          │
-│   Противоречия             Версии                      │          │
+│   Contradictions           Versions                    │          │
 │   ──────────────           ──────                      │          │
 │   CONTRADICTS edges        (:NodeVersion)──────────────┘          │
 │                                                                    │
-│   Каждый элемент графа ССЫЛАЕТСЯ на решение,                      │
-│   которое привело к его созданию.                                 │
+│   Every graph element REFERENCES the decision                     │
+│   that led to its creation.                                       │
 └────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 8.6 Уровни автономии (Autonomy Levels 0-4)
+## 8.6 Autonomy Levels (0-4)
 
-### Определение уровней
+### Level Definitions
 
-Система определяет пять уровней автономии, через которые агент (или группа агентов) проходит по мере накопления доверия.
+The system defines five autonomy levels through which an agent (or group of agents) progresses as trust accumulates.
 
 ```
 Level 0       Level 1        Level 2       Level 3        Level 4
 MANUAL        SUPERVISED     GUIDED        AUTONOMOUS     SELF-EVOLVING
   │               │              │              │              │
-  │  Агент        │  Агент       │  Агент       │  Агент       │  Агент
-  │  предлагает,  │  выполняет   │  выполняет   │  обрабатывает│  может
-  │  человек      │  рутинные,   │  большинство │  все операции│  изменять
-  │  утверждает   │  человек     │  операций,   │  самостоятельно│ собственные
-  │  ВСЁ          │  утверждает  │  человек     │  человек     │  правила
-  │               │  критические │  проверяет   │  вмешивается │  (unanimous
-  │               │              │  дайджест    │  при аномалиях│  consensus)
-  │               │              │  еженедельно │              │
+  │  Agent        │  Agent       │  Agent       │  Agent       │  Agent
+  │  proposes,    │  performs    │  handles     │  handles all │  may modify
+  │  human        │  routine,    │  most ops,   │  operations  │  its own
+  │  approves     │  human       │  human       │  autonomously│  rules
+  │  EVERYTHING   │  approves    │  reviews     │  human       │  (unanimous
+  │               │  critical    │  weekly      │  intervenes  │  consensus)
+  │               │              │  digest      │  on anomalies│
   ▼               ▼              ▼              ▼              ▼
 trustScore    trustScore     trustScore    trustScore     trustScore
   N/A           ≥ 0.80         ≥ 0.90        ≥ 0.95         ≥ 0.98
 ```
 
-### Текущий статус системы
+### Current System Status
 
-> **Система UN ProjectAdvisor работает на Level 1 (Supervised).**
+> **The UN ProjectAdvisor system operates at Level 1 (Supervised).**
 >
-> Агенты выполняют рутинные операции (извлечение, валидация, обогащение)
-> автономно. Критические операции (удаление, слияние, изменение namespace)
-> требуют подтверждения человека.
+> Agents perform routine operations (extraction, validation, enrichment)
+> autonomously. Critical operations (deletion, merging, namespace changes)
+> require human approval.
 
-### Матрица полномочий
+### Authority Matrix
 
 ```
 ┌─────────────────────────┬────────┬────────┬────────┬────────┬────────┐
-│ Операция                │ Lv 0   │ Lv 1   │ Lv 2   │ Lv 3   │ Lv 4   │
+│ Operation               │ Lv 0   │ Lv 1   │ Lv 2   │ Lv 3   │ Lv 4   │
 │                         │ Manual │ Super. │ Guided │ Auto.  │ S-Evol │
 ├─────────────────────────┼────────┼────────┼────────┼────────┼────────┤
-│ Создать узел            │ HUMAN  │ AUTO   │ AUTO   │ AUTO   │ AUTO   │
-│ Создать ребро           │ HUMAN  │ AUTO   │ AUTO   │ AUTO   │ AUTO   │
-│ Обновить confidence     │ HUMAN  │ AUTO   │ AUTO   │ AUTO   │ AUTO   │
+│ Create node             │ HUMAN  │ AUTO   │ AUTO   │ AUTO   │ AUTO   │
+│ Create edge             │ HUMAN  │ AUTO   │ AUTO   │ AUTO   │ AUTO   │
+│ Update confidence       │ HUMAN  │ AUTO   │ AUTO   │ AUTO   │ AUTO   │
 │ Entity resolution       │ HUMAN  │ HUMAN  │ AUTO   │ AUTO   │ AUTO   │
-│ Продвинуть паттерн      │ HUMAN  │ HUMAN  │ AUTO   │ AUTO   │ AUTO   │
-│ Разрешить противоречие  │ HUMAN  │ HUMAN  │ REVIEW │ AUTO   │ AUTO   │
-│ Создать namespace       │ HUMAN  │ HUMAN  │ HUMAN  │ AUTO   │ AUTO   │
-│ Изменить namespace      │ HUMAN  │ HUMAN  │ HUMAN  │ HUMAN  │ AUTO*  │
+│ Promote pattern         │ HUMAN  │ HUMAN  │ AUTO   │ AUTO   │ AUTO   │
+│ Resolve contradiction   │ HUMAN  │ HUMAN  │ REVIEW │ AUTO   │ AUTO   │
+│ Create namespace        │ HUMAN  │ HUMAN  │ HUMAN  │ AUTO   │ AUTO   │
+│ Change namespace        │ HUMAN  │ HUMAN  │ HUMAN  │ HUMAN  │ AUTO*  │
 │ MERGE entities          │ HUMAN  │ HUMAN  │ HUMAN  │ HUMAN  │ AUTO*  │
 │ DELETE (Tombstone)      │ HUMAN  │ HUMAN  │ HUMAN  │ HUMAN  │ AUTO*  │
-│ Миграция схемы          │ HUMAN  │ HUMAN  │ HUMAN  │ HUMAN  │ AUTO*  │
-│ Изменить правила агента │ HUMAN  │ HUMAN  │ HUMAN  │ HUMAN  │ UNAN*  │
-│ Повысить autonomy level │ HUMAN  │ HUMAN  │ HUMAN  │ HUMAN  │ UNAN*  │
+│ Schema migration        │ HUMAN  │ HUMAN  │ HUMAN  │ HUMAN  │ AUTO*  │
+│ Change agent rules      │ HUMAN  │ HUMAN  │ HUMAN  │ HUMAN  │ UNAN*  │
+│ Upgrade autonomy level  │ HUMAN  │ HUMAN  │ HUMAN  │ HUMAN  │ UNAN*  │
 ├─────────────────────────┼────────┼────────┼────────┼────────┼────────┤
-│ HUMAN  = требует подтверждения человека                               │
-│ AUTO   = агент выполняет автономно                                    │
-│ REVIEW = агент выполняет, человек проверяет в дайджесте              │
-│ AUTO*  = автономно, но с unanimous consensus агентов                  │
-│ UNAN*  = только через unanimous consensus + Orchestrator trustScore  │
+│ HUMAN  = requires human approval                                      │
+│ AUTO   = agent executes autonomously                                  │
+│ REVIEW = agent executes, human reviews in digest                      │
+│ AUTO*  = autonomously, but with unanimous agent consensus             │
+│ UNAN*  = only via unanimous consensus + Orchestrator trustScore       │
 │          ≥ 0.98                                                       │
 └───────────────────────────────────────────────────────────────────────┘
 ```
 
-### Критерии повышения уровня
+### Level Upgrade Criteria
 
-Переход на каждый следующий уровень автономии требует выполнения метрических порогов на протяжении **минимум 30 дней**.
+Transition to each next autonomy level requires meeting metric thresholds for a **minimum of 30 days**.
 
-| Критерий | Lv 0→1 | Lv 1→2 | Lv 2→3 | Lv 3→4 |
+| Criterion | Lv 0→1 | Lv 1→2 | Lv 2→3 | Lv 3→4 |
 |----------|--------|--------|--------|--------|
 | **trustScore** | ≥ 0.80 | ≥ 0.90 | ≥ 0.95 | ≥ 0.98 |
 | **successRate** (Runtime) | ≥ 70% | ≥ 85% | ≥ 95% | ≥ 99% |
@@ -7886,10 +7883,10 @@ trustScore    trustScore     trustScore    trustScore     trustScore
 | **Confidence calibration** | ≥ 0.6 | ≥ 0.75 | ≥ 0.85 | ≥ 0.95 |
 | **QUALITY_ISSUE rate** (per 1000 ops) | < 50 | < 20 | < 5 | < 1 |
 | **Contradiction resolution accuracy** | N/A | ≥ 80% | ≥ 90% | ≥ 97% |
-| **Минимум операций** | 100 | 1,000 | 10,000 | 100,000 |
-| **Минимальный срок на уровне** | - | 30 дней | 90 дней | 180 дней |
+| **Minimum operations** | 100 | 1,000 | 10,000 | 100,000 |
+| **Minimum time at level** | - | 30 days | 90 days | 180 days |
 
-### Протокол повышения уровня
+### Level Upgrade Protocol
 
 ```javascript
 async function evaluateAutonomyUpgrade(agentId) {
@@ -7939,60 +7936,60 @@ async function evaluateAutonomyUpgrade(agentId) {
 }
 ```
 
-### Понижение уровня (Demotion)
+### Level Demotion
 
-Понижение уровня автономии происходит автоматически при нарушении порогов:
+Autonomy level demotion occurs automatically when thresholds are violated:
 
-| Триггер | Действие |
+| Trigger | Action |
 |---------|----------|
-| `trustScore` упал ниже порога текущего уровня | Понижение на 1 уровень |
-| `QUALITY_ISSUE` rate превысил порог в 3x | Понижение на 1 уровень |
-| Критическое противоречие, созданное агентом | Понижение на 1 уровень + review |
-| Обнаружена фальсификация провенанса | Понижение до Level 0 + расследование |
+| `trustScore` dropped below the current level threshold | Demote by 1 level |
+| `QUALITY_ISSUE` rate exceeded threshold by 3x | Demote by 1 level |
+| Critical contradiction created by the agent | Demote by 1 level + review |
+| Provenance falsification detected | Demote to Level 0 + investigation |
 
 ---
 
-## Перспективы развития
+## Future Directions
 
-### Интеграция с GNN для предиктивного скоринга качества
+### GNN Integration for Predictive Quality Scoring
 
-GNN-сервис (порт 5000) уже поддерживает link prediction и node classification. В будущем эти возможности будут интегрированы в APES:
+The GNN service (port 5000) already supports link prediction and node classification. In the future, these capabilities will be integrated into APES:
 
-- **Предиктивное обнаружение противоречий** — GNN предсказывает конфликтующие рёбра до их создания на основе структурных паттернов графа
-- **Рекомендация trustScore** — GNN анализирует историю агента и предсказывает оптимальный trustScore на основе embedding-сходства с успешными агентами
-- **Оптимизация графов** — GNN предлагает структурные улучшения (недостающие рёбра, избыточные узлы) на основе обученной модели графовой структуры
+- **Predictive contradiction detection** — GNN predicts conflicting edges before they are created, based on structural graph patterns
+- **trustScore recommendation** — GNN analyzes agent history and predicts the optimal trustScore based on embedding similarity with successful agents
+- **Graph optimization** — GNN suggests structural improvements (missing edges, redundant nodes) based on a trained graph structure model
 
-### Федеративное обучение между duty stations
+### Federated Learning Across Duty Stations
 
-26 duty stations ООН генерируют знания параллельно. Федеративное обучение позволит:
+26 UN duty stations generate knowledge in parallel. Federated learning will allow:
 
-- Каждая станция обучает локальную модель на своих данных
-- Градиенты (не данные) агрегируются центральным координатором
-- Глобальная модель распространяется обратно на станции
-- Приватность данных сохраняется (данные не покидают станцию)
+- Each station trains a local model on its own data
+- Gradients (not data) are aggregated by a central coordinator
+- The global model is distributed back to the stations
+- Data privacy is preserved (data never leaves the station)
 
-### Мультимодальное знание
+### Multimodal Knowledge
 
-Унификация знаний из разных модальностей в едином графе:
+Unification of knowledge from different modalities in a single graph:
 
-- **Текст** → NLP-извлечение → узлы и рёбра с провенансом `sourceType: 'document'`
-- **Код** → AST-анализ → узлы и рёбра с провенансом `sourceType: 'code'`
-- **Диаграммы** → Computer Vision → узлы и рёбра с провенансом `sourceType: 'diagram'`
-- Все три модальности связываются через `SAME_AS` рёбра с confidence-оценкой
-
----
-
-*Этот документ является частью [Кодекса UN ProjectAdvisor](../CODEX_INDEX.md)*
+- **Text** → NLP extraction → nodes and edges with provenance `sourceType: 'document'`
+- **Code** → AST analysis → nodes and edges with provenance `sourceType: 'code'`
+- **Diagrams** → Computer Vision → nodes and edges with provenance `sourceType: 'diagram'`
+- All three modalities are linked via `SAME_AS` edges with a confidence score
 
 ---
 
-## Часть IX: CODEX-DOMAINS — Стандарты типов информации
+*This document is part of the [UN ProjectAdvisor Codex](../CODEX_INDEX.md)*
 
 ---
 
-## 9.1 Архитектура двух уровней
+## Part IX: CODEX-DOMAINS — Information Type Standards
 
-UN ProjectAdvisor хранит два принципиально разных класса информации:
+---
+
+## 9.1 Two-Level Architecture
+
+UN ProjectAdvisor stores two fundamentally different classes of information:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -8033,27 +8030,27 @@ UN ProjectAdvisor хранит два принципиально разных к
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Level 1: System Meta** — информация О САМОЙ системе UN PA:
-архитектура, требования, решения, конфигурация, метрики, теоретическая база.
+**Level 1: System Meta** — information ABOUT THE UN PA SYSTEM ITSELF:
+architecture, requirements, decisions, configuration, metrics, theoretical basis.
 
-**Level 2: Target Project** — информация об ИССЛЕДУЕМОМ проекте:
-извлечённые схемы, код, бизнес-правила, исполняемые графы, результаты анализа.
+**Level 2: Target Project** — information about THE ANALYZED PROJECT:
+extracted schemas, code, business rules, executable graphs, analysis results.
 
 ---
 
-## 9.2 Каноничные namespace
+## 9.2 Canonical Namespaces
 
-В системе используются ровно 4 namespace:
+Exactly 4 namespaces are used in the system:
 
-| Namespace | Уровень | Назначение |
+| Namespace | Level | Purpose |
 |-----------|---------|-----------|
-| `CORE` | System Meta | Системная инфраструктура, каталог, tracking, архитектура |
-| `META` | System Meta | Конфигурация, метрики, требования, решения |
-| `PROJECT` | Target Project | Извлечённые данные целевого проекта |
-| `GXE` | Target Project | Исполняемые графы и аудит |
+| `CORE` | System Meta | System infrastructure, catalog, tracking, architecture |
+| `META` | System Meta | Configuration, metrics, requirements, decisions |
+| `PROJECT` | Target Project | Extracted data of the target project |
+| `GXE` | Target Project | Executable graphs and audit |
 
-Любой другой namespace отклоняется или нормализуется автоматически
-(см. `memgraph.service.js` — `mergeNode()` namespace normalization).
+Any other namespace is rejected or normalized automatically
+(see `memgraph.service.js` — `mergeNode()` namespace normalization).
 
 ---
 
@@ -8063,85 +8060,85 @@ UN ProjectAdvisor хранит два принципиально разных к
 
 #### 9.3.1 SystemArchitecture
 
-| Атрибут | Значение |
+| Attribute | Value |
 |---------|----------|
 | **Namespace** | `CORE` |
 | **Labels** | `CoreComponent`, `TechnicalComponent`, `SystemComponent` |
 | **Required fields** | `name`, `type`, `domain` |
 | **Edges** | `DEPENDS_ON`, `CONTAINS`, `IMPLEMENTS`, `USES`, `TRIGGERS` |
-| **Auto-created** | Нет (seed scripts, manual) |
+| **Auto-created** | No (seed scripts, manual) |
 | **Source** | `seed-core-components.js`, manual |
 
 ---
 
 #### 9.3.2 SystemRequirements
 
-| Атрибут | Значение |
+| Attribute | Value |
 |---------|----------|
 | **Namespace** | `META` |
 | **Labels** | `BusinessRequirement`, `RequirementCategory`, `Feature` |
 | **Required fields** | `name`, `priority`, `status` |
 | **Edges** | `BELONGS_TO_CATEGORY`, `DEPENDS_ON`, `IMPLEMENTED_BY` |
-| **Auto-created** | Нет |
+| **Auto-created** | No |
 | **Source** | manual, backlog import |
 
 ---
 
 #### 9.3.3 SystemDecisions
 
-| Атрибут | Значение |
+| Attribute | Value |
 |---------|----------|
 | **Namespace** | `META` |
 | **Labels** | `ADR`, `Decision`, `Rationale` |
 | **Required fields** | `title`, `status`, `context`, `decision` |
 | **Edges** | `SUPERSEDES`, `RELATES_TO`, `MOTIVATED_BY` |
-| **Auto-created** | Частично (SelfDocumentor) |
+| **Auto-created** | Partially (SelfDocumentor) |
 | **Source** | `SelfDocumentor`, manual |
 | **Status values** | `PROPOSED`, `ACCEPTED`, `DEPRECATED`, `SUPERSEDED` |
 
-> Примечание: На 2026-03-12 ADR = 0 узлов. Тип заявлен, не заполнен.
+> Note: As of 2026-03-12, ADR = 0 nodes. Type declared, not yet populated.
 
 ---
 
 #### 9.3.4 SystemMetrics
 
-| Атрибут | Значение |
+| Attribute | Value |
 |---------|----------|
 | **Namespace** | `META` |
 | **Labels** | `PromptMetric`, `ExecutionMetric`, `PromptVersion` |
 | **Required fields** | `id`, `createdAt` |
 | **Edges** | `MEASURED_FOR`, `VERSION_OF` |
-| **Auto-created** | Да |
+| **Auto-created** | Yes |
 | **Source** | `ainfra.service.js`, `RuntimeEngine` |
 
 ---
 
 #### 9.3.5 SystemConfig
 
-| Атрибут | Значение |
+| Attribute | Value |
 |---------|----------|
 | **Namespace** | `META` |
 | **Labels** | `AINFRA`, `AIConfigSet`, `AIProviderConfig`, `Settings`, `Domain`, `Notification` |
 | **Required fields** | `name` |
 | **Edges** | `HAS_CONFIG`, `ACTIVE_CONFIG`, `USES_PROVIDER` |
-| **Auto-created** | Да |
+| **Auto-created** | Yes |
 | **Source** | `ainfra.service.js` |
-| **Constraint** | Ровно 1 ребро `ACTIVE_CONFIG` от `AINFRA` root |
+| **Constraint** | Exactly 1 `ACTIVE_CONFIG` edge from `AINFRA` root |
 
 ---
 
 #### 9.3.6 ResearchKnowledge
 
-| Атрибут | Значение |
+| Attribute | Value |
 |---------|----------|
 | **Namespace** | `CORE` |
 | **Labels** | `Theory`, `Methodology`, `BestPractice`, `ResearchPaper` |
 | **Required fields** | `title`, `domain`, `sourceRef` |
 | **Edges** | `BASED_ON`, `CONTRADICTS`, `EXTENDS` |
-| **Auto-created** | Нет |
+| **Auto-created** | No |
 | **Source** | manual, research import |
 
-> Примечание: На 2026-03-12 = 0 узлов. Тип заявлен, не заполнен.
+> Note: As of 2026-03-12 = 0 nodes. Type declared, not yet populated.
 
 ---
 
@@ -8149,114 +8146,114 @@ UN ProjectAdvisor хранит два принципиально разных к
 
 #### 9.3.7 ExtractedSchema
 
-| Атрибут | Значение |
+| Attribute | Value |
 |---------|----------|
 | **Namespace** | `PROJECT` |
 | **Labels** | `DatabaseTable`, `TableProfile`, `StructuralEntity`, `StructuralAttribute`, `StoredProcedureKG`, `DataSourceConfig`, `DomainConfig` |
-| **Required fields** | `name` или `tableName` |
+| **Required fields** | `name` or `tableName` |
 | **Edges** | `HAS_ATTRIBUTE`, `PROFILED_TABLE`, `FK_*`, `SOFT_FK`, `M_N` |
-| **Auto-created** | Да |
+| **Auto-created** | Yes |
 | **Source** | `mssql.graph-generator.js`, `structural-domain.service.js`, `ingestion-graph.service.js` |
 
 ---
 
 #### 9.3.8 ExtractedCode
 
-| Атрибут | Значение |
+| Attribute | Value |
 |---------|----------|
 | **Namespace** | `PROJECT` |
 | **Labels** | `Function`, `Method`, `Class`, `Module`, `File`, `Interface` |
 | **Required fields** | `name`, `filePath` |
 | **Edges** | `CONTAINS`, `SAME_DIRECTORY`, `SIMILAR_TO`, `MODIFIES`, `MEMBER_OF` |
-| **Auto-created** | Да |
+| **Auto-created** | Yes |
 | **Source** | `entity-extractor.js` |
 
 ---
 
 #### 9.3.9 ExtractedRules
 
-| Атрибут | Значение |
+| Attribute | Value |
 |---------|----------|
 | **Namespace** | `PROJECT` |
 | **Labels** | `BusinessRule`, `SemanticRule`, `SemanticCalculation`, `DomainVocabulary` |
-| **Secondary labels** | `SEMANTIC` (маркер семантического домена) |
+| **Secondary labels** | `SEMANTIC` (semantic domain marker) |
 | **Required fields** | `name`, `confidence` |
 | **Edges** | `IMPLEMENTS`, `GOVERNS`, `DERIVED_FROM` |
-| **Auto-created** | Да |
+| **Auto-created** | Yes |
 | **Source** | `semantic-domain.service.js`, `mssql.graph-generator.js` |
 
 ---
 
 #### 9.3.10 ExtractedEntities
 
-| Атрибут | Значение |
+| Attribute | Value |
 |---------|----------|
 | **Namespace** | `PROJECT` |
 | **Labels** | `Concept`, `System`, `Technology`, `Organization`, `Document`, `WorkItem`, `Knowledge`, `Database`, `Process` |
 | **Required fields** | `name`, `type` |
 | **Edges** | `RELATES_TO`, `SIMILAR_TO`, `CONTAINS` |
-| **Auto-created** | Да |
+| **Auto-created** | Yes |
 | **Source** | `entity-extractor.js`, project-knowledge MCP |
 
 ---
 
 #### 9.3.11 ExecutableGraph
 
-| Атрибут | Значение |
+| Attribute | Value |
 |---------|----------|
 | **Namespace** | `GXE` |
 | **Labels** | `SubGraph`, `SubGraphPort` |
-| **Secondary labels** | `KnowledgeQuantum` (маркер) |
+| **Secondary labels** | `KnowledgeQuantum` (marker) |
 | **Required fields** | `id`, `subgraphId` |
 | **Edges** | `CONNECTS_INTERNAL`, `PORT_OF`, `BRIDGES_TO` |
-| **Auto-created** | Да |
+| **Auto-created** | Yes |
 | **Source** | `subgraph-extractor.js`, `graph-consolidator.js` |
 
 ---
 
 #### 9.3.12 ExecutionRecord
 
-| Атрибут | Значение |
+| Attribute | Value |
 |---------|----------|
 | **Namespace** | `META` |
 | **Labels** | `ExecutionRecord`, `ExecutionPattern`, `AOPEG_Execution`, `AOPEG_NodeExecution`, `AOPEG_ExecutionGraph`, `AOPEG_GraphNode`, `AOPEG_GraphEdge` |
 | **Required fields** | `id`, `status`, `graphId` |
 | **Edges** | `AOPEG_EXECUTES_GRAPH`, `AOPEG_EXECUTED_NODE`, `AOPEG_CONTAINS_NODE`, `AOPEG_CONTAINS_EDGE` |
-| **Auto-created** | Да |
+| **Auto-created** | Yes |
 | **Source** | `GxeManagerService`, `RuntimeEngine`, `graph.repository.js` |
 
-> Примечание: `ExecutionRecord` = 0 на 2026-03-12.
-> `GxeManagerService` создаёт `ExecutionRecord`, `RuntimeEngine` создаёт `AOPEG_Execution`.
-> Унификация запланирована (CC-029).
+> Note: `ExecutionRecord` = 0 as of 2026-03-12.
+> `GxeManagerService` creates `ExecutionRecord`, `RuntimeEngine` creates `AOPEG_Execution`.
+> Unification planned (CC-029).
 
 ---
 
 #### 9.3.13 InformationGraph
 
-| Атрибут | Значение |
+| Attribute | Value |
 |---------|----------|
 | **Namespace** | `PROJECT` |
 | **Labels** | `DomainGraph`, `BehavioralNode`, `BusinessEntity`, `LifecycleState`, `BusinessProcessGraph` |
-| **Secondary labels** | `BehavioralProcess` (на DomainGraph) |
+| **Secondary labels** | `BehavioralProcess` (on DomainGraph) |
 | **Required fields** | `id` |
 | **Edges** | `CONTAINS_NODE`, `TRANSITIONS_TO`, `STARTS_WITH` |
-| **Auto-created** | Да |
+| **Auto-created** | Yes |
 | **Source** | `ingestion-graph.service.js` |
 
 ---
 
 #### 9.3.14 CatalogInfra
 
-| Атрибут | Значение |
+| Attribute | Value |
 |---------|----------|
 | **Namespace** | `CORE` |
 | **Labels** | `CatalogRoot`, `CatalogEntry`, `GraphDefinition`, `GraphVersion`, `NodeType`, `EdgeType` |
-| **Required fields** | `entryId`/`graphId`/`versionId` (зависит от label), `name` |
+| **Required fields** | `entryId`/`graphId`/`versionId` (depends on label), `name` |
 | **Edges** | `CONTAINS`, `HAS_VERSION`, `DEFINES`, `SUPERSEDES`, `DECOMPOSES`, `LOADED_BY` |
-| **Auto-created** | Частично |
+| **Auto-created** | Partially |
 | **Source** | `graphCatalog.service.js`, `graph-loader.service.js`, `GraphTypeService.js` |
 
-Иерархия:
+Hierarchy:
 ```
 (:CatalogRoot)-[:CONTAINS]->(:CatalogEntry)-[:DEFINES]->(:GraphDefinition)-[:HAS_VERSION]->(:GraphVersion)-[:SUPERSEDES]->(:GraphVersion)
 ```
@@ -8265,50 +8262,49 @@ UN ProjectAdvisor хранит два принципиально разных к
 
 #### 9.3.15 IngestionTracking
 
-| Атрибут | Значение |
+| Attribute | Value |
 |---------|----------|
 | **Namespace** | `CORE` |
 | **Labels** | `KnowledgeGraph`, `IngestionSession`, `IngestionPhase`, `KnowledgeNode` |
-| **Required fields** | `sessionId` (для Phase), `id` |
+| **Required fields** | `sessionId` (for Phase), `id` |
 | **Edges** | `HAS_PHASE`, `PRODUCED_GRAPH`, `PROFILED_TABLE` |
-| **Auto-created** | Да |
+| **Auto-created** | Yes |
 | **Source** | `ingestion-graph.service.js` |
 
-> `KnowledgeNode` — fallback label. Избегать в новом коде, использовать
-> конкретные labels (DatabaseTable, StoredProcedureKG и т.д.).
+> `KnowledgeNode` — fallback label. Avoid in new code; use specific labels (DatabaseTable, StoredProcedureKG, etc.).
 
 ---
 
 #### 9.3.16 GXEAudit
 
-| Атрибут | Значение |
+| Attribute | Value |
 |---------|----------|
 | **Namespace** | `GXE` |
 | **Labels** | `TechnicalDebt`, `Gap`, `BusinessGoal`, `QuickWin`, `AuditReport`, `ConsolidationCheckpoint` |
-| **Secondary labels** | `MetaNode` (на ConsolidationCheckpoint) |
+| **Secondary labels** | `MetaNode` (on ConsolidationCheckpoint) |
 | **Required fields** | `name` |
 | **Edges** | `CONTAINS`, `TARGETS`, `BLOCKS`, `FIXED_BY` |
-| **Auto-created** | Частично |
+| **Auto-created** | Partially |
 | **Source** | `graph-consolidator.js`, audit scripts |
 
 ---
 
 #### 9.3.17 ReferenceData
 
-| Атрибут | Значение |
+| Attribute | Value |
 |---------|----------|
 | **Namespace** | `PROJECT` |
 | **Labels** | `SupportGroup`, `Equipment`, `UNStaffProfile`, `Workspace`, `YNBusinessGraph`, `YNTestScenario`, `YNTestUser`, `YNRole`, `Artifact`, `Project` |
-| **Required fields** | `name` или domain-specific ID |
+| **Required fields** | `name` or domain-specific ID |
 | **Edges** | `REPORTS_TO`, `SUBMITTED_BY`, `EXPECTS_GRAPH`, `CAN_SPAWN`, `COMPATIBLE_WITH` |
-| **Auto-created** | Нет (seed, import) |
+| **Auto-created** | No (seed, import) |
 | **Source** | seed scripts, FlowDesk import |
 
 ---
 
 ## 9.4 Routing Rules
 
-Функция маршрутизации определяет Information Type и каноничный namespace по label:
+The routing function determines the Information Type and canonical namespace by label:
 
 ```javascript
 const LABEL_ROUTING = {
@@ -8408,16 +8404,16 @@ function resolveInformationType(label) {
 
 ## 9.5 Auto-documentation Protocol
 
-Когда система автономно создаёт исполняемый граф, она ДОЛЖНА создать
-сопроводительную документацию:
+When the system autonomously creates an executable graph, it MUST create
+accompanying documentation:
 
-1. **GraphDocumentation** — назначение, входы/выходы, предположения
-2. **ADR** (если архитектурное решение) — контекст, решение, последствия
-3. **Связи** — `DOCUMENTS`, `IMPLEMENTS`, `MOTIVATED_BY`
+1. **GraphDocumentation** — purpose, inputs/outputs, assumptions
+2. **ADR** (if an architectural decision) — context, decision, consequences
+3. **Relations** — `DOCUMENTS`, `IMPLEMENTS`, `MOTIVATED_BY`
 
 ```javascript
 async documentGraphCreation(graphId, motivation, context) {
-  // 1. Документация графа
+  // 1. Graph documentation
   await memgraph.mergeNode('GraphDocumentation', {
     id: `doc-${graphId}`,
     namespace: 'META',
@@ -8431,7 +8427,7 @@ async documentGraphCreation(graphId, motivation, context) {
     createdAt: new Date().toISOString()
   });
 
-  // 2. ADR для архитектурных решений
+  // 2. ADR for architectural decisions
   if (context.isArchitecturalDecision) {
     await memgraph.mergeNode('ADR', {
       id: `adr-${generateUUID()}`,
@@ -8446,7 +8442,7 @@ async documentGraphCreation(graphId, motivation, context) {
     });
   }
 
-  // 3. Связи
+  // 3. Relations
   await memgraph.createRelationship(`doc-${graphId}`, graphId, 'DOCUMENTS');
   if (context.sourceRequirementId) {
     await memgraph.createRelationship(graphId, context.sourceRequirementId, 'IMPLEMENTS');
@@ -8456,9 +8452,9 @@ async documentGraphCreation(graphId, motivation, context) {
 
 ---
 
-## 9.6 Статистика (на 2026-03-12)
+## 9.6 Statistics (as of 2026-03-12)
 
-| Information Type | Узлов | % от общего |
+| Information Type | Nodes | % of total |
 |------------------|-------|-------------|
 | ExtractedSchema | 1,482 | 31.8% |
 | ExecutableGraph | 1,395 | 29.9% |
@@ -8478,21 +8474,21 @@ async documentGraphCreation(graphId, motivation, context) {
 | SystemDecisions | 0 | 0% |
 | ResearchKnowledge | 0 | 0% |
 
-**Итого:** 4,662 узла, 18,330 рёбер, 4 namespace.
+**Total:** 4,662 nodes, 18,330 edges, 4 namespaces.
 
 ---
 
 ## 9.7 Tool Namespace Architecture
 
-### 9.7.1 Концепция
+### 9.7.1 Concept
 
-Tools в системе UN ProjectAdvisor разделены по областям знаний аналогично узлам графа. Каждый Tool имеет поле `toolNamespace`, определяющее к какой области знаний он относится.
+Tools in the UN ProjectAdvisor system are separated by knowledge domain, analogously to graph nodes. Each Tool has a `toolNamespace` field that determines which knowledge domain it belongs to.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                      AI ASSISTANT                            │
 │                                                              │
-│   "Мне нужны инструменты для работы с FlowDesk"             │
+│   "I need tools for working with FlowDesk"                  │
 │                          │                                   │
 │                          ▼                                   │
 │               MCP Tool Registry                              │
@@ -8512,23 +8508,23 @@ Tools в системе UN ProjectAdvisor разделены по областя
 
 ### 9.7.2 Tool Namespaces
 
-| Namespace | Назначение | Примеры tools |
+| Namespace | Purpose | Example tools |
 |-----------|------------|---------------|
-| **CODEX** | Работа со стандартами, валидацией, ADR | codex.search_rules, codex.check_compliance, meta.health_check |
-| **CORE** | Инфраструктура системы UN PA | graph.query, ai.generate, catalog.search_graphs, vector.search |
-| **PROJECT** | Анализ целевых проектов (FlowDesk, iNeed) | sql.schema_scan, flowdesk.classify_intent, ingestion.parse_document |
+| **CODEX** | Working with standards, validation, ADR | codex.search_rules, codex.check_compliance, meta.health_check |
+| **CORE** | UN PA system infrastructure | graph.query, ai.generate, catalog.search_graphs, vector.search |
+| **PROJECT** | Target project analysis (FlowDesk, iNeed) | sql.schema_scan, flowdesk.classify_intent, ingestion.parse_document |
 
-### 9.7.3 Источники Tools
+### 9.7.3 Tool Sources
 
-Система объединяет tools из двух источников:
+The system combines tools from two sources:
 
-| Источник | Описание | Количество |
+| Source | Description | Count |
 |----------|----------|------------|
-| **MCP Tools** | Model Context Protocol handlers в `api/src/mcp/tools/` | 93 |
-| **AOPEG Executors** | Graph execution plugins в `api/src/core/aopeg/plugins/` | 52 |
-| **Всего** | | **145** |
+| **MCP Tools** | Model Context Protocol handlers in `api/src/mcp/tools/` | 93 |
+| **AOPEG Executors** | Graph execution plugins in `api/src/core/aopeg/plugins/` | 52 |
+| **Total** | | **145** |
 
-### 9.7.4 Граф Tools в Memgraph
+### 9.7.4 Tools Graph in Memgraph
 
 ```
 ToolCatalog (root)
@@ -8542,7 +8538,7 @@ ToolCatalog (root)
     ├── :HAS_CATEGORY → ToolCategory {id: 'aopeg-flowdesk'}
     │                        └── :HAS_TOOL → Tool {toolNamespace: 'PROJECT'}
     │
-    └── ... (19 категорий всего: 11 MCP + 8 AOPEG)
+    └── ... (19 categories total: 11 MCP + 8 AOPEG)
 ```
 
 ### 9.7.5 Tool Node Schema
@@ -8550,13 +8546,13 @@ ToolCatalog (root)
 ```javascript
 {
   // Identity
-  id: 'tool.graph.query',             // Уникальный ID
-  name: 'Query Graph',                // Человекочитаемое имя
-  executorId: 'graph.query',          // ID для вызова
+  id: 'tool.graph.query',             // Unique ID
+  name: 'Query Graph',                // Human-readable name
+  executorId: 'graph.query',          // ID for invocation
 
   // Classification
   toolNamespace: 'CORE',              // CODEX | CORE | PROJECT
-  category: 'graph',                  // Категория внутри namespace
+  category: 'graph',                  // Category within namespace
   source: 'mcp',                      // mcp | aopeg | codex
 
   // Metadata
@@ -8565,8 +8561,8 @@ ToolCatalog (root)
   status: 'active',                   // active | deprecated | experimental
 
   // Schemas
-  inputSchema: { ... },               // JSON Schema для входных параметров
-  outputSchema: { ... },              // JSON Schema для результата
+  inputSchema: { ... },               // JSON Schema for input parameters
+  outputSchema: { ... },              // JSON Schema for result
 
   // Timestamps
   createdAt: '2026-03-19T...',
@@ -8576,16 +8572,16 @@ ToolCatalog (root)
 
 ### 9.7.6 MCP Discovery API
 
-AI агенты получают tools через MCP endpoints:
+AI agents receive tools via MCP endpoints:
 
 ```javascript
-// Получить все tools определённого namespace
+// Get all tools for a specific namespace
 await mcp.callTool('list_tools_by_namespace', {
   namespace: 'PROJECT'
 });
 // → { namespace: 'PROJECT', count: 30, tools: [...] }
 
-// Получить tools с фильтром по категории
+// Get tools filtered by category
 await mcp.callTool('list_tools_by_namespace', {
   namespace: 'CORE',
   category: 'graph',
@@ -8593,16 +8589,16 @@ await mcp.callTool('list_tools_by_namespace', {
 });
 // → { namespace: 'CORE', category: 'graph', count: 12, tools: [...] }
 
-// Статистика по всем tools
+// Statistics for all tools
 await mcp.callTool('get_tool_stats', {});
 // → { total: 145, byNamespace: { CODEX: 11, CORE: 104, PROJECT: 30 }, ... }
 ```
 
-### 9.7.7 Маппинг категорий → namespace
+### 9.7.7 Category → Namespace Mapping
 
 **MCP Tools (93):**
 
-| Category | Namespace | Кол-во |
+| Category | Namespace | Count |
 |----------|-----------|--------|
 | meta (system + codex) | CODEX | 11 |
 | workflow, graph, ai, analytics, vector, notification, catalog, visualization, editor | CORE | 72 |
@@ -8610,48 +8606,48 @@ await mcp.callTool('get_tool_stats', {});
 
 **AOPEG Executors (52):**
 
-| Plugin | Namespace | Кол-во |
+| Plugin | Namespace | Count |
 |--------|-----------|--------|
 | common, workflow, notification, subgraph, rag, ingestion | CORE | 32 |
 | flowdesk, sql-extraction | PROJECT | 20 |
 
-### 9.7.8 Добавление новых Tools
+### 9.7.8 Adding New Tools
 
-При создании нового Tool:
+When creating a new Tool:
 
-1. **Определить `toolNamespace`** по правилам:
-   - Работа со стандартами/валидацией → **CODEX**
-   - Инфраструктура системы → **CORE**
-   - Анализ целевого проекта → **PROJECT**
+1. **Determine `toolNamespace`** by the rules:
+   - Working with standards/validation → **CODEX**
+   - System infrastructure → **CORE**
+   - Target project analysis → **PROJECT**
 
-2. **Добавить в seed script:**
+2. **Add to seed script:**
    - MCP tools → `api/scripts/seed-tool-catalog.js`
    - AOPEG executors → `api/scripts/seed-aopeg-executors.js`
 
-3. **Зарегистрировать** в ToolRegistry (для MCP tools)
+3. **Register** in ToolRegistry (for MCP tools)
 
-4. **Создать Tool node** в графе с обязательными полями:
+4. **Create Tool node** in the graph with required fields:
    - `id`, `name`, `executorId`
    - `toolNamespace`, `category`, `source`
    - `description`, `status`
 
-### 9.7.9 Cypher запросы к Tool Registry
+### 9.7.9 Cypher Queries to Tool Registry
 
 ```cypher
--- Все tools по namespace
+-- All tools by namespace
 MATCH (t:Tool {toolNamespace: 'PROJECT'})
 RETURN t.name, t.category, t.description;
 
--- Статистика по namespace и source
+-- Statistics by namespace and source
 MATCH (t:Tool)
 RETURN t.toolNamespace AS namespace, t.source AS source, count(t) AS count
 ORDER BY namespace, source;
 
--- Tools определённой AOPEG категории
+-- Tools of a specific AOPEG category
 MATCH (cat:ToolCategory {id: 'aopeg-flowdesk'})-[:HAS_TOOL]->(t:Tool)
 RETURN t.name, t.executorId;
 
--- Поиск по описанию
+-- Search by description
 MATCH (t:Tool)
 WHERE toLower(t.description) CONTAINS 'extract'
 RETURN t.name, t.toolNamespace, t.description;
@@ -8659,15 +8655,15 @@ RETURN t.name, t.toolNamespace, t.description;
 
 ---
 
-*Этот документ является частью [Кодекса UN ProjectAdvisor](../CODEX_INDEX.md)*
+*This document is part of the [UN ProjectAdvisor Codex](../CODEX_INDEX.md)*
 
 ---
 
-## Приложение A: Architecture Decision Records
+## Appendix A: Architecture Decision Records
 
-### Индекс ADR
+### ADR Index
 
-| ADR | Решение | Статус |
+| ADR | Decision | Status |
 |-----|---------|--------|
 | ADR-001 | Memgraph as Knowledge Graph Store | ACCEPTED |
 | ADR-002 | GXE AOPEG Execution Model | ACCEPTED |
@@ -9177,54 +9173,54 @@ Each type has:
 
 ---
 
-## Приложение B: Changelog
+## Appendix B: Changelog
 
-Все значимые изменения в Кодексе документируются здесь.
+All significant changes to the Codex are documented here.
 
-Формат основан на [Keep a Changelog](https://keepachangelog.com/ru/1.0.0/).
+Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [0.1.0] — 2026-03-12
 
-### Добавлено
+### Added
 
-#### Часть 0: AI Манифест
-- Философия системы и роль ИИ-агентов
-- Принципы работы с противоречиями
-- Этические границы автономии
+#### Part 0: AI Manifesto
+- System philosophy and the role of AI agents
+- Principles for working with contradictions
+- Ethical boundaries of autonomy
 
-#### Часть I: CODEX-CRUD
-- Стандарты создания узлов и рёбер
+#### Part I: CODEX-CRUD
+- Standards for creating nodes and edges
 - Fingerprint collision handling
 - Polystore saga pattern (Memgraph → Qdrant → Redis)
 
-#### Часть II: CODEX-META
-- Обязательные поля метаданных (3 уровня)
-- Knowledge Quantum schema (8 блоков)
+#### Part II: CODEX-META
+- Required metadata fields (3 levels)
+- Knowledge Quantum schema (8 blocks)
 - W3C PROV-O mapping
 - Hash chain integrity
 - Bi-temporal model (tt/vt)
 
-#### Часть III: CODEX-VERSION
-- Две модели: NodeVersion vs Domain nodes
-- Bridge pattern для связи моделей
+#### Part III: CODEX-VERSION
+- Two models: NodeVersion vs Domain nodes
+- Bridge pattern for linking models
 - SUPERSEDES chain management
-- Merge/Split/Fork операции
-- God Mode протокол
-- Tombstones и soft delete
+- Merge/Split/Fork operations
+- God Mode protocol
+- Tombstones and soft delete
 
-#### Часть IV: CODEX-NS
-- Четыре namespace (CORE/PROJECT/META/COMMON)
-- Routing rules и auto-detection
+#### Part IV: CODEX-NS
+- Four namespaces (CORE/PROJECT/META/COMMON)
+- Routing rules and auto-detection
 - Cross-namespace query patterns
 - Isolation guarantees
 - ExecutionRecord → META migration
 
-#### Часть V: CODEX-VALID
+#### Part V: CODEX-VALID
 - JSON Schema registry (7 schemas)
 - Validation modes (warn/strict/skip)
 - Error codes (VAL001-VAL009)
 
-#### Часть VI: CODEX-CATALOG
+#### Part VI: CODEX-CATALOG
 - CatalogEntry/GraphVersion/GraphDefinition schema
 - Auto-save policy
 - 3-level deduplication (hash → Jaccard → GNN)
@@ -9232,168 +9228,168 @@ Each type has:
 - Reuse strategies (DIRECT_REUSE, CLONE_MODIFY, ABSTRACT_INHERIT, CREATE_NEW)
 - Pattern promotion lifecycle
 
-#### Часть VII: CODEX-POLY
+#### Part VII: CODEX-POLY
 - Canonical write order (Memgraph → Qdrant → Redis)
 - Compensating transactions (saga)
 - Consistency levels
-- Checkpoint/Resume для pipelines
-- Health checks и auto-repair
+- Checkpoint/Resume for pipelines
+- Health checks and auto-repair
 
-#### Часть VIII: SELF-EVOLUTION (future)
+#### Part VIII: SELF-EVOLUTION (future)
 - Agent cascade architecture (3-tier)
 - Consensus voting mechanisms (Majority/Weighted/Unanimous)
 - APES (Agent Performance Evolution System)
-- Contradiction detection и resolution
+- Contradiction detection and resolution
 - Self-documentation (ADR auto-generation)
 - Autonomy levels 0-4
 
-### Инфраструктура
+### Infrastructure
 - Schema Registry (`api/src/validation/schema-registry.js`) — 7 JSON schemas
-- Интеграция в `memgraph.service.js` (warn mode по умолчанию)
+- Integration into `memgraph.service.js` (warn mode by default)
 - 34/34 unit tests passing
 - Error codes: VAL001-VAL009, CRUD001-CRUD009, CATALOG001-CATALOG006
 
 ## [0.1.1] — 2026-03-12
 
-### Добавлено
+### Added
 
-#### Часть IX: CODEX-DOMAINS
-- 17 Information Types (двухуровневая архитектура: System Meta + Target Project)
-- Label routing rules (76 labels → 17 типов → 4 namespace)
-- Auto-documentation protocol для автономно создаваемых графов
-- Статистика: 4,662 узла, 18,330 рёбер
+#### Part IX: CODEX-DOMAINS
+- 17 Information Types (two-level architecture: System Meta + Target Project)
+- Label routing rules (76 labels → 17 types → 4 namespaces)
+- Auto-documentation protocol for autonomously created graphs
+- Statistics: 4,662 nodes, 18,330 edges
 
-### Исправлено
+### Fixed
 
-#### FIX-KB-001: ACTIVE_CONFIG аномалия
-- Удалено 137,160 дубликатов рёбер ACTIVE_CONFIG
-- Удалено 20 дубликатов AIConfigSet и 57 AIProviderConfig
-- Исправлен `_setActiveConfigSetInternal()` (row-per-match → two-step)
-- Исправлен `_createConfigSetInternal()` (CREATE → MERGE)
-- Исправлен `_createProviderConfig()` (CREATE → MERGE)
+#### FIX-KB-001: ACTIVE_CONFIG anomaly
+- Removed 137,160 duplicate ACTIVE_CONFIG edges
+- Removed 20 duplicate AIConfigSet and 57 AIProviderConfig nodes
+- Fixed `_setActiveConfigSetInternal()` (row-per-match → two-step)
+- Fixed `_createConfigSetInternal()` (CREATE → MERGE)
+- Fixed `_createProviderConfig()` (CREATE → MERGE)
 
 #### FIX-KB-002: Namespace inconsistency
-- Унифицированы CORE/Core/core → CORE (82 узла)
-- Удалены default/default2 namespace (16 узлов → CORE)
-- Добавлена нормализация namespace в `memgraph.service.js` `mergeNode()`
+- Unified CORE/Core/core → CORE (82 nodes)
+- Removed default/default2 namespace (16 nodes → CORE)
+- Added namespace normalization in `memgraph.service.js` `mergeNode()`
 
-#### FIX-KB-003: Namespace для всех узлов
-- 2,896 узлов получили namespace (было 63% без namespace → 0%)
-- Маппинг по доменам: PROJECT(2,188), CORE(443+180), META(47)
+#### FIX-KB-003: Namespace for all nodes
+- 2,896 nodes received namespace (was 63% without namespace → 0%)
+- Mapping by domain: PROJECT(2,188), CORE(443+180), META(47)
 
 #### FIX-KB-004: Namespace mismatches
 - SystemComponent: GXE → CORE (20)
 - BehavioralNode: CORE → PROJECT (18)
 - Notification: CORE → META (15)
-- Унифицированы sql-extraction, iNeed, YOUNEED, core.types.* → 4 стандартных NS
+- Unified sql-extraction, iNeed, YOUNEED, core.types.* → 4 standard namespaces
 
 ## [0.1.2] — 2026-03-13
 
-### Добавлено
+### Added
 
-#### CC-029: Унификация ExecutionRecord
-- Создан `ExecutionRecorder` (`runtime/persistence/ExecutionRecorder.js`)
-- Интеграция в RuntimeEngine._buildResult() (fire-and-forget)
-- Миграция AOPEG_Execution → ExecutionRecord (META namespace)
-- ExecutionNodeRecordSchema добавлена в Schema Registry (8 schemas)
+#### CC-029: ExecutionRecord Unification
+- Created `ExecutionRecorder` (`runtime/persistence/ExecutionRecorder.js`)
+- Integration into RuntimeEngine._buildResult() (fire-and-forget)
+- Migration AOPEG_Execution → ExecutionRecord (META namespace)
+- ExecutionNodeRecordSchema added to Schema Registry (8 schemas)
 
-#### CC-030: E2E тест ExecutionRecord
-- Тестовый скрипт `scripts/test-execution-record.js` (7/7 checks)
-- Исправлен баг: 3 вызова _buildResult() не передавали dag
+#### CC-030: E2E Test for ExecutionRecord
+- Test script `scripts/test-execution-record.js` (7/7 checks)
+- Fixed bug: 3 calls to _buildResult() were not passing dag
 
 #### CC-031: Production Activation
 - StartupManager (`services/startup/StartupManager.js`)
-- OrphanDetector cron (каждые 6 часов)
-- TombstoneExpirer cron (каждые 24 часа)
+- OrphanDetector cron (every 6 hours)
+- TombstoneExpirer cron (every 24 hours)
 - Health endpoint `/health/codex`
-- Graceful shutdown интеграция
-- Тестовый скрипт `scripts/test-startup-manager.js` (12/12 checks)
+- Graceful shutdown integration
+- Test script `scripts/test-startup-manager.js` (12/12 checks)
 
 #### CC-032: Architecture Decision Records
-- 6 ADR созданы в `docs/codex/adr/`
+- 6 ADRs created in `docs/codex/adr/`
 - ADR-001: Memgraph as Knowledge Graph Store
 - ADR-002: GXE AOPEG Execution Model
 - ADR-003: Four-Namespace Architecture
 - ADR-004: Bi-temporal Versioning with Hash Chain
 - ADR-005: Polystore Architecture
 - ADR-006: Information Types Classification
-- 6 ADR nodes в Memgraph (META namespace)
-- 12 RELATED_TO edges между ADR
+- 6 ADR nodes in Memgraph (META namespace)
+- 12 RELATED_TO edges between ADRs
 
-### Инфраструктура
-- Schema Registry: 8 schemas, 36 тестов
+### Infrastructure
+- Schema Registry: 8 schemas, 36 tests
 - Background jobs: 2 (OrphanDetector 6h, TombstoneExpirer 24h)
-- .env.example обновлён
+- .env.example updated
 
 ## [0.1.3] — 2026-03-19
 
-### Добавлено
+### Added
 
 #### Tool Namespace Architecture (CODEX-DOMAINS §9.7)
-- Поле `toolNamespace` (CODEX/CORE/PROJECT) в tool-definition.schema.json
-- 145 Tool nodes записаны в Memgraph (93 MCP + 52 AOPEG)
+- `toolNamespace` field (CODEX/CORE/PROJECT) in tool-definition.schema.json
+- 145 Tool nodes written to Memgraph (93 MCP + 52 AOPEG)
 - 19 ToolCategory nodes (11 MCP + 8 AOPEG)
-- Классификация: CODEX=11, CORE=104, PROJECT=30
+- Classification: CODEX=11, CORE=104, PROJECT=30
 
 #### MCP Discovery Endpoints
-- `list_tools_by_namespace` — фильтрация tools по namespace с optional category
-- `get_tool_stats` — статистика registry (byLevel, byCategory, byNamespace)
-- Built-in tools в GXEMcpServer (не через registry)
+- `list_tools_by_namespace` — filter tools by namespace with optional category
+- `get_tool_stats` — registry statistics (byLevel, byCategory, byNamespace)
+- Built-in tools in GXEMcpServer (not via registry)
 
 #### Codex Tools → MCP Integration
-- 6 Codex tools мигрированы в MCP: `api/src/mcp/tools/codex/`
+- 6 Codex tools migrated to MCP: `api/src/mcp/tools/codex/`
   - codex.search_rules, codex.get_rule, codex.get_principles
   - codex.get_blackcodex, codex.check_compliance, codex.propose_change
-- Наследуют BaseTool, делегируют в executeCodexTool()
-- Зарегистрированы через createCodexTools() в MCP index
+- Inherit BaseTool, delegate to executeCodexTool()
+- Registered via createCodexTools() in MCP index
 
-#### ToolRegistry расширения
-- `listByNamespace(namespace)` — фильтрация по toolNamespace
-- `listByNamespaceAndCategory(namespace, category)` — двойная фильтрация
-- `getStats()` возвращает `byNamespace` разбивку
+#### ToolRegistry Extensions
+- `listByNamespace(namespace)` — filter by toolNamespace
+- `listByNamespaceAndCategory(namespace, category)` — dual filter
+- `getStats()` returns `byNamespace` breakdown
 
 #### Seed Scripts
-- `seed-tool-catalog.js` обновлён: CATEGORY_NAMESPACE маппинг, toolNamespace в Cypher
-- `seed-aopeg-executors.js` — новый скрипт с auto-discovery executors из plugins
-- Исправлен баг: `runCypher` → `runQuery` в seed-tool-catalog.js
+- `seed-tool-catalog.js` updated: CATEGORY_NAMESPACE mapping, toolNamespace in Cypher
+- `seed-aopeg-executors.js` — new script with auto-discovery of executors from plugins
+- Fixed bug: `runCypher` → `runQuery` in seed-tool-catalog.js
 
-### Инфраструктура
-- Документация: CODEX-DOMAINS.md §9.7 (9 подсекций)
-- CODEX_INDEX.md обновлён со статистикой tools
-- Tool definition schema расширена (optional toolNamespace field)
+### Infrastructure
+- Documentation: CODEX-DOMAINS.md §9.7 (9 subsections)
+- CODEX_INDEX.md updated with tools statistics
+- Tool definition schema extended (optional toolNamespace field)
 
 ## [Unreleased]
 
-### Планируется
-- Приложение A: JSON Schemas (полный набор)
-- Приложение B: Cypher Templates
-- Приложение C: Error Codes Registry
-- Приложение D: Migration Guide
-- Приложение E: Code Review Checklist
-- Повышение статуса до 🟢 1.0.0 после production validation
+### Planned
+- Appendix A: JSON Schemas (full set)
+- Appendix B: Cypher Templates
+- Appendix C: Error Codes Registry
+- Appendix D: Migration Guide
+- Appendix E: Code Review Checklist
+- Promote status to 🟢 1.0.0 after production validation
 
 ---
 
-## Статистика Кодекса v0.1.3
+## Codex v0.1.3 Statistics
 
-| Метрика | Значение |
+| Metric | Value |
 |---------|----------|
-| Частей Кодекса | 10 (0-IX) |
+| Codex parts | 10 (0-IX) |
 | ADR | 6 |
 | Information Types | 17 |
-| Tool nodes в графе | 145 |
+| Tool nodes in graph | 145 |
 | Tool categories | 19 (11 MCP + 8 AOPEG) |
 | Tool namespaces | 3 (CODEX, CORE, PROJECT) |
 | JSON Schemas | 8 |
 | Error codes | 18+ |
 | Background jobs | 2 (OrphanDetector, TombstoneExpirer) |
 | Seed scripts | 2 (seed-tool-catalog, seed-aopeg-executors) |
-| Узлов в графе | ~4,800+ |
-| Рёбер в графе | ~18,500+ |
+| Nodes in graph | ~4,800+ |
+| Edges in graph | ~18,500+ |
 | Namespaces | 4 (CORE, PROJECT, META, COMMON) |
 
 ---
 
-*Сгенерировано: 2026-03-19T10:17:45.656Z*
-*Версия: 0.1.3*
-*Сборка: build-codex-artifact.js*
+*Generated: 2026-03-19T10:17:45.656Z*
+*Version: 0.1.3*
+*Build: build-codex-artifact.js*

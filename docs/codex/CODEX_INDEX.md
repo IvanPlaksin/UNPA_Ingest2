@@ -1,111 +1,111 @@
-# КОДЕКС UN PROJECTADVISOR
+# CODEX UN PROJECTADVISOR
 
-**Версия:** 0.1.2-draft
-**Дата создания:** 2026-03-12
-**Обновлено:** 2026-03-19
-**Статус:** В разработке
+**Version:** 0.1.2-draft
+**Created:** 2026-03-12
+**Updated:** 2026-03-19
+**Status:** In development
 
-## Назначение
+## Purpose
 
-Кодекс — свод стандартов хранения, версионирования и управления знаниями
-в системе UN ProjectAdvisor. Предназначен для:
-- ИИ-агентов, выполняющих операции с графом знаний
-- Архитекторов, проектирующих расширения системы
-- Операторов, сопровождающих систему
+The Codex is a collection of standards for storing, versioning, and managing knowledge
+in the UN ProjectAdvisor system. Intended for:
+- AI agents performing operations on the knowledge graph
+- Architects designing system extensions
+- Operators maintaining the system
 
-## Структура
+## Structure
 
-| Часть | Документ | Статус | Версия |
-|-------|----------|--------|--------|
-| 0 | [Манифест для ИИ-агентов](manifesto/AI_MANIFESTO.md) | 🟡 В разработке | 0.1.0 |
-| I | [CODEX-CRUD: Стандарт операций](standards/CODEX-CRUD.md) | 🟡 В разработке | 0.1.0 |
-| II | [CODEX-META: Стандарт метаданных](standards/CODEX-META.md) | 🟡 В разработке | 0.1.0 |
-| III | [CODEX-VERSION: Стандарт версионности](standards/CODEX-VERSION.md) | 🟡 В разработке | 0.1.0 |
-| IV | [CODEX-NS: Стандарт namespace](standards/CODEX-NS.md) | 🟡 В разработке | 0.1.0 |
-| V | [CODEX-VALID: Стандарт валидации](standards/CODEX-VALID.md) | 🟡 В разработке | 0.1.0 |
-| VI | [CODEX-CATALOG: Стандарт каталога](standards/CODEX-CATALOG.md) | 🟡 В разработке | 0.1.0 |
-| VII | [CODEX-POLY: Протокол Polystore](standards/CODEX-POLY.md) | 🟡 В разработке | 0.1.0 |
-| VIII | [Саморазвивающаяся система](future/SELF-EVOLUTION.md) | 🟡 В разработке | 0.1.0 |
-| IX | [CODEX-DOMAINS: Стандарты типов информации](standards/CODEX-DOMAINS.md) | 🟡 В разработке | 0.1.0 |
+| Part | Document | Status | Version |
+|------|----------|--------|---------|
+| 0 | [Manifesto for AI Agents](manifesto/AI_MANIFESTO.md) | 🟡 In development | 0.1.0 |
+| I | [CODEX-CRUD: Operations Standard](standards/CODEX-CRUD.md) | 🟡 In development | 0.1.0 |
+| II | [CODEX-META: Metadata Standard](standards/CODEX-META.md) | 🟡 In development | 0.1.0 |
+| III | [CODEX-VERSION: Versioning Standard](standards/CODEX-VERSION.md) | 🟡 In development | 0.1.0 |
+| IV | [CODEX-NS: Namespace Standard](standards/CODEX-NS.md) | 🟡 In development | 0.1.0 |
+| V | [CODEX-VALID: Validation Standard](standards/CODEX-VALID.md) | 🟡 In development | 0.1.0 |
+| VI | [CODEX-CATALOG: Catalog Standard](standards/CODEX-CATALOG.md) | 🟡 In development | 0.1.0 |
+| VII | [CODEX-POLY: Polystore Protocol](standards/CODEX-POLY.md) | 🟡 In development | 0.1.0 |
+| VIII | [Self-Evolving System](future/SELF-EVOLUTION.md) | 🟡 In development | 0.1.0 |
+| IX | [CODEX-DOMAINS: Information Type Standards](standards/CODEX-DOMAINS.md) | 🟡 In development | 0.1.0 |
 
-## Приложения
+## Appendices
 
-| Приложение | Документ | Статус |
-|------------|----------|--------|
-| A | [JSON Schemas](appendices/A_JSON_SCHEMAS.md) | 🔴 Не начат |
-| B | [Cypher Templates](appendices/B_CYPHER_TEMPLATES.md) | 🔴 Не начат |
-| C | [Error Codes](appendices/C_ERROR_CODES.md) | 🔴 Не начат |
-| D | [Migration Guide](appendices/D_MIGRATION_GUIDE.md) | 🔴 Не начат |
-| E | [Code Review Checklist](appendices/E_CODE_REVIEW_CHECKLIST.md) | 🔴 Не начат |
-| ADR | [Architecture Decision Records](adr/README.md) | 🟢 6 ADR |
+| Appendix | Document | Status |
+|----------|----------|--------|
+| A | [JSON Schemas](appendices/A_JSON_SCHEMAS.md) | 🔴 Not started |
+| B | [Cypher Templates](appendices/B_CYPHER_TEMPLATES.md) | 🔴 Not started |
+| C | [Error Codes](appendices/C_ERROR_CODES.md) | 🔴 Not started |
+| D | [Migration Guide](appendices/D_MIGRATION_GUIDE.md) | 🔴 Not started |
+| E | [Code Review Checklist](appendices/E_CODE_REVIEW_CHECKLIST.md) | 🔴 Not started |
+| ADR | [Architecture Decision Records](adr/README.md) | 🟢 6 ADRs |
 
-## Принципы Кодекса
+## Codex Principles
 
-1. **Immutability-first** — данные не удаляются, а версионируются
-2. **Provenance by default** — каждый факт имеет источник и уверенность
-3. **Bi-temporal tracking** — transaction time + valid time для каждой записи
-4. **Hash chain integrity** — криптографическая верификация цепочки изменений
-5. **Polystore coordination** — атомарность или компенсация при записи в несколько хранилищ
-6. **Agent accountability** — ИИ-агенты несут ответственность за качество данных
+1. **Immutability-first** — data is never deleted, only versioned
+2. **Provenance by default** — every fact has a source and a confidence score
+3. **Bi-temporal tracking** — transaction time + valid time for every record
+4. **Hash chain integrity** — cryptographic verification of the change chain
+5. **Polystore coordination** — atomicity or compensation when writing to multiple stores
+6. **Agent accountability** — AI agents are responsible for data quality
 
-## Исследовательская база
+## Research Foundation
 
-Кодекс опирается на state-of-the-art исследования:
+The Codex is based on state-of-the-art research:
 
 ### Temporal Knowledge Graphs
-- **Graphiti / Zep** — validity windows, факты инвалидируются не удаляются
-- **AeonG** — anchor+delta storage для эффективного хранения версий
-- **ConVer-G** — bitstring versioning для быстрых temporal queries
+- **Graphiti / Zep** — validity windows, facts are invalidated not deleted
+- **AeonG** — anchor+delta storage for efficient version storage
+- **ConVer-G** — bitstring versioning for fast temporal queries
 
 ### Immutable Data Systems
-- **Datomic** — datoms с временными координатами, append-only
+- **Datomic** — datoms with temporal coordinates, append-only
 - **EventStoreDB** — event sourcing, CQRS patterns
 - **Git** — content-addressable storage, Merkle trees
 
 ### Provenance Standards
-- **W3C PROV-O** — Entity/Activity/Agent триада
+- **W3C PROV-O** — Entity/Activity/Agent triad
 - **PAV Ontology** — Provenance/Authoring/Versioning
 - **OpenMetadata** — column-level lineage
 
 ### Multi-Agent Systems
 - **Google A2A Protocol (2025)** — agent-to-agent communication
 - **CIR3** — balanced collective convergence
-- **DSPy** — программируемые LLM pipelines (основа для APES)
+- **DSPy** — programmable LLM pipelines (foundation for APES)
 
 ### Graph Neural Networks
 - **PyTorch Geometric** — GNN framework
 - **ACL 2025 GNN-RAG** — multi-hop reasoning
 - **Link Prediction** — knowledge graph completion
 
-## Статистика v0.1.2
+## Statistics v0.1.2
 
-| Метрика | Значение |
-|---------|----------|
-| Частей Кодекса | 10 (0-IX) |
-| Markdown файлов | 19 (12 стандартов + 7 ADR) |
+| Metric | Value |
+|--------|-------|
+| Codex parts | 10 (0-IX) |
+| Markdown files | 19 (12 standards + 7 ADRs) |
 | JSON Schemas | 8 |
 | Error codes | 18+ |
 | Unit tests | 36 |
-| ADR | 6 |
+| ADRs | 6 |
 | Background jobs | 2 (OrphanDetector, TombstoneExpirer) |
 | Tool nodes | 145 (CODEX=11, CORE=104, PROJECT=30) |
 | Tool categories | 19 (11 MCP + 8 AOPEG) |
 | Tool namespaces | 3 (CODEX, CORE, PROJECT) |
 | Seed scripts | 2 (seed-tool-catalog.js, seed-aopeg-executors.js) |
 
-## Roadmap к 1.0.0
+## Roadmap to 1.0.0
 
-- [ ] Production validation (3+ месяца использования)
+- [ ] Production validation (3+ months of usage)
 - [ ] Appendices A-E
 - [ ] Integration tests
 - [ ] Performance benchmarks
 - [ ] Security audit
 - [ ] Multi-language support (EN/RU/FR/ES/AR/ZH)
 
-## История изменений
+## Change History
 
-| Версия | Дата | Автор | Изменения |
-|--------|------|-------|-----------|
-| 0.1.0-draft | 2026-03-12 | Claude Code + Claude Opus | Полный Кодекс: 9 частей, Schema Registry, 34 теста |
-| 0.1.1-draft | 2026-03-13 | Claude Code + Claude Opus | Part IX, 6 ADR, ExecutionRecord, StartupManager, 36 тестов |
+| Version | Date | Author | Changes |
+|---------|------|--------|---------|
+| 0.1.0-draft | 2026-03-12 | Claude Code + Claude Opus | Full Codex: 9 parts, Schema Registry, 34 tests |
+| 0.1.1-draft | 2026-03-13 | Claude Code + Claude Opus | Part IX, 6 ADRs, ExecutionRecord, StartupManager, 36 tests |
 | 0.1.2-draft | 2026-03-19 | Claude Code + Claude Opus | Tool Namespace Architecture (§9.7), 145 Tool nodes, MCP discovery |

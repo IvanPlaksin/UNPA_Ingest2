@@ -1,26 +1,26 @@
-# CODEX-CRUD: Стандарт операций с графом знаний
+# CODEX-CRUD: Knowledge Graph Operations Standard
 
-**Статус:** 🟡 В разработке
-**Версия:** 0.1.0
-**Последнее обновление:** 2026-03-12
+**Status:** 🟡 In Development
+**Version:** 0.1.0
+**Last updated:** 2026-03-12
 
 ---
 
-## Оглавление
+## Table of Contents
 
-- [1.1 Принципы операций](#11-принципы-операций)
-- [1.2 Операция CREATE](#12-операция-create)
-- [1.3 Операция READ](#13-операция-read)
-- [1.4 Операция UPDATE](#14-операция-update)
-- [1.5 Операция DELETE](#15-операция-delete)
-- [1.6 Транзакционность polystore](#16-транзакционность-polystore)
+- [1.1 Operation Principles](#11-operation-principles)
+- [1.2 CREATE Operation](#12-create-operation)
+- [1.3 READ Operation](#13-read-operation)
+- [1.4 UPDATE Operation](#14-update-operation)
+- [1.5 DELETE Operation](#15-delete-operation)
+- [1.6 Polystore Transactionality](#16-polystore-transactionality)
 - [1.7 Error taxonomy](#17-error-taxonomy)
 
 ---
 
-## Преамбула
+## Preamble
 
-CRUD в контексте immutable graph — не классический Create/Read/Update/Delete.
+CRUD in the context of an immutable graph is not the classical Create/Read/Update/Delete.
 
 ```
 TRADITIONAL CRUD              IMMUTABLE GRAPH CRUD
@@ -31,48 +31,48 @@ UPDATE → UPDATE SET            UPDATE → CREATE new version + SUPERSEDES
 DELETE → DELETE                DELETE → CREATE Tombstone + mark DELETED
 ```
 
-**Update** = создание новой версии + цепочка SUPERSEDES.
-**Delete** = создание Tombstone + статус DELETED.
-Данные не уничтожаются — они эволюционируют.
+**Update** = creating a new version + SUPERSEDES chain.
+**Delete** = creating a Tombstone + DELETED status.
+Data is not destroyed -- it evolves.
 
 ---
 
-## 1.1 Принципы операций
+## 1.1 Operation Principles
 
-Три ключевых принципа определяют все операции:
+Three key principles govern all operations:
 
-| Принцип | Описание | Реализация |
-|---------|----------|------------|
-| **MERGE-first** | Идемпотентный upsert вместо INSERT | Cypher `MERGE`, не `CREATE` |
-| **Explicit-failure** | Ошибки явные, не silent | `throw` при проблемах, не `return null` |
-| **Atomic-or-compensate** | Транзакция или откат | Unit of Work pattern |
+| Principle | Description | Implementation |
+|-----------|-------------|----------------|
+| **MERGE-first** | Idempotent upsert instead of INSERT | Cypher `MERGE`, not `CREATE` |
+| **Explicit-failure** | Errors are explicit, not silent | `throw` on problems, not `return null` |
+| **Atomic-or-compensate** | Transaction or rollback | Unit of Work pattern |
 
 ### MERGE-first
 
-Все операции записи используют `MERGE` по умолчанию:
-- Повторный вызов с теми же данными безопасен (idempotent)
-- Нет race condition при параллельных записях
-- Caller не обязан проверять существование перед записью
+All write operations use `MERGE` by default:
+- Repeated call with the same data is safe (idempotent)
+- No race condition on concurrent writes
+- Caller does not need to check existence before writing
 
-**Исключение:** `NodeVersion` и `EdgeVersion` используют `CREATE`, поскольку каждая версия уникальна.
+**Exception:** `NodeVersion` and `EdgeVersion` use `CREATE`, since each version is unique.
 
 ### Explicit-failure
 
-Запрещены silent failures:
-- `mergeRelationship()` — если source/target не существуют → `throw EdgeMissingEndpointError`
-- `mergeNode()` — если validation fails → `throw ValidationError`
-- Polystore write — если partial failure → compensating rollback + `throw TransactionError`
+Silent failures are forbidden:
+- `mergeRelationship()` -- if source/target don't exist → `throw EdgeMissingEndpointError`
+- `mergeNode()` -- if validation fails → `throw ValidationError`
+- Polystore write -- if partial failure → compensating rollback + `throw TransactionError`
 
 ### Atomic-or-compensate
 
-Для одиночного хранилища (Memgraph) — используем транзакции Cypher.
-Для polystore (Memgraph + Qdrant + Redis) — компенсирующие транзакции (Saga pattern).
+For a single store (Memgraph) -- use Cypher transactions.
+For polystore (Memgraph + Qdrant + Redis) -- compensating transactions (Saga pattern).
 
 ---
 
-## 1.2 Операция CREATE
+## 1.2 CREATE Operation
 
-### Алгоритм
+### Algorithm
 
 ```
 Input Data
@@ -93,19 +93,19 @@ Input Data
     │   - id (UUID v4)
     │   - createdAt (ISO timestamp)
     │   - contentHash (SHA-256)
-    │   - chainHash (если версионированный)
+    │   - chainHash (if versioned)
     │
     ▼
 [4] Execute MERGE
     │
     ▼
-[5] Post-verify (если критическая операция)
+[5] Post-verify (for critical operations)
     │
     ▼
 Return created node
 ```
 
-### Реализация для domain nodes
+### Implementation for domain nodes
 
 ```javascript
 async createNode(label, properties, options = {}) {
@@ -148,7 +148,7 @@ async createNode(label, properties, options = {}) {
 }
 ```
 
-### Реализация для NodeVersion (Immutable Graph)
+### Implementation for NodeVersion (Immutable Graph)
 
 ```javascript
 async createNodeVersion(entityId, data, changeReason) {
@@ -235,11 +235,11 @@ async createNodeVersion(entityId, data, changeReason) {
 
 ---
 
-## 1.3 Операция READ
+## 1.3 READ Operation
 
 ### Namespace routing
 
-Каждый запрос маршрутизируется через namespace:
+Every query is routed through a namespace:
 
 ```javascript
 async read(entityId, options = {}) {
@@ -258,26 +258,26 @@ async read(entityId, options = {}) {
 
 ### Temporal queries (bi-temporal)
 
-| Запрос | Параметры | Описание |
-|--------|-----------|----------|
-| Current state | — | Последняя ACTIVE версия |
-| Point-in-time (tt) | `asOf: datetime` | Что система знала на момент |
-| Point-in-time (vt) | `validAt: datetime` | Что было истинным на момент |
-| Bi-temporal | `asOf` + `validAt` | Комбинация двух измерений |
-| Version history | `entityId` | Вся SUPERSEDES chain |
+| Query | Parameters | Description |
+|-------|------------|-------------|
+| Current state | -- | Latest ACTIVE version |
+| Point-in-time (tt) | `asOf: datetime` | What the system knew at the time |
+| Point-in-time (vt) | `validAt: datetime` | What was true at the time |
+| Bi-temporal | `asOf` + `validAt` | Combination of both dimensions |
+| Version history | `entityId` | Full SUPERSEDES chain |
 
 ```javascript
 async readAtTime(entityId, { asOf, validAt }) {
   const conditions = ['n.entityId = $entityId'];
 
   if (asOf) {
-    // Transaction time: когда записано
+    // Transaction time: when it was recorded
     conditions.push(
       'n.ttStart <= $asOf AND (n.ttEnd IS NULL OR n.ttEnd > $asOf)'
     );
   }
   if (validAt) {
-    // Valid time: когда истинно
+    // Valid time: when it was true
     conditions.push(
       'n.vtStart <= $validAt AND (n.vtEnd IS NULL OR n.vtEnd > $validAt)'
     );
@@ -297,17 +297,17 @@ async readAtTime(entityId, { asOf, validAt }) {
 
 ### Cache strategy
 
-| Уровень | Хранилище | TTL | Invalidation |
-|---------|-----------|-----|--------------|
-| L1 | In-memory LRU | 5 min | На каждый SUPERSEDES |
-| L2 | Redis | 30 min | На каждый SUPERSEDES |
-| Bypass | — | — | Temporal queries всегда в Memgraph |
+| Level | Store | TTL | Invalidation |
+|-------|-------|-----|--------------|
+| L1 | In-memory LRU | 5 min | On every SUPERSEDES |
+| L2 | Redis | 30 min | On every SUPERSEDES |
+| Bypass | -- | -- | Temporal queries always hit Memgraph |
 
 ---
 
-## 1.4 Операция UPDATE
+## 1.4 UPDATE Operation
 
-### Для domain nodes (mutable)
+### For domain nodes (mutable)
 
 ```javascript
 async updateNode(nodeId, updates) {
@@ -343,7 +343,7 @@ async updateNode(nodeId, updates) {
 }
 ```
 
-### Для NodeVersion (immutable)
+### For NodeVersion (immutable)
 
 ```javascript
 // UPDATE = CREATE new version
@@ -352,21 +352,21 @@ async updateEntity(entityId, updates, changeReason) {
 }
 ```
 
-### Правило выбора стратегии
+### Strategy selection rule
 
-| Тип узла | Стратегия | Обоснование |
-|----------|-----------|-------------|
-| Domain node (Table, Column, etc.) | Mutable `SET` | Day-to-day operations, не нужна полная история |
-| Knowledge fact | New NodeVersion | Факты переосмысливаются, нужна аудит-цепочка |
-| GXE workflow graph | New GraphVersion | Каждое изменение логики — новая версия |
-| ExecutionRecord | **Immutable** | Запись выполнения никогда не меняется |
-| CatalogEntry metadata | Mutable `SET` | Только updatedAt, usageCount, qualityScore |
+| Node type | Strategy | Rationale |
+|-----------|----------|-----------|
+| Domain node (Table, Column, etc.) | Mutable `SET` | Day-to-day operations, full history not needed |
+| Knowledge fact | New NodeVersion | Facts are reinterpreted, audit chain required |
+| GXE workflow graph | New GraphVersion | Every logic change is a new version |
+| ExecutionRecord | **Immutable** | Execution record is never changed |
+| CatalogEntry metadata | Mutable `SET` | Only updatedAt, usageCount, qualityScore |
 
 ---
 
-## 1.5 Операция DELETE
+## 1.5 DELETE Operation
 
-### Soft delete (стандарт)
+### Soft delete (standard)
 
 ```javascript
 async deleteNode(nodeId, reason) {
@@ -420,7 +420,7 @@ async deleteNode(nodeId, reason) {
 }
 ```
 
-### Hard delete (только God Mode)
+### Hard delete (God Mode only)
 
 ```javascript
 async purgeNode(nodeId, godModeSession) {
@@ -489,23 +489,23 @@ async restoreNode(tombstoneId) {
 }
 ```
 
-### Сводная таблица
+### Summary table
 
-| Операция | Кто может | Восстановимо | Аудит |
-|----------|-----------|--------------|-------|
-| Soft delete | Любой агент | Да (Tombstone) | Tombstone node |
-| Hard delete (purge) | Только God Mode | Нет | GodModeAudit record |
-| Restore | Любой агент | — | Tombstone.restoredAt |
+| Operation | Who can | Restorable | Audit |
+|-----------|---------|------------|-------|
+| Soft delete | Any agent | Yes (Tombstone) | Tombstone node |
+| Hard delete (purge) | God Mode only | No | GodModeAudit record |
+| Restore | Any agent | -- | Tombstone.restoredAt |
 
 ---
 
-## 1.6 Транзакционность polystore
+## 1.6 Polystore Transactionality
 
-### Проблема
+### Problem
 
-Запись в Memgraph + Qdrant + Redis не атомарна. Partial failure = inconsistent state (orphaned vectors, missing graph nodes).
+Writing to Memgraph + Qdrant + Redis is not atomic. Partial failure = inconsistent state (orphaned vectors, missing graph nodes).
 
-### Решение: Compensating Transactions (Saga pattern)
+### Solution: Compensating Transactions (Saga pattern)
 
 ```
 ┌──────────────────────────────────────────────────────┐
@@ -535,19 +535,19 @@ async restoreNode(tombstoneId) {
 └──────────────────────────────────────────────────────┘
 ```
 
-### Порядок записи
+### Write order
 
-| Шаг | Хранилище | Операция | Компенсация |
-|-----|-----------|----------|-------------|
+| Step | Store | Operation | Compensation |
+|------|-------|-----------|--------------|
 | 1 | Memgraph | MERGE node/edge | DELETE node/edge |
 | 2 | Qdrant | upsert vectors | delete points |
 | 3 | Redis | SET cache | DEL key |
 
-**Правило:** Memgraph записывается первым, потому что это primary source of truth.
+**Rule:** Memgraph is written first because it is the primary source of truth.
 
-### Реализация
+### Implementation
 
-Использовать существующий `TransactionManager` из `api/src/services/pipeline/TransactionManager.js`:
+Use the existing `TransactionManager` from `api/src/services/pipeline/TransactionManager.js`:
 
 ```javascript
 const TransactionManager = require('../pipeline/TransactionManager');
@@ -597,8 +597,8 @@ async polystoreWrite(nodeData, vectorData, cacheData) {
 
 ## 1.7 Error taxonomy
 
-| Код | Тип | Описание | Severity | Recovery |
-|-----|-----|----------|----------|----------|
+| Code | Type | Description | Severity | Recovery |
+|------|------|-------------|----------|----------|
 | `CRUD001` | ValidationError | Schema validation failed | ERROR | Fix input data |
 | `CRUD002` | DuplicateError | Fingerprint collision | WARNING | Use UPSERT policy or modify data |
 | `CRUD003` | NotFoundError | Entity not found by ID | ERROR | Verify ID, check namespace |
@@ -611,10 +611,10 @@ async polystoreWrite(nodeData, vectorData, cacheData) {
 
 ### Severity levels
 
-- **CRITICAL** — система в inconsistent state, требуется немедленное вмешательство
-- **ERROR** — операция не может быть выполнена, caller должен обработать
-- **WARNING** — операция выполнена с оговорками, caller должен быть осведомлён
+- **CRITICAL** -- system is in an inconsistent state, immediate intervention required
+- **ERROR** -- operation cannot be completed, caller must handle
+- **WARNING** -- operation completed with caveats, caller should be aware
 
 ---
 
-*Этот документ является частью [Кодекса UN ProjectAdvisor](../CODEX_INDEX.md)*
+*This document is part of the [UN ProjectAdvisor Codex](../CODEX_INDEX.md)*
