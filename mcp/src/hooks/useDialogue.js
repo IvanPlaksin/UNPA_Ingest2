@@ -8,11 +8,16 @@ import {
   getSessionContext,
   getRelatedSessions,
   searchDialogue,
+  aiSearchDialogue,
+  reanalyzeSession,
   getDecisions,
   getDecisionDetail,
   getDecisionProvenance,
   getStats,
   getMetrics,
+  getRelatedDialoguesForBacklog,
+  getProvenanceChain,
+  getAnalytics,
 } from '../services/dialogue.service';
 
 export function useDialogueSessions(filters = {}) {
@@ -93,6 +98,7 @@ export function useSessionContext(sessionId) {
   const [context, setContext] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [rev, setRev] = useState(0);
 
   useEffect(() => {
     if (!sessionId) { setContext(null); return; }
@@ -102,9 +108,11 @@ export function useSessionContext(sessionId) {
       .then(data => setContext(data.success ? data : null))
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
-  }, [sessionId]);
+  }, [sessionId, rev]);
 
-  return { context, loading, error };
+  const refetch = useCallback(() => setRev(r => r + 1), []);
+
+  return { context, loading, error, refetch };
 }
 
 export function useDialogueDecisions(filters = {}) {
@@ -205,6 +213,24 @@ export function useDialogueMetrics() {
   return { metrics, loading, refresh };
 }
 
+export function useRelatedDialoguesForBacklog(backlogId) {
+  const [sessions, setSessions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!backlogId) { setSessions([]); return; }
+    setLoading(true);
+    setError(null);
+    getRelatedDialoguesForBacklog(backlogId)
+      .then(data => setSessions(data.sessions || []))
+      .catch(err => setError(err.message))
+      .finally(() => setLoading(false));
+  }, [backlogId]);
+
+  return { sessions, loading, error };
+}
+
 export function useRelatedSessions(sessionId, limit = 5) {
   const [related, setRelated] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -219,4 +245,95 @@ export function useRelatedSessions(sessionId, limit = 5) {
   }, [sessionId, limit]);
 
   return { related, loading };
+}
+
+export function useProvenanceChain(type, nodeId) {
+  const [chain, setChain] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!type || !nodeId) { setChain(null); return; }
+    setLoading(true);
+    setError(null);
+    getProvenanceChain(type, nodeId)
+      .then(data => setChain(data.success ? data : null))
+      .catch(err => setError(err.message))
+      .finally(() => setLoading(false));
+  }, [type, nodeId]);
+
+  return { chain, loading, error };
+}
+
+export function useAISearch() {
+  const [results, setResults] = useState([]);
+  const [strategy, setStrategy] = useState(null);
+  const [reasoning, setReasoning] = useState(null);
+  const [searchParams, setSearchParams] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [aiAvailable, setAiAvailable] = useState(true);
+
+  const search = useCallback(async (query) => {
+    if (!query?.trim()) { setResults([]); setStrategy(null); setReasoning(null); setSearchParams(null); return; }
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await aiSearchDialogue(query);
+      setResults(data.results || []);
+      setStrategy(data.strategy || null);
+      setReasoning(data.reasoning || null);
+      setSearchParams(data.searchParams || null);
+      setAiAvailable(data.aiAvailable !== false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { results, strategy, reasoning, searchParams, loading, error, aiAvailable, search };
+}
+
+export function useSessionReanalyze() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [lastSessionId, setLastSessionId] = useState(null);
+
+  const reanalyze = useCallback(async (sessionId) => {
+    setLoading(true);
+    setError(null);
+    setLastSessionId(sessionId);
+    try {
+      await reanalyzeSession(sessionId);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { reanalyze, loading, error, lastSessionId };
+}
+
+export function useDialogueAnalytics(period = 'all') {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetch = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await getAnalytics(period);
+      setData(result.success ? result : null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [period]);
+
+  useEffect(() => { fetch(); }, [fetch]);
+  return { data, loading, error, refetch: fetch };
 }

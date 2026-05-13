@@ -25,7 +25,13 @@ let _llm = null;
 let _sourceService = null;
 let _draftService = null;
 
-function llm() { if (!_llm) _llm = require('../../llm.service'); return _llm; }
+function llm() {
+  if (!_llm) {
+    const { getInstance: getLLMProvider } = require('../../llm/LLMProviderService');
+    _llm = getLLMProvider();
+  }
+  return _llm;
+}
 function srcSvc() { if (!_sourceService) _sourceService = require('../source.service'); return _sourceService; }
 function draftSvc() { if (!_draftService) _draftService = require('../draft.service'); return _draftService; }
 
@@ -180,11 +186,13 @@ async function runExtractionPipeline(workspaceId, sourceId, options = {}) {
 
         const response = await llm().chat(
           [{ role: 'user', content: filledPrompt }],
-          [], null,
           { maxTokens: 4000, temperature: 0.1 }
         );
 
-        const responseText = response?.content || '';
+        const rawRC = response?.content;
+        const responseText = Array.isArray(rawRC)
+          ? rawRC.filter(b => b.type === 'text').map(b => b.text).join('')
+          : (rawRC || '');
         addChat('assistant', `${extractType} extraction response (${responseText.length} chars)`);
 
         // Parse JSON from response

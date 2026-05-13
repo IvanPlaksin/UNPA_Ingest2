@@ -63,7 +63,10 @@ function mg() {
 }
 
 function llm() {
-  if (!_llm) _llm = require('../llm.service');
+  if (!_llm) {
+    const { getInstance: getLLMProvider } = require('../llm/LLMProviderService');
+    _llm = getLLMProvider();
+  }
   return _llm;
 }
 
@@ -241,7 +244,12 @@ ${textContent.substring(0, 3000)}`;
           maxTokens: 500
         });
 
-        const responseText = typeof llmResponse === 'string' ? llmResponse : llmResponse?.content || llmResponse?.text || '';
+        const rawLlmContent = llmResponse?.content;
+        const responseText = typeof llmResponse === 'string'
+          ? llmResponse
+          : Array.isArray(rawLlmContent)
+            ? rawLlmContent.filter(b => b.type === 'text').map(b => b.text).join('')
+            : (rawLlmContent || llmResponse?.text || '');
         const jsonMatch = responseText.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]);

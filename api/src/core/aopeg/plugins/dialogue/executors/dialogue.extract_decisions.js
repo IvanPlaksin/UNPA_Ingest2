@@ -81,11 +81,12 @@ async function extractWithLLM(llmService, text, model) {
   try {
     const result = await llmService.chat(
       [{ role: 'user', content: EXTRACT_PROMPT(text.slice(0, 4000)) }],
-      [],
-      null,
       { model, maxTokens: 800 }
     );
-    const raw = (result.content || '').trim();
+    const rawContent = result.content;
+    const raw = (Array.isArray(rawContent)
+      ? rawContent.filter(b => b.type === 'text').map(b => b.text).join('')
+      : (rawContent || '')).trim();
     // Extract JSON from response (may be wrapped in markdown code blocks)
     const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, raw];
     const jsonStr = jsonMatch[1].trim();
@@ -139,7 +140,10 @@ const dialogueExtractDecisionsExecutor = createSimpleExecutor({
 
     let llmService = null;
     if (useLLM) {
-      try { llmService = require('../../../../../services/llm.service'); } catch { /* fallback */ }
+      try {
+        const { getInstance: getLLMProvider } = require('../../../../../services/llm/LLMProviderService');
+        llmService = getLLMProvider();
+      } catch { /* fallback */ }
     }
 
     // Load segments with their messages from Memgraph + JSONL

@@ -126,7 +126,8 @@ class TaskPlanner {
     _getLlmService() {
         if (!this._llmService) {
             try {
-                this._llmService = require('../llm.service');
+                const { getInstance: getLLMProvider } = require('../llm/LLMProviderService');
+                this._llmService = getLLMProvider();
             } catch (e) {
                 console.warn('TaskPlanner: LLM service not available');
             }

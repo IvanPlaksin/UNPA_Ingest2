@@ -5,13 +5,9 @@
  * Uses LLM to generate contextual responses based on session data.
  */
 
-let _llmService = null;
+const { getInstance: getLLMProvider } = require('../services/llm/LLMProviderService');
 function getLlmService() {
-  if (!_llmService) {
-    _llmService = require('../services/llm.service');
-    if (typeof _llmService === 'function') _llmService = new _llmService();
-  }
-  return _llmService;
+  return getLLMProvider();
 }
 
 /**
@@ -116,7 +112,10 @@ Provide helpful, concise responses. If the user asks about specific entities, ru
 
     const result = await llm.chat(chatMessages);
 
-    const responseText = result?.content || result?.message?.content || 'No response generated.';
+    const rawContent = result?.content;
+    const responseText = Array.isArray(rawContent)
+      ? rawContent.filter(b => b.type === 'text').map(b => b.text).join('')
+      : (rawContent || result?.message?.content || 'No response generated.');
 
     res.json({ message: responseText });
   } catch (error) {

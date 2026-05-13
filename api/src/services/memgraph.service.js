@@ -66,6 +66,8 @@ const ALLOWED_LABELS = new Set([
     'KBReference',
     'ExperienceRecord', 'ExtractionStrategy',
     'PromotionRecord', 'PromotionItem',
+    // Provenance (SIGILLUM namespace) — extraction round audit trail
+    'ProvenanceRound',
 ]);
 
 /**

@@ -66,7 +66,8 @@ async function main() {
 
   // Load services (from scripts/ → up 5 levels to src/, then into services/)
   const mg = require('../../../../../services/memgraph.service');
-  const llmService = require('../../../../../services/llm.service');
+  const { getInstance: getLLMProvider } = require('../../../../../services/llm/LLMProviderService');
+  const llmService = getLLMProvider();
   const { dialogueSummarizeExecutor } = require('../executors/dialogue.summarize');
   const { dialogueExtractDecisionsExecutor } = require('../executors/dialogue.extract_decisions');
   const { dialogueEmbedExecutor } = require('../executors/dialogue.embed');

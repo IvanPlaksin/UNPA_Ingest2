@@ -1,14 +1,309 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Box, List, ListItemButton, ListItemText, Chip, Select, MenuItem,
-  FormControl, InputLabel, Pagination, CircularProgress, Typography, Stack,
+  Box, Chip, Select, MenuItem, FormControl, InputLabel,
+  Pagination, CircularProgress, Typography, Stack, Paper,
+  Collapse, Divider, Tooltip, IconButton,
 } from '@mui/material';
+import { ExpandMore, ExpandLess, Link as LinkIcon, AutoFixHigh, Check } from '@mui/icons-material';
 import { useLocation } from 'react-router-dom';
-import { useDialogueSessions } from '../../hooks/useDialogue';
+import { useDialogueSessions, useRelatedSessions, useSessionReanalyze } from '../../hooks/useDialogue';
 import SessionDetailDrawer from '../../components/Dialogue/SessionDetailDrawer';
+import {
+  parseSmartTitle, parseTopics, inferSessionType, SESSION_TYPE_STYLE as TYPE_STYLE,
+  parseSummaryBlurb, parseEntities, ENTITY_TYPE_COLOR,
+} from '../../components/Dialogue/session-meta';
 
-const PLATFORM_LABELS = { claude_code: 'Claude Code', claude_ai: 'Claude.ai' };
-const PLATFORM_COLORS = { claude_code: 'primary', claude_ai: 'secondary' };
+const PLATFORM_LABEL = { claude_code: 'Claude Code', claude_ai: 'Claude.ai' };
+const PLATFORM_COLOR = { claude_code: 'primary', claude_ai: 'secondary' };
+
+// ─── Compact card for related sessions (inside expandable panel) ──────────────
+
+function RelatedSessionMiniCard({ session, onOpen }) {
+  const smart = parseSmartTitle(session.title, session.summary);
+  const type = inferSessionType(session.title, session.summary);
+  const style = TYPE_STYLE[type];
+
+  return (
+    <Box
+      onClick={() => onOpen(session.sessionId)}
+      sx={{
+        px: 1.5, py: 1, cursor: 'pointer',
+        display: 'flex', gap: 1, alignItems: 'flex-start',
+        borderRadius: 1,
+        '&:hover': { bgcolor: 'action.hover' },
+      }}
+    >
+      <Chip
+        label={PLATFORM_LABEL[session.platform] || 'unknown'}
+        size="small"
+        color={PLATFORM_COLOR[session.platform] || 'default'}
+        sx={{ flexShrink: 0, mt: 0.2 }}
+      />
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Typography variant="body2" fontWeight={500} sx={{
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>
+          {smart}
+        </Typography>
+        <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }} flexWrap="wrap">
+          <Chip
+            label={type}
+            size="small"
+            variant="outlined"
+            sx={{ height: 18, fontSize: 10, borderColor: style.border, color: style.color }}
+          />
+          {session.startedAt && (
+            <Typography variant="caption" color="text.disabled" sx={{ alignSelf: 'center' }}>
+              {new Date(session.startedAt).toLocaleDateString()}
+            </Typography>
+          )}
+          {session.chainScore != null && (
+            <Chip
+              label={`${Math.round(session.chainScore * 100)}% match`}
+              size="small"
+              color={session.chainScore >= 0.8 ? 'success' : 'default'}
+              sx={{ height: 18, fontSize: 10 }}
+            />
+          )}
+        </Stack>
+      </Box>
+    </Box>
+  );
+}
+
+// ─── Lazy-loaded related sessions panel ──────────────────────────────────────
+
+function LazyRelatedList({ sessionId, onOpen }) {
+  const { related, loading } = useRelatedSessions(sessionId, 5);
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 1.5 }}>
+        <CircularProgress size={16} />
+      </Box>
+    );
+  }
+
+  if (related.length === 0) {
+    return (
+      <Typography variant="caption" color="text.disabled" sx={{ px: 1.5, py: 1, display: 'block' }}>
+        No related sessions found
+      </Typography>
+    );
+  }
+
+  return (
+    <Box>
+      {related.map((s, i) => (
+        <React.Fragment key={s.sessionId}>
+          {i > 0 && <Divider />}
+          <RelatedSessionMiniCard session={s} onOpen={onOpen} />
+        </React.Fragment>
+      ))}
+    </Box>
+  );
+}
+
+function RelatedPanel({ session, onOpen }) {
+  const [expanded, setExpanded] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  const toggle = (e) => {
+    e.stopPropagation();
+    if (!loaded) setLoaded(true);
+    setExpanded(v => !v);
+  };
+
+  return (
+    <Box onClick={e => e.stopPropagation()}>
+      <Box
+        onClick={toggle}
+        sx={{
+          display: 'flex', alignItems: 'center', gap: 0.5,
+          px: 1.5, py: 0.75,
+          cursor: 'pointer',
+          borderTop: '1px solid',
+          borderColor: 'divider',
+          color: 'text.secondary',
+          '&:hover': { bgcolor: 'action.hover' },
+        }}
+      >
+        {expanded ? <ExpandLess sx={{ fontSize: 16 }} /> : <ExpandMore sx={{ fontSize: 16 }} />}
+        <Typography variant="caption">Related sessions</Typography>
+        <LinkIcon sx={{ fontSize: 12, ml: 0.5 }} />
+      </Box>
+      <Collapse in={expanded}>
+        <Box sx={{ bgcolor: 'background.default', borderTop: '1px solid', borderColor: 'divider' }}>
+          {loaded && <LazyRelatedList sessionId={session.sessionId} onOpen={onOpen} />}
+        </Box>
+      </Collapse>
+    </Box>
+  );
+}
+
+// ─── Main session card ────────────────────────────────────────────────────────
+
+function ReanalyzeButton({ sessionId }) {
+  const { reanalyze, loading, error, lastSessionId } = useSessionReanalyze();
+  const [done, setDone] = useState(false);
+
+  const handle = (e) => {
+    e.stopPropagation();
+    reanalyze(sessionId).then(() => {
+      setDone(true);
+      setTimeout(() => setDone(false), 2000);
+    });
+  };
+
+  const isDone = done && lastSessionId === sessionId && !loading;
+
+  return (
+    <Tooltip title={isDone ? 'Re-analysis complete' : error ? `Error: ${error}` : 'Re-run AI analysis'}>
+      <IconButton
+        size="small"
+        onClick={handle}
+        disabled={loading && lastSessionId === sessionId}
+        sx={{ opacity: 0.5, '&:hover': { opacity: 1 }, flexShrink: 0 }}
+      >
+        {loading && lastSessionId === sessionId
+          ? <CircularProgress size={14} />
+          : isDone
+            ? <Check sx={{ fontSize: 16, color: 'success.main' }} />
+            : <AutoFixHigh sx={{ fontSize: 16 }} />
+        }
+      </IconButton>
+    </Tooltip>
+  );
+}
+
+function SessionCard({ session, idx, total, onOpen }) {
+  const smart = parseSmartTitle(session.title, session.summary);
+  const topics = parseTopics(session.summary);
+  const type = inferSessionType(session.title, session.summary);
+  const style = TYPE_STYLE[type];
+  const blurb = parseSummaryBlurb(session.summary);
+  const entities = parseEntities(session);
+
+  return (
+    <Box
+      sx={{
+        borderBottom: idx < total - 1 ? '1px solid' : 'none',
+        borderColor: 'divider',
+        '&:hover': { bgcolor: 'action.hover' },
+        '&:hover .reanalyze-btn': { opacity: 1 },
+      }}
+    >
+      {/* Clickable header row */}
+      <Box
+        onClick={() => onOpen(session.sessionId)}
+        sx={{ px: 2, pt: 1.5, pb: 0.5, cursor: 'pointer', display: 'flex', gap: 1.5, alignItems: 'flex-start' }}
+      >
+        {/* Platform chip */}
+        <Chip
+          label={PLATFORM_LABEL[session.platform] || session.platform || 'unknown'}
+          size="small"
+          color={PLATFORM_COLOR[session.platform] || 'default'}
+          sx={{ mt: 0.3, flexShrink: 0 }}
+        />
+
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          {/* Smart title */}
+          <Typography variant="body1" fontWeight={500} sx={{
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {smart}
+          </Typography>
+
+          {/* Tag row: type + topics + meta */}
+          <Stack direction="row" spacing={0.5} sx={{ mt: 0.75 }} flexWrap="wrap" gap={0.5}>
+            <Chip
+              label={type}
+              size="small"
+              variant="outlined"
+              sx={{ height: 20, fontSize: 11, borderColor: style.border, color: style.color, fontWeight: 600 }}
+            />
+            {topics.map(topic => (
+              <Chip key={topic} label={topic} size="small" variant="outlined"
+                sx={{ height: 20, fontSize: 11, color: 'text.secondary' }} />
+            ))}
+            <Typography variant="caption" color="text.disabled" sx={{ alignSelf: 'center' }}>
+              {session.startedAt ? new Date(session.startedAt).toLocaleDateString() : '—'}
+            </Typography>
+            <Typography variant="caption" color="text.disabled" sx={{ alignSelf: 'center' }}>·</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center' }}>
+              {session.messageCount ?? 0} msgs
+            </Typography>
+            {session.gitBranch && (
+              <>
+                <Typography variant="caption" color="text.disabled" sx={{ alignSelf: 'center' }}>·</Typography>
+                <Tooltip title={session.gitBranch}>
+                  <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {session.gitBranch}
+                  </Typography>
+                </Tooltip>
+              </>
+            )}
+            {session.lastReanalyzedAt && (
+              <>
+                <Typography variant="caption" color="text.disabled" sx={{ alignSelf: 'center' }}>·</Typography>
+                <Tooltip title={`Re-analyzed: ${new Date(session.lastReanalyzedAt).toLocaleString()}`}>
+                  <Typography variant="caption" color="success.main" sx={{ alignSelf: 'center', display: 'flex', alignItems: 'center', gap: 0.3 }}>
+                    ✓ AI {new Date(session.lastReanalyzedAt).toLocaleDateString()}
+                  </Typography>
+                </Tooltip>
+              </>
+            )}
+          </Stack>
+
+          {/* Entity tags row */}
+          {entities.length > 0 && (
+            <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }} flexWrap="wrap" gap={0.5}>
+              {entities.slice(0, 5).map(e => (
+                <Chip
+                  key={e.name}
+                  label={`${e.name} ${Math.round(e.confidence * 100)}%`}
+                  size="small"
+                  color={ENTITY_TYPE_COLOR[e.type] || 'default'}
+                  variant="outlined"
+                  sx={{ height: 18, fontSize: 10 }}
+                />
+              ))}
+            </Stack>
+          )}
+        </Box>
+
+        {/* Re-analyze button (visible on hover) */}
+        <Box className="reanalyze-btn" sx={{ opacity: 0, transition: 'opacity 0.15s', flexShrink: 0, mt: 0.5 }}>
+          <ReanalyzeButton sessionId={session.sessionId} />
+        </Box>
+      </Box>
+
+      {/* Summary blurb: goals + achieved */}
+      {blurb && (
+        <Box
+          onClick={() => onOpen(session.sessionId)}
+          sx={{ px: 2, pb: 1.5, cursor: 'pointer' }}
+        >
+          {blurb.goals.length > 0 && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.6 }}>
+              <span style={{ fontWeight: 600 }}>Goals: </span>{blurb.goals.join(' · ')}
+            </Typography>
+          )}
+          {blurb.achieved.length > 0 && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.6 }}>
+              <span style={{ fontWeight: 600 }}>Done: </span>{blurb.achieved.join(' · ')}
+            </Typography>
+          )}
+        </Box>
+      )}
+
+      {/* Expandable related panel */}
+      <RelatedPanel session={session} onOpen={onOpen} />
+    </Box>
+  );
+}
+
+// ─── TimelineTab ──────────────────────────────────────────────────────────────
 
 export default function TimelineTab() {
   const [filters, setFilters] = useState({ platform: '', limit: 20, offset: 0, sort: 'startedAt_desc' });
@@ -16,7 +311,6 @@ export default function TimelineTab() {
   const { sessions, loading, pagination } = useDialogueSessions(filters);
   const location = useLocation();
 
-  // Open session drawer when navigated here with state.openSession
   useEffect(() => {
     if (location.state?.openSession) {
       setSelectedSessionId(location.state.openSession);
@@ -73,46 +367,17 @@ export default function TimelineTab() {
           No sessions found
         </Typography>
       ) : (
-        <List disablePadding sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+        <Paper variant="outlined">
           {sessions.map((session, idx) => (
-            <ListItemButton
+            <SessionCard
               key={session.sessionId}
-              divider={idx < sessions.length - 1}
-              sx={{ gap: 1.5, alignItems: 'flex-start', py: 1.5 }}
-              onClick={() => setSelectedSessionId(session.sessionId)}
-            >
-              <Chip
-                label={PLATFORM_LABELS[session.platform] || session.platform || 'unknown'}
-                size="small"
-                color={PLATFORM_COLORS[session.platform] || 'default'}
-                sx={{ mt: 0.3, flexShrink: 0 }}
-              />
-              <ListItemText
-                primary={session.title || 'Untitled session'}
-                secondary={
-                  <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
-                    <Typography variant="caption" component="span">
-                      {session.startedAt ? new Date(session.startedAt).toLocaleDateString() : '—'}
-                    </Typography>
-                    <Typography variant="caption" component="span" color="text.disabled">·</Typography>
-                    <Typography variant="caption" component="span">
-                      {session.messageCount ?? 0} messages
-                    </Typography>
-                    {session.gitBranch && (
-                      <>
-                        <Typography variant="caption" component="span" color="text.disabled">·</Typography>
-                        <Typography variant="caption" component="span" color="text.secondary">
-                          {session.gitBranch}
-                        </Typography>
-                      </>
-                    )}
-                  </Stack>
-                }
-                primaryTypographyProps={{ fontWeight: 500 }}
-              />
-            </ListItemButton>
+              session={session}
+              idx={idx}
+              total={sessions.length}
+              onOpen={setSelectedSessionId}
+            />
           ))}
-        </List>
+        </Paper>
       )}
 
       {/* Pagination */}

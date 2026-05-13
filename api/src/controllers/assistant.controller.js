@@ -14,7 +14,7 @@ const { sessionContextService } = require('../services/agents/SessionContextServ
 const { graphActionParser } = require('../services/agents/GraphActionParser');
 const { getApiKey, getModel } = require('../config/ai-models.config');
 const { agentLearningService } = require('../services/agents/AgentLearningService');
-const llmService = require('../services/llm.service');
+const { getInstance: getLLMProvider } = require('../services/llm/LLMProviderService');
 
 // ────────────────────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -181,7 +181,8 @@ async function chat(req, res) {
     res.setHeader('X-Session-Id', sessionId);
     res.flushHeaders();
 
-    console.log(`[Assistant] Streaming via provider: ${llmService.provider}`);
+    const llmProvider = getLLMProvider();
+    console.log(`[Assistant] Streaming via provider: ${llmProvider.type}`);
 
     // 9. Execute via Agent SDK (Anthropic) or fallback to basic streaming
     let fullResponse = '';
@@ -190,7 +191,7 @@ async function chat(req, res) {
     req.on('close', () => { aborted = true; });
 
     try {
-      if (llmService.provider === 'anthropic') {
+      if (llmProvider.type === 'anthropic') {
         // ── Agent SDK Mode: full agentic loop with MCP tools ──
         const { getAgentService } = require('../services/agents/anthropic-agent.service');
         const agent = await getAgentService();
@@ -245,16 +246,15 @@ async function chat(req, res) {
         }
       } else {
         // ── Fallback: basic streaming without tools ──
-        await llmService.streamChat(
-          llmMessages,
-          (text) => {
-            if (aborted) return;
+        const streamObj = llmProvider.stream(llmMessages, { maxTokens: MAX_TOKENS });
+        for await (const event of streamObj) {
+          if (aborted) break;
+          if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
+            const text = event.delta.text;
             fullResponse += text;
             res.write(`data: ${JSON.stringify({ type: 'chunk', text })}\n\n`);
-          },
-          null,
-          { maxTokens: MAX_TOKENS }
-        );
+          }
+        }
       }
     } catch (streamErr) {
       const errorMsg = streamErr.response?.data?.error?.message || streamErr.message;

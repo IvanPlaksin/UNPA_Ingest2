@@ -15,7 +15,7 @@
 'use strict';
 
 const { patternLibrary } = require('../patterns');
-const llmService = require('../llm.service');
+const { getInstance: getLLMProvider } = require('../llm/LLMProviderService');
 
 // Lazy load structured output for Gemini fallback
 let _structuredOutput = null;
@@ -398,7 +398,7 @@ Extract every entity mentioned and all relationships between them. Return JSON:`
                 { role: 'system', content: systemPrompt },
                 { role: 'user', content: userPrompt }
             ];
-            const response = await llmService.chat(messages);
+            const response = await getLLMProvider().chat(messages);
             return this._parseLLMResponse(response);
         } catch (ollamaError) {
             logger.warn('Ollama extraction failed:', ollamaError.message);
@@ -414,9 +414,12 @@ Extract every entity mentioned and all relationships between them. Return JSON:`
     _parseLLMResponse(response) {
         try {
             // Get text content from response
+            const rawContent = response?.content;
             const text = typeof response === 'string'
                 ? response
-                : response?.content || response?.text || '';
+                : Array.isArray(rawContent)
+                    ? rawContent.filter(b => b.type === 'text').map(b => b.text).join('')
+                    : (rawContent || response?.text || '');
 
             // Find JSON in response
             const jsonMatch = text.match(/\{[\s\S]*\}/);

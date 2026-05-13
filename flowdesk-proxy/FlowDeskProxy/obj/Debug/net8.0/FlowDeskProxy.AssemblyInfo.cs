@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("FlowDeskProxy")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c0e64cf0e6631eb96b5b1e8ec65d0214f5c87be5")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+587cf335b921088b6fb3f092c0166d1a2c6d78b9")]
 [assembly: System.Reflection.AssemblyProductAttribute("FlowDeskProxy")]
 [assembly: System.Reflection.AssemblyTitleAttribute("FlowDeskProxy")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

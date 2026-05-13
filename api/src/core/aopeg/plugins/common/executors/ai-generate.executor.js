@@ -48,7 +48,8 @@ class AiGenerateExecutor extends BaseExecutor {
     }
 
     try {
-      const llmService = require('../../../../../services/llm.service');
+      const { getInstance: getLLMProvider } = require('../../../../../services/llm/LLMProviderService');
+      const llmProvider = getLLMProvider();
 
       const messages = [
         { role: 'system', content: systemPrompt },
@@ -58,10 +59,13 @@ class AiGenerateExecutor extends BaseExecutor {
       const opts = {};
       if (model) opts.model = model;
 
-      const result = await llmService.chat(messages, [], null, opts);
+      const result = await llmProvider.chat(messages, opts);
 
-      // Normalize response: Claude returns result.content, Ollama returns result.content too (after llmService normalization)
-      let response = result?.content || result?.choices?.[0]?.message?.content || '';
+      // Normalize response: extract text from content blocks
+      const rawContent = result?.content;
+      let response = Array.isArray(rawContent)
+        ? rawContent.filter(b => b.type === 'text').map(b => b.text).join('')
+        : (rawContent || result?.choices?.[0]?.message?.content || '');
 
       // Parse JSON if requested
       if (responseFormat === 'json' && typeof response === 'string') {
@@ -73,7 +77,7 @@ class AiGenerateExecutor extends BaseExecutor {
       }
 
       return this.success(
-        { response, model_used: result?.model || model || 'unknown', provider: llmService.provider, mock: false },
+        { response, model_used: result?.model || model || 'unknown', provider: llmProvider.type, mock: false },
         { tokens: result?.usage || null },
         1.0,
       );

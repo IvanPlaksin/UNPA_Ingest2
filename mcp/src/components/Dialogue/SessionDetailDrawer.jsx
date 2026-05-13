@@ -11,19 +11,92 @@
  * which becomes the system context for the assistant (see _meta.dataCompleteness).
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import {
   Drawer, Box, Typography, Tabs, Tab, Chip, IconButton, CircularProgress,
   Divider, Stack, Paper, Tooltip, LinearProgress, Avatar,
   List, ListItem, ListItemText, ListItemAvatar, Collapse,
-  Alert,
+  Alert, InputBase, ToggleButtonGroup, ToggleButton,
 } from '@mui/material';
 import {
   Close, Timeline, Lightbulb, Hub, CheckCircle, Cancel, HelpOutline,
   SmartToy, Person, Link as LinkIcon, OpenInNew, ExpandMore, ExpandLess,
-  Code, Chat, AutoAwesome,
+  Code, Chat, AutoAwesome, Search, Clear, AutoFixHigh, Refresh,
 } from '@mui/icons-material';
-import { useSessionContext, useDialogueSession } from '../../hooks/useDialogue';
+import { useSessionContext, useDialogueSession, useSessionReanalyze } from '../../hooks/useDialogue';
+import { useWebSocketListener } from '../../hooks/useWebSocket';
+import ProvenanceChain from './ProvenanceChain';
+import {
+  parseSmartTitle, parseTopics, inferSessionType, SESSION_TYPE_STYLE,
+  parseEntities, ENTITY_TYPE_COLOR,
+} from './session-meta';
+
+// ── Re-analyze progress panel ─────────────────────────────────────────────────
+
+const STEP_LABELS_TOTAL = 3;
+
+function ReanalyzeProgress({ sessionId, onDone }) {
+  const [steps, setSteps] = useState([]);
+  const [status, setStatus] = useState(null); // null | 'running' | 'done' | 'error'
+
+  useWebSocketListener(useCallback((msg) => {
+    if (msg.type !== 'dialogue:reanalyze' || msg.sessionId !== sessionId) return;
+    setStatus(msg.status);
+    setSteps(prev => {
+      const next = { step: msg.step, label: msg.label, status: msg.status, result: msg.result ?? null };
+      const idx = prev.findIndex(s => s.step === msg.step);
+      if (idx !== -1) {
+        const updated = [...prev];
+        updated[idx] = next;
+        return updated;
+      }
+      return [...prev, next];
+    });
+    if (msg.status === 'done' && msg.step === STEP_LABELS_TOTAL) {
+      setTimeout(() => onDone?.(), 1500);
+    }
+  }, [sessionId, onDone]));
+
+  if (!steps.length) return null;
+
+  return (
+    <Box sx={{ px: 2, py: 1.5, bgcolor: 'background.default', borderBottom: '1px solid', borderColor: 'divider' }}>
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+        <AutoFixHigh sx={{ fontSize: 14, color: 'primary.main' }} />
+        <Typography variant="caption" fontWeight={600} color="primary.main">AI Re-analysis</Typography>
+        {status === 'done' && <Chip label="Complete" size="small" color="success" sx={{ height: 18, fontSize: 10 }} />}
+        {status === 'error' && <Chip label="Error" size="small" color="error" sx={{ height: 18, fontSize: 10 }} />}
+      </Stack>
+      <Stack spacing={0.75}>
+        {Array.from({ length: STEP_LABELS_TOTAL }, (_, i) => {
+          const s = steps.find(x => x.step === i + 1);
+          const isDone = s?.status === 'done';
+          const isRunning = s?.status === 'running';
+          return (
+            <Box key={i}>
+              <Stack direction="row" spacing={1} alignItems="center">
+                {isDone
+                  ? <CheckCircle sx={{ fontSize: 14, flexShrink: 0 }} color="success" />
+                  : isRunning
+                    ? <CircularProgress size={12} sx={{ flexShrink: 0 }} />
+                    : <Box sx={{ width: 14, height: 14, borderRadius: '50%', border: '1px solid', borderColor: 'divider', flexShrink: 0 }} />
+                }
+                <Typography variant="caption" color={isDone ? 'success.main' : isRunning ? 'text.primary' : 'text.disabled'} fontWeight={isRunning ? 500 : 400}>
+                  {s?.label || `Step ${i + 1}`}
+                </Typography>
+              </Stack>
+              {isDone && s?.result && (
+                <Typography variant="caption" color="text.secondary" sx={{ pl: 3, display: 'block', mt: 0.25 }}>
+                  {s.result}
+                </Typography>
+              )}
+            </Box>
+          );
+        })}
+      </Stack>
+    </Box>
+  );
+}
 
 // ── Participant identification ────────────────────────────────────────────────
 
@@ -124,13 +197,36 @@ function DecisionCard({ decision, type }) {
   );
 }
 
-function MessageBubble({ message, platform }) {
+function highlightText(text, query) {
+  if (!query || !text) return text;
+  const idx = text.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return text;
+  const parts = [];
+  let last = 0;
+  let i = idx;
+  while (i !== -1 && parts.length < 20) {
+    parts.push(text.slice(last, i));
+    parts.push(
+      <mark key={i} style={{ background: '#fff176', borderRadius: 2, padding: '0 1px' }}>
+        {text.slice(i, i + query.length)}
+      </mark>
+    );
+    last = i + query.length;
+    i = text.toLowerCase().indexOf(query.toLowerCase(), last);
+  }
+  parts.push(text.slice(last));
+  return parts;
+}
+
+function MessageBubble({ message, platform, searchQuery }) {
   const pc = getParticipant(message, platform);
   const isHuman = message.role === 'user';
   const [expanded, setExpanded] = useState(false);
   const content = message.content || '';
   const PREVIEW = 300;
-  const needsExpand = content.length > PREVIEW;
+  const hasMatch = searchQuery && content.toLowerCase().includes(searchQuery.toLowerCase());
+  const needsExpand = !hasMatch && content.length > PREVIEW;
+  const displayContent = needsExpand && !expanded ? content.slice(0, PREVIEW) + '…' : content;
 
   return (
     <Box sx={{ display: 'flex', gap: 1, mb: 1.5, flexDirection: isHuman ? 'row-reverse' : 'row' }}>
@@ -144,13 +240,13 @@ function MessageBubble({ message, platform }) {
           variant="outlined"
           sx={{
             p: 1.5,
-            bgcolor: isHuman ? 'primary.50' : 'background.default',
-            borderColor: isHuman ? 'primary.200' : 'divider',
+            bgcolor: hasMatch ? '#fffde7' : isHuman ? 'primary.50' : 'background.default',
+            borderColor: hasMatch ? 'warning.main' : isHuman ? 'primary.200' : 'divider',
             borderRadius: 2,
           }}
         >
           <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-            {needsExpand && !expanded ? content.slice(0, PREVIEW) + '…' : content}
+            {searchQuery ? highlightText(displayContent, searchQuery) : displayContent}
           </Typography>
           {needsExpand && (
             <Typography
@@ -181,6 +277,7 @@ function MessageBubble({ message, platform }) {
 
 function OverviewTab({ ctx }) {
   const { session, segments, linkedEntities, _meta } = ctx;
+  const entities = parseEntities(session);
 
   return (
     <Box sx={{ p: 2 }}>
@@ -216,6 +313,37 @@ function OverviewTab({ ctx }) {
           <Chip label={session.projectPath.split(/[/\\]/).pop()} size="small" variant="outlined" />
         )}
       </Stack>
+
+      {/* Last reanalyzed */}
+      {session.lastReanalyzedAt && (
+        <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 2 }}>
+          <AutoFixHigh sx={{ fontSize: 13, color: 'text.disabled' }} />
+          <Typography variant="caption" color="text.secondary">
+            Last re-analyzed: {new Date(session.lastReanalyzedAt).toLocaleString()}
+          </Typography>
+        </Stack>
+      )}
+
+      {/* Entity chips */}
+      {entities.length > 0 && (
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: 'block', mb: 0.75 }}>
+            TECHNOLOGIES & CONCEPTS
+          </Typography>
+          <Stack direction="row" spacing={0.5} flexWrap="wrap" gap={0.5}>
+            {entities.map(e => (
+              <Chip
+                key={e.name}
+                label={`${e.name} ${Math.round(e.confidence * 100)}%`}
+                size="small"
+                color={ENTITY_TYPE_COLOR[e.type] || 'default'}
+                variant="outlined"
+                sx={{ height: 20, fontSize: 11 }}
+              />
+            ))}
+          </Stack>
+        </Box>
+      )}
 
       {/* Data completeness for AI assistant */}
       {_meta && (
@@ -341,6 +469,26 @@ function OverviewTab({ ctx }) {
 
 function ThreadTab({ ctx, messages, messagesLoading }) {
   const { session, thread } = ctx;
+  const [query, setQuery] = useState('');
+  const [participant, setParticipant] = useState('all');
+  const inputRef = useRef(null);
+
+  const filtered = useMemo(() => {
+    if (!messages.length) return messages;
+    return messages.filter(msg => {
+      if (participant !== 'all') {
+        const isHuman = msg.role === 'user';
+        if (participant === 'human' && !isHuman) return false;
+        if (participant === 'assistant' && isHuman) return false;
+      }
+      if (query.trim()) {
+        return (msg.content || '').toLowerCase().includes(query.toLowerCase());
+      }
+      return true;
+    });
+  }, [messages, query, participant]);
+
+  const hasFilter = query.trim() || participant !== 'all';
 
   return (
     <Box>
@@ -366,6 +514,59 @@ function ThreadTab({ ctx, messages, messagesLoading }) {
         </Box>
       )}
 
+      {/* Search + filter bar */}
+      <Box sx={{ px: 2, pt: 1.5, pb: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+        <Paper
+          variant="outlined"
+          sx={{ display: 'flex', alignItems: 'center', px: 1.5, py: 0.5, mb: 1 }}
+        >
+          <Search sx={{ color: 'text.disabled', fontSize: 18, mr: 1, flexShrink: 0 }} />
+          <InputBase
+            inputRef={inputRef}
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Search messages…"
+            sx={{ flex: 1, fontSize: '0.875rem' }}
+            inputProps={{ 'aria-label': 'search messages' }}
+          />
+          {query && (
+            <IconButton size="small" onClick={() => { setQuery(''); inputRef.current?.focus(); }}>
+              <Clear fontSize="small" />
+            </IconButton>
+          )}
+        </Paper>
+
+        <Stack direction="row" spacing={1} alignItems="center">
+          <ToggleButtonGroup
+            value={participant}
+            exclusive
+            onChange={(_, v) => { if (v !== null) setParticipant(v); }}
+            size="small"
+            sx={{ '& .MuiToggleButton-root': { py: 0.3, px: 1, fontSize: '0.75rem', textTransform: 'none' } }}
+          >
+            <ToggleButton value="all">All</ToggleButton>
+            <ToggleButton value="human">You</ToggleButton>
+            <ToggleButton value="assistant">Claude</ToggleButton>
+          </ToggleButtonGroup>
+
+          {hasFilter && (
+            <Typography variant="caption" color={filtered.length === 0 ? 'error' : 'text.secondary'}>
+              {filtered.length} / {messages.length} messages
+            </Typography>
+          )}
+          {hasFilter && (
+            <Typography
+              variant="caption"
+              color="primary"
+              sx={{ cursor: 'pointer' }}
+              onClick={() => { setQuery(''); setParticipant('all'); }}
+            >
+              Clear
+            </Typography>
+          )}
+        </Stack>
+      </Box>
+
       {/* Messages */}
       <Box sx={{ px: 2, pt: 1.5, pb: 2 }}>
         {messagesLoading ? (
@@ -376,9 +577,18 @@ function ThreadTab({ ctx, messages, messagesLoading }) {
           <Typography color="text.secondary" sx={{ textAlign: 'center', py: 3 }}>
             No messages loaded
           </Typography>
+        ) : filtered.length === 0 ? (
+          <Typography color="text.secondary" sx={{ textAlign: 'center', py: 3 }}>
+            No messages match "{query}"
+          </Typography>
         ) : (
-          messages.map((msg, idx) => (
-            <MessageBubble key={msg.messageId || idx} message={msg} platform={session.platform} />
+          filtered.map((msg, idx) => (
+            <MessageBubble
+              key={msg.messageId || idx}
+              message={msg}
+              platform={session.platform}
+              searchQuery={query.trim() || null}
+            />
           ))
         )}
       </Box>
@@ -432,41 +642,61 @@ function DecisionsTab({ decisions }) {
   );
 }
 
+function SessionMiniCard({ session }) {
+  const smart = parseSmartTitle(session.title, session.summary);
+  const topics = parseTopics(session.summary);
+  const type = inferSessionType(session.title, session.summary);
+  const style = SESSION_TYPE_STYLE[type];
+  return (
+    <Box>
+      <Typography variant="body2" fontWeight={500} sx={{
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+      }}>
+        {smart}
+      </Typography>
+      <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }} flexWrap="wrap" gap={0.5}>
+        <Chip label={type} size="small" variant="outlined"
+          sx={{ height: 18, fontSize: 10, borderColor: style.border, color: style.color, fontWeight: 600 }} />
+        {topics.map(t => (
+          <Chip key={t} label={t} size="small" variant="outlined"
+            sx={{ height: 18, fontSize: 10, color: 'text.secondary' }} />
+        ))}
+      </Stack>
+    </Box>
+  );
+}
+
 // ── Related Tab ───────────────────────────────────────────────────────────────
 
-function RelatedTab({ relatedSessions, thread }) {
-  if (!relatedSessions?.length) {
-    return (
-      <Box sx={{ p: 3, textAlign: 'center' }}>
-        <Typography color="text.secondary">No connected sessions found</Typography>
-      </Box>
-    );
-  }
-
+function RelatedTab({ sessionId, relatedSessions, thread }) {
   return (
     <Box sx={{ p: 2 }}>
-      <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-        Connected via CONTINUES_FROM edges (semantic similarity + temporal proximity)
-      </Typography>
-      {relatedSessions.map(s => (
+      {/* ProvenanceChain: direct CONTINUES_FROM graph chain */}
+      {sessionId && (
+        <Box sx={{ mb: 2 }}>
+          <ProvenanceChain type="session" nodeId={sessionId} />
+        </Box>
+      )}
+
+      {relatedSessions?.length > 0 && (
+        <>
+          <Divider sx={{ mb: 2 }} />
+          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+            Semantically related sessions
+          </Typography>
+        </>
+      )}
+      {relatedSessions?.map(s => (
         <Paper key={s.sessionId} variant="outlined" sx={{ p: 1.5, mb: 1 }}>
           <Stack direction="row" spacing={1} alignItems="flex-start">
             <PlatformChip platform={s.platform} />
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="body2" fontWeight={500} noWrap>
-                {s.title || 'Untitled session'}
-              </Typography>
-              {s.summary && (
-                <Typography variant="caption" color="text.secondary" display="block"
-                  sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {s.summary}
-                </Typography>
-              )}
-              <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
+              <SessionMiniCard session={s} />
+              <Stack direction="row" spacing={1} sx={{ mt: 0.75 }}>
                 <Chip
-                  label={`${Math.round(s.score * 100)}% similarity`}
+                  label={`${Math.round((s.score || 0) * 100)}% similarity`}
                   size="small"
-                  color={s.score >= 0.7 ? 'success' : 'warning'}
+                  color={(s.score || 0) >= 0.7 ? 'success' : 'warning'}
                 />
                 {s.startedAt && (
                   <Typography variant="caption" color="text.disabled" sx={{ alignSelf: 'center' }}>
@@ -478,6 +708,12 @@ function RelatedTab({ relatedSessions, thread }) {
           </Stack>
         </Paper>
       ))}
+
+      {!relatedSessions?.length && !sessionId && (
+        <Typography color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
+          No connected sessions found
+        </Typography>
+      )}
     </Box>
   );
 }
@@ -486,7 +722,8 @@ function RelatedTab({ relatedSessions, thread }) {
 
 export default function SessionDetailDrawer({ sessionId, onClose }) {
   const [tab, setTab] = useState(0);
-  const { context, loading: ctxLoading, error: ctxError } = useSessionContext(sessionId);
+  const { context, loading: ctxLoading, error: ctxError, refetch } = useSessionContext(sessionId);
+  const { reanalyze, loading: reanalyzeLoading } = useSessionReanalyze();
   const { session: sessionWithMessages, loading: msgLoading } = useDialogueSession(
     tab === 1 ? sessionId : null // lazy load messages only when Thread tab is active
   );
@@ -523,7 +760,7 @@ export default function SessionDetailDrawer({ sessionId, onClose }) {
           ) : context ? (
             <>
               <Typography variant="subtitle1" fontWeight={600} noWrap>
-                {context.session?.title || 'Session Detail'}
+                {parseSmartTitle(context.session?.title, context.session?.summary) || 'Session Detail'}
               </Typography>
               <Stack direction="row" spacing={1} sx={{ mt: 0.3 }}>
                 <PlatformChip platform={context.session?.platform} />
@@ -538,14 +775,32 @@ export default function SessionDetailDrawer({ sessionId, onClose }) {
             <Typography variant="body2" color="text.secondary">{sessionId}</Typography>
           )}
         </Box>
-        <IconButton size="small" onClick={onClose} sx={{ mt: 0.3 }}>
-          <Close fontSize="small" />
-        </IconButton>
+        <Stack direction="row" spacing={0.5} sx={{ mt: 0.3, flexShrink: 0 }}>
+          <Tooltip title="Re-run AI analysis (summary, entities, decisions)">
+            <span>
+              <IconButton
+                size="small"
+                disabled={reanalyzeLoading || !sessionId}
+                onClick={() => reanalyze(sessionId)}
+              >
+                {reanalyzeLoading
+                  ? <CircularProgress size={16} />
+                  : <AutoFixHigh fontSize="small" />
+                }
+              </IconButton>
+            </span>
+          </Tooltip>
+          <IconButton size="small" onClick={onClose}>
+            <Close fontSize="small" />
+          </IconButton>
+        </Stack>
       </Box>
 
       {ctxError && (
         <Alert severity="error" sx={{ m: 2 }}>{ctxError}</Alert>
       )}
+
+      <ReanalyzeProgress sessionId={sessionId} onDone={refetch} />
 
       {context && (
         <>
@@ -572,6 +827,7 @@ export default function SessionDetailDrawer({ sessionId, onClose }) {
             {tab === 2 && <DecisionsTab decisions={context.decisions} />}
             {tab === 3 && (
               <RelatedTab
+                sessionId={sessionId}
                 relatedSessions={context.relatedSessions}
                 thread={context.thread}
               />

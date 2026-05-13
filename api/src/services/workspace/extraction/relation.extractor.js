@@ -19,7 +19,10 @@ const LOG_PREFIX = '[RelationExtractor]';
 
 let _llm = null;
 function llm() {
-  if (!_llm) _llm = require('../../llm.service');
+  if (!_llm) {
+    const { getInstance: getLLMProvider } = require('../../llm/LLMProviderService');
+    _llm = getLLMProvider();
+  }
   return _llm;
 }
 
@@ -84,11 +87,13 @@ async function extractRelations(text, entities, options = {}) {
 
       const response = await llm().chat(
         [{ role: 'user', content: prompt }],
-        [], null,
         { maxTokens: CONFIG.maxTokens, temperature: CONFIG.temperature }
       );
 
-      const responseText = response?.content || '';
+      const rawRC = response?.content;
+      const responseText = Array.isArray(rawRC)
+        ? rawRC.filter(b => b.type === 'text').map(b => b.text).join('')
+        : (rawRC || '');
       const parsed = parseRelationsFromResponse(responseText);
 
       if (parsed.relations.length > 0) {

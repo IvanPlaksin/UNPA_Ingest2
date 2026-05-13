@@ -11,6 +11,8 @@ import {
 } from '@mui/icons-material';
 import { useDialogueDecisions, useDecisionDetail } from '../../hooks/useDialogue';
 import { useNavigate } from 'react-router-dom';
+import ProvenanceChain from '../../components/Dialogue/ProvenanceChain';
+import { parseEntitiesFromText, ENTITY_TYPE_COLOR } from '../../components/Dialogue/session-meta';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -259,6 +261,25 @@ function DecisionDetailDrawer({ decisionId, onClose }) {
                   </Stack>
                 </Section>
               )}
+
+              {/* Provenance Chain */}
+              {decisionId && (
+                <>
+                  <Divider />
+                  <Section title="Evolution chain" icon={<AccountTree fontSize="small" />}>
+                    <ProvenanceChain
+                      type="decision"
+                      nodeId={decisionId}
+                      onDecisionClick={(id) => {
+                        if (id !== decisionId) {
+                          onClose();
+                          setTimeout(() => onClose(), 0);
+                        }
+                      }}
+                    />
+                  </Section>
+                </>
+              )}
             </Stack>
           )}
         </Box>
@@ -358,6 +379,20 @@ export default function DecisionsTab() {
                         {d.decision}
                       </Typography>
                     )}
+                    {/* Entity tags extracted from decision text */}
+                    {(() => {
+                      const ents = parseEntitiesFromText([d.title, d.decision, d.rationale, d.context].filter(Boolean).join(' '));
+                      return ents.length > 0 ? (
+                        <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }} flexWrap="wrap" gap={0.5}>
+                          {ents.slice(0, 4).map(e => (
+                            <Chip key={e.name}
+                              label={`${e.name} ${Math.round(e.confidence * 100)}%`}
+                              size="small" color={ENTITY_TYPE_COLOR[e.type] || 'default'}
+                              variant="outlined" sx={{ height: 16, fontSize: 9 }} />
+                          ))}
+                        </Stack>
+                      ) : null;
+                    })()}
                   </TableCell>
                   <TableCell>
                     <Chip

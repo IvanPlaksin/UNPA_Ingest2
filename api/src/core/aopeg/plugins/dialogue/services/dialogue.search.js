@@ -232,7 +232,10 @@ class DialogueSearchService {
       `MATCH (s:DialogueSession { sessionId: $sid })-[c:CONTINUES_FROM]-(related:DialogueSession)
        RETURN related.sessionId AS relatedId,
               related.title AS title,
+              related.platform AS platform,
               related.startedAt AS startedAt,
+              related.messageCount AS messageCount,
+              related.summary AS summary,
               c.score AS chainScore
        ORDER BY c.score DESC
        LIMIT $limit`,
@@ -244,7 +247,10 @@ class DialogueSearchService {
       .map(r => ({
         sessionId: r.relatedId,
         title: r.title,
+        platform: r.platform,
         startedAt: r.startedAt,
+        messageCount: r.messageCount,
+        summary: r.summary,
         chainScore: r.chainScore,
       }));
   }

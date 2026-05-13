@@ -69,6 +69,7 @@ class StartupManager {
     await this._initAGENamespaceIndexes();
     await this._initWorkspaceSchema();
     await this._initDialogueSchema();
+    await this._initSigillumSchema();
     await this._initDialogueCollection();
     await this._initExtractionQueue();
     this._initOrphanDetector();
@@ -133,6 +134,25 @@ class StartupManager {
       }
     } catch (err) {
       this._log('warn', `Dialogue schema init skipped: ${err.message}`);
+    }
+  }
+
+  // ─── Sigillum Schema ──────────────────────────────────────────────
+
+  async _initSigillumSchema() {
+    if (process.env.GRAPH_DB_BACKEND === 'postgres-age') return;
+    try {
+      const { SchemaLoaderService } = require('../memgraph/schema-loader.service');
+      const memgraphService = require('../memgraph.service');
+      const loader = new SchemaLoaderService(memgraphService);
+      const result = await loader.loadSchema('sigillum-schema');
+      if (result.success) {
+        this._log('info', `Sigillum schema loaded (${result.statements} statements)`);
+      } else {
+        this._log('warn', `Sigillum schema loaded with ${result.errors.length} errors`);
+      }
+    } catch (err) {
+      this._log('warn', `Sigillum schema init skipped: ${err.message}`);
     }
   }
 

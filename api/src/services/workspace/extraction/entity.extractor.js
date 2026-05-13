@@ -18,7 +18,10 @@ const LOG_PREFIX = '[EntityExtractor]';
 
 let _llm = null;
 function llm() {
-  if (!_llm) _llm = require('../../llm.service');
+  if (!_llm) {
+    const { getInstance: getLLMProvider } = require('../../llm/LLMProviderService');
+    _llm = getLLMProvider();
+  }
   return _llm;
 }
 
@@ -75,12 +78,13 @@ async function extractEntities(text, options = {}) {
       // Call LLM via chat interface
       const response = await llm().chat(
         [{ role: 'user', content: prompt }],
-        [], // no tools
-        null,
         { maxTokens: CONFIG.maxTokens, temperature: CONFIG.temperature }
       );
 
-      const responseText = response?.content || response?.text || '';
+      const rawRC = response?.content;
+      const responseText = Array.isArray(rawRC)
+        ? rawRC.filter(b => b.type === 'text').map(b => b.text).join('')
+        : (rawRC || response?.text || '');
       const parsed = parseEntitiesFromResponse(responseText);
 
       if (parsed.entities.length > 0) {
