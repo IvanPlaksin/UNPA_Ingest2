@@ -265,28 +265,74 @@ export class RerankExecutor extends BaseExecutor {
   }
 
   /**
-   * LLM-based reranking (stub - would use actual LLM service)
+   * LLM-based reranking: asks the LLM to score each result 0-10 against the query.
+   * Batches at most 15 results to keep the prompt token-efficient.
+   * Falls back to combined method on any failure.
    */
   private async rerankWithLLM(
     results: SearchResult[],
     query: string,
     _model?: string
   ): Promise<SearchResult[]> {
-    // For now, fall back to combined method
-    // In production, this would call an LLM to score relevance
-    return this.rerankCombined(results, query, {});
+    if (results.length === 0) return results;
+
+    let llmProvider: any;
+    try {
+      const { getInstance } = require('../../../../../services/llm/LLMProviderService') as any;
+      llmProvider = getInstance();
+    } catch {
+      return this.rerankCombined(results, query, {});
+    }
+
+    const batch = results.slice(0, 15);
+    const resultLines = batch
+      .map((r, i) => `${i + 1}. [${r.id}] ${(r.content || r.name || '').slice(0, 200)}`)
+      .join('\n');
+
+    const prompt =
+      `Score each search result's relevance to the query. Scale: 0 (irrelevant) to 10 (perfect match). Integers only.\n` +
+      `Query: "${query}"\n\nResults:\n${resultLines}\n\n` +
+      `Respond with ONLY a JSON array of ${batch.length} integers, e.g. [8,3,9,5].`;
+
+    try {
+      const rawContent = await llmProvider.chat(
+        [{ role: 'user', content: prompt }],
+        { maxTokens: 120, temperature: 0 }
+      );
+
+      const text: string = Array.isArray(rawContent)
+        ? (rawContent as any[]).filter((b: any) => b.type === 'text').map((b: any) => b.text).join('')
+        : (typeof rawContent === 'string' ? rawContent : (rawContent as any)?.content || '');
+
+      const match = text.match(/\[[\d,\s]+\]/);
+      if (!match) return this.rerankCombined(results, query, {});
+
+      const scores: number[] = JSON.parse(match[0]);
+      if (!Array.isArray(scores) || scores.length < batch.length) {
+        return this.rerankCombined(results, query, {});
+      }
+
+      const reranked = batch.map((r, i) => ({
+        ...r,
+        score: (typeof scores[i] === 'number' ? scores[i] : 0) / 10,
+      }));
+
+      // Append un-batched results with their original scores
+      return [...reranked, ...results.slice(15)];
+    } catch {
+      return this.rerankCombined(results, query, {});
+    }
   }
 
   /**
-   * Cross-encoder reranking (stub - would use actual cross-encoder model)
+   * Cross-encoder reranking. Uses LLM as the scoring model since a dedicated
+   * cross-encoder service is not available in this deployment.
    */
   private async rerankCrossEncoder(
     results: SearchResult[],
     query: string
   ): Promise<SearchResult[]> {
-    // For now, use BM25 as fallback
-    // In production, this would use a cross-encoder model
-    return this.rerankBM25(results, query);
+    return this.rerankWithLLM(results, query);
   }
 
   /**

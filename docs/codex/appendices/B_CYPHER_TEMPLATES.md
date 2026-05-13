@@ -1,13 +1,13 @@
-# Приложение B: Cypher Templates
+# Appendix B: Cypher Templates
 
-**Статус:** 🔴 Не начат
-**Версия:** -
-**Последнее обновление:** -
+**Status:** 🔴 Not started
+**Version:** -
+**Last updated:** -
 
-## Содержание
+## Contents
 
-Параметризованные, безопасные Cypher-шаблоны для всех CRUD-операций.
+Parameterized, safe Cypher templates for all CRUD operations.
 
 ---
 
-*Этот документ является частью [Кодекса UN ProjectAdvisor](../CODEX_INDEX.md)*
+*This document is part of the [UN ProjectAdvisor Codex](../CODEX_INDEX.md)*

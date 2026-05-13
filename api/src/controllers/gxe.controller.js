@@ -489,10 +489,10 @@ ${parentContext.dataFlowContext || 'The sub-graph should accept input data, proc
  */
 async function getActiveGenerationPrompt(parentContext = null) {
   try {
-    const memgraphService = require('../services/memgraph.service');
+    const graphDB = require('../services/storage/GraphDBPort').getGraphDB();
     const { withSession } = require('../core/aopeg/utils/cypher.utils');
 
-    const prompt = await withSession(memgraphService.driver, async (session) => {
+    const prompt = await withSession(graphDB.driver, async (session) => {
       const result = await session.run(
         `MATCH (s:Settings {id: 'gxe-generation-prompt-default'})-[:DEFAULT_PROMPT]->(pv:PromptVersion {category: 'gxe-generation'})
          RETURN pv.id AS id, pv.content AS content`
@@ -525,13 +525,13 @@ async function getActiveGenerationPrompt(parentContext = null) {
  * Seed the first generation prompt from hardcoded buildSystemPrompt()
  */
 async function seedDefaultGenerationPrompt() {
-  const memgraphService = require('../services/memgraph.service');
+  const graphDB = require('../services/storage/GraphDBPort').getGraphDB();
   const { withWriteTransaction } = require('../core/aopeg/utils/cypher.utils');
 
   const hardcodedContent = buildSystemPrompt(null);
   const versionId = uuidv4();
 
-  await withWriteTransaction(memgraphService.driver, async (tx) => {
+  await withWriteTransaction(graphDB.driver, async (tx) => {
     await tx.run(
       `CREATE (pv:PromptVersion {
          id: $id, category: 'gxe-generation', name: 'GXE Default v1',
@@ -563,11 +563,11 @@ async function seedDefaultGenerationPrompt() {
  * Record prompt effectiveness metric (fire-and-forget internal helper)
  */
 async function recordPromptMetricInternal(promptVersionId, metrics) {
-  const memgraphService = require('../services/memgraph.service');
+  const graphDB = require('../services/storage/GraphDBPort').getGraphDB();
   const { withWriteTransaction } = require('../core/aopeg/utils/cypher.utils');
   const metricId = uuidv4();
 
-  await withWriteTransaction(memgraphService.driver, async (tx) => {
+  await withWriteTransaction(graphDB.driver, async (tx) => {
     await tx.run(
       `MATCH (pv:PromptVersion {id: $promptId, category: 'gxe-generation'})
        CREATE (m:PromptMetric {
@@ -3203,7 +3203,7 @@ exports.saveMcpSettings = async (req, res) => {
     }
 
     // Import memgraph service for storing settings
-    const memgraphService = require('../services/memgraph.service');
+    const graphDB = require('../services/storage/GraphDBPort').getGraphDB();
     const { withWriteTransaction } = require('../core/aopeg/utils/cypher.utils');
 
     const settingsData = {
@@ -3215,7 +3215,7 @@ exports.saveMcpSettings = async (req, res) => {
       ...metadata
     };
 
-    await withWriteTransaction(memgraphService.driver, async (tx) => {
+    await withWriteTransaction(graphDB.driver, async (tx) => {
       await tx.run(
         `
         MERGE (s:Settings {id: $id})
@@ -3262,10 +3262,10 @@ exports.loadMcpSettings = async (req, res) => {
   try {
     const { settingsId = 'default' } = req.params;
 
-    const memgraphService = require('../services/memgraph.service');
+    const graphDB = require('../services/storage/GraphDBPort').getGraphDB();
     const { withSession } = require('../core/aopeg/utils/cypher.utils');
 
-    const settings = await withSession(memgraphService.driver, async (session) => {
+    const settings = await withSession(graphDB.driver, async (session) => {
       const result = await session.run(
         `
         MATCH (s:Settings {id: $id, type: 'mcp-tools-settings'})
@@ -3335,10 +3335,10 @@ exports.deleteMcpSettings = async (req, res) => {
   try {
     const { settingsId = 'default' } = req.params;
 
-    const memgraphService = require('../services/memgraph.service');
+    const graphDB = require('../services/storage/GraphDBPort').getGraphDB();
     const { withWriteTransaction } = require('../core/aopeg/utils/cypher.utils');
 
-    await withWriteTransaction(memgraphService.driver, async (tx) => {
+    await withWriteTransaction(graphDB.driver, async (tx) => {
       await tx.run(
         `
         MATCH (s:Settings {id: $id, type: 'mcp-tools-settings'})
@@ -3365,10 +3365,10 @@ exports.deleteMcpSettings = async (req, res) => {
  */
 exports.listMcpSettings = async (req, res) => {
   try {
-    const memgraphService = require('../services/memgraph.service');
+    const graphDB = require('../services/storage/GraphDBPort').getGraphDB();
     const { withSession } = require('../core/aopeg/utils/cypher.utils');
 
-    const profiles = await withSession(memgraphService.driver, async (session) => {
+    const profiles = await withSession(graphDB.driver, async (session) => {
       const result = await session.run(
         `
         MATCH (s:Settings {type: 'mcp-tools-settings'})
@@ -3409,10 +3409,10 @@ exports.listMcpSettings = async (req, res) => {
 exports.getAiSettings = async (req, res) => {
   try {
     const { settingsId = 'default' } = req.query;
-    const memgraphService = require('../services/memgraph.service');
+    const graphDB = require('../services/storage/GraphDBPort').getGraphDB();
     const { withSession } = require('../core/aopeg/utils/cypher.utils');
 
-    const settings = await withSession(memgraphService.driver, async (session) => {
+    const settings = await withSession(graphDB.driver, async (session) => {
       const result = await session.run(
         `MATCH (s:Settings {id: $id}) WHERE s.type = 'ai-settings' RETURN s`,
         { id: `ai-settings-${settingsId}` }
@@ -3452,10 +3452,10 @@ exports.getAiSettings = async (req, res) => {
 exports.saveAiSettings = async (req, res) => {
   try {
     const { selectedModel, temperature, maxTokens, useTools, useSDA, settingsId = 'default' } = req.body;
-    const memgraphService = require('../services/memgraph.service');
+    const graphDB = require('../services/storage/GraphDBPort').getGraphDB();
     const { withWriteTransaction } = require('../core/aopeg/utils/cypher.utils');
 
-    await withWriteTransaction(memgraphService.driver, async (tx) => {
+    await withWriteTransaction(graphDB.driver, async (tx) => {
       await tx.run(
         `MERGE (s:Settings {id: $id})
          SET s.type = 'ai-settings',
@@ -3606,10 +3606,10 @@ exports.saveDisplayRules = async (req, res) => {
  */
 exports.listDisplayRules = async (req, res) => {
   try {
-    const memgraphService = require('../services/memgraph.service');
+    const graphDB = require('../services/storage/GraphDBPort').getGraphDB();
     const { withSession } = require('../core/aopeg/utils/cypher.utils');
 
-    const results = await withSession(memgraphService.driver, async (session) => {
+    const results = await withSession(graphDB.driver, async (session) => {
       const result = await session.run(
         `MATCH (s:Settings {type: 'gxe-display-rules'})
          RETURN s ORDER BY s.graphType`
@@ -3643,10 +3643,10 @@ exports.listDisplayRules = async (req, res) => {
  */
 exports.getSystemPrompt = async (req, res) => {
   try {
-    const memgraphService = require('../services/memgraph.service');
+    const graphDB = require('../services/storage/GraphDBPort').getGraphDB();
     const { withSession } = require('../core/aopeg/utils/cypher.utils');
 
-    const prompt = await withSession(memgraphService.driver, async (session) => {
+    const prompt = await withSession(graphDB.driver, async (session) => {
       const result = await session.run(
         `MATCH (s:Settings {id: 'system-prompt-current'})-[:CURRENT]->(pv:PromptVersion) RETURN pv`
       );
@@ -3682,11 +3682,11 @@ exports.saveSystemPrompt = async (req, res) => {
       return res.status(400).json({ success: false, error: 'content (string) is required' });
     }
 
-    const memgraphService = require('../services/memgraph.service');
+    const graphDB = require('../services/storage/GraphDBPort').getGraphDB();
     const { withWriteTransaction } = require('../core/aopeg/utils/cypher.utils');
     const versionId = uuidv4();
 
-    const result = await withWriteTransaction(memgraphService.driver, async (tx) => {
+    const result = await withWriteTransaction(graphDB.driver, async (tx) => {
       // 1. Get current version
       const cur = await tx.run(
         `OPTIONAL MATCH (s:Settings {id: 'system-prompt-current'})-[:CURRENT]->(pv:PromptVersion)
@@ -3753,11 +3753,11 @@ exports.saveSystemPrompt = async (req, res) => {
 exports.getSystemPromptHistory = async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 20;
-    const memgraphService = require('../services/memgraph.service');
+    const graphDB = require('../services/storage/GraphDBPort').getGraphDB();
     const { withSession } = require('../core/aopeg/utils/cypher.utils');
     const neo4j = require('neo4j-driver');
 
-    const history = await withSession(memgraphService.driver, async (session) => {
+    const history = await withSession(graphDB.driver, async (session) => {
       const result = await session.run(
         `MATCH (pv:PromptVersion) RETURN pv ORDER BY pv.createdAt DESC LIMIT $limit`,
         { limit: neo4j.int(limit) }
@@ -3775,7 +3775,7 @@ exports.getSystemPromptHistory = async (req, res) => {
     });
 
     // Mark current version
-    const currentId = await withSession(memgraphService.driver, async (session) => {
+    const currentId = await withSession(graphDB.driver, async (session) => {
       const r = await session.run(
         `MATCH (s:Settings {id: 'system-prompt-current'})-[:CURRENT]->(pv:PromptVersion) RETURN pv.id AS cid`
       );
@@ -3802,10 +3802,10 @@ exports.getSystemPromptHistory = async (req, res) => {
  */
 exports.getDefaultGenerationPrompt = async (req, res) => {
   try {
-    const memgraphService = require('../services/memgraph.service');
+    const graphDB = require('../services/storage/GraphDBPort').getGraphDB();
     const { withSession } = require('../core/aopeg/utils/cypher.utils');
 
-    let prompt = await withSession(memgraphService.driver, async (session) => {
+    let prompt = await withSession(graphDB.driver, async (session) => {
       const result = await session.run(
         `MATCH (s:Settings {id: 'gxe-generation-prompt-default'})-[:DEFAULT_PROMPT]->(pv:PromptVersion {category: 'gxe-generation'})
          RETURN pv`
@@ -3836,12 +3836,12 @@ exports.getDefaultGenerationPrompt = async (req, res) => {
  */
 exports.listGenerationPrompts = async (req, res) => {
   try {
-    const memgraphService = require('../services/memgraph.service');
+    const graphDB = require('../services/storage/GraphDBPort').getGraphDB();
     const { withSession } = require('../core/aopeg/utils/cypher.utils');
     const neo4j = require('neo4j-driver');
     const limit = parseInt(req.query.limit) || 50;
 
-    const prompts = await withSession(memgraphService.driver, async (session) => {
+    const prompts = await withSession(graphDB.driver, async (session) => {
       // Get all prompt versions with metric aggregation
       const result = await session.run(
         `MATCH (pv:PromptVersion {category: 'gxe-generation'})
@@ -3873,7 +3873,7 @@ exports.listGenerationPrompts = async (req, res) => {
     });
 
     // Mark current default
-    const defaultId = await withSession(memgraphService.driver, async (session) => {
+    const defaultId = await withSession(graphDB.driver, async (session) => {
       const r = await session.run(
         `MATCH (s:Settings {id: 'gxe-generation-prompt-default'})-[:DEFAULT_PROMPT]->(pv:PromptVersion) RETURN pv.id AS did`
       );
@@ -3901,11 +3901,11 @@ exports.saveGenerationPrompt = async (req, res) => {
       return res.status(400).json({ success: false, error: 'content (string) is required' });
     }
 
-    const memgraphService = require('../services/memgraph.service');
+    const graphDB = require('../services/storage/GraphDBPort').getGraphDB();
     const { withWriteTransaction } = require('../core/aopeg/utils/cypher.utils');
     const versionId = uuidv4();
 
-    const result = await withWriteTransaction(memgraphService.driver, async (tx) => {
+    const result = await withWriteTransaction(graphDB.driver, async (tx) => {
       const cur = await tx.run(
         `OPTIONAL MATCH (pv:PromptVersion {category: 'gxe-generation'})
          RETURN max(toInteger(pv.version)) AS maxVer`
@@ -3945,10 +3945,10 @@ exports.saveGenerationPrompt = async (req, res) => {
 exports.setDefaultGenerationPrompt = async (req, res) => {
   try {
     const { promptId } = req.params;
-    const memgraphService = require('../services/memgraph.service');
+    const graphDB = require('../services/storage/GraphDBPort').getGraphDB();
     const { withWriteTransaction } = require('../core/aopeg/utils/cypher.utils');
 
-    await withWriteTransaction(memgraphService.driver, async (tx) => {
+    await withWriteTransaction(graphDB.driver, async (tx) => {
       const check = await tx.run(
         `MATCH (pv:PromptVersion {id: $promptId, category: 'gxe-generation'}) RETURN pv`,
         { promptId }
@@ -3991,11 +3991,11 @@ exports.setDefaultGenerationPrompt = async (req, res) => {
 exports.getGenerationPromptMetrics = async (req, res) => {
   try {
     const { promptId } = req.params;
-    const memgraphService = require('../services/memgraph.service');
+    const graphDB = require('../services/storage/GraphDBPort').getGraphDB();
     const { withSession } = require('../core/aopeg/utils/cypher.utils');
     const neo4j = require('neo4j-driver');
 
-    const metrics = await withSession(memgraphService.driver, async (session) => {
+    const metrics = await withSession(graphDB.driver, async (session) => {
       const result = await session.run(
         `MATCH (pv:PromptVersion {id: $promptId, category: 'gxe-generation'})-[:HAS_METRIC]->(m:PromptMetric)
          RETURN m ORDER BY m.createdAt DESC LIMIT $limit`,

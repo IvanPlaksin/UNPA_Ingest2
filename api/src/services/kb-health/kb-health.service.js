@@ -72,14 +72,13 @@ class KBHealthService {
    */
   async computeCoverage() {
     try {
+      // Use per-label counts instead of a full graph scan (safe for large graphs)
       const result = await memgraphService.runQuery(`
         MATCH (n)
-        WHERE n.namespace IS NOT NULL
-        WITH labels(n)[0] AS label
-        RETURN collect(DISTINCT label) AS presentLabels
+        RETURN labels(n)[0] AS label, count(n) AS cnt
       `);
 
-      const presentLabels = result[0]?.presentLabels || [];
+      const presentLabels = result.map(r => r.label).filter(Boolean);
       const covered = EXPECTED_TYPES.filter(t => presentLabels.includes(t));
 
       return {
@@ -127,13 +126,14 @@ class KBHealthService {
    */
   async computeFreshness() {
     try {
-      // Memgraph: only compare datetime-typed updatedAt (skip string dates)
+      // Filter to string-type updatedAt only — some legacy nodes store zoned_date_time objects
+      // which cause type errors when compared with >= against a string literal in Memgraph
+      const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
       const result = await memgraphService.runQuery(`
         MATCH (n)
-        WHERE n.updatedAt IS NOT NULL AND valueType(n.updatedAt) = 'ZONED_DATE_TIME'
-        WITH n, datetime() - n.updatedAt AS age
+        WHERE n.updatedAt IS NOT NULL AND valueType(n.updatedAt) = 'String'
         RETURN count(n) AS total,
-               sum(CASE WHEN age.day <= 30 THEN 1 ELSE 0 END) AS fresh
+               sum(CASE WHEN n.updatedAt >= '${cutoff}' THEN 1 ELSE 0 END) AS fresh
       `);
 
       const total = result[0]?.total || 1;
@@ -157,19 +157,19 @@ class KBHealthService {
    */
   async computeConnectivity() {
     try {
+      // Lightweight: compare total nodes vs nodes that have at least one edge
       const result = await memgraphService.runQuery(`
         MATCH (n)
-        WHERE n.namespace IS NOT NULL
-        WITH n
-        OPTIONAL MATCH (n)-[r]-()
-        WITH n, count(r) AS degree
-        RETURN
-          count(n) AS total,
-          sum(CASE WHEN degree = 0 THEN 1 ELSE 0 END) AS orphans
+        RETURN count(n) AS total
+      `);
+      const totalResult = await memgraphService.runQuery(`
+        MATCH (n)-[r]-()
+        RETURN count(DISTINCT n) AS connected
       `);
 
       const total = result[0]?.total || 1;
-      const orphans = result[0]?.orphans || 0;
+      const connected = totalResult[0]?.connected || 0;
+      const orphans = Math.max(0, total - connected);
 
       return {
         score: Math.max(0, 1 - (orphans / total)),

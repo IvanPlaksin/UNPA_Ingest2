@@ -1,32 +1,32 @@
-# CODEX-CATALOG: Стандарт каталога GXE
+# CODEX-CATALOG: GXE Catalog Standard
 
-**Статус:** 🟡 Черновик
-**Версия:** 0.1.0
-**Последнее обновление:** 2026-03-12
+**Status:** 🟡 Draft
+**Version:** 0.1.0
+**Last updated:** 2026-03-12
 
 ---
 
-## Преамбула
+## Preamble
 
-Каталог -- единая точка истины о всех графах в системе UN ProjectAdvisor. Без каталога графы становятся разрозненными артефактами: дублируются, теряются, не переиспользуются. С каталогом -- это управляемая библиотека с версионностью, дедупликацией и интеллектуальным поиском.
+The catalog is the single source of truth about all graphs in the UN ProjectAdvisor system. Without a catalog, graphs become scattered artifacts: duplicated, lost, and never reused. With a catalog, they form a managed library with versioning, deduplication, and intelligent search.
 
-Настоящий стандарт определяет:
-- схему `CatalogEntry` и связанных узлов,
-- политику автоматического сохранения графов,
-- механизмы дедупликации (exact, structural, semantic),
-- четыре режима поиска (keyword, structural, GNN, hybrid),
-- стратегии переиспользования графов,
-- жизненный цикл паттернов и их продвижение в шаблоны.
+This standard defines:
+- the `CatalogEntry` schema and related nodes,
+- the automatic graph save policy,
+- deduplication mechanisms (exact, structural, semantic),
+- four search modes (keyword, structural, GNN, hybrid),
+- graph reuse strategies,
+- the pattern lifecycle and promotion to templates.
 
-Реализация: `api/src/services/graphCatalog.service.js`
+Implementation: `api/src/services/graphCatalog.service.js`
 
 ---
 
 ## 6.1. CatalogEntry schema
 
-### Структура графа каталога
+### Catalog graph structure
 
-Каталог организован как иерархическое дерево узлов в Memgraph. Каждый граф представлен тройкой `CatalogEntry -> GraphDefinition -> GraphVersion`, где CatalogEntry -- реестровая запись, GraphDefinition -- определение (узлы + рёбра), а GraphVersion -- конкретная версия снимка.
+The catalog is organized as a hierarchical tree of nodes in Memgraph. Each graph is represented by a triple `CatalogEntry -> GraphDefinition -> GraphVersion`, where CatalogEntry is the registry record, GraphDefinition is the definition (nodes + edges), and GraphVersion is a specific version snapshot.
 
 ```
                             ┌─────────────────────────┐
@@ -82,93 +82,93 @@
           └──────────────┘
 ```
 
-Дополнительные связи иерархии:
+Additional hierarchy relationships:
 
 ```
-(:CatalogEntry)-[:CHILD_OF]->(:CatalogEntry)           # Родительская иерархия
-(:CatalogEntry)-[:DECOMPOSES {nodeId}]->(:CatalogEntry) # Декомпозиция узла в подграф
+(:CatalogEntry)-[:CHILD_OF]->(:CatalogEntry)           # Parent hierarchy
+(:CatalogEntry)-[:DECOMPOSES {nodeId}]->(:CatalogEntry) # Node decomposition into subgraph
 ```
 
-### Полная схема CatalogEntry
+### Full CatalogEntry schema
 
-| Поле           | Тип        | Обязательно | Описание                                  | Пример                          |
-|----------------|------------|-------------|-------------------------------------------|---------------------------------|
-| `entryId`      | `string`   | Да          | Глобально уникальный идентификатор (UUID) | `"a1b2c3d4-e5f6-..."`          |
-| `name`         | `string`   | Да          | Человекочитаемое имя графа                | `"IT Hardware Request"`         |
-| `type`         | `string`   | Да          | Тип графа (см. CATALOG_TYPES)             | `"business"`                    |
-| `namespace`    | `string`   | Да          | Пространство имён (изоляция данных)       | `"un-pa"`, `"default"`          |
-| `description`  | `string`   | Нет         | Краткое описание назначения графа          | `"Процесс запроса оборудования"`|
-| `tags`         | `string[]` | Нет         | Теги для поиска и классификации            | `["ineed", "hardware", "it"]`   |
-| `visibility`   | `string`   | Да          | Уровень видимости (см. ниже)              | `"PUBLIC"`                      |
-| `qualityScore` | `number`   | Нет         | Оценка качества (0.0 -- 1.0)              | `0.85`                          |
-| `createdAt`    | `string`   | Да          | ISO 8601 timestamp создания               | `"2026-03-12T14:30:00.000Z"`   |
-| `updatedAt`    | `string`   | Да          | ISO 8601 timestamp последнего обновления  | `"2026-03-12T15:00:00.000Z"`   |
-| `createdBy`    | `string`   | Нет         | Автор создания                            | `"system"`, `"user-123"`        |
-| `currentVersion` | `number` | Да         | Номер текущей версии (целое число)        | `3`                             |
-| `usageCount`   | `number`   | Нет         | Счётчик использований                     | `42`                            |
-| `isPublic`     | `boolean`  | Нет         | Флаг публичности (для обратной совместимости) | `true`                      |
+| Field          | Type       | Required | Description                                    | Example                         |
+|----------------|------------|----------|------------------------------------------------|---------------------------------|
+| `entryId`      | `string`   | Yes      | Globally unique identifier (UUID)              | `"a1b2c3d4-e5f6-..."`          |
+| `name`         | `string`   | Yes      | Human-readable graph name                      | `"IT Hardware Request"`         |
+| `type`         | `string`   | Yes      | Graph type (see CATALOG_TYPES)                 | `"business"`                    |
+| `namespace`    | `string`   | Yes      | Namespace (data isolation)                     | `"un-pa"`, `"default"`          |
+| `description`  | `string`   | No       | Brief description of the graph's purpose       | `"Equipment request process"`   |
+| `tags`         | `string[]` | No       | Tags for search and classification             | `["ineed", "hardware", "it"]`   |
+| `visibility`   | `string`   | Yes      | Visibility level (see below)                   | `"PUBLIC"`                      |
+| `qualityScore` | `number`   | No       | Quality score (0.0 -- 1.0)                     | `0.85`                          |
+| `createdAt`    | `string`   | Yes      | ISO 8601 creation timestamp                    | `"2026-03-12T14:30:00.000Z"`   |
+| `updatedAt`    | `string`   | Yes      | ISO 8601 last update timestamp                 | `"2026-03-12T15:00:00.000Z"`   |
+| `createdBy`    | `string`   | No       | Author                                         | `"system"`, `"user-123"`        |
+| `currentVersion` | `number` | Yes     | Current version number (integer)               | `3`                             |
+| `usageCount`   | `number`   | No       | Usage counter                                  | `42`                            |
+| `isPublic`     | `boolean`  | No       | Public flag (for backward compatibility)       | `true`                          |
 
-### Схема GraphDefinition
+### GraphDefinition schema
 
-| Поле            | Тип      | Описание                                          |
-|-----------------|----------|---------------------------------------------------|
-| `graphId`       | `string` | UUID определения                                  |
-| `nodes`         | `string` | JSON-строка массива узлов графа                   |
-| `edges`         | `string` | JSON-строка массива рёбер графа                   |
-| `requiredParams`| `string` | JSON-строка параметров, необходимых для запуска    |
-| `toolIds`       | `string[]`| Список идентификаторов инструментов               |
-| `nodeCount`     | `number` | Количество узлов                                  |
-| `edgeCount`     | `number` | Количество рёбер                                  |
-| `topology`      | `string` | Классификация топологии (`PIPELINE`, `DAG`, `TREE`)|
-| `contentHash`   | `string` | SHA-256 от отсортированного JSON узлов и рёбер    |
-| `validatedAt`   | `string` | Время последней валидации                         |
-| `wasAutoFixed`  | `boolean`| Был ли граф автоматически исправлен               |
+| Field           | Type      | Description                                           |
+|-----------------|-----------|-------------------------------------------------------|
+| `graphId`       | `string`  | Definition UUID                                       |
+| `nodes`         | `string`  | JSON string of the graph nodes array                  |
+| `edges`         | `string`  | JSON string of the graph edges array                  |
+| `requiredParams`| `string`  | JSON string of parameters required to run             |
+| `toolIds`       | `string[]`| List of tool identifiers                              |
+| `nodeCount`     | `number`  | Number of nodes                                       |
+| `edgeCount`     | `number`  | Number of edges                                       |
+| `topology`      | `string`  | Topology classification (`PIPELINE`, `DAG`, `TREE`)   |
+| `contentHash`   | `string`  | SHA-256 of sorted JSON nodes and edges                |
+| `validatedAt`   | `string`  | Time of last validation                               |
+| `wasAutoFixed`  | `boolean` | Whether the graph was automatically fixed             |
 
-### Схема GraphVersion
+### GraphVersion schema
 
-| Поле            | Тип      | Описание                                         |
+| Field           | Type     | Description                                      |
 |-----------------|----------|--------------------------------------------------|
-| `versionId`     | `string` | UUID версии                                      |
-| `versionNumber` | `number` | Целочисленный номер версии (1, 2, 3...)          |
-| `changelog`     | `string` | Описание изменений                               |
-| `createdAt`     | `string` | ISO 8601 timestamp создания версии               |
-| `createdBy`     | `string` | Автор версии                                     |
-| `contentHash`   | `string` | SHA-256 хеш содержимого этой версии              |
+| `versionId`     | `string` | Version UUID                                     |
+| `versionNumber` | `number` | Integer version number (1, 2, 3...)              |
+| `changelog`     | `string` | Description of changes                           |
+| `createdAt`     | `string` | ISO 8601 version creation timestamp              |
+| `createdBy`     | `string` | Version author                                   |
+| `contentHash`   | `string` | SHA-256 hash of this version's content           |
 
-### CATALOG_TYPES -- допустимые типы графов
+### CATALOG_TYPES -- allowed graph types
 
 ```javascript
 const CATALOG_TYPES = {
-  BUSINESS:  'business',   // Бизнес-процессы (iNeed, onboarding, approval)
-  TECHNICAL: 'technical',  // Технические пайплайны (ETL, extraction, deployment)
-  META:      'meta',       // Мета-графы, управляющие другими графами
-  TEMPLATE:  'template',   // Шаблоны для создания новых графов
-  COMPOSITE: 'composite',  // Составные графы, содержащие подграфы
+  BUSINESS:  'business',   // Business processes (iNeed, onboarding, approval)
+  TECHNICAL: 'technical',  // Technical pipelines (ETL, extraction, deployment)
+  META:      'meta',       // Meta-graphs that manage other graphs
+  TEMPLATE:  'template',   // Templates for creating new graphs
+  COMPOSITE: 'composite',  // Composite graphs containing subgraphs
 };
 ```
 
-| Тип          | Назначение                                            | Пример                          |
-|--------------|-------------------------------------------------------|---------------------------------|
-| `business`   | Моделирует бизнес-процесс от начала до конца          | iNeed Hardware Request          |
-| `technical`  | Технический пайплайн обработки данных                 | SQL Extraction Pipeline         |
-| `meta`       | Оркестрирует другие графы, управляет маршрутизацией    | iNeed META Intake               |
-| `template`   | Параметризованный шаблон для клонирования              | Generic Approval Workflow       |
-| `composite`  | Агрегирует несколько подграфов через DECOMPOSES         | Full Onboarding Process         |
+| Type         | Purpose                                                  | Example                         |
+|--------------|----------------------------------------------------------|---------------------------------|
+| `business`   | Models a business process end-to-end                     | iNeed Hardware Request          |
+| `technical`  | Technical data processing pipeline                       | SQL Extraction Pipeline         |
+| `meta`       | Orchestrates other graphs, manages routing               | iNeed META Intake               |
+| `template`   | Parameterized template for cloning                       | Generic Approval Workflow       |
+| `composite`  | Aggregates multiple subgraphs via DECOMPOSES             | Full Onboarding Process         |
 
-> **CATALOG003:** Попытка создать CatalogEntry с типом, отсутствующим в `CATALOG_TYPES`, приводит к ошибке `CATALOG003: Invalid type enum`.
+> **CATALOG003:** Attempting to create a CatalogEntry with a type not present in `CATALOG_TYPES` results in error `CATALOG003: Invalid type enum`.
 
-### Уровни видимости (Visibility)
+### Visibility levels
 
-| Уровень    | Описание                                                        | Кто видит                          |
-|------------|----------------------------------------------------------------|-------------------------------------|
-| `PUBLIC`   | Доступен всем пользователям и агентам системы                  | Все                                 |
-| `INTERNAL` | Доступен только внутри namespace                                | Участники namespace                 |
-| `PRIVATE`  | Доступен только автору и администраторам                        | Автор + admin                       |
+| Level      | Description                                                     | Who can see                     |
+|------------|-----------------------------------------------------------------|---------------------------------|
+| `PUBLIC`   | Accessible to all users and system agents                       | Everyone                        |
+| `INTERNAL` | Accessible only within the namespace                            | Namespace members               |
+| `PRIVATE`  | Accessible only to the author and administrators                | Author + admin                  |
 
-### Cypher: создание CatalogEntry
+### Cypher: creating a CatalogEntry
 
 ```cypher
-// Создание новой записи каталога
+// Create a new catalog entry
 CREATE (c:CatalogEntry {
   entryId: $entryId,
   name: $name,
@@ -186,13 +186,13 @@ CREATE (c:CatalogEntry {
   qualityScore: 1.0
 })
 
-// Связь с CatalogRoot
+// Link to CatalogRoot
 MATCH (root:CatalogRoot {id: 'catalog-root'})
 MATCH (c:CatalogEntry {entryId: $entryId})
 MERGE (root)-[:CONTAINS]->(c)
 ```
 
-### Cypher: запрос CatalogEntry с последней версией
+### Cypher: query CatalogEntry with latest version
 
 ```cypher
 MATCH (c:CatalogEntry {entryId: $id})-[:DEFINES]->(d:GraphDefinition)-[:HAS_VERSION]->(v:GraphVersion)
@@ -202,7 +202,7 @@ ORDER BY v.versionNumber DESC
 LIMIT 1
 ```
 
-### Cypher: список всех графов в namespace
+### Cypher: list all graphs in a namespace
 
 ```cypher
 MATCH (c:CatalogEntry)
@@ -213,9 +213,9 @@ RETURN c.entryId AS id, c.name, c.type, c.description,
 ORDER BY c.updatedAt DESC
 ```
 
-### Индексы
+### Indexes
 
-Обязательные индексы для производительности каталога:
+Required indexes for catalog performance:
 
 ```cypher
 CREATE INDEX ON :CatalogEntry(entryId);
@@ -232,13 +232,13 @@ CREATE INDEX ON :ReuseRecord(recordId);
 
 ## 6.2. Auto-save policy
 
-### Когда граф сохраняется автоматически
+### When a graph is saved automatically
 
-Каталог не требует явного действия «Сохранить» от пользователя. Графы сохраняются автоматически в трёх сценариях:
+The catalog does not require an explicit "Save" action from the user. Graphs are saved automatically in three scenarios:
 
 ```
 ┌───────────────────────────────────────────────────────────────────────┐
-│                     ТРИГГЕРЫ AUTO-SAVE                                │
+│                     AUTO-SAVE TRIGGERS                                 │
 │                                                                       │
 │  1. CREATION         2. VERSION BUMP         3. IMPORT                │
 │  ┌──────────────┐    ┌──────────────┐        ┌──────────────┐        │
@@ -251,60 +251,60 @@ CREATE INDEX ON :ReuseRecord(recordId);
 └───────────────────────────────────────────────────────────────────────┘
 ```
 
-| Триггер           | Метод                           | Что создаётся                               |
-|--------------------|---------------------------------|----------------------------------------------|
-| Создание графа     | `createGraph(data)`             | CatalogEntry + GraphDefinition + GraphVersion v1 |
-| Новая версия       | `createVersion(entryId, data)`  | Новые GraphDefinition + GraphVersion vN+1, SUPERSEDES |
-| SQL Import         | `mssql.import-orchestrator.js`  | Новый CatalogEntry для каждого импортированного графа |
-| GraphLoader startup| `graph-loader.service.js`       | CatalogEntry для предзагруженных графов (iNeed, SQL Extraction) |
+| Trigger           | Method                          | What is created                                      |
+|--------------------|---------------------------------|------------------------------------------------------|
+| Graph creation     | `createGraph(data)`             | CatalogEntry + GraphDefinition + GraphVersion v1     |
+| New version        | `createVersion(entryId, data)`  | New GraphDefinition + GraphVersion vN+1, SUPERSEDES  |
+| SQL Import         | `mssql.import-orchestrator.js`  | New CatalogEntry for each imported graph             |
+| GraphLoader startup| `graph-loader.service.js`       | CatalogEntry for pre-loaded graphs (iNeed, SQL Extraction) |
 
-### GXE godMode -- два режима сохранения
+### GXE godMode -- two save modes
 
-Поведение GXE-редактора при сохранении зависит от режима `godMode`:
+GXE editor save behavior depends on the `godMode` setting:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                                                                 │
-│   godMode: OFF (обычный режим)          godMode: ON (God Mode)  │
+│   godMode: OFF (normal mode)            godMode: ON (God Mode)  │
 │   ────────────────────────                ──────────────────────  │
 │                                                                 │
-│   Пользователь нажимает "Save"          Пользователь нажимает   │
-│           │                             "Save"                   │
-│           ▼                                    │                 │
-│   createVersion(entryId, data)                 ▼                 │
-│           │                             updateGraph(id, data)    │
-│           ▼                                    │                 │
-│   ┌──────────────────┐                         ▼                 │
-│   │ GraphVersion N+1 │                 ┌──────────────────┐      │
-│   │ + SUPERSEDES     │                 │ In-place SET     │      │
-│   │ + новый Definition│                │ на GraphDefinition│      │
-│   └──────────────────┘                 │ (без новой версии)│     │
-│                                        └──────────────────┘      │
-│   История СОХРАНЯЕТСЯ                  История НЕ сохраняется    │
-│   Откат возможен                       Откат невозможен          │
+│   User clicks "Save"                    User clicks "Save"      │
+│           │                                    │                 │
+│           ▼                                    ▼                 │
+│   createVersion(entryId, data)          updateGraph(id, data)    │
+│           │                                    │                 │
+│           ▼                                    ▼                 │
+│   ┌──────────────────┐                 ┌──────────────────┐      │
+│   │ GraphVersion N+1 │                 │ In-place SET     │      │
+│   │ + SUPERSEDES     │                 │ on GraphDefinition│      │
+│   │ + new Definition │                 │ (no new version) │      │
+│   └──────────────────┘                 └──────────────────┘      │
+│                                                                 │
+│   History PRESERVED                    History NOT preserved    │
+│   Rollback possible                    Rollback impossible      │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-- **godMode OFF** -- рекомендуемый режим. Каждое сохранение создаёт новую версию (`createVersion`). Граф становится иммутабельным после сохранения. История изменений полностью сохраняется.
+- **godMode OFF** -- recommended mode. Each save creates a new version (`createVersion`). The graph becomes immutable after saving. Full change history is preserved.
 
-- **godMode ON** -- режим для быстрого прототипирования. Обновляет GraphDefinition на месте (`updateGraph`). Не создаёт новую версию. Используется только в процессе разработки.
+- **godMode ON** -- mode for rapid prototyping. Updates the GraphDefinition in place (`updateGraph`). Does not create a new version. Used only during development.
 
-> **CATALOG004:** При конкурентном обновлении одной и той же CatalogEntry двумя пользователями одновременно возникает ошибка `CATALOG004: Version conflict`. Система использует `currentVersion` как optimistic lock.
+> **CATALOG004:** If two users update the same CatalogEntry concurrently, error `CATALOG004: Version conflict` is raised. The system uses `currentVersion` as an optimistic lock.
 
-### GraphLoader -- автосохранение при старте
+### GraphLoader -- auto-save on startup
 
-При запуске сервера `GraphLoaderService` загружает предопределённые графы из файлов и создаёт для каждого `CatalogEntry`:
+On server startup, `GraphLoaderService` loads predefined graphs from files and creates a `CatalogEntry` for each:
 
 ```javascript
-// graph-loader.service.js -- упрощённый фрагмент
+// graph-loader.service.js -- simplified excerpt
 async loadGraph(graphDef) {
   const dag = { nodes: graphDef.nodes, edges: graphDef.edges };
 
-  // 1. Сохранить в PatternLibrary (in-memory кеш)
+  // 1. Save to PatternLibrary (in-memory cache)
   this._patternLibrary.register(graphDef.id, dag);
 
-  // 2. Сохранить метаданные в Memgraph
+  // 2. Save metadata to Memgraph
   await this._memgraph.run(`
     MERGE (g:BusinessProcessGraph {graphId: $graphId})
     ON CREATE SET
@@ -322,9 +322,9 @@ async loadGraph(graphDef) {
 }
 ```
 
-Предзагружаемые графы:
+Pre-loaded graphs:
 
-| ID графа                              | Тип       | Узлов | Рёбер |
+| Graph ID                              | Type      | Nodes | Edges |
 |----------------------------------------|-----------|-------|-------|
 | `INEED-G0-META-INTAKE-V1`             | meta      | 16    | 16    |
 | `INEED-G1-IT-HARDWARE-V1`             | business  | 22    | 22    |
@@ -333,18 +333,18 @@ async loadGraph(graphDef) {
 | `CORE-SQL-EXTRACTION-META-V1`         | technical | --    | --    |
 | `CORE-SQL-PROCEDURE-ANALYSIS-V1`      | technical | --    | --    |
 
-### Cypher: создание версии с SUPERSEDES
+### Cypher: creating a version with SUPERSEDES
 
 ```cypher
-// Шаг 1: Получить текущую версию
+// Step 1: Get current version
 MATCH (c:CatalogEntry {entryId: $entryId})
 RETURN c.currentVersion AS currentVersion
 
-// Шаг 2: Обновить номер текущей версии
+// Step 2: Update current version number
 MATCH (c:CatalogEntry {entryId: $entryId})
 SET c.updatedAt = datetime(), c.currentVersion = $versionNumber
 
-// Шаг 3: Создать новые GraphDefinition и GraphVersion
+// Step 3: Create new GraphDefinition and GraphVersion
 CREATE (g:GraphDefinition {
   graphId: $graphId,
   nodes: $nodes,
@@ -364,14 +364,14 @@ CREATE (v:GraphVersion {
   contentHash: $contentHash
 })
 
-// Шаг 4: Связать с CatalogEntry
+// Step 4: Link to CatalogEntry
 MATCH (c:CatalogEntry {entryId: $entryId})
 MATCH (g:GraphDefinition {graphId: $graphId})
 MATCH (v:GraphVersion {versionId: $versionId})
 CREATE (c)-[:DEFINES]->(g)
 CREATE (g)-[:HAS_VERSION]->(v)
 
-// Шаг 5: Создать SUPERSEDES ребро к предыдущей версии
+// Step 5: Create SUPERSEDES edge to previous version
 MATCH (c:CatalogEntry {entryId: $entryId})-[:DEFINES]->(:GraphDefinition)-[:HAS_VERSION]->(prev:GraphVersion)
 WHERE prev.versionNumber = $versionNumber - 1
 MATCH (v:GraphVersion {versionId: $versionId})
@@ -382,34 +382,34 @@ CREATE (v)-[:SUPERSEDES]->(prev)
 
 ## 6.3. Deduplication
 
-### Проблема
+### Problem
 
-Без дедупликации каталог быстро заполняется дубликатами: один и тот же пайплайн, сохранённый разными пользователями, или импортированный повторно из того же источника. Дедупликация обеспечивает единственность каждого графа в каталоге.
+Without deduplication, the catalog quickly fills with duplicates: the same pipeline saved by different users, or repeatedly imported from the same source. Deduplication ensures uniqueness of each graph in the catalog.
 
-### Трёхуровневая стратегия дедупликации
+### Three-level deduplication strategy
 
 ```
-  Новый граф
+  New graph
       │
       ▼
 ┌─────────────────────────────────┐
 │ Level 1: EXACT MATCH            │
-│ contentHash == существующий?     │
+│ contentHash == existing?        │
 │                                 │
 │ SHA-256(sorted(nodes + edges))  │
-│ O(1) поиск по индексу           │
+│ O(1) lookup by index            │
 ├─────────────┬───────────────────┘
-│  Совпал     │  Не совпал
+│  Match      │  No match
 │             ▼
 │  ┌─────────────────────────────────┐
 │  │ Level 2: STRUCTURAL MATCH       │
 │  │ Jaccard(toolIds_A, toolIds_B)   │
 │  │          >= 0.85 ?              │
 │  │                                 │
-│  │ Сравнение топологии, node count,│
+│  │ Compare topology, node count,   │
 │  │ edge count, toolId overlap      │
 │  ├─────────────┬───────────────────┘
-│  │  Совпал     │  Не совпал
+│  │  Match      │  No match
 │  │             ▼
 │  │  ┌─────────────────────────────────┐
 │  │  │ Level 3: SEMANTIC MATCH (GNN)   │
@@ -417,44 +417,44 @@ CREATE (v)-[:SUPERSEDES]->(prev)
 │  │  │          >= threshold ?         │
 │  │  │                                 │
 │  │  │ GNN graph embeddings            │
-│  │  │ Threshold: настраиваемый        │
+│  │  │ Threshold: configurable         │
 │  │  │ (default: 0.90)                 │
 │  │  ├─────────────┬───────────────────┘
-│  │  │  Совпал     │  Не совпал
+│  │  │  Match      │  No match
 │  │  │             ▼
 │  │  │        ┌────────────┐
-│  │  │        │ УНИКАЛЕН   │
-│  │  │        │ Создать    │
+│  │  │        │  UNIQUE    │
+│  │  │        │  Create    │
 │  │  │        │ CatalogEntry│
 │  │  │        └────────────┘
 │  │  ▼
 │  ▼
 │ ┌────────────────────┐
-│ │ ДУБЛИКАТ ОБНАРУЖЕН │
-│ │ Вернуть существующий│
-│ │ entryId             │
+│ │ DUPLICATE FOUND    │
+│ │ Return existing    │
+│ │ entryId            │
 │ └────────────────────┘
 ▼
 ```
 
-> **CATALOG005:** При обнаружении дубликата на Level 1 возвращается ошибка `CATALOG005: Dedup collision (identical contentHash exists)` с указанием `existingEntryId`.
+> **CATALOG005:** When a Level 1 duplicate is detected, error `CATALOG005: Dedup collision (identical contentHash exists)` is returned with the `existingEntryId`.
 
 ### Level 1: Exact Match -- contentHash
 
-Самый быстрый и надёжный уровень. `contentHash` вычисляется как SHA-256 от канонизированного JSON узлов и рёбер:
+The fastest and most reliable level. `contentHash` is computed as SHA-256 of canonicalized JSON of nodes and edges:
 
 ```javascript
 /**
- * Вычисляет contentHash для графа.
- * Используется для exact-match дедупликации.
+ * Computes contentHash for a graph.
+ * Used for exact-match deduplication.
  *
- * @param {Array} nodes - Массив узлов графа
- * @param {Array} edges - Массив рёбер графа
- * @returns {string} SHA-256 хеш
+ * @param {Array} nodes - Array of graph nodes
+ * @param {Array} edges - Array of graph edges
+ * @returns {string} SHA-256 hash
  */
 computeContentHash(nodes, edges) {
-  // Сортировка обеспечивает стабильность хеша
-  // при изменении порядка узлов/рёбер
+  // Sorting ensures hash stability
+  // when the order of nodes/edges changes
   const sortedNodes = [...nodes].sort((a, b) =>
     (a.id || '').localeCompare(b.id || '')
   );
@@ -468,7 +468,7 @@ computeContentHash(nodes, edges) {
 }
 ```
 
-Поиск по contentHash -- O(1) благодаря индексу:
+ContentHash lookup is O(1) thanks to an index:
 
 ```cypher
 MATCH (d:GraphDefinition {contentHash: $hash})
@@ -478,7 +478,7 @@ LIMIT 1
 
 ### Level 2: Structural Match -- Jaccard Similarity
 
-Если exact match не сработал, проверяется структурное сходство. Основная метрика -- Jaccard coefficient по toolId:
+If exact match fails, structural similarity is checked. The primary metric is the Jaccard coefficient over toolId:
 
 ```
            |toolIds_A ∩ toolIds_B|
@@ -486,16 +486,16 @@ J(A,B) = ───────────────────────�
            |toolIds_A ∪ toolIds_B|
 ```
 
-Порог: **J >= 0.85** -- графы считаются структурно идентичными.
+Threshold: **J >= 0.85** -- graphs are considered structurally identical.
 
-Дополнительные сигналы:
-- Совпадение топологии (PIPELINE / DAG / TREE)
-- Близость по количеству узлов (±20%)
-- Совпадение тегов
+Additional signals:
+- Topology match (PIPELINE / DAG / TREE)
+- Node count proximity (±20%)
+- Tag overlap
 
 ```javascript
 /**
- * Проверяет структурное сходство двух графов.
+ * Checks structural similarity between two graphs.
  *
  * @param {Object} graphA - { toolIds, topology, nodeCount, tags }
  * @param {Object} graphB - { toolIds, topology, nodeCount, tags }
@@ -532,14 +532,14 @@ function checkStructuralSimilarity(graphA, graphB) {
 
 ### Level 3: Semantic Match -- GNN Embedding Similarity
 
-Если структурное сравнение недостаточно (графы используют разные инструменты, но решают одну задачу), используются GNN-эмбеддинги:
+When structural comparison is insufficient (graphs use different tools but solve the same problem), GNN embeddings are used:
 
 ```javascript
 /**
- * Вычисляет семантическое сходство через GNN-сервис.
+ * Computes semantic similarity via the GNN service.
  *
- * @param {Object} graphA - Граф для сравнения
- * @param {Object} graphB - Эталонный граф
+ * @param {Object} graphA - Graph to compare
+ * @param {Object} graphB - Reference graph
  * @returns {Promise<{ similar: boolean, cosine: number }>}
  */
 async function checkSemanticSimilarity(graphA, graphB) {
@@ -557,27 +557,27 @@ async function checkSemanticSimilarity(graphA, graphB) {
   const cosine = result.cosine_similarity || 0;
 
   return {
-    similar: cosine >= 0.90,  // Порог настраивается
+    similar: cosine >= 0.90,  // Threshold is configurable
     cosine: Math.round(cosine * 1000) / 1000,
   };
 }
 ```
 
-GNN-сервис (порт 5000) вычисляет эмбеддинг каждого графа, затем считает косинусное расстояние:
+The GNN service (port 5000) computes an embedding for each graph and then calculates the cosine distance:
 
 ```
                     Σ(A_i × B_i)
-cos(A, B) = ────────────────────────────
+cos(A, B) = ────────────────────────
               √(Σ A_i²) × √(Σ B_i²)
 ```
 
 ### checkFingerprintCollision
 
-Функция `checkFingerprintCollision()` из `GraphSchemaManager` объединяет все три уровня:
+The `checkFingerprintCollision()` function from `GraphSchemaManager` combines all three levels:
 
 ```javascript
 /**
- * Проверяет, существует ли дубликат графа в каталоге.
+ * Checks whether a duplicate of a graph exists in the catalog.
  *
  * @param {Object} graph - { nodes, edges, toolIds, topology }
  * @returns {Promise<{ isDuplicate: boolean, level: string, existingId: string|null }>}
@@ -622,9 +622,9 @@ async checkFingerprintCollision(graph) {
 
 ## 6.4. Search mechanisms
 
-### Четыре режима поиска
+### Four search modes
 
-Каталог поддерживает четыре режима поиска, от простого до интеллектуального:
+The catalog supports four search modes, from simple to intelligent:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -633,23 +633,23 @@ async checkFingerprintCollision(graph) {
 │  ┌─────────────┐  ┌──────────────┐  ┌────────────┐  ┌──────────────┐ │
 │  │  KEYWORD    │  │  STRUCTURAL  │  │  SEMANTIC   │  │   HYBRID     │ │
 │  │             │  │              │  │   (GNN)     │  │              │ │
-│  │ name LIKE   │  │ Jaccard      │  │ cosine sim  │  │ взвешенная   │ │
-│  │ tags CONTAINS│  │ toolId match │  │ embedding   │  │ комбинация   │ │
-│  │ description │  │ topology     │  │ space       │  │ всех трёх    │ │
+│  │ name LIKE   │  │ Jaccard      │  │ cosine sim  │  │ weighted     │ │
+│  │ tags CONTAINS│  │ toolId match │  │ embedding   │  │ combination  │ │
+│  │ description │  │ topology     │  │ space       │  │ of all three │ │
 │  │ FULLTEXT    │  │ node count   │  │             │  │              │ │
 │  └─────────────┘  └──────────────┘  └────────────┘  └──────────────┘ │
 │                                                                        │
-│  Скорость: ████    Скорость: ███     Скорость: ██    Скорость: ██    │
-│  Качество: ██      Качество: ███     Качество: ████  Качество: █████ │
+│  Speed: ████    Speed: ███     Speed: ██    Speed: ██              │
+│  Quality: ██    Quality: ███   Quality: ████  Quality: █████        │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### 1. Keyword Search
 
-Полнотекстовый поиск по имени, описанию и тегам. Использует Cypher CONTAINS и FULLTEXT индексы:
+Full-text search by name, description, and tags. Uses Cypher CONTAINS and FULLTEXT indexes:
 
 ```cypher
-// Поиск по ключевым словам
+// Keyword search
 MATCH (c:CatalogEntry)
 WHERE c.name CONTAINS $searchTerm
    OR c.description CONTAINS $searchTerm
@@ -659,17 +659,17 @@ ORDER BY c.qualityScore DESC, c.usageCount DESC
 LIMIT $limit
 ```
 
-Для высоконагруженных сценариев рекомендуется FULLTEXT индекс:
+For high-load scenarios, a FULLTEXT index is recommended:
 
 ```cypher
-// Создание FULLTEXT индекса (выполняется один раз при инициализации)
+// Create FULLTEXT index (executed once during initialization)
 CALL db.index.fulltext.createNodeIndex(
   'catalog_search',
   ['CatalogEntry'],
   ['name', 'description']
 );
 
-// Поиск через FULLTEXT
+// Search via FULLTEXT
 CALL db.index.fulltext.queryNodes('catalog_search', $searchTerm)
 YIELD node, score
 RETURN node.entryId AS id, node.name, score
@@ -679,14 +679,14 @@ LIMIT $limit
 
 ### 2. Structural Search
 
-Поиск по структурным характеристикам графа: toolId overlap, топология, размер.
+Search by graph structural characteristics: toolId overlap, topology, size.
 
 ```javascript
 /**
- * Структурный поиск в каталоге.
+ * Structural search in the catalog.
  *
  * @param {Object} criteria - { toolIds, topology, minNodes, maxNodes }
- * @returns {Promise<Array>} Отсортированные результаты
+ * @returns {Promise<Array>} Sorted results
  */
 async structuralSearch(criteria) {
   const { toolIds = [], topology, minNodes = 0, maxNodes = Infinity } = criteria;
@@ -715,15 +715,15 @@ async structuralSearch(criteria) {
 
 ### 3. Semantic Search (GNN)
 
-Поиск по семантическому сходству через GNN graph embeddings. Вычисляет эмбеддинг запроса и находит ближайших соседей в пространстве эмбеддингов:
+Search by semantic similarity via GNN graph embeddings. Computes an embedding for the query and finds nearest neighbors in the embedding space:
 
 ```javascript
 /**
- * Семантический поиск через GNN-сервис.
+ * Semantic search via the GNN service.
  *
  * @param {Object} queryGraph - { nodes, edges }
- * @param {number} topK - Количество результатов
- * @returns {Promise<Array>} Ранжированные результаты с cosine score
+ * @param {number} topK - Number of results
+ * @returns {Promise<Array>} Ranked results with cosine score
  */
 async semanticSearch(queryGraph, topK = 10) {
   const response = await fetch(`${GNN_SERVICE_URL}/api/v1/similarity/find`, {
@@ -742,37 +742,37 @@ async semanticSearch(queryGraph, topK = 10) {
 
 ### 4. Hybrid Search
 
-Комбинирует все три режима с настраиваемыми весами:
+Combines all three modes with configurable weights:
 
 ```
 score = w_keyword * S_keyword + w_structural * S_jaccard + w_gnn * S_cosine
 ```
 
-Веса по умолчанию:
+Default weights:
 
-| Компонент        | Вес (w)  | Обоснование                                           |
-|------------------|----------|--------------------------------------------------------|
-| `w_keyword`      | **0.3**  | Базовый сигнал, быстрый, но шумный                    |
-| `w_structural`   | **0.3**  | Надёжный для технических графов с известными toolId    |
-| `w_gnn`          | **0.4**  | Наивысший вес: учитывает семантику и структуру         |
+| Component        | Weight (w) | Rationale                                              |
+|------------------|------------|--------------------------------------------------------|
+| `w_keyword`      | **0.3**    | Base signal, fast but noisy                            |
+| `w_structural`   | **0.3**    | Reliable for technical graphs with known toolIds       |
+| `w_gnn`          | **0.4**    | Highest weight: accounts for semantics and structure   |
 
 ```javascript
 /**
- * Гибридный поиск в каталоге.
+ * Hybrid search in the catalog.
  *
  * @param {Object} query - { searchTerm, toolIds, topology, nodes, edges }
  * @param {Object} weights - { keyword, structural, gnn }
- * @returns {Promise<Array>} Ранжированные результаты
+ * @returns {Promise<Array>} Ranked results
  */
 async hybridSearch(query, weights = { keyword: 0.3, structural: 0.3, gnn: 0.4 }) {
-  // Параллельный запуск всех трёх режимов
+  // Run all three modes in parallel
   const [keywordResults, structuralResults, gnnResults] = await Promise.allSettled([
     this.keywordSearch(query.searchTerm),
     this.structuralSearch({ toolIds: query.toolIds, topology: query.topology }),
     this.semanticSearch({ nodes: query.nodes, edges: query.edges }),
   ]);
 
-  // Объединение результатов
+  // Merge results
   const scoreMap = new Map();
 
   for (const r of keywordResults.value || []) {
@@ -794,7 +794,7 @@ async hybridSearch(query, weights = { keyword: 0.3, structural: 0.3, gnn: 0.4 })
     scoreMap.set(r.id, entry);
   }
 
-  // Вычисление финального score
+  // Compute final score
   return [...scoreMap.values()]
     .map(entry => ({
       ...entry,
@@ -807,7 +807,7 @@ async hybridSearch(query, weights = { keyword: 0.3, structural: 0.3, gnn: 0.4 })
 }
 ```
 
-### MCP Tools для поиска
+### MCP Tools for search
 
 #### catalog.search_graphs
 
@@ -871,24 +871,24 @@ async hybridSearch(query, weights = { keyword: 0.3, structural: 0.3, gnn: 0.4 })
 
 ## 6.5. Reuse strategy
 
-### Проблема переиспользования
+### The reuse problem
 
-Когда системе нужен новый подграф, существует четыре варианта: создать с нуля, скопировать существующий, расширить шаблон или сослаться на готовый. Неправильный выбор стратегии ведёт к раздуванию каталога (лишние клоны) или хрупким зависимостям (битые ссылки).
+When the system needs a new subgraph, there are four options: create from scratch, copy an existing one, extend a template, or reference a ready-made one. Choosing the wrong strategy leads to catalog bloat (unnecessary clones) or fragile dependencies (broken references).
 
 ### ReuseStrategyResolver
 
-Реализация: `api/src/services/graph/reuse-strategy-resolver.js`
+Implementation: `api/src/services/graph/reuse-strategy-resolver.js`
 
-Четыре стратегии переиспользования:
+Four reuse strategies:
 
-| Стратегия          | Идентификатор       | Описание                                         |
-|--------------------|---------------------|--------------------------------------------------|
-| **CLONE**          | `CLONE_MODIFY`      | Клонировать граф и модифицировать под задачу      |
-| **EXTEND**         | `ABSTRACT_INHERIT`  | Взять шаблон и параметризовать                   |
-| **COMPOSE**        | `DIRECT_REUSE`      | Использовать граф как есть (ссылка, без копии)    |
-| **REFERENCE**      | `CREATE_NEW`        | Создать новый граф с нуля                        |
+| Strategy           | Identifier          | Description                                           |
+|--------------------|---------------------|-------------------------------------------------------|
+| **CLONE**          | `CLONE_MODIFY`      | Clone the graph and modify it for the task            |
+| **EXTEND**         | `ABSTRACT_INHERIT`  | Take a template and parameterize it                   |
+| **COMPOSE**        | `DIRECT_REUSE`      | Use the graph as-is (reference, no copy)              |
+| **REFERENCE**      | `CREATE_NEW`        | Create a new graph from scratch                       |
 
-### Матрица принятия решений
+### Decision matrix
 
 ```
                         Similarity Score
@@ -898,36 +898,36 @@ async hybridSearch(query, weights = { keyword: 0.3, structural: 0.3, gnn: 0.4 })
    ┌────────────────────────────────────────────────────────────┐
    │                                                            │
    │  CREATE_NEW        CLONE_MODIFY       DIRECT_REUSE        │
-   │  Создать            Клонировать       Использовать         │
-   │  новый граф         и доработать      как есть             │
+   │  Create            Clone and          Use as-is           │
+   │  new graph         adapt                                   │
    │                                                            │
    │  ◄─── 0.0 ─── 0.3 ──── 0.6 ──── 0.9 ──── 1.0 ───►       │
    │       │              │              │                      │
-   │       │  Нет         │  Средняя     │  Высокая             │
-   │       │  релевантных │  похожесть   │  похожесть           │
-   │       │  кандидатов  │              │                      │
+   │       │  No          │  Medium      │  High                │
+   │       │  relevant    │  similarity  │  similarity          │
+   │       │  candidates  │              │                      │
    └────────────────────────────────────────────────────────────┘
 
-   Особый случай: если лучший кандидат имеет type='template'
-   и score > 0.5 → ABSTRACT_INHERIT (приоритет над остальными)
+   Special case: if the best candidate has type='template'
+   and score > 0.5 → ABSTRACT_INHERIT (takes priority over others)
 ```
 
-| Условие                                      | Стратегия           | Действие                                  |
+| Condition                                    | Strategy            | Action                                    |
 |-----------------------------------------------|---------------------|-------------------------------------------|
-| `score >= 0.9`                                | `DIRECT_REUSE`      | Ссылка на существующий граф               |
-| `0.6 <= score < 0.9`                          | `CLONE_MODIFY`      | Клон + модификация узлов/рёбер            |
-| `type = 'template'` И `score > 0.5`          | `ABSTRACT_INHERIT`  | Создание экземпляра из шаблона            |
-| `score < 0.6` или нет кандидатов              | `CREATE_NEW`        | Создание нового графа с нуля              |
+| `score >= 0.9`                                | `DIRECT_REUSE`      | Reference the existing graph              |
+| `0.6 <= score < 0.9`                          | `CLONE_MODIFY`      | Clone + modify nodes/edges                |
+| `type = 'template'` AND `score > 0.5`        | `ABSTRACT_INHERIT`  | Instantiate from template                 |
+| `score < 0.6` or no candidates              | `CREATE_NEW`        | Create a new graph from scratch           |
 
-> **CATALOG006:** Если стратегия переиспользования не соответствует фактическому действию (например, `DIRECT_REUSE` рекомендован, но пользователь модифицировал граф), возникает предупреждение `CATALOG006: Reuse strategy mismatch`.
+> **CATALOG006:** If the reuse strategy does not match the actual action (e.g., `DIRECT_REUSE` was recommended but the user modified the graph), warning `CATALOG006: Reuse strategy mismatch` is raised.
 
-### Алгоритм выбора стратегии
+### Strategy selection algorithm
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │                 STRATEGY SELECTION FLOW                            │
 │                                                                    │
-│  Входные данные:                                                   │
+│  Input:                                                            │
 │  ┌──────────────────────────────────────┐                         │
 │  │ nodeContext: {                        │                         │
 │  │   nodeId, nodeLabel,                 │                         │
@@ -961,7 +961,7 @@ async hybridSearch(query, weights = { keyword: 0.3, structural: 0.3, gnn: 0.4 })
 │                     │                                              │
 │                     ▼                                              │
 │  ┌─────────────────────────────────────┐                          │
-│  │ Step 3b: _applyGNNBoost() (опц.)   │                          │
+│  │ Step 3b: _applyGNNBoost() (opt.)   │                          │
 │  │ → cosine similarity boost           │                          │
 │  └──────────────────┬──────────────────┘                          │
 │                     │                                              │
@@ -977,15 +977,15 @@ async hybridSearch(query, weights = { keyword: 0.3, structural: 0.3, gnn: 0.4 })
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-### Веса скоринга кандидатов
+### Candidate scoring weights
 
-| Фактор             | Вес    | Описание                                                  |
-|---------------------|--------|-----------------------------------------------------------|
-| toolId Jaccard      | **0.40** | Пересечение инструментов между графами                  |
-| keyword overlap     | **0.25** | Совпадение ключевых слов (name, description, tags)      |
-| topology match      | **0.15** | Совпадение топологии (PIPELINE/DAG/TREE)                |
-| size proximity      | **0.10** | Близость по количеству узлов (3--20 = 0.8, иначе 0.4)  |
-| quality bonus       | **0.10** | Оценка качества графа (qualityScore)                    |
+| Factor              | Weight   | Description                                                  |
+|---------------------|----------|--------------------------------------------------------------|
+| toolId Jaccard      | **0.40** | Tool overlap between graphs                                  |
+| keyword overlap     | **0.25** | Keyword match (name, description, tags)                      |
+| topology match      | **0.15** | Topology match (PIPELINE/DAG/TREE)                           |
+| size proximity      | **0.10** | Node count proximity (3--20 = 0.8, otherwise 0.4)           |
+| quality bonus       | **0.10** | Graph quality score (qualityScore)                           |
 
 ### MCP Tool: catalog.analyze_reuse
 
@@ -1003,15 +1003,15 @@ async hybridSearch(query, weights = { keyword: 0.3, structural: 0.3, gnn: 0.4 })
   },
   returns: {
     strategy: 'string',        // DIRECT_REUSE | CLONE_MODIFY | ABSTRACT_INHERIT | CREATE_NEW
-    reason: 'string',          // Человекочитаемое обоснование
-    sourceGraph: {             // Лучший кандидат (null для CREATE_NEW)
+    reason: 'string',          // Human-readable rationale
+    sourceGraph: {             // Best candidate (null for CREATE_NEW)
       entryId: 'string',
       name: 'string',
       similarityScore: 'number',
       scoreBreakdown: 'object',
     },
-    alternatives: 'object[]',  // Топ-3 альтернативных кандидата
-    gnnUsed: 'boolean',        // Был ли использован GNN для бустинга
+    alternatives: 'object[]',  // Top-3 alternative candidates
+    gnnUsed: 'boolean',        // Whether GNN was used for boosting
   }
 }
 ```
@@ -1020,28 +1020,28 @@ async hybridSearch(query, weights = { keyword: 0.3, structural: 0.3, gnn: 0.4 })
 
 ## 6.6. Pattern promotion
 
-### Два типа PatternLibrary
+### Two types of PatternLibrary
 
-В системе существуют два независимых хранилища паттернов, работающих на разных уровнях:
+The system has two independent pattern stores operating at different levels:
 
 ```
 ┌─────────────────────────────────────┐   ┌─────────────────────────────────────┐
 │    Runtime PatternLibrary           │   │    Extraction PatternLibrary        │
 │    (runtime/learning/)              │   │    (services/patterns/)             │
 │                                     │   │                                     │
-│  Хранит: DAG-паттерны выполнения    │   │  Хранит: Паттерны извлечения        │
-│  Источник: recordExecution()        │   │  Источник: registerEntityPattern()  │
-│  Цель: переиспользование графов     │   │  Цель: улучшение извлечения         │
-│  Кеш: LRU in-memory + Memgraph     │   │  Кеш: in-memory + domain index      │
+│  Stores: DAG execution patterns     │   │  Stores: Extraction patterns        │
+│  Source: recordExecution()          │   │  Source: registerEntityPattern()    │
+│  Purpose: graph reuse               │   │  Purpose: extraction improvement    │
+│  Cache: LRU in-memory + Memgraph   │   │  Cache: in-memory + domain index    │
 │                                     │   │                                     │
-│  Файл:                              │   │  Файл:                              │
+│  File:                              │   │  File:                              │
 │  runtime/learning/PatternLibrary.js │   │  services/patterns/pattern-library.js│
 └─────────────────────────────────────┘   └─────────────────────────────────────┘
 ```
 
-### Жизненный цикл паттерна
+### Pattern lifecycle
 
-Паттерн проходит четыре стадии от первого наблюдения до превращения в шаблон каталога:
+A pattern passes through four stages from first observation to becoming a catalog template:
 
 ```
  ┌───────────┐     ┌────────────┐     ┌───────────┐     ┌───────────┐
@@ -1051,42 +1051,42 @@ async hybridSearch(query, weights = { keyword: 0.3, structural: 0.3, gnn: 0.4 })
  │ rate: ?   │     │ rate > 0.5 │     │ rate > 0.8│     │ type:template│
  └───────────┘     └────────────┘     └───────────┘     └───────────┘
       │                  │                  │                  │
-      │  Первое          │  Повторное       │  Стабильный      │  Зарегистрирован
-      │  выполнение      │  подтверждение   │  паттерн         │  в каталоге
+      │  First           │  Repeated        │  Stable          │  Registered
+      │  execution       │  confirmation    │  pattern         │  in catalog
 ```
 
-### Критерии продвижения
+### Promotion criteria
 
-| Переход                | Условие                                           | Автоматически |
-|------------------------|----------------------------------------------------|---------------|
-| OBSERVED → CANDIDATE   | `observationCount >= 3`                            | Да            |
-| CANDIDATE → PROMOTED   | `observationCount >= 5` И `successRate > 0.8`      | Да            |
-| PROMOTED → TEMPLATE    | Решение администратора или агента                  | Нет           |
+| Transition             | Condition                                          | Automatic |
+|------------------------|----------------------------------------------------|-----------|
+| OBSERVED → CANDIDATE   | `observationCount >= 3`                            | Yes       |
+| CANDIDATE → PROMOTED   | `observationCount >= 5` AND `successRate > 0.8`    | Yes       |
+| PROMOTED → TEMPLATE    | Administrator or agent decision                    | No        |
 
-### Пороги продвижения
+### Promotion thresholds
 
 ```javascript
 const PROMOTION_THRESHOLDS = {
   CANDIDATE: {
-    minObservations: 3,     // Минимум наблюдений для кандидата
-    minSuccessRate: 0.5,    // Минимальный success rate
+    minObservations: 3,     // Minimum observations for candidate
+    minSuccessRate: 0.5,    // Minimum success rate
   },
   PROMOTED: {
-    minObservations: 5,     // Порог для продвижения
-    minSuccessRate: 0.8,    // 80%+ успешных выполнений
+    minObservations: 5,     // Threshold for promotion
+    minSuccessRate: 0.8,    // 80%+ successful executions
   },
 };
 ```
 
-### recordExecution() -- запись результата выполнения
+### recordExecution() -- recording execution results
 
-Каждое выполнение графа записывается в PatternLibrary для обучения:
+Every graph execution is recorded in PatternLibrary for learning:
 
 ```javascript
 /**
- * Записывает результат выполнения графа для обучения паттернов.
+ * Records a graph execution result for pattern learning.
  *
- * @param {Object} executionResult - Результат RuntimeEngine
+ * @param {Object} executionResult - RuntimeEngine result
  * @param {Object} context - { taskCategory, taskDescription, userId }
  * @returns {Promise<{ patternId, isNewPattern, successRate }>}
  */
@@ -1100,11 +1100,11 @@ async recordExecution(executionResult, context) {
   const dag = executionResult.dag;
   const hash = this._computePatternHash(dag);
 
-  // Найти или создать паттерн
+  // Find or create pattern
   let pattern = this._hashIndex.get(hash);
 
   if (!pattern) {
-    // Новый паттерн — OBSERVED
+    // New pattern -- OBSERVED
     pattern = {
       hash,
       category: taskCategory,
@@ -1119,17 +1119,17 @@ async recordExecution(executionResult, context) {
     this._hashIndex.set(hash, pattern);
   }
 
-  // Обновить статистику
+  // Update statistics
   pattern.observations++;
   if (success) pattern.successes++;
   else pattern.failures++;
   pattern.successRate = pattern.successes / pattern.observations;
   pattern.lastSeenAt = new Date().toISOString();
 
-  // Проверить продвижение
+  // Check promotion
   this._checkPromotion(pattern);
 
-  // Обновить category cache
+  // Update category cache
   const existing = this._categoryCache.get(taskCategory);
   if (!existing || pattern.successRate > existing.successRate) {
     this._cachePattern(taskCategory, pattern);
@@ -1144,13 +1144,13 @@ async recordExecution(executionResult, context) {
 }
 ```
 
-### _checkPromotion() -- автоматическое продвижение
+### _checkPromotion() -- automatic promotion
 
 ```javascript
 /**
- * Проверяет, готов ли паттерн к продвижению на следующую стадию.
+ * Checks whether a pattern is ready for promotion to the next stage.
  *
- * @param {Object} pattern - Объект паттерна
+ * @param {Object} pattern - Pattern object
  */
 _checkPromotion(pattern) {
   const { observations, successRate, stage } = pattern;
@@ -1173,22 +1173,22 @@ _checkPromotion(pattern) {
 }
 ```
 
-### registerEntityPattern() -- регистрация паттерна извлечения
+### registerEntityPattern() -- registering an extraction pattern
 
-Extraction PatternLibrary использует другой API для регистрации паттернов:
+The Extraction PatternLibrary uses a different API for registering patterns:
 
 ```javascript
 /**
- * Регистрирует паттерн извлечения сущности.
+ * Registers an entity extraction pattern.
  *
- * @param {Object} config - Конфигурация паттерна
- * @param {string} config.id - Уникальный ID паттерна
- * @param {string} config.name - Имя паттерна
- * @param {string} config.domain - Домен (sql, javascript, etc.)
- * @param {RegExp[]} config.patterns - Массив регулярных выражений
- * @param {string} config.entityType - Тип извлекаемой сущности
- * @param {number} config.confidence - Базовый confidence (0.0-1.0)
- * @returns {EntityPattern} Зарегистрированный паттерн
+ * @param {Object} config - Pattern configuration
+ * @param {string} config.id - Unique pattern ID
+ * @param {string} config.name - Pattern name
+ * @param {string} config.domain - Domain (sql, javascript, etc.)
+ * @param {RegExp[]} config.patterns - Array of regular expressions
+ * @param {string} config.entityType - Type of entity to extract
+ * @param {number} config.confidence - Base confidence (0.0-1.0)
+ * @returns {EntityPattern} Registered pattern
  */
 registerEntityPattern(config) {
   const pattern = config instanceof EntityPattern
@@ -1202,15 +1202,15 @@ registerEntityPattern(config) {
 }
 ```
 
-### Превращение PROMOTED паттерна в CatalogEntry TEMPLATE
+### Promoting a PROMOTED pattern to a CatalogEntry TEMPLATE
 
-Когда паттерн достигает стадии PROMOTED, он может быть зарегистрирован в каталоге как шаблон:
+When a pattern reaches the PROMOTED stage, it can be registered in the catalog as a template:
 
 ```javascript
 /**
- * Превращает продвинутый паттерн в шаблон каталога.
+ * Converts a promoted pattern into a catalog template.
  *
- * @param {Object} pattern - Паттерн со стадией PROMOTED
+ * @param {Object} pattern - Pattern with stage PROMOTED
  * @returns {Promise<{ entryId, name }>}
  */
 async promoteToTemplate(pattern) {
@@ -1218,7 +1218,7 @@ async promoteToTemplate(pattern) {
     throw new Error('Only PROMOTED patterns can become templates');
   }
 
-  // Создать CatalogEntry типа 'template'
+  // Create CatalogEntry of type 'template'
   const entry = await graphCatalogService.createGraph({
     name: `Template: ${pattern.category}`,
     description: `Auto-promoted pattern with ${pattern.observations} observations `
@@ -1231,7 +1231,7 @@ async promoteToTemplate(pattern) {
     createdBy: 'pattern-promotion',
   });
 
-  // Обновить стадию паттерна
+  // Update pattern stage
   pattern.stage = 'TEMPLATE';
   pattern.catalogEntryId = entry.entryId;
 
@@ -1241,10 +1241,10 @@ async promoteToTemplate(pattern) {
 }
 ```
 
-### Cypher: запрос паттернов по стадии
+### Cypher: query patterns by stage
 
 ```cypher
-// Найти все продвинутые паттерны, готовые к шаблонизации
+// Find all promoted patterns ready for templating
 MATCH (p:ExecutionPattern)
 WHERE p.stage = 'PROMOTED'
   AND p.observations >= 5
@@ -1255,18 +1255,18 @@ ORDER BY p.successRate DESC, p.observations DESC
 
 ---
 
-## Коды ошибок
+## Error codes
 
-| Код         | Имя                       | Описание                                                  | HTTP | Действие                              |
-|-------------|---------------------------|-----------------------------------------------------------|------|----------------------------------------|
-| `CATALOG001`| Entry not found           | CatalogEntry с указанным entryId не найден в каталоге     | 404  | Проверить entryId, возможен soft delete |
-| `CATALOG002`| Duplicate entryId         | CatalogEntry с таким entryId уже существует               | 409  | Использовать существующий или сгенерировать новый UUID |
-| `CATALOG003`| Invalid type enum         | Указанный тип не входит в CATALOG_TYPES                   | 400  | Использовать: business, technical, meta, template, composite |
-| `CATALOG004`| Version conflict          | Конкурентное обновление: currentVersion изменился          | 409  | Перечитать CatalogEntry и повторить операцию |
-| `CATALOG005`| Dedup collision           | Граф с идентичным contentHash уже существует в каталоге    | 409  | Вернуть существующий entryId или createVersion |
-| `CATALOG006`| Reuse strategy mismatch   | Стратегия переиспользования не соответствует фактическому действию | 422  | Предупреждение, не блокирует операцию |
+| Code        | Name                      | Description                                                  | HTTP | Action                                |
+|-------------|---------------------------|--------------------------------------------------------------|------|----------------------------------------|
+| `CATALOG001`| Entry not found           | CatalogEntry with the given entryId not found in the catalog | 404  | Check entryId, soft delete possible   |
+| `CATALOG002`| Duplicate entryId         | CatalogEntry with this entryId already exists                | 409  | Use existing or generate new UUID      |
+| `CATALOG003`| Invalid type enum         | Specified type is not in CATALOG_TYPES                       | 400  | Use: business, technical, meta, template, composite |
+| `CATALOG004`| Version conflict          | Concurrent update: currentVersion has changed                | 409  | Re-read CatalogEntry and retry operation |
+| `CATALOG005`| Dedup collision           | Graph with identical contentHash already exists in catalog   | 409  | Return existing entryId or createVersion |
+| `CATALOG006`| Reuse strategy mismatch   | Reuse strategy does not match the actual action              | 422  | Warning, does not block the operation  |
 
-### Формат ответа ошибки
+### Error response format
 
 ```json
 {
@@ -1284,4 +1284,4 @@ ORDER BY p.successRate DESC, p.observations DESC
 
 ---
 
-> **CODEX-CATALOG v0.1.0** | Часть VI **Кодекс UN ProjectAdvisor** | Стандарт каталога GXE
+> **CODEX-CATALOG v0.1.0** | Part VI **UN ProjectAdvisor Codex** | GXE Catalog Standard

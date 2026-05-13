@@ -16,7 +16,7 @@ const { PluginBase, createSimpleExecutor, createSuccessResult, createErrorResult
 // Import real services
 const qdrantService = require('../../../../services/qdrant.service');
 const memgraphService = require('../../../../services/memgraph.service');
-const llmService = require('../../../../services/llm.service');
+const { getInstance: getLLMProvider } = require('../../../../services/llm/LLMProviderService');
 const { EmbeddingService } = require('../../../../services/structuring/embeddings/EmbeddingService');
 const { HybridSearch, createHybridSearch } = require('../../../../services/retrieval/hybrid-search');
 const { QueryExpansionService, createQueryExpansionService } = require('../../../../services/retrieval/query-expansion.service');
@@ -70,6 +70,7 @@ function getQueryExpansion() {
     queryExpansionInstance = createQueryExpansionService({
       maxExpansions: 5,
       maxSynonymsPerTerm: 3,
+      llmService: getLLMProvider(),
     });
   }
   return queryExpansionInstance;
@@ -90,6 +91,11 @@ const expandQueryExecutor = createSimpleExecutor({
       includeSynonyms: { type: 'boolean', default: true },
       includeUNTerms: { type: 'boolean', default: true },
       includeRelatedSystems: { type: 'boolean', default: true },
+      generateRelated: {
+        type: 'boolean',
+        default: false,
+        description: 'Use LLM to generate related queries (requires LLM provider)'
+      },
     },
   },
   async execute(params, context) {
@@ -105,6 +111,7 @@ const expandQueryExecutor = createSimpleExecutor({
         includeSynonyms: params.includeSynonyms !== false,
         includeUNTerms: params.includeUNTerms !== false,
         includeRelatedSystems: params.includeRelatedSystems !== false,
+        generateRelated: params.generateRelated === true,
       });
 
       return createSuccessResult({
@@ -115,10 +122,12 @@ const expandQueryExecutor = createSimpleExecutor({
         systemExpansions: result.systemExpansions,
         unEntities: result.unEntities,
         relatedSystems: result.relatedSystems,
+        relatedQueries: result.relatedQueries || [],
       }, {
         termCount: result.metadata.termCount,
         synonymCount: result.metadata.synonymCount,
         expansionRatio: result.metadata.expansionRatio,
+        relatedQueriesGenerated: (result.relatedQueries || []).length,
       }, 1.0);
 
     } catch (error) {
@@ -171,11 +180,21 @@ const vectorSearchExecutor = createSimpleExecutor({
         }, { searchType: 'vector', error: 'Embedding service unavailable' });
       }
 
+      // Build filter and resolve fullNamespace for collection selection.
+      // fullNamespace is the 4th arg to searchSimilar and determines which
+      // Qdrant collection to use via namespace.config.js mapping.
+      let searchFilter = null;
+      let fullNamespace = namespace;
+
+      if (namespace.startsWith('project:')) {
+        // project:<id> → project collection, filter by projectId
+        fullNamespace = namespace;
+        searchFilter = { must: [{ key: 'projectId', match: { value: namespace.slice(8) } }] };
+      }
+      // unified, core, meta, codex, etc. are passed as-is to resolve via namespace.config.js
+
       // Search in Qdrant
-      const searchResult = await qdrantService.searchSimilar(queryVector, topK, {
-        namespace: namespace.startsWith('project:') ? 'project' : namespace,
-        ...(namespace.startsWith('project:') && { projectId: namespace.slice(8) }),
-      });
+      const searchResult = await qdrantService.searchSimilar(queryVector, topK, searchFilter, fullNamespace);
 
       // Filter by score threshold
       const filteredResults = searchResult.filter(r => r.score >= scoreThreshold);
@@ -183,14 +202,18 @@ const vectorSearchExecutor = createSimpleExecutor({
       const results = filteredResults.map((r, index) => ({
         id: r.id,
         text: r.payload?.text || r.payload?.content || '',
+        name: r.payload?.name || r.payload?.quantum_id || '',
         score: r.score,
         rank: index + 1,
         source: 'vector',
         metadata: {
-          namespace: r.payload?.namespace,
-          chunkIndex: r.payload?.chunkIndex,
-          entityCount: r.payload?.entityCount,
-          createdAt: r.payload?.createdAt,
+          namespace:    r.payload?.namespace,
+          sessionId:    r.payload?.sessionId,
+          sourceType:   r.payload?.source_type,
+          primaryType:  r.payload?.primary_type,
+          chunkIndex:   r.payload?.chunkIndex,
+          entityCount:  r.payload?.entityCount,
+          createdAt:    r.payload?.createdAt,
         },
       }));
 
@@ -476,45 +499,110 @@ const assembleContextExecutor = createSimpleExecutor({
 // EXECUTOR: RERANK RESULTS
 // ────────────────────────────────────────────────────────────────────────────
 
+// ── BM25 helper (simple TF-IDF approximation) ────────────────────────────────
+
+function tokenize(text) {
+  return (text || '').toLowerCase().replace(/[^\w\s]/g, ' ').split(/\s+/).filter(t => t.length > 2);
+}
+
+function bm25Score(docTokens, queryTokens, avgDocLen, k1 = 1.5, b = 0.75) {
+  const docLen = docTokens.length;
+  const freq = {};
+  for (const t of docTokens) freq[t] = (freq[t] || 0) + 1;
+  let score = 0;
+  for (const qt of queryTokens) {
+    const tf = freq[qt] || 0;
+    if (tf === 0) continue;
+    const idf = Math.log(1 + 1 / (0.5 + 0.5 * tf));
+    score += idf * (tf * (k1 + 1)) / (tf + k1 * (1 - b + b * docLen / Math.max(avgDocLen, 1)));
+  }
+  return score;
+}
+
 const rerankResultsExecutor = createSimpleExecutor({
   type: 'rag.rerank',
   displayName: 'Rerank Results',
-  description: 'Rerank search results using cross-encoder or LLM',
+  description: 'Rerank search results using BM25 or LLM scoring',
   domain: 'rag',
   parameterSchema: {
     type: 'object',
     properties: {
-      topK: { type: 'number', default: 10, description: 'Number of top results to keep' },
-      method: { type: 'string', default: 'score', description: 'Reranking method: score, llm' },
+      topK:   { type: 'number', default: 10,        description: 'Number of top results to keep' },
+      method: { type: 'string', default: 'combined', description: 'Reranking method: score|bm25|llm|combined' },
     },
   },
   async execute(params, context) {
-    const query = context.input?.query || '';
+    const query   = params.query || context.input?.query || '';
     const results = context.input?.results || [];
-    const topK = params.topK || 10;
+    const topK    = params.topK || 10;
+    const method  = params.method || 'combined';
 
     if (results.length === 0) {
-      return createSuccessResult({
-        results: [],
-        query,
-      }, { method: params.method || 'score' });
+      return createSuccessResult({ results: [], query }, { method });
     }
 
-    // For now, simple score-based reranking
-    const sorted = [...results].sort((a, b) => (b.score || 0) - (a.score || 0));
-    const reranked = sorted.slice(0, topK).map((r, i) => ({
-      ...r,
-      originalRank: results.indexOf(r) + 1,
-      newRank: i + 1,
+    let reranked;
+
+    if (method === 'llm') {
+      // LLM reranking: ask LLM to score 0-10, fall back to bm25 on any error
+      let llmProvider = null;
+      try { llmProvider = getLLMProvider(); } catch { /* no provider */ }
+
+      if (llmProvider) {
+        try {
+          const batch = results.slice(0, 15);
+          const lines = batch.map((r, i) =>
+            `${i + 1}. [${r.id}] ${(r.text || r.content || r.name || '').slice(0, 200)}`
+          ).join('\n');
+          const prompt =
+            `Score each result's relevance to the query. Scale: 0-10 integers only.\n` +
+            `Query: "${query}"\n\nResults:\n${lines}\n\n` +
+            `Respond with ONLY a JSON array of ${batch.length} integers, e.g. [8,3,9,5].`;
+
+          const raw = await llmProvider.chat([{ role: 'user', content: prompt }], { maxTokens: 120, temperature: 0 });
+          const text = Array.isArray(raw)
+            ? raw.filter(b => b.type === 'text').map(b => b.text).join('')
+            : (typeof raw === 'string' ? raw : raw?.content || '');
+
+          const match = text.match(/\[[\d,\s]+\]/);
+          if (match) {
+            const scores = JSON.parse(match[0]);
+            if (Array.isArray(scores) && scores.length >= batch.length) {
+              const scored = batch.map((r, i) => ({ ...r, score: (scores[i] || 0) / 10 }));
+              reranked = [...scored, ...results.slice(15)].sort((a, b) => (b.score || 0) - (a.score || 0));
+            }
+          }
+        } catch (e) {
+          console.warn('[rerank] LLM scoring failed, falling back to BM25:', e.message);
+        }
+      }
+    }
+
+    if (!reranked) {
+      // BM25 reranking: combine BM25 score with original vector score
+      const queryTokens = tokenize(query);
+      const allTokens   = results.map(r => tokenize(r.text || r.content || r.name || ''));
+      const avgLen      = allTokens.reduce((s, t) => s + t.length, 0) / Math.max(allTokens.length, 1);
+
+      reranked = results.map((r, i) => {
+        const bm25 = bm25Score(allTokens[i], queryTokens, avgLen);
+        const normBm25 = Math.min(bm25 / 10, 1);
+        const combined = (r.score || 0) * 0.6 + normBm25 * 0.4;
+        return { ...r, score: combined };
+      }).sort((a, b) => (b.score || 0) - (a.score || 0));
+    }
+
+    const top = reranked.slice(0, topK).map((r, i) => ({
+      ...r, originalRank: results.indexOf(results.find(x => x.id === r.id)) + 1, newRank: i + 1,
     }));
 
     return createSuccessResult({
-      results: reranked,
+      results: top,
       query,
     }, {
-      method: params.method || 'score',
+      method,
       originalCount: results.length,
-      rerankedCount: reranked.length,
+      rerankedCount: top.length,
     });
   },
 });
@@ -566,13 +654,16 @@ Instructions:
       // Call LLM
       let response;
       try {
-        response = await llmService.chat(messages, []);
+        response = await getLLMProvider().chat(messages);
       } catch (llmError) {
         console.warn('[generate] LLM call failed:', llmError.message);
         return createErrorResult('LLM_ERROR', `LLM unavailable: ${llmError.message}`, true);
       }
 
-      const generatedText = response?.content || response || '';
+      const rawContent = response?.content;
+      const generatedText = Array.isArray(rawContent)
+        ? rawContent.filter(b => b.type === 'text').map(b => b.text).join('')
+        : (rawContent || '');
 
       return createSuccessResult({
         response: generatedText,
@@ -638,8 +729,11 @@ const summarizeResultsExecutor = createSimpleExecutor({
 
       let summary;
       try {
-        const response = await llmService.chat(messages, []);
-        summary = response?.content || response || '';
+        const response = await getLLMProvider().chat(messages);
+        const rc = response?.content;
+        summary = Array.isArray(rc)
+          ? rc.filter(b => b.type === 'text').map(b => b.text).join('')
+          : (rc || '');
       } catch (llmError) {
         // Fallback to simple extraction
         summary = results

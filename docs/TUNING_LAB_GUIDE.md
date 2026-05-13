@@ -1,30 +1,30 @@
-# Tuning Lab - Руководство пользователя
+# Tuning Lab - User Guide
 
-## Обзор
+## Overview
 
-**Tuning Lab** — это интерфейс для AI-powered оптимизации параметров extraction pipeline в UN ProjectAdvisor. Позволяет автоматически находить оптимальные настройки для извлечения сущностей и связей из текста.
+**Tuning Lab** is an interface for AI-powered parameter optimization of the extraction pipeline in UN ProjectAdvisor. It allows you to automatically find optimal settings for extracting entities and relationships from text.
 
-## Запуск
+## Getting Started
 
-### Требования
-- API сервер запущен на порту 3010
-- Frontend dev server запущен
+### Requirements
+- API server running on port 3010
+- Frontend dev server running
 
-### Доступ
-1. Откройте приложение в браузере: `http://localhost:5173`
-2. Перейдите в **Pipeline Lab** (боковое меню)
-3. Выберите вкладку **Tuning Lab**
+### Access
+1. Open the application in your browser: `http://localhost:5173`
+2. Navigate to **Pipeline Lab** (sidebar menu)
+3. Select the **Tuning Lab** tab
 
 ---
 
-## Workflow (Рабочий процесс)
+## Workflow
 
-Tuning Lab работает в пошаговом режиме:
+Tuning Lab operates in a step-by-step mode:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  1. ВВОД ТЕКСТА                                              │
-│     Введите или вставьте текст для анализа                  │
+│  1. TEXT INPUT                                               │
+│     Enter or paste text for analysis                        │
 │     [Samples] [Upload] [Clear]                               │
 │     ┌─────────────────────────────────────────────────────┐ │
 │     │ Enter text here...                                   │ │
@@ -33,235 +33,235 @@ Tuning Lab работает в пошаговом режиме:
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
-│  2. РЕЗУЛЬТАТЫ ЭКСТРАКЦИИ                                    │
-│     Entities: 5 найдено | Relationships: 3 найдено          │
+│  2. EXTRACTION RESULTS                                       │
+│     Entities: 5 found | Relationships: 3 found              │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
-│  3. МЕТРИКИ И ТЮНИНГ                                         │
+│  3. METRICS & TUNING                                         │
 │     [Metrics] [Parameters] [Recommendations] [Chart]        │
 │                    [Start Tuning]                            │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Шаги:**
-1. **Ввод текста** — введите текст вручную, выберите из примеров или загрузите файл
-2. **Экстракция** — нажмите "Extract & Evaluate" для извлечения сущностей и связей
-3. **Просмотр результатов** — увидите извлеченные сущности и связи с confidence scores
-4. **Оценка метрик** — система автоматически оценит качество экстракции
-5. **Тюнинг** (опционально) — запустите автоматическую оптимизацию параметров
+**Steps:**
+1. **Text Input** — enter text manually, choose from samples, or upload a file
+2. **Extraction** — click "Extract & Evaluate" to extract entities and relationships
+3. **Review Results** — view the extracted entities and relationships with confidence scores
+4. **Evaluate Metrics** — the system automatically assesses extraction quality
+5. **Tuning** (optional) — run automatic parameter optimization
 
 ---
 
-## Интерфейс
+## Interface
 
-### 0. Text Input Panel (Панель ввода текста)
+### 0. Text Input Panel
 
-**Поле ввода текста** — основной элемент для начала работы.
+**Text input field** — the primary element to start working.
 
-**Действия:**
-| Кнопка | Описание |
-|--------|----------|
-| **Samples** | Выбрать из примеров текстов (Technical, UN Systems, Work Items) |
-| **Upload** | Загрузить .txt или .md файл |
-| **Clear** | Очистить текст |
-| **Extract & Evaluate** | Запустить экстракцию и оценку |
+**Actions:**
+| Button | Description |
+|--------|-------------|
+| **Samples** | Choose from sample texts (Technical, UN Systems, Work Items) |
+| **Upload** | Upload a .txt or .md file |
+| **Clear** | Clear the text |
+| **Extract & Evaluate** | Run extraction and evaluation |
 
-**Статистика:** показывает количество слов и символов.
-
----
-
-### 1. Parameters Panel (Панель параметров)
-
-Содержит слайдеры для настройки 6 основных параметров pipeline:
-
-| Параметр | Диапазон | Описание |
-|----------|----------|----------|
-| **Entity Min Confidence** | 0.1 - 0.99 | Минимальный порог уверенности для извлечения сущности |
-| **LLM Temperature** | 0 - 1 | Креативность LLM (0 = детерминированный, 1 = креативный) |
-| **Co-occurrence Base Confidence** | 0.3 - 0.8 | Базовая уверенность для связей по совместному упоминанию |
-| **Pattern Min Confidence** | 0.3 - 0.9 | Минимальная уверенность для паттерн-based связей |
-| **Chunk Max Tokens** | 128 - 2048 | Максимальный размер чанка в токенах |
-| **Chunk Overlap** | 0 - 256 | Перекрытие между чанками в токенах |
-
-**Использование:**
-- Двигайте слайдеры для изменения параметров
-- Изменения применяются в реальном времени
-- Слайдеры блокируются во время активной сессии tuning
+**Statistics:** displays word count and character count.
 
 ---
 
-### 2. Metrics Display (Отображение метрик)
+### 1. Parameters Panel
 
-Показывает текущие метрики качества pipeline:
+Contains sliders for adjusting 6 core pipeline parameters:
 
-| Метрика | Описание |
-|---------|----------|
-| **Overall Score** | Общий балл качества (0-100%) |
-| **Entity Coverage** | Полнота извлечения сущностей (recall) |
-| **Entity Precision** | Точность извлечения сущностей |
-| **Relationship Quality** | Качество извлеченных связей |
-| **Confidence Distribution** | Качество распределения confidence scores |
+| Parameter | Range | Description |
+|-----------|-------|-------------|
+| **Entity Min Confidence** | 0.1 - 0.99 | Minimum confidence threshold for entity extraction |
+| **LLM Temperature** | 0 - 1 | LLM creativity (0 = deterministic, 1 = creative) |
+| **Co-occurrence Base Confidence** | 0.3 - 0.8 | Base confidence for co-occurrence-based relationships |
+| **Pattern Min Confidence** | 0.3 - 0.9 | Minimum confidence for pattern-based relationships |
+| **Chunk Max Tokens** | 128 - 2048 | Maximum chunk size in tokens |
+| **Chunk Overlap** | 0 - 256 | Overlap between chunks in tokens |
 
-**Индикаторы:**
-- 🟢 **Running** — сессия tuning активна
-- 🟡 **Paused** — сессия приостановлена
-- ⚪ **Idle** — нет активной сессии
-- ✅ **Passed** — текущая конфигурация прошла проверку
-- ❌ **Failed** — требуется оптимизация
-
----
-
-### 3. Optimization Chart (График оптимизации)
-
-Визуализирует историю оптимизации:
-
-- **Overall Score** (голубая линия) — общий балл по итерациям
-- **F1 Score** (зеленая линия) — F1 метрика
-- **Recall** (желтая пунктирная) — полнота
-- **Precision** (красная пунктирная) — точность
-
-**Summary stats внизу графика:**
-- Iterations — количество итераций
-- First Score — начальный балл
-- Last Score — текущий балл
-- Improvement — улучшение в %
+**Usage:**
+- Drag sliders to change parameters
+- Changes are applied in real time
+- Sliders are locked during an active tuning session
 
 ---
 
-### 4. Session Controls (Управление сессией)
+### 2. Metrics Display
 
-#### Кнопки управления:
+Shows the current pipeline quality metrics:
 
-| Кнопка | Действие |
-|--------|----------|
-| ⚙️ **Settings** | Открыть настройки tuning |
-| ▶️ **Start Tuning** | Запустить автоматическую оптимизацию |
-| ⏹️ **Stop & Apply Best** | Остановить и применить лучшую конфигурацию |
-| 🔄 **Reset** | Сбросить конфигурацию к значениям по умолчанию |
+| Metric | Description |
+|--------|-------------|
+| **Overall Score** | Overall quality score (0-100%) |
+| **Entity Coverage** | Entity extraction completeness (recall) |
+| **Entity Precision** | Entity extraction precision |
+| **Relationship Quality** | Quality of extracted relationships |
+| **Confidence Distribution** | Quality of confidence score distribution |
 
-#### Настройки tuning (⚙️):
+**Indicators:**
+- 🟢 **Running** — tuning session is active
+- 🟡 **Paused** — session is paused
+- ⚪ **Idle** — no active session
+- ✅ **Passed** — current configuration passed validation
+- ❌ **Failed** — optimization required
+
+---
+
+### 3. Optimization Chart
+
+Visualizes the optimization history:
+
+- **Overall Score** (blue line) — overall score across iterations
+- **F1 Score** (green line) — F1 metric
+- **Recall** (yellow dashed) — recall
+- **Precision** (red dashed) — precision
+
+**Summary stats below the chart:**
+- Iterations — number of iterations
+- First Score — initial score
+- Last Score — current score
+- Improvement — improvement in %
+
+---
+
+### 4. Session Controls
+
+#### Control Buttons:
+
+| Button | Action |
+|--------|--------|
+| ⚙️ **Settings** | Open tuning settings |
+| ▶️ **Start Tuning** | Start automatic optimization |
+| ⏹️ **Stop & Apply Best** | Stop and apply the best configuration |
+| 🔄 **Reset** | Reset configuration to default values |
+
+#### Tuning Settings (⚙️):
 
 **Max Iterations** (3-50)
-- Количество итераций оптимизации
-- Рекомендуется: 10-20 для начала
+- Number of optimization iterations
+- Recommended: 10-20 to start
 
 **Optimization Strategy:**
-| Стратегия | Описание | Когда использовать |
-|-----------|----------|-------------------|
-| **Random Search** | Случайный поиск | Быстрое исследование пространства параметров |
-| **Grid Search** | Систематический перебор | Полный анализ всех комбинаций |
-| **Bayesian** | Байесовская оптимизация | Умный поиск, учитывает предыдущие результаты |
+| Strategy | Description | When to Use |
+|----------|-------------|-------------|
+| **Random Search** | Random search | Quick exploration of parameter space |
+| **Grid Search** | Systematic enumeration | Full analysis of all combinations |
+| **Bayesian** | Bayesian optimization | Smart search that learns from previous results |
 
 **Target Metric:**
-- F1 Score (рекомендуется)
+- F1 Score (recommended)
 - Entity Recall
 - Entity Precision
 - Relationship Quality
 
 ---
 
-### 5. Recommendations Table (Таблица рекомендаций)
+### 5. Recommendations Table
 
-Показывает AI-генерируемые рекомендации по улучшению.
+Displays AI-generated recommendations for improvement.
 
-**Структура рекомендации:**
-- **Parameter** — какой параметр изменить
-- **Current** → **Suggested** — текущее и рекомендуемое значение
-- **Reason** — обоснование рекомендации
-- **Expected Impact** — ожидаемый эффект
+**Recommendation structure:**
+- **Parameter** — which parameter to change
+- **Current** → **Suggested** — current and recommended value
+- **Reason** — justification for the recommendation
+- **Expected Impact** — anticipated effect
 
-**Действия:**
-- 🔄 **Refresh** — получить новые рекомендации
-- ✅ **Apply** — применить конкретную рекомендацию
+**Actions:**
+- 🔄 **Refresh** — get new recommendations
+- ✅ **Apply** — apply a specific recommendation
 
 ---
 
-## Сценарии использования
+## Usage Scenarios
 
-### Сценарий 1: Быстрая оптимизация
+### Scenario 1: Quick Optimization
 
-1. Откройте Tuning Lab
-2. Нажмите **Start Tuning** (используются настройки по умолчанию)
-3. Дождитесь завершения 10 итераций
-4. Просмотрите результаты на графике
-5. Лучшая конфигурация применится автоматически
+1. Open Tuning Lab
+2. Click **Start Tuning** (default settings are used)
+3. Wait for 10 iterations to complete
+4. Review results on the chart
+5. The best configuration will be applied automatically
 
-### Сценарий 2: Тонкая настройка
+### Scenario 2: Fine-Tuning
 
-1. Нажмите ⚙️ **Settings**
-2. Выберите:
+1. Click ⚙️ **Settings**
+2. Select:
    - Max Iterations: 30
    - Strategy: Bayesian
    - Target: F1 Score
-3. Нажмите **Start**
-4. Наблюдайте за прогрессом на графике
-5. При необходимости остановите раньше через **Stop & Apply Best**
+3. Click **Start**
+4. Monitor progress on the chart
+5. If needed, stop early via **Stop & Apply Best**
 
-### Сценарий 3: Ручная настройка с рекомендациями
+### Scenario 3: Manual Tuning with Recommendations
 
-1. Нажмите 🔄 **Refresh** в панели Recommendations
-2. Просмотрите AI-рекомендации
-3. Примените рекомендации по одной, нажимая ✅
-4. Проверяйте метрики после каждого изменения
-5. Сохраните оптимальную конфигурацию
+1. Click 🔄 **Refresh** in the Recommendations panel
+2. Review AI recommendations
+3. Apply recommendations one by one by clicking ✅
+4. Check metrics after each change
+5. Save the optimal configuration
 
-### Сценарий 4: A/B тестирование конфигураций
+### Scenario 4: A/B Testing Configurations
 
-1. Запомните текущие метрики
-2. Измените параметры вручную через слайдеры
-3. Нажмите **Refresh** для получения новой оценки
-4. Сравните метрики
-5. Используйте **Reset** если результат хуже
+1. Note the current metrics
+2. Change parameters manually via sliders
+3. Click **Refresh** to get a new evaluation
+4. Compare metrics
+5. Use **Reset** if the result is worse
 
 ---
 
 ## REST API Endpoints
 
-Tuning Lab использует следующие API endpoints:
+Tuning Lab uses the following API endpoints:
 
-### Сессии
+### Sessions
 ```
-POST /api/v1/tuning/start          # Запустить сессию
-POST /api/v1/tuning/auto           # Автоматический tuning
-POST /api/v1/tuning/:id/stop       # Остановить сессию
-POST /api/v1/tuning/:id/pause      # Пауза
-POST /api/v1/tuning/:id/resume     # Продолжить
-GET  /api/v1/tuning/status         # Статус
-GET  /api/v1/tuning/:id/history    # История итераций
-GET  /api/v1/tuning/:id/export     # Экспорт результатов
-```
-
-### Конфигурация
-```
-GET  /api/v1/tuning/config         # Текущая конфигурация
-PUT  /api/v1/tuning/config         # Обновить конфигурацию
-POST /api/v1/tuning/config/reset   # Сброс к defaults
-GET  /api/v1/tuning/parameters     # Список параметров
+POST /api/v1/tuning/start          # Start a session
+POST /api/v1/tuning/auto           # Automatic tuning
+POST /api/v1/tuning/:id/stop       # Stop a session
+POST /api/v1/tuning/:id/pause      # Pause
+POST /api/v1/tuning/:id/resume     # Resume
+GET  /api/v1/tuning/status         # Status
+GET  /api/v1/tuning/:id/history    # Iteration history
+GET  /api/v1/tuning/:id/export     # Export results
 ```
 
-### Профили
+### Configuration
 ```
-GET  /api/v1/tuning/profiles              # Список профилей
-POST /api/v1/tuning/profiles/:name/load   # Загрузить профиль
-POST /api/v1/tuning/profiles/:name/save   # Сохранить профиль
+GET  /api/v1/tuning/config         # Current configuration
+PUT  /api/v1/tuning/config         # Update configuration
+POST /api/v1/tuning/config/reset   # Reset to defaults
+GET  /api/v1/tuning/parameters     # List parameters
 ```
 
-### Метрики и оценка
+### Profiles
 ```
-GET  /api/v1/tuning/metrics               # Агрегированные метрики
-GET  /api/v1/tuning/metrics/:name/trend   # Тренд метрики
-GET  /api/v1/tuning/metrics/best          # Лучший результат
-POST /api/v1/tuning/evaluate              # Оценить конфигурацию
-POST /api/v1/tuning/recommendations       # Получить рекомендации
-POST /api/v1/tuning/compare               # Сравнить конфигурации
+GET  /api/v1/tuning/profiles              # List profiles
+POST /api/v1/tuning/profiles/:name/load   # Load a profile
+POST /api/v1/tuning/profiles/:name/save   # Save a profile
+```
+
+### Metrics & Evaluation
+```
+GET  /api/v1/tuning/metrics               # Aggregated metrics
+GET  /api/v1/tuning/metrics/:name/trend   # Metric trend
+GET  /api/v1/tuning/metrics/best          # Best result
+POST /api/v1/tuning/evaluate              # Evaluate a configuration
+POST /api/v1/tuning/recommendations       # Get recommendations
+POST /api/v1/tuning/compare               # Compare configurations
 ```
 
 ---
 
-## Примеры API запросов
+## API Request Examples
 
-### Запустить автоматический tuning
+### Start Automatic Tuning
 ```bash
 curl -X POST http://localhost:3010/api/v1/tuning/auto \
   -H "Content-Type: application/json" \
@@ -272,7 +272,7 @@ curl -X POST http://localhost:3010/api/v1/tuning/auto \
   }'
 ```
 
-### Обновить параметр
+### Update a Parameter
 ```bash
 curl -X PUT http://localhost:3010/api/v1/tuning/config \
   -H "Content-Type: application/json" \
@@ -285,7 +285,7 @@ curl -X PUT http://localhost:3010/api/v1/tuning/config \
   }'
 ```
 
-### Получить рекомендации
+### Get Recommendations
 ```bash
 curl -X POST http://localhost:3010/api/v1/tuning/recommendations \
   -H "Content-Type: application/json" \
@@ -301,60 +301,60 @@ curl -X POST http://localhost:3010/api/v1/tuning/recommendations \
 
 ---
 
-## Лучшие практики
+## Best Practices
 
-### Оптимизация
+### Optimization
 
-1. **Начните с Random Search** для быстрого исследования
-2. **Переключитесь на Bayesian** для точной оптимизации
-3. **Используйте F1 Score** как целевую метрику для баланса precision/recall
-4. **10-20 итераций** достаточно для большинства случаев
+1. **Start with Random Search** for quick exploration
+2. **Switch to Bayesian** for precise optimization
+3. **Use F1 Score** as the target metric for a balance between precision and recall
+4. **10-20 iterations** is sufficient for most cases
 
-### Параметры
+### Parameters
 
-1. **Entity Min Confidence**: начните с 0.6, увеличивайте при большом количестве false positives
-2. **LLM Temperature**: держите 0.1-0.3 для консистентных результатов
-3. **Chunk Size**: 512-1024 токенов обычно оптимально
-4. **Chunk Overlap**: 10-20% от размера чанка
+1. **Entity Min Confidence**: start at 0.6, increase when there are too many false positives
+2. **LLM Temperature**: keep between 0.1-0.3 for consistent results
+3. **Chunk Size**: 512-1024 tokens is usually optimal
+4. **Chunk Overlap**: 10-20% of chunk size
 
-### Диагностика
+### Diagnostics
 
-| Проблема | Решение |
-|----------|---------|
-| Низкий Recall | Уменьшить minConfidence, увеличить chunk overlap |
-| Низкий Precision | Увеличить minConfidence, уменьшить temperature |
-| Медленная обработка | Уменьшить chunk size, уменьшить iterations |
-| Нестабильные результаты | Уменьшить temperature, использовать Bayesian |
+| Problem | Solution |
+|---------|----------|
+| Low Recall | Decrease minConfidence, increase chunk overlap |
+| Low Precision | Increase minConfidence, decrease temperature |
+| Slow Processing | Decrease chunk size, decrease iterations |
+| Unstable Results | Decrease temperature, use Bayesian |
 
 ---
 
 ## Troubleshooting
 
 ### "Session not found"
-- Сессия истекла или была остановлена
-- Запустите новую сессию через **Start Tuning**
+- The session expired or was stopped
+- Start a new session via **Start Tuning**
 
 ### "API Error"
-- Проверьте что API сервер запущен на порту 3010
-- Проверьте консоль браузера для деталей
+- Verify that the API server is running on port 3010
+- Check the browser console for details
 
-### Слайдеры заблокированы
-- Остановите активную сессию tuning
-- Или дождитесь завершения текущей итерации
+### Sliders are locked
+- Stop the active tuning session
+- Or wait for the current iteration to complete
 
-### График пустой
-- Запустите сессию tuning для накопления данных
-- Минимум 2 итерации для отображения линии
-
----
-
-## Связанные документы
-
-- [Pipeline Configuration](./PIPELINE_CONFIG.md) — детали конфигурации
-- [Entity Extraction](./ENTITY_EXTRACTION.md) — как работает извлечение сущностей
-- [Golden Dataset](../api/tests/fixtures/golden-dataset.json) — тестовые данные
+### Chart is empty
+- Start a tuning session to accumulate data
+- At least 2 iterations are required to display a line
 
 ---
 
-*Документ создан: 2026-01-22*
-*Версия: 1.0.0*
+## Related Documents
+
+- [Pipeline Configuration](./PIPELINE_CONFIG.md) — configuration details
+- [Entity Extraction](./ENTITY_EXTRACTION.md) — how entity extraction works
+- [Golden Dataset](../api/tests/fixtures/golden-dataset.json) — test data
+
+---
+
+*Document created: 2026-01-22*
+*Version: 1.0.0*

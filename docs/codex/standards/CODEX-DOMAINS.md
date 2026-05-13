@@ -1,16 +1,16 @@
-# CODEX-DOMAINS: Стандарты типов информации
+# CODEX-DOMAINS: Information Type Standards
 
-> Часть IX Кодекса UN ProjectAdvisor v0.1.0
+> Part IX of the UN ProjectAdvisor Codex v0.1.0
 >
-> **Статус:** 🟡 В разработке
-> **Версия:** 0.1.0-draft
-> **Последнее обновление:** 2026-03-12
+> **Status:** 🟡 In Development
+> **Version:** 0.1.0-draft
+> **Last updated:** 2026-03-12
 
 ---
 
-## 9.1 Архитектура двух уровней
+## 9.1 Two-level architecture
 
-UN ProjectAdvisor хранит два принципиально разных класса информации:
+UN ProjectAdvisor stores two fundamentally different classes of information:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -51,27 +51,27 @@ UN ProjectAdvisor хранит два принципиально разных к
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Level 1: System Meta** — информация О САМОЙ системе UN PA:
-архитектура, требования, решения, конфигурация, метрики, теоретическая база.
+**Level 1: System Meta** -- information ABOUT the UN PA system itself:
+architecture, requirements, decisions, configuration, metrics, theoretical foundation.
 
-**Level 2: Target Project** — информация об ИССЛЕДУЕМОМ проекте:
-извлечённые схемы, код, бизнес-правила, исполняемые графы, результаты анализа.
+**Level 2: Target Project** -- information ABOUT the project under investigation:
+extracted schemas, code, business rules, executable graphs, analysis results.
 
 ---
 
-## 9.2 Каноничные namespace
+## 9.2 Canonical namespaces
 
-В системе используются ровно 4 namespace:
+The system uses exactly 4 namespaces:
 
-| Namespace | Уровень | Назначение |
-|-----------|---------|-----------|
-| `CORE` | System Meta | Системная инфраструктура, каталог, tracking, архитектура |
-| `META` | System Meta | Конфигурация, метрики, требования, решения |
-| `PROJECT` | Target Project | Извлечённые данные целевого проекта |
-| `GXE` | Target Project | Исполняемые графы и аудит |
+| Namespace | Level | Purpose |
+|-----------|-------|---------|
+| `CORE` | System Meta | System infrastructure, catalog, tracking, architecture |
+| `META` | System Meta | Configuration, metrics, requirements, decisions |
+| `PROJECT` | Target Project | Extracted data of the target project |
+| `GXE` | Target Project | Executable graphs and audit |
 
-Любой другой namespace отклоняется или нормализуется автоматически
-(см. `memgraph.service.js` — `mergeNode()` namespace normalization).
+Any other namespace is rejected or normalized automatically
+(see `memgraph.service.js` -- `mergeNode()` namespace normalization).
 
 ---
 
@@ -81,85 +81,85 @@ UN ProjectAdvisor хранит два принципиально разных к
 
 #### 9.3.1 SystemArchitecture
 
-| Атрибут | Значение |
-|---------|----------|
+| Attribute | Value |
+|-----------|-------|
 | **Namespace** | `CORE` |
 | **Labels** | `CoreComponent`, `TechnicalComponent`, `SystemComponent` |
 | **Required fields** | `name`, `type`, `domain` |
 | **Edges** | `DEPENDS_ON`, `CONTAINS`, `IMPLEMENTS`, `USES`, `TRIGGERS` |
-| **Auto-created** | Нет (seed scripts, manual) |
+| **Auto-created** | No (seed scripts, manual) |
 | **Source** | `seed-core-components.js`, manual |
 
 ---
 
 #### 9.3.2 SystemRequirements
 
-| Атрибут | Значение |
-|---------|----------|
+| Attribute | Value |
+|-----------|-------|
 | **Namespace** | `META` |
 | **Labels** | `BusinessRequirement`, `RequirementCategory`, `Feature` |
 | **Required fields** | `name`, `priority`, `status` |
 | **Edges** | `BELONGS_TO_CATEGORY`, `DEPENDS_ON`, `IMPLEMENTED_BY` |
-| **Auto-created** | Нет |
+| **Auto-created** | No |
 | **Source** | manual, backlog import |
 
 ---
 
 #### 9.3.3 SystemDecisions
 
-| Атрибут | Значение |
-|---------|----------|
+| Attribute | Value |
+|-----------|-------|
 | **Namespace** | `META` |
 | **Labels** | `ADR`, `Decision`, `Rationale` |
 | **Required fields** | `title`, `status`, `context`, `decision` |
 | **Edges** | `SUPERSEDES`, `RELATES_TO`, `MOTIVATED_BY` |
-| **Auto-created** | Частично (SelfDocumentor) |
+| **Auto-created** | Partially (SelfDocumentor) |
 | **Source** | `SelfDocumentor`, manual |
 | **Status values** | `PROPOSED`, `ACCEPTED`, `DEPRECATED`, `SUPERSEDED` |
 
-> Примечание: На 2026-03-12 ADR = 0 узлов. Тип заявлен, не заполнен.
+> Note: As of 2026-03-12 ADR = 0 nodes. Type declared, not populated.
 
 ---
 
 #### 9.3.4 SystemMetrics
 
-| Атрибут | Значение |
-|---------|----------|
+| Attribute | Value |
+|-----------|-------|
 | **Namespace** | `META` |
 | **Labels** | `PromptMetric`, `ExecutionMetric`, `PromptVersion` |
 | **Required fields** | `id`, `createdAt` |
 | **Edges** | `MEASURED_FOR`, `VERSION_OF` |
-| **Auto-created** | Да |
+| **Auto-created** | Yes |
 | **Source** | `ainfra.service.js`, `RuntimeEngine` |
 
 ---
 
 #### 9.3.5 SystemConfig
 
-| Атрибут | Значение |
-|---------|----------|
+| Attribute | Value |
+|-----------|-------|
 | **Namespace** | `META` |
 | **Labels** | `AINFRA`, `AIConfigSet`, `AIProviderConfig`, `Settings`, `Domain`, `Notification` |
 | **Required fields** | `name` |
 | **Edges** | `HAS_CONFIG`, `ACTIVE_CONFIG`, `USES_PROVIDER` |
-| **Auto-created** | Да |
+| **Auto-created** | Yes |
 | **Source** | `ainfra.service.js` |
-| **Constraint** | Ровно 1 ребро `ACTIVE_CONFIG` от `AINFRA` root |
+| **Constraint** | Exactly 1 `ACTIVE_CONFIG` edge from `AINFRA` root |
 
 ---
 
 #### 9.3.6 ResearchKnowledge
 
-| Атрибут | Значение |
-|---------|----------|
+| Attribute | Value |
+|-----------|-------|
 | **Namespace** | `CORE` |
 | **Labels** | `Theory`, `Methodology`, `BestPractice`, `ResearchPaper` |
 | **Required fields** | `title`, `domain`, `sourceRef` |
 | **Edges** | `BASED_ON`, `CONTRADICTS`, `EXTENDS` |
-| **Auto-created** | Нет |
+| **Auto-created** | No |
 | **Source** | manual, research import |
 
-> Примечание: На 2026-03-12 = 0 узлов. Тип заявлен, не заполнен.
+> Note: As of 2026-03-12 = 0 nodes. Type declared, not populated.
 
 ---
 
@@ -167,114 +167,114 @@ UN ProjectAdvisor хранит два принципиально разных к
 
 #### 9.3.7 ExtractedSchema
 
-| Атрибут | Значение |
-|---------|----------|
+| Attribute | Value |
+|-----------|-------|
 | **Namespace** | `PROJECT` |
 | **Labels** | `DatabaseTable`, `TableProfile`, `StructuralEntity`, `StructuralAttribute`, `StoredProcedureKG`, `DataSourceConfig`, `DomainConfig` |
-| **Required fields** | `name` или `tableName` |
+| **Required fields** | `name` or `tableName` |
 | **Edges** | `HAS_ATTRIBUTE`, `PROFILED_TABLE`, `FK_*`, `SOFT_FK`, `M_N` |
-| **Auto-created** | Да |
+| **Auto-created** | Yes |
 | **Source** | `mssql.graph-generator.js`, `structural-domain.service.js`, `ingestion-graph.service.js` |
 
 ---
 
 #### 9.3.8 ExtractedCode
 
-| Атрибут | Значение |
-|---------|----------|
+| Attribute | Value |
+|-----------|-------|
 | **Namespace** | `PROJECT` |
 | **Labels** | `Function`, `Method`, `Class`, `Module`, `File`, `Interface` |
 | **Required fields** | `name`, `filePath` |
 | **Edges** | `CONTAINS`, `SAME_DIRECTORY`, `SIMILAR_TO`, `MODIFIES`, `MEMBER_OF` |
-| **Auto-created** | Да |
+| **Auto-created** | Yes |
 | **Source** | `entity-extractor.js` |
 
 ---
 
 #### 9.3.9 ExtractedRules
 
-| Атрибут | Значение |
-|---------|----------|
+| Attribute | Value |
+|-----------|-------|
 | **Namespace** | `PROJECT` |
 | **Labels** | `BusinessRule`, `SemanticRule`, `SemanticCalculation`, `DomainVocabulary` |
-| **Secondary labels** | `SEMANTIC` (маркер семантического домена) |
+| **Secondary labels** | `SEMANTIC` (semantic domain marker) |
 | **Required fields** | `name`, `confidence` |
 | **Edges** | `IMPLEMENTS`, `GOVERNS`, `DERIVED_FROM` |
-| **Auto-created** | Да |
+| **Auto-created** | Yes |
 | **Source** | `semantic-domain.service.js`, `mssql.graph-generator.js` |
 
 ---
 
 #### 9.3.10 ExtractedEntities
 
-| Атрибут | Значение |
-|---------|----------|
+| Attribute | Value |
+|-----------|-------|
 | **Namespace** | `PROJECT` |
 | **Labels** | `Concept`, `System`, `Technology`, `Organization`, `Document`, `WorkItem`, `Knowledge`, `Database`, `Process` |
 | **Required fields** | `name`, `type` |
 | **Edges** | `RELATES_TO`, `SIMILAR_TO`, `CONTAINS` |
-| **Auto-created** | Да |
+| **Auto-created** | Yes |
 | **Source** | `entity-extractor.js`, project-knowledge MCP |
 
 ---
 
 #### 9.3.11 ExecutableGraph
 
-| Атрибут | Значение |
-|---------|----------|
+| Attribute | Value |
+|-----------|-------|
 | **Namespace** | `GXE` |
 | **Labels** | `SubGraph`, `SubGraphPort` |
-| **Secondary labels** | `KnowledgeQuantum` (маркер) |
+| **Secondary labels** | `KnowledgeQuantum` (marker) |
 | **Required fields** | `id`, `subgraphId` |
 | **Edges** | `CONNECTS_INTERNAL`, `PORT_OF`, `BRIDGES_TO` |
-| **Auto-created** | Да |
+| **Auto-created** | Yes |
 | **Source** | `subgraph-extractor.js`, `graph-consolidator.js` |
 
 ---
 
 #### 9.3.12 ExecutionRecord
 
-| Атрибут | Значение |
-|---------|----------|
+| Attribute | Value |
+|-----------|-------|
 | **Namespace** | `META` |
 | **Labels** | `ExecutionRecord`, `ExecutionPattern`, `AOPEG_Execution`, `AOPEG_NodeExecution`, `AOPEG_ExecutionGraph`, `AOPEG_GraphNode`, `AOPEG_GraphEdge` |
 | **Required fields** | `id`, `status`, `graphId` |
 | **Edges** | `AOPEG_EXECUTES_GRAPH`, `AOPEG_EXECUTED_NODE`, `AOPEG_CONTAINS_NODE`, `AOPEG_CONTAINS_EDGE` |
-| **Auto-created** | Да |
+| **Auto-created** | Yes |
 | **Source** | `GxeManagerService`, `RuntimeEngine`, `graph.repository.js` |
 
-> Примечание: `ExecutionRecord` = 0 на 2026-03-12.
-> `GxeManagerService` создаёт `ExecutionRecord`, `RuntimeEngine` создаёт `AOPEG_Execution`.
-> Унификация запланирована (CC-029).
+> Note: `ExecutionRecord` = 0 as of 2026-03-12.
+> `GxeManagerService` creates `ExecutionRecord`, `RuntimeEngine` creates `AOPEG_Execution`.
+> Unification planned (CC-029).
 
 ---
 
 #### 9.3.13 InformationGraph
 
-| Атрибут | Значение |
-|---------|----------|
+| Attribute | Value |
+|-----------|-------|
 | **Namespace** | `PROJECT` |
 | **Labels** | `DomainGraph`, `BehavioralNode`, `BusinessEntity`, `LifecycleState`, `BusinessProcessGraph` |
-| **Secondary labels** | `BehavioralProcess` (на DomainGraph) |
+| **Secondary labels** | `BehavioralProcess` (on DomainGraph) |
 | **Required fields** | `id` |
 | **Edges** | `CONTAINS_NODE`, `TRANSITIONS_TO`, `STARTS_WITH` |
-| **Auto-created** | Да |
+| **Auto-created** | Yes |
 | **Source** | `ingestion-graph.service.js` |
 
 ---
 
 #### 9.3.14 CatalogInfra
 
-| Атрибут | Значение |
-|---------|----------|
+| Attribute | Value |
+|-----------|-------|
 | **Namespace** | `CORE` |
 | **Labels** | `CatalogRoot`, `CatalogEntry`, `GraphDefinition`, `GraphVersion`, `NodeType`, `EdgeType` |
-| **Required fields** | `entryId`/`graphId`/`versionId` (зависит от label), `name` |
+| **Required fields** | `entryId`/`graphId`/`versionId` (depends on label), `name` |
 | **Edges** | `CONTAINS`, `HAS_VERSION`, `DEFINES`, `SUPERSEDES`, `DECOMPOSES`, `LOADED_BY` |
-| **Auto-created** | Частично |
+| **Auto-created** | Partially |
 | **Source** | `graphCatalog.service.js`, `graph-loader.service.js`, `GraphTypeService.js` |
 
-Иерархия:
+Hierarchy:
 ```
 (:CatalogRoot)-[:CONTAINS]->(:CatalogEntry)-[:DEFINES]->(:GraphDefinition)-[:HAS_VERSION]->(:GraphVersion)-[:SUPERSEDES]->(:GraphVersion)
 ```
@@ -283,50 +283,50 @@ UN ProjectAdvisor хранит два принципиально разных к
 
 #### 9.3.15 IngestionTracking
 
-| Атрибут | Значение |
-|---------|----------|
+| Attribute | Value |
+|-----------|-------|
 | **Namespace** | `CORE` |
 | **Labels** | `KnowledgeGraph`, `IngestionSession`, `IngestionPhase`, `KnowledgeNode` |
-| **Required fields** | `sessionId` (для Phase), `id` |
+| **Required fields** | `sessionId` (for Phase), `id` |
 | **Edges** | `HAS_PHASE`, `PRODUCED_GRAPH`, `PROFILED_TABLE` |
-| **Auto-created** | Да |
+| **Auto-created** | Yes |
 | **Source** | `ingestion-graph.service.js` |
 
-> `KnowledgeNode` — fallback label. Избегать в новом коде, использовать
-> конкретные labels (DatabaseTable, StoredProcedureKG и т.д.).
+> `KnowledgeNode` is a fallback label. Avoid in new code; use
+> specific labels (DatabaseTable, StoredProcedureKG, etc.).
 
 ---
 
 #### 9.3.16 GXEAudit
 
-| Атрибут | Значение |
-|---------|----------|
+| Attribute | Value |
+|-----------|-------|
 | **Namespace** | `GXE` |
 | **Labels** | `TechnicalDebt`, `Gap`, `BusinessGoal`, `QuickWin`, `AuditReport`, `ConsolidationCheckpoint` |
-| **Secondary labels** | `MetaNode` (на ConsolidationCheckpoint) |
+| **Secondary labels** | `MetaNode` (on ConsolidationCheckpoint) |
 | **Required fields** | `name` |
 | **Edges** | `CONTAINS`, `TARGETS`, `BLOCKS`, `FIXED_BY` |
-| **Auto-created** | Частично |
+| **Auto-created** | Partially |
 | **Source** | `graph-consolidator.js`, audit scripts |
 
 ---
 
 #### 9.3.17 ReferenceData
 
-| Атрибут | Значение |
-|---------|----------|
+| Attribute | Value |
+|-----------|-------|
 | **Namespace** | `PROJECT` |
 | **Labels** | `SupportGroup`, `Equipment`, `UNStaffProfile`, `Workspace`, `YNBusinessGraph`, `YNTestScenario`, `YNTestUser`, `YNRole`, `Artifact`, `Project` |
-| **Required fields** | `name` или domain-specific ID |
+| **Required fields** | `name` or domain-specific ID |
 | **Edges** | `REPORTS_TO`, `SUBMITTED_BY`, `EXPECTS_GRAPH`, `CAN_SPAWN`, `COMPATIBLE_WITH` |
-| **Auto-created** | Нет (seed, import) |
+| **Auto-created** | No (seed, import) |
 | **Source** | seed scripts, FlowDesk import |
 
 ---
 
 ## 9.4 Routing Rules
 
-Функция маршрутизации определяет Information Type и каноничный namespace по label:
+The routing function determines the Information Type and canonical namespace by label:
 
 ```javascript
 const LABEL_ROUTING = {
@@ -426,16 +426,16 @@ function resolveInformationType(label) {
 
 ## 9.5 Auto-documentation Protocol
 
-Когда система автономно создаёт исполняемый граф, она ДОЛЖНА создать
-сопроводительную документацию:
+When the system autonomously creates an executable graph, it MUST create
+accompanying documentation:
 
-1. **GraphDocumentation** — назначение, входы/выходы, предположения
-2. **ADR** (если архитектурное решение) — контекст, решение, последствия
-3. **Связи** — `DOCUMENTS`, `IMPLEMENTS`, `MOTIVATED_BY`
+1. **GraphDocumentation** -- purpose, inputs/outputs, assumptions
+2. **ADR** (if an architectural decision) -- context, decision, consequences
+3. **Relationships** -- `DOCUMENTS`, `IMPLEMENTS`, `MOTIVATED_BY`
 
 ```javascript
 async documentGraphCreation(graphId, motivation, context) {
-  // 1. Документация графа
+  // 1. Graph documentation
   await memgraph.mergeNode('GraphDocumentation', {
     id: `doc-${graphId}`,
     namespace: 'META',
@@ -449,7 +449,7 @@ async documentGraphCreation(graphId, motivation, context) {
     createdAt: new Date().toISOString()
   });
 
-  // 2. ADR для архитектурных решений
+  // 2. ADR for architectural decisions
   if (context.isArchitecturalDecision) {
     await memgraph.mergeNode('ADR', {
       id: `adr-${generateUUID()}`,
@@ -464,7 +464,7 @@ async documentGraphCreation(graphId, motivation, context) {
     });
   }
 
-  // 3. Связи
+  // 3. Relationships
   await memgraph.createRelationship(`doc-${graphId}`, graphId, 'DOCUMENTS');
   if (context.sourceRequirementId) {
     await memgraph.createRelationship(graphId, context.sourceRequirementId, 'IMPLEMENTS');
@@ -474,10 +474,10 @@ async documentGraphCreation(graphId, motivation, context) {
 
 ---
 
-## 9.6 Статистика (на 2026-03-12)
+## 9.6 Statistics (as of 2026-03-12)
 
-| Information Type | Узлов | % от общего |
-|------------------|-------|-------------|
+| Information Type | Nodes | % of total |
+|------------------|-------|------------|
 | ExtractedSchema | 1,482 | 31.8% |
 | ExecutableGraph | 1,395 | 29.9% |
 | IngestionTracking | 485 | 10.4% |
@@ -496,21 +496,21 @@ async documentGraphCreation(graphId, motivation, context) {
 | SystemDecisions | 0 | 0% |
 | ResearchKnowledge | 0 | 0% |
 
-**Итого:** 4,662 узла, 18,330 рёбер, 4 namespace.
+**Total:** 4,662 nodes, 18,330 edges, 4 namespaces.
 
 ---
 
 ## 9.7 Tool Namespace Architecture
 
-### 9.7.1 Концепция
+### 9.7.1 Concept
 
-Tools в системе UN ProjectAdvisor разделены по областям знаний аналогично узлам графа. Каждый Tool имеет поле `toolNamespace`, определяющее к какой области знаний он относится.
+Tools in the UN ProjectAdvisor system are divided by knowledge domains analogously to graph nodes. Each Tool has a `toolNamespace` field that defines which knowledge domain it belongs to.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                      AI ASSISTANT                            │
 │                                                              │
-│   "Мне нужны инструменты для работы с FlowDesk"             │
+│   "I need tools for working with FlowDesk"                   │
 │                          │                                   │
 │                          ▼                                   │
 │               MCP Tool Registry                              │
@@ -530,23 +530,23 @@ Tools в системе UN ProjectAdvisor разделены по областя
 
 ### 9.7.2 Tool Namespaces
 
-| Namespace | Назначение | Примеры tools |
-|-----------|------------|---------------|
-| **CODEX** | Работа со стандартами, валидацией, ADR | codex.search_rules, codex.check_compliance, meta.health_check |
-| **CORE** | Инфраструктура системы UN PA | graph.query, ai.generate, catalog.search_graphs, vector.search |
-| **PROJECT** | Анализ целевых проектов (FlowDesk, iNeed) | sql.schema_scan, flowdesk.classify_intent, ingestion.parse_document |
+| Namespace | Purpose | Example tools |
+|-----------|---------|---------------|
+| **CODEX** | Working with standards, validation, ADR | codex.search_rules, codex.check_compliance, meta.health_check |
+| **CORE** | UN PA system infrastructure | graph.query, ai.generate, catalog.search_graphs, vector.search |
+| **PROJECT** | Analysis of target projects (FlowDesk, iNeed) | sql.schema_scan, flowdesk.classify_intent, ingestion.parse_document |
 
-### 9.7.3 Источники Tools
+### 9.7.3 Tool Sources
 
-Система объединяет tools из двух источников:
+The system combines tools from two sources:
 
-| Источник | Описание | Количество |
-|----------|----------|------------|
-| **MCP Tools** | Model Context Protocol handlers в `api/src/mcp/tools/` | 93 |
-| **AOPEG Executors** | Graph execution plugins в `api/src/core/aopeg/plugins/` | 52 |
-| **Всего** | | **145** |
+| Source | Description | Count |
+|--------|-------------|-------|
+| **MCP Tools** | Model Context Protocol handlers in `api/src/mcp/tools/` | 93 |
+| **AOPEG Executors** | Graph execution plugins in `api/src/core/aopeg/plugins/` | 52 |
+| **Total** | | **145** |
 
-### 9.7.4 Граф Tools в Memgraph
+### 9.7.4 Tool Graph in Memgraph
 
 ```
 ToolCatalog (root)
@@ -560,7 +560,7 @@ ToolCatalog (root)
     ├── :HAS_CATEGORY → ToolCategory {id: 'aopeg-flowdesk'}
     │                        └── :HAS_TOOL → Tool {toolNamespace: 'PROJECT'}
     │
-    └── ... (19 категорий всего: 11 MCP + 8 AOPEG)
+    └── ... (19 categories total: 11 MCP + 8 AOPEG)
 ```
 
 ### 9.7.5 Tool Node Schema
@@ -568,13 +568,13 @@ ToolCatalog (root)
 ```javascript
 {
   // Identity
-  id: 'tool.graph.query',             // Уникальный ID
-  name: 'Query Graph',                // Человекочитаемое имя
-  executorId: 'graph.query',          // ID для вызова
+  id: 'tool.graph.query',             // Unique ID
+  name: 'Query Graph',                // Human-readable name
+  executorId: 'graph.query',          // ID for invocation
 
   // Classification
   toolNamespace: 'CORE',              // CODEX | CORE | PROJECT
-  category: 'graph',                  // Категория внутри namespace
+  category: 'graph',                  // Category within namespace
   source: 'mcp',                      // mcp | aopeg | codex
 
   // Metadata
@@ -583,8 +583,8 @@ ToolCatalog (root)
   status: 'active',                   // active | deprecated | experimental
 
   // Schemas
-  inputSchema: { ... },               // JSON Schema для входных параметров
-  outputSchema: { ... },              // JSON Schema для результата
+  inputSchema: { ... },               // JSON Schema for input parameters
+  outputSchema: { ... },              // JSON Schema for result
 
   // Timestamps
   createdAt: '2026-03-19T...',
@@ -594,16 +594,16 @@ ToolCatalog (root)
 
 ### 9.7.6 MCP Discovery API
 
-AI агенты получают tools через MCP endpoints:
+AI agents retrieve tools via MCP endpoints:
 
 ```javascript
-// Получить все tools определённого namespace
+// Get all tools of a specific namespace
 await mcp.callTool('list_tools_by_namespace', {
   namespace: 'PROJECT'
 });
 // → { namespace: 'PROJECT', count: 30, tools: [...] }
 
-// Получить tools с фильтром по категории
+// Get tools filtered by category
 await mcp.callTool('list_tools_by_namespace', {
   namespace: 'CORE',
   category: 'graph',
@@ -611,65 +611,65 @@ await mcp.callTool('list_tools_by_namespace', {
 });
 // → { namespace: 'CORE', category: 'graph', count: 12, tools: [...] }
 
-// Статистика по всем tools
+// Statistics for all tools
 await mcp.callTool('get_tool_stats', {});
 // → { total: 145, byNamespace: { CODEX: 11, CORE: 104, PROJECT: 30 }, ... }
 ```
 
-### 9.7.7 Маппинг категорий → namespace
+### 9.7.7 Category to namespace mapping
 
 **MCP Tools (93):**
 
-| Category | Namespace | Кол-во |
-|----------|-----------|--------|
+| Category | Namespace | Count |
+|----------|-----------|-------|
 | meta (system + codex) | CODEX | 11 |
 | workflow, graph, ai, analytics, vector, notification, catalog, visualization, editor | CORE | 72 |
 | ingestion | PROJECT | 10 |
 
 **AOPEG Executors (52):**
 
-| Plugin | Namespace | Кол-во |
-|--------|-----------|--------|
+| Plugin | Namespace | Count |
+|--------|-----------|-------|
 | common, workflow, notification, subgraph, rag, ingestion | CORE | 32 |
 | flowdesk, sql-extraction | PROJECT | 20 |
 
-### 9.7.8 Добавление новых Tools
+### 9.7.8 Adding new Tools
 
-При создании нового Tool:
+When creating a new Tool:
 
-1. **Определить `toolNamespace`** по правилам:
-   - Работа со стандартами/валидацией → **CODEX**
-   - Инфраструктура системы → **CORE**
-   - Анализ целевого проекта → **PROJECT**
+1. **Determine `toolNamespace`** by the rules:
+   - Working with standards/validation → **CODEX**
+   - System infrastructure → **CORE**
+   - Target project analysis → **PROJECT**
 
-2. **Добавить в seed script:**
+2. **Add to seed script:**
    - MCP tools → `api/scripts/seed-tool-catalog.js`
    - AOPEG executors → `api/scripts/seed-aopeg-executors.js`
 
-3. **Зарегистрировать** в ToolRegistry (для MCP tools)
+3. **Register** in ToolRegistry (for MCP tools)
 
-4. **Создать Tool node** в графе с обязательными полями:
+4. **Create a Tool node** in the graph with required fields:
    - `id`, `name`, `executorId`
    - `toolNamespace`, `category`, `source`
    - `description`, `status`
 
-### 9.7.9 Cypher запросы к Tool Registry
+### 9.7.9 Cypher queries to Tool Registry
 
 ```cypher
--- Все tools по namespace
+-- All tools by namespace
 MATCH (t:Tool {toolNamespace: 'PROJECT'})
 RETURN t.name, t.category, t.description;
 
--- Статистика по namespace и source
+-- Statistics by namespace and source
 MATCH (t:Tool)
 RETURN t.toolNamespace AS namespace, t.source AS source, count(t) AS count
 ORDER BY namespace, source;
 
--- Tools определённой AOPEG категории
+-- Tools of a specific AOPEG category
 MATCH (cat:ToolCategory {id: 'aopeg-flowdesk'})-[:HAS_TOOL]->(t:Tool)
 RETURN t.name, t.executorId;
 
--- Поиск по описанию
+-- Search by description
 MATCH (t:Tool)
 WHERE toLower(t.description) CONTAINS 'extract'
 RETURN t.name, t.toolNamespace, t.description;
@@ -677,4 +677,4 @@ RETURN t.name, t.toolNamespace, t.description;
 
 ---
 
-*Этот документ является частью [Кодекса UN ProjectAdvisor](../CODEX_INDEX.md)*
+*This document is part of the [UN ProjectAdvisor Codex](../CODEX_INDEX.md)*

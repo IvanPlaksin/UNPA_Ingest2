@@ -66,6 +66,8 @@ const ALLOWED_LABELS = new Set([
     'KBReference',
     'ExperienceRecord', 'ExtractionStrategy',
     'PromotionRecord', 'PromotionItem',
+    // Provenance (SIGILLUM namespace) — extraction round audit trail
+    'ProvenanceRound',
 ]);
 
 /**
@@ -988,36 +990,142 @@ class MemgraphService {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// SINGLETON FACTORY
+// POSTGRES-AGE SHIM
+// When GRAPH_DB_BACKEND=postgres-age, export a compatibility shim that
+// implements the MemgraphService interface on top of PostgresAGEAdapter.
+// This lets existing callers (memgraphService.driver, executeQuery, etc.)
+// work without code changes during the Memgraph → PostgreSQL+AGE migration.
 // ────────────────────────────────────────────────────────────────────────────
 
-/** @type {MemgraphService} */
-let instance = null;
+if (process.env.GRAPH_DB_BACKEND === 'postgres-age') {
+    const { PostgresAGEAdapter } = require('./storage/adapters/PostgresAGEAdapter');
 
-/**
- * Get MemgraphService singleton
- * @returns {MemgraphService}
- */
-function getMemgraphService() {
-    if (!instance) {
-        instance = new MemgraphService();
+    class AGESession {
+        constructor(adapter) { this._adapter = adapter; }
+
+        run(cypher, params = {}) {
+            return this._adapter.runQuery(cypher, params);
+        }
+
+        writeTransaction(fn) {
+            return fn({ run: (c, p = {}) => this._adapter.runQuery(c, p) });
+        }
+
+        readTransaction(fn) {
+            return fn({ run: (c, p = {}) => this._adapter.runQuery(c, p) });
+        }
+
+        close() { return Promise.resolve(); }
     }
-    return instance;
-}
 
-/**
- * Get the shared driver for use by other services (e.g., MemgraphClient).
- * This prevents multiple driver instances and connection pool exhaustion.
- * @returns {import('neo4j-driver').Driver}
- */
-function getSharedDriver() {
-    return getMemgraphService().driver;
-}
+    class AGEDriver {
+        constructor(adapter) { this._adapter = adapter; }
 
-// Export both the class and singleton getter
-// Default export is singleton for backwards compatibility
-const singletonInstance = getMemgraphService();
-module.exports = singletonInstance;
-module.exports.MemgraphService = MemgraphService;
-module.exports.getMemgraphService = getMemgraphService;
-module.exports.getSharedDriver = getSharedDriver;
+        session() { return new AGESession(this._adapter); }
+
+        executeRead(fn) {
+            return fn({ run: (c, p = {}) => this._adapter.runQuery(c, p) });
+        }
+
+        executeWrite(fn) {
+            return fn({ run: (c, p = {}) => this._adapter.runQuery(c, p) });
+        }
+
+        verifyConnectivity() { return this._adapter.verifyConnectivity(); }
+
+        close() { return Promise.resolve(); }
+    }
+
+    class AGEMemgraphShim {
+        constructor() {
+            this._adapter = new PostgresAGEAdapter();
+            this.driver = new AGEDriver(this._adapter);
+            this._connectionVerified = false;
+        }
+
+        async verifyConnectivity() {
+            if (this._connectionVerified) return true;
+            const ok = await this._adapter.verifyConnectivity();
+            this._connectionVerified = ok;
+            console.log('[AGEShim] PostgreSQL+AGE connectivity verified');
+            return ok;
+        }
+
+        // Returns plain objects (array), matching MemgraphService.runQuery() contract
+        async runQuery(cypher, params = {}) {
+            const result = await this._adapter.runQuery(cypher, params);
+            if (!result || !result.records) return [];
+            return result.records.map(rec => rec.toObject());
+        }
+
+        async executeQuery(cypher, params = {}) {
+            return this._adapter.runQuery(cypher, params);
+        }
+
+        async executeInSession(queries) {
+            if (!queries || queries.length === 0) return [];
+            const normalized = queries.map(q =>
+                typeof q === 'string'
+                    ? { cypher: q, params: {} }
+                    : { cypher: q.cypher || q.query || q, params: q.params || {} }
+            );
+            return this._adapter.runBatch(normalized);
+        }
+
+        async queryWithNamespace(cypher, params = {}, namespaceFilter = null) {
+            return this._adapter.runWithNamespace(cypher, params, namespaceFilter);
+        }
+
+        getConnectionInfo() {
+            return { type: 'postgres-age', uri: process.env.POSTGRES_CONNECTION_STRING ? '(configured)' : '(missing)', ...this._adapter.getStats() };
+        }
+
+        getStats() { return this._adapter.getStats(); }
+
+        async getVertexLabelById(graphId) {
+            return this._adapter.getVertexLabelById ? this._adapter.getVertexLabelById(graphId) : null;
+        }
+
+        async ensureNamespaceIndexes() {
+            return this._adapter.ensureNamespaceIndexes();
+        }
+
+        async countNodesByNamespace(namespace) {
+            return this._adapter.countNodesByNamespace(namespace);
+        }
+
+        async countEdgesByNamespace(namespace) {
+            return this._adapter.countEdgesByNamespace(namespace);
+        }
+    }
+
+    const shimInstance = new AGEMemgraphShim();
+    module.exports = shimInstance;
+    module.exports.MemgraphService = AGEMemgraphShim;
+    module.exports.getMemgraphService = () => shimInstance;
+    module.exports.getSharedDriver = () => shimInstance.driver;
+} else {
+    // ────────────────────────────────────────────────────────────────────────
+    // SINGLETON FACTORY (Memgraph / default path)
+    // ────────────────────────────────────────────────────────────────────────
+
+    /** @type {MemgraphService} */
+    let instance = null;
+
+    function getMemgraphService() {
+        if (!instance) {
+            instance = new MemgraphService();
+        }
+        return instance;
+    }
+
+    function getSharedDriver() {
+        return getMemgraphService().driver;
+    }
+
+    const singletonInstance = getMemgraphService();
+    module.exports = singletonInstance;
+    module.exports.MemgraphService = MemgraphService;
+    module.exports.getMemgraphService = getMemgraphService;
+    module.exports.getSharedDriver = getSharedDriver;
+}

@@ -39,10 +39,10 @@ class ServiceConnector {
    */
   async initLLM() {
     try {
-      const llmService = require('../../services/llm.service');
+      const { getInstance: getLLMProvider } = require('../../services/llm/LLMProviderService');
       this.providers.set('llm', {
         type: 'llm',
-        service: llmService,
+        service: getLLMProvider(),
         status: 'connected',
         capabilities: ['chat', 'stream', 'tools']
       });
@@ -184,11 +184,17 @@ class ServiceConnector {
     const { tools = [], stream = false, onChunk } = options;
 
     if (stream && onChunk) {
-      await llm.streamChat(messages, onChunk);
+      // LLMProviderService.stream() returns an AsyncIterable of events
+      const streamObj = llm.stream(messages, { tools: tools?.length ? tools : undefined });
+      for await (const event of streamObj) {
+        if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
+          onChunk(event.delta.text);
+        }
+      }
       return { streamed: true };
     }
 
-    return llm.chat(messages, tools);
+    return llm.chat(messages, { tools: tools?.length ? tools : undefined });
   }
 
   /**

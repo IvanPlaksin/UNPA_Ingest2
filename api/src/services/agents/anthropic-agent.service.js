@@ -16,7 +16,10 @@ const { createAllTools } = require('../../mcp/index');
 const { filterToolsForTask, classifyTaskIntent } = require('../graph/tool-filter');
 const { CatalogReuseService } = require('../graph/catalog-reuse.service');
 
-const MCP_SERVER_PATH = process.env.MCP_SERVER_PATH || 'd:/UN/Repos/MCP_CLAUDE/mcp-server/dist/index.js';
+const MCP_SERVER_PATH = process.env.MCP_SERVER_PATH;
+if (!MCP_SERVER_PATH) {
+  console.warn('[AnthropicAgent] WARNING: MCP_SERVER_PATH env var not set. Agent MCP tools will be unavailable. Set MCP_SERVER_PATH=/path/to/mcp-server/dist/index.js');
+}
 const MAX_AGENT_ITERATIONS = 10;
 
 /**

@@ -250,7 +250,7 @@ router.post('/analyze', async (req, res) => {
   try {
     const rankingService = require('../services/backlog/ranking.service');
     const { buildRankingAnalysisPrompt } = require('../prompts/ranking-agent.prompt');
-    const llmService = require('../services/llm.service');
+    const { getInstance: getLLMProvider } = require('../services/llm/LLMProviderService');
 
     // Gather all data
     const [ranked, plan, stats, depGraph] = await Promise.all([
@@ -265,12 +265,17 @@ router.post('/analyze', async (req, res) => {
 
     // Call LLM via chat interface
     const messages = [{ role: 'user', content: prompt }];
-    const analysis = await llmService.chat(messages, [], null, { maxTokens: 4096 });
+    const analysis = await getLLMProvider().chat(messages, { maxTokens: 4096 });
 
     res.json({
       success: true,
       data: {
-        analysis: analysis.text || analysis.content || (typeof analysis === 'string' ? analysis : JSON.stringify(analysis)),
+        analysis: (() => {
+          const rc = analysis?.content;
+          return Array.isArray(rc)
+            ? rc.filter(b => b.type === 'text').map(b => b.text).join('')
+            : (rc || analysis?.text || (typeof analysis === 'string' ? analysis : JSON.stringify(analysis)));
+        })(),
         rankedCount: ranked.length,
         executionPlan: plan,
         stats,

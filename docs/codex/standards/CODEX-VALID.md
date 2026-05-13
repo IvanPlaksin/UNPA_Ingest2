@@ -1,28 +1,28 @@
-# CODEX-VALID: Стандарт валидации
+# CODEX-VALID: Validation Standard
 
-**Статус:** 🟡 В разработке
-**Версия:** 0.1.0
-**Последнее обновление:** 2026-03-12
-
----
-
-## Оглавление
-
-- [5.1 Schema Registry: единый источник правды](#51-schema-registry-единый-источник-правды)
-- [5.2 Pre-write валидация](#52-pre-write-валидация)
-- [5.3 Post-write верификация](#53-post-write-верификация)
-- [5.4 Обнаружение дубликатов](#54-обнаружение-дубликатов)
-- [5.5 Обнаружение осиротевших данных](#55-обнаружение-осиротевших-данных)
-- [5.6 Управление индексами](#56-управление-индексами)
-- [Приложение: Коды ошибок валидации](#приложение-коды-ошибок-валидации)
+**Status:** 🟡 In development
+**Version:** 0.1.0
+**Last updated:** 2026-03-12
 
 ---
 
-## 5.1 Schema Registry: единый источник правды
+## Table of Contents
 
-### Архитектура
+- [5.1 Schema Registry: single source of truth](#51-schema-registry-single-source-of-truth)
+- [5.2 Pre-write validation](#52-pre-write-validation)
+- [5.3 Post-write verification](#53-post-write-verification)
+- [5.4 Duplicate detection](#54-duplicate-detection)
+- [5.5 Orphaned data detection](#55-orphaned-data-detection)
+- [5.6 Index management](#56-index-management)
+- [Appendix: Validation error codes](#appendix-validation-error-codes)
 
-Schema Registry — централизованный реестр JSON Schema определений для всех сущностей графа знаний. Реализован в `api/src/validation/schema-registry.js`.
+---
+
+## 5.1 Schema Registry: single source of truth
+
+### Architecture
+
+Schema Registry is a centralized registry of JSON Schema definitions for all knowledge graph entities. Implemented in `api/src/validation/schema-registry.js`.
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -39,30 +39,30 @@ Schema Registry — централизованный реестр JSON Schema о
 │                                │  validateExecRec   │   │
 │                                └───────────────────┘   │
 │                                                         │
-│  Функции:                                               │
-│  - register(schema)     — зарегистрировать/заменить     │
-│  - validate(id, data)   — валидировать данные            │
-│  - listSchemas()        — список всех ID                 │
-│  - getSchema(id)        — получить raw schema            │
-│  - getSchemaRegistry()  — singleton                      │
+│  Functions:                                             │
+│  - register(schema)     — register/replace              │
+│  - validate(id, data)   — validate data                 │
+│  - listSchemas()        — list all IDs                  │
+│  - getSchema(id)        — get raw schema                │
+│  - getSchemaRegistry()  — singleton                     │
 └─────────────────────────────────────────────────────────┘
 ```
 
-### Встроенные схемы
+### Built-in schemas
 
-| # | Schema ID | Описание | Required fields | Strict |
-|---|-----------|----------|-----------------|--------|
-| 1 | `codex://schemas/base-node` | Минимальный контракт для любого узла | id, createdAt, namespace | Нет |
-| 2 | `codex://schemas/provenance` | Провенанс (W3C PROV-O) | sourceType, sourceId, confidence | Нет |
-| 3 | `codex://schemas/node-version` | Immutable узел с bi-temporal и hash chain | 9 полей (versionId, entityId, namespace, sequenceNumber, status, ttStart, contentHash, chainHash, nodeType) | Да |
-| 4 | `codex://schemas/edge-version` | Immutable ребро с hash chain | 10 полей | Да |
-| 5 | `codex://schemas/catalog-entry` | Запись каталога GXE | entryId, name, type, namespace, createdAt | Нет |
-| 6 | `codex://schemas/graph-version` | Snapshot версии графа | versionId, versionNumber, createdAt, contentHash | Да |
-| 7 | `codex://schemas/execution-record` | Лог выполнения | executionId, dagId, status, executedAt | Нет |
+| # | Schema ID | Description | Required fields | Strict |
+|---|-----------|-------------|-----------------|--------|
+| 1 | `codex://schemas/base-node` | Minimum contract for any node | id, createdAt, namespace | No |
+| 2 | `codex://schemas/provenance` | Provenance (W3C PROV-O) | sourceType, sourceId, confidence | No |
+| 3 | `codex://schemas/node-version` | Immutable node with bi-temporal and hash chain | 9 fields (versionId, entityId, namespace, sequenceNumber, status, ttStart, contentHash, chainHash, nodeType) | Yes |
+| 4 | `codex://schemas/edge-version` | Immutable edge with hash chain | 10 fields | Yes |
+| 5 | `codex://schemas/catalog-entry` | GXE catalog entry | entryId, name, type, namespace, createdAt | No |
+| 6 | `codex://schemas/graph-version` | Graph version snapshot | versionId, versionNumber, createdAt, contentHash | Yes |
+| 7 | `codex://schemas/execution-record` | Execution log | executionId, dagId, status, executedAt | No |
 
-### Правила расширения
+### Extension rules
 
-Новые типы узлов должны наследовать от `BaseNodeSchema` через композицию `allOf`:
+New node types must inherit from `BaseNodeSchema` through `allOf` composition:
 
 ```json
 {
@@ -83,62 +83,62 @@ Schema Registry — централизованный реестр JSON Schema о
 }
 ```
 
-**Правило:** Каждый новый тип узла в графе знаний ОБЯЗАН иметь соответствующую JSON Schema в Registry до начала использования.
+**Rule:** Every new node type in the knowledge graph MUST have a corresponding JSON Schema in the Registry before use.
 
 ---
 
-## 5.2 Pre-write валидация
+## 5.2 Pre-write validation
 
-### Точки перехвата
+### Intercept points
 
-Валидация выполняется ПЕРЕД каждой операцией записи в Memgraph:
+Validation is performed BEFORE each write operation to Memgraph:
 
-| Операция | Файл | Текущая валидация | Целевая валидация |
-|----------|------|-------------------|-------------------|
-| `mergeNode()` | memgraph.service.js:386 | Только `if (!id)` | Schema + fingerprint + business rules |
-| `mergeRelationship()` | memgraph.service.js:445 | Нет | Node existence check + edge schema |
-| `createNode()` (graph-gen) | mssql.graph-generator.js:398 | Нет | BaseNode schema + provenance |
-| `saveEntityWithProvenance()` | GraphStorageService.js:66 | Только provenance | Full schema + provenance + fingerprint |
-| `createNode()` (immutable) | immutable-graph.service.ts:72 | Нет | NodeVersion schema + hash chain |
-| `createCatalogEntry()` | graphCatalog.service.js:141 | Нет | CatalogEntry schema |
+| Operation | File | Current validation | Target validation |
+|-----------|------|--------------------|-------------------|
+| `mergeNode()` | memgraph.service.js:386 | Only `if (!id)` | Schema + fingerprint + business rules |
+| `mergeRelationship()` | memgraph.service.js:445 | None | Node existence check + edge schema |
+| `createNode()` (graph-gen) | mssql.graph-generator.js:398 | None | BaseNode schema + provenance |
+| `saveEntityWithProvenance()` | GraphStorageService.js:66 | Provenance only | Full schema + provenance + fingerprint |
+| `createNode()` (immutable) | immutable-graph.service.ts:72 | None | NodeVersion schema + hash chain |
+| `createCatalogEntry()` | graphCatalog.service.js:141 | None | CatalogEntry schema |
 
-### Алгоритм валидации
+### Validation algorithm
 
 ```
                          ┌──────────────┐
-                         │  Входные     │
-                         │  данные      │
+                         │  Input       │
+                         │  data        │
                          └──────┬───────┘
                                 │
                          ┌──────▼───────┐
-                         │  1. Detect   │  Определить тип узла
-                         │     Schema   │  по label / context
+                         │  1. Detect   │  Detect node type
+                         │     Schema   │  by label / context
                          └──────┬───────┘
                                 │
                          ┌──────▼───────┐
-                         │  2. JSON     │  Проверить required fields,
-                         │     Schema   │  типы, enum, format
+                         │  2. JSON     │  Check required fields,
+                         │     Schema   │  types, enum, format
                          │     Check    │
                          └──────┬───────┘
                                 │
                         ┌───────▼───────┐
                  ┌──────│  valid?       │──────┐
-                 │ Нет  └───────────────┘ Да   │
+                 │ No   └───────────────┘ Yes  │
                  │                              │
           ┌──────▼──────┐               ┌──────▼───────┐
-          │ REJECT      │               │  3. Business │  Проверить
-          │ VAL001-003  │               │     Rules    │  бизнес-правила
+          │ REJECT      │               │  3. Business │  Check
+          │ VAL001-003  │               │     Rules    │  business rules
           └─────────────┘               └──────┬───────┘
                                                │
                                         ┌──────▼───────┐
-                                        │  4. Finger-  │  Проверить
-                                        │     print    │  дубликаты
+                                        │  4. Finger-  │  Check
+                                        │     print    │  duplicates
                                         │     Check    │
                                         └──────┬───────┘
                                                │
                                   ┌────────────▼────────────┐
                            ┌─────│  collision?              │─────┐
-                           │ Да  └──────────────────────────┘ Нет │
+                           │ Yes └──────────────────────────┘ No  │
                            │                                      │
                     ┌──────▼──────┐                        ┌──────▼──────┐
                     │  Apply      │                        │  5. WRITE   │
@@ -147,35 +147,35 @@ Schema Registry — централизованный реестр JSON Schema о
                     └─────────────┘
 ```
 
-### Обязательные поля по уровням
+### Required fields by level
 
-**Уровень 0 — MANDATORY (для ЛЮБОГО узла):**
+**Level 0 — MANDATORY (for ANY node):**
 - `id` — UUID v4
 - `createdAt` — ISO 8601 datetime
-- `namespace` — одно из: CORE, PROJECT, META, COMMON
+- `namespace` — one of: CORE, PROJECT, META, COMMON
 
-**Уровень 1 — PROVENANCE (для извлечённых данных):**
+**Level 1 — PROVENANCE (for extracted data):**
 - `sourceType` — enum: llm, user, system, import, pipeline, agent
-- `sourceId` — ID источника (модель, пользователь, pipeline ID)
-- `extractionCycleId` — UUID цикла извлечения
-- `confidence` — число от 0.0 до 1.0
+- `sourceId` — source ID (model, user, pipeline ID)
+- `extractionCycleId` — extraction cycle UUID
+- `confidence` — number from 0.0 to 1.0
 
-**Уровень 2 — VERSION (для версионируемых узлов):**
-- `versionId` — UUID версии
-- `sequenceNumber` — порядковый номер (integer >= 1)
+**Level 2 — VERSION (for versioned nodes):**
+- `versionId` — version UUID
+- `sequenceNumber` — sequence number (integer >= 1)
 - `status` — enum: DRAFT, ACTIVE, SUPERSEDED, DEPRECATED, MERGED, DELETED
 - `ttStart` — transaction time start (ISO 8601)
-- `contentHash` — SHA-256 hex (64 символа)
-- `chainHash` — Merkle chain hash (64 символа)
+- `contentHash` — SHA-256 hex (64 characters)
+- `chainHash` — Merkle chain hash (64 characters)
 
-**Уровень 3 — EDGE (для рёбер):**
-- `sourceEntityId` — ID исходного узла
-- `targetEntityId` — ID целевого узла
-- `edgeType` — тип связи (строка)
+**Level 3 — EDGE (for edges):**
+- `sourceEntityId` — source node ID
+- `targetEntityId` — target node ID
+- `edgeType` — relationship type (string)
 
-### Код интеграции
+### Integration code
 
-Рекомендуемый паттерн интеграции в `memgraph.service.js`:
+Recommended integration pattern in `memgraph.service.js`:
 
 ```javascript
 const { getSchemaRegistry, checkFingerprintCollision } = require('../validation/schema-registry');
@@ -205,22 +205,22 @@ async mergeNode(label, properties) {
 
 ---
 
-## 5.3 Post-write верификация
+## 5.3 Post-write verification
 
-### Когда применять
+### When to apply
 
-Post-write check выполняет read-after-write для подтверждения целостности записи.
+Post-write check performs a read-after-write to confirm write integrity.
 
-| Операция | Post-write check | Обоснование |
-|----------|-----------------|-------------|
-| NodeVersion create | **ДА** | Hash chain integrity — критично |
-| EdgeVersion create | **ДА** | Bi-temporal consistency — критично |
-| CatalogEntry create | **ДА** | SUPERSEDES chain integrity |
-| mergeNode (domain) | Нет | MERGE идемпотентен, допустима eventual consistency |
-| mergeRelationship | Нет | Идемпотентный MERGE |
-| Qdrant upsert | **ДА** (async) | Проверить, что вектор записан (polystore sync) |
+| Operation | Post-write check | Rationale |
+|-----------|-----------------|-----------|
+| NodeVersion create | **YES** | Hash chain integrity — critical |
+| EdgeVersion create | **YES** | Bi-temporal consistency — critical |
+| CatalogEntry create | **YES** | SUPERSEDES chain integrity |
+| mergeNode (domain) | No | MERGE is idempotent, eventual consistency is acceptable |
+| mergeRelationship | No | Idempotent MERGE |
+| Qdrant upsert | **YES** (async) | Verify that the vector was written (polystore sync) |
 
-### Алгоритм
+### Algorithm
 
 ```
   WRITE to Memgraph
@@ -233,9 +233,9 @@ Post-write check выполняет read-after-write для подтвержде
   (contentHash, chainHash, status)
         │
    ┌────▼────┐
-   │ match?  │──── Да ──→ OK
+   │ match?  │──── Yes ──→ OK
    └────┬────┘
-        │ Нет
+        │ No
         ▼
   Log INCONSISTENCY (VAL007)
   Retry write (max 2)
@@ -244,9 +244,9 @@ Post-write check выполняет read-after-write для подтвержде
   If still mismatch → ALERT + manual review
 ```
 
-### Проверка hash chain
+### Hash chain check
 
-Для NodeVersion после записи:
+For NodeVersion after write:
 
 ```javascript
 // Read back the written version
@@ -265,13 +265,13 @@ if (written.chainHash !== expectedChainHash) {
 
 ---
 
-## 5.4 Обнаружение дубликатов
+## 5.4 Duplicate detection
 
-### Стратегия: трёхуровневый подход
+### Strategy: three-level approach
 
-**Уровень 1 — Fingerprint (быстрый, точный)**
+**Level 1 — Fingerprint (fast, exact)**
 
-SHA-256 от нормализованного содержимого:
+SHA-256 of normalized content:
 ```javascript
 const fingerprint = crypto.createHash('sha256')
   .update(JSON.stringify({
@@ -283,7 +283,7 @@ const fingerprint = crypto.createHash('sha256')
   .digest('hex');
 ```
 
-**Уровень 2 — Normalized form (для entity resolution)**
+**Level 2 — Normalized form (for entity resolution)**
 
 ```cypher
 MATCH (n {normalizedForm: $normalizedForm, type: $type})
@@ -291,7 +291,7 @@ WHERE n.lifecycleState = 'active' OR n.lifecycleState IS NULL
 RETURN n ORDER BY n.confidence DESC LIMIT 1
 ```
 
-**Уровень 3 — Semantic similarity (через Qdrant)**
+**Level 3 — Semantic similarity (via Qdrant)**
 
 ```javascript
 const similar = await qdrantService.searchSimilar(
@@ -300,54 +300,54 @@ const similar = await qdrantService.searchSimilar(
 );
 ```
 
-### Политики обработки дубликатов
+### Duplicate handling policies
 
-| Политика | Когда применяется | Действие |
-|----------|-------------------|----------|
-| `REJECT` | NodeVersion с таким же contentHash уже существует | Отклонить запись, вернуть ошибку VAL004 |
-| `UPSERT` | Domain-узел с таким же id | Обновить свойства через MERGE SET |
-| `VERSION` | CatalogEntry с таким же contentHash | Создать новую версию (increment versionNumber) |
-| `MERGE` | Entity с normalized form match (confidence > 0.8) | Объединить свойства, взять максимальный confidence |
+| Policy | When applied | Action |
+|--------|--------------|--------|
+| `REJECT` | NodeVersion with the same contentHash already exists | Reject write, return error VAL004 |
+| `UPSERT` | Domain node with the same id | Update properties via MERGE SET |
+| `VERSION` | CatalogEntry with the same contentHash | Create new version (increment versionNumber) |
+| `MERGE` | Entity with normalized form match (confidence > 0.8) | Merge properties, take maximum confidence |
 
-### Алгоритм определения политики
+### Policy selection algorithm
 
 ```
   contentHash collision?
         │
    ┌────▼────┐
-   │ NodeVer?│──── Да ──→ REJECT (immutable, дубликат)
+   │ NodeVer?│──── Yes ──→ REJECT (immutable, duplicate)
    └────┬────┘
-        │ Нет
+        │ No
    ┌────▼────────┐
-   │ CatalogEntry│──── Да ──→ VERSION (создать новую версию)
+   │ CatalogEntry│──── Yes ──→ VERSION (create new version)
    └────┬────────┘
-        │ Нет
+        │ No
    ┌────▼────────┐
-   │ normalForm  │──── Да ──→ MERGE (entity resolution)
+   │ normalForm  │──── Yes ──→ MERGE (entity resolution)
    │ match?      │
    └────┬────────┘
-        │ Нет
+        │ No
         ▼
-      UPSERT (default: MERGE по id)
+      UPSERT (default: MERGE by id)
 ```
 
 ---
 
-## 5.5 Обнаружение осиротевших данных
+## 5.5 Orphaned data detection
 
-### Типы orphaned данных
+### Types of orphaned data
 
-| Тип | Описание | Риск | Проверка |
-|-----|----------|------|----------|
-| Orphan nodes | Узлы без рёбер (изолированные) | Средний | Каждые 6 часов |
-| Orphan edges | Рёбра с отсутствующим source/target | Высокий | Каждые 6 часов |
-| Orphan vectors | Векторы в Qdrant без узла в Memgraph | Высокий | Ежедневно |
-| Stale versions | GraphVersion без CatalogEntry | Средний | Еженедельно |
-| Broken chains | NodeVersion с невалидным chainHash | Критический | При каждой записи |
+| Type | Description | Risk | Check |
+|------|-------------|------|-------|
+| Orphan nodes | Nodes without edges (isolated) | Medium | Every 6 hours |
+| Orphan edges | Edges with missing source/target | High | Every 6 hours |
+| Orphan vectors | Vectors in Qdrant without a node in Memgraph | High | Daily |
+| Stale versions | GraphVersion without a CatalogEntry | Medium | Weekly |
+| Broken chains | NodeVersion with invalid chainHash | Critical | On every NodeVersion write |
 
-### Запросы для обнаружения
+### Detection queries
 
-**Orphan nodes (узлы без связей):**
+**Orphan nodes (nodes without edges):**
 ```cypher
 MATCH (n)
 WHERE NOT (n)--() AND NOT n:CatalogRoot AND NOT n:Settings
@@ -355,7 +355,7 @@ RETURN labels(n) AS labels, count(n) AS count
 ORDER BY count DESC
 ```
 
-**Orphan edges (рёбра к несуществующим узлам):**
+**Orphan edges (edges to non-existent nodes):**
 ```cypher
 MATCH (a)-[r]->(b)
 WHERE a.id IS NULL OR b.id IS NULL
@@ -375,84 +375,84 @@ const mgIds = new Set(mgDocs.map(r => r.id));
 const qdrantOrphans = qdrantPoints.filter(p => !mgIds.has(p.payload?.documentId));
 ```
 
-### Расписание проверок
+### Check schedule
 
-| Проверка | Интервал | Действие при обнаружении |
-|----------|----------|-------------------------|
-| Orphan nodes | 6 часов | Лог + метрика, не удалять автоматически |
-| Orphan edges | 6 часов | Лог + пометить для review |
-| Orphan vectors | 24 часа | Лог + queue для cleanup (ручное подтверждение) |
-| Hash chain audit | При каждой записи NodeVersion | ALERT + block further writes |
-| Full integrity scan | Еженедельно | Полный отчёт через `validateGraphIntegrity()` |
+| Check | Interval | Action on detection |
+|-------|----------|---------------------|
+| Orphan nodes | 6 hours | Log + metric, do not auto-delete |
+| Orphan edges | 6 hours | Log + flag for review |
+| Orphan vectors | 24 hours | Log + queue for cleanup (manual confirmation) |
+| Hash chain audit | On every NodeVersion write | ALERT + block further writes |
+| Full integrity scan | Weekly | Full report via `validateGraphIntegrity()` |
 
 ---
 
-## 5.6 Управление индексами
+## 5.6 Index management
 
-### Проблема: текущее состояние
+### Problem: current state
 
-Индексы и constraints создаются в **4+ файлах**:
+Indexes and constraints are created in **4+ files**:
 
-| Файл | Кол-во | Тип |
-|------|--------|-----|
+| File | Count | Type |
+|------|-------|------|
 | `GraphSchemaManager.js` | 25 constraints + 20+ indexes | Domain + Immutable + AOPEG |
 | `memgraph.service.js:795-808` | 9 indexes | Namespace-specific |
 | `graphCatalog.service.js:93-101` | 8 indexes | Catalog |
 | `apply-schema-memgraph.js` | ~10 | Migration script |
 | `apply-multi-domain-schema.js` | ~15 | Multi-domain migration |
 
-**Проблемы:**
-- Нет единого места для полного списка индексов
-- Возможны дубликаты и конфликты
-- Нет relationship indexes
-- Нет composite indexes
-- Нет full-text indexes
+**Problems:**
+- No single place for the complete list of indexes
+- Duplicates and conflicts are possible
+- No relationship indexes
+- No composite indexes
+- No full-text indexes
 
-### Целевое состояние
+### Target state
 
-Все определения индексов должны быть в одном месте: `GraphSchemaManager.js`.
+All index definitions must be in one place: `GraphSchemaManager.js`.
 
-**Правила:**
-1. Каждый новый label ОБЯЗАН иметь index на id/primary key
-2. Каждый label с `namespace` ОБЯЗАН иметь index на `namespace`
-3. Поля, используемые в WHERE/ORDER BY, ОБЯЗАНЫ иметь index
-4. Все определения — в `GraphSchemaManager.initializeSchema()`
-5. Дублирование в других файлах запрещено
+**Rules:**
+1. Every new label MUST have an index on id/primary key
+2. Every label with `namespace` MUST have an index on `namespace`
+3. Fields used in WHERE/ORDER BY MUST have an index
+4. All definitions — in `GraphSchemaManager.initializeSchema()`
+5. Duplication in other files is forbidden
 
-### Недостающие индексы (план добавления)
+### Missing indexes (plan to add)
 
-| Label | Property | Обоснование |
-|-------|----------|-------------|
-| * (все) | `updatedAt` | Сортировка по дате обновления |
-| CatalogEntry | `createdBy` | Фильтр по автору |
-| ExecutionPattern | `hash` | Lookup по DAG hash |
-| ExecutionRecord | `dagId` | Поиск executions по графу |
-| * (все domain) | `extractionCycleId` | Групповое удаление цикла |
+| Label | Property | Rationale |
+|-------|----------|-----------|
+| * (all) | `updatedAt` | Sorting by update date |
+| CatalogEntry | `createdBy` | Filter by author |
+| ExecutionPattern | `hash` | Lookup by DAG hash |
+| ExecutionRecord | `dagId` | Search executions by graph |
+| * (all domain) | `extractionCycleId` | Bulk delete by cycle |
 
-### План миграции
+### Migration plan
 
-1. Собрать полный перечень индексов из всех файлов (audit)
-2. Объединить в `GraphSchemaManager.initializeSchema()`
-3. Добавить недостающие индексы
-4. Удалить дублирующие определения из других файлов
-5. Добавить `SHOW INDEX INFO` проверку в healthcheck endpoint
-
----
-
-## Приложение: Коды ошибок валидации
-
-| Код | Имя | Описание | Severity | Действие |
-|-----|-----|----------|----------|----------|
-| VAL001 | SCHEMA_REQUIRED_MISSING | Отсутствует обязательное поле | ERROR | Reject write |
-| VAL002 | SCHEMA_TYPE_MISMATCH | Неверный тип данных | ERROR | Reject write |
-| VAL003 | SCHEMA_ENUM_INVALID | Значение не из допустимого enum | ERROR | Reject write |
-| VAL004 | DUPLICATE_CONTENT | Дубликат по contentHash | WARNING | Apply policy (REJECT/UPSERT/VERSION/MERGE) |
-| VAL005 | EDGE_MISSING_SOURCE | Исходный узел ребра не существует | ERROR | Reject edge creation |
-| VAL006 | EDGE_MISSING_TARGET | Целевой узел ребра не существует | ERROR | Reject edge creation |
-| VAL007 | HASH_CHAIN_BROKEN | Нарушена целостность hash chain | CRITICAL | Alert + block writes |
-| VAL008 | ORPHAN_DETECTED | Обнаружен orphaned node/edge/vector | WARNING | Log + queue for review |
-| VAL009 | NAMESPACE_VIOLATION | Запись в неразрешённый namespace | ERROR | Reject write |
+1. Collect the complete list of indexes from all files (audit)
+2. Consolidate in `GraphSchemaManager.initializeSchema()`
+3. Add missing indexes
+4. Remove duplicate definitions from other files
+5. Add `SHOW INDEX INFO` check to the healthcheck endpoint
 
 ---
 
-*Этот документ является частью [Кодекса UN ProjectAdvisor](../CODEX_INDEX.md)*
+## Appendix: Validation error codes
+
+| Code | Name | Description | Severity | Action |
+|------|------|-------------|----------|--------|
+| VAL001 | SCHEMA_REQUIRED_MISSING | Required field missing | ERROR | Reject write |
+| VAL002 | SCHEMA_TYPE_MISMATCH | Wrong data type | ERROR | Reject write |
+| VAL003 | SCHEMA_ENUM_INVALID | Value not from allowed enum | ERROR | Reject write |
+| VAL004 | DUPLICATE_CONTENT | Duplicate by contentHash | WARNING | Apply policy (REJECT/UPSERT/VERSION/MERGE) |
+| VAL005 | EDGE_MISSING_SOURCE | Edge source node does not exist | ERROR | Reject edge creation |
+| VAL006 | EDGE_MISSING_TARGET | Edge target node does not exist | ERROR | Reject edge creation |
+| VAL007 | HASH_CHAIN_BROKEN | Hash chain integrity broken | CRITICAL | Alert + block writes |
+| VAL008 | ORPHAN_DETECTED | Orphaned node/edge/vector detected | WARNING | Log + queue for review |
+| VAL009 | NAMESPACE_VIOLATION | Write to forbidden namespace | ERROR | Reject write |
+
+---
+
+*This document is part of the [UN ProjectAdvisor Codex](../CODEX_INDEX.md)*

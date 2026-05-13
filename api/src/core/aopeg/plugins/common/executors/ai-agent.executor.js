@@ -83,7 +83,8 @@ class AiAgentExecutor extends BaseExecutor {
     }
 
     try {
-      const llmService = require('../../../../../services/llm.service');
+      const { getInstance: getLLMProvider } = require('../../../../../services/llm/LLMProviderService');
+      const llmProvider = getLLMProvider();
 
       // Build messages with optional system prompt override
       const finalMessages = this._buildMessages(messages, systemPrompt, aiContext);
@@ -96,8 +97,9 @@ class AiAgentExecutor extends BaseExecutor {
       if (model) opts.model = model;
       if (maxTokens) opts.maxTokens = maxTokens;
       if (temperature !== undefined) opts.temperature = temperature;
+      if (tools.length) opts.tools = tools;
 
-      const result = await llmService.chat(finalMessages, tools, null, opts);
+      const result = await llmProvider.chat(finalMessages, opts);
 
       // Extract response content
       const response = this._extractResponse(result);
@@ -121,7 +123,7 @@ class AiAgentExecutor extends BaseExecutor {
           usage,
           hasToolUse,
           model_used: result?.model || model || 'unknown',
-          provider: llmService.provider,
+          provider: llmProvider.type,
           mock: false,
         },
         {

@@ -362,12 +362,16 @@ Focus on UN-specific terminology (IMIS, Umoja, staff rules, etc.)
 
 Return only JSON array: ["query1", "query2", "query3"]`;
 
-      const response = await this.llmService.chat([
+      const rawResponse = await this.llmService.chat([
         { role: 'user', content: prompt }
       ], { temperature: 0.3, maxTokens: 200 });
 
-      // Parse response
-      const match = response.match(/\[[\s\S]*\]/);
+      // Normalize: LLMProviderService returns block array; older services return string
+      const text = Array.isArray(rawResponse)
+        ? rawResponse.filter(b => b.type === 'text').map(b => b.text).join('')
+        : (typeof rawResponse === 'string' ? rawResponse : rawResponse?.content || '');
+
+      const match = text.match(/\[[\s\S]*\]/);
       if (match) {
         return JSON.parse(match[0]);
       }

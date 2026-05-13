@@ -23,7 +23,7 @@ describe('SchemaRegistry', () => {
 
   test('should initialize with 8 built-in schemas', () => {
     const schemas = registry.listSchemas();
-    expect(schemas).toHaveLength(8);
+    expect(schemas).toHaveLength(17);
     expect(schemas).toContain('codex://schemas/base-node');
     expect(schemas).toContain('codex://schemas/provenance');
     expect(schemas).toContain('codex://schemas/node-version');
@@ -324,8 +324,8 @@ describe('SchemaRegistry', () => {
   // -----------------------------------------------------------------------
 
   describe('Constants', () => {
-    test('NAMESPACES has 4 values', () => {
-      expect(Object.keys(NAMESPACES)).toHaveLength(4);
+    test('NAMESPACES has 6 values', () => {
+      expect(Object.keys(NAMESPACES)).toHaveLength(6);
     });
 
     test('NODE_STATUS has 6 values', () => {

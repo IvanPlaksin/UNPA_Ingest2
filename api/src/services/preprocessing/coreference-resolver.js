@@ -15,7 +15,7 @@
 
 'use strict';
 
-const llmService = require('../llm.service');
+const { getInstance: getLLMProvider } = require('../llm/LLMProviderService');
 
 /**
  * Pronoun patterns for detection
@@ -129,12 +129,16 @@ Return ONLY valid JSON in this format:
   "replacements": [{"from": "he", "to": "John Smith", "position": 15}]
 }`;
 
-        const response = await llmService.chat([
-            { role: 'system', content: 'You are a linguistic expert specializing in coreference resolution. Replace pronouns with their referents. Return only valid JSON.' },
+        const response = await getLLMProvider().chat([
             { role: 'user', content: prompt }
-        ]);
+        ], {
+            system: 'You are a linguistic expert specializing in coreference resolution. Replace pronouns with their referents. Return only valid JSON.',
+        });
 
-        const content = response.content || '';
+        const rawContent = response.content;
+        const content = Array.isArray(rawContent)
+            ? rawContent.filter(b => b.type === 'text').map(b => b.text).join('')
+            : (rawContent || '');
         const parsed = this._parseJsonResponse(content);
 
         if (parsed.resolved && parsed.resolved !== text) {

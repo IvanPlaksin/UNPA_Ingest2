@@ -194,6 +194,12 @@ class ExpressionSandbox {
       throw new Error('Expression must be a string');
     }
 
+    // Reject expressions with dangerous patterns before execution
+    const safety = this.checkSafety(expression);
+    if (!safety.safe) {
+      throw new Error(`Security violation: ${safety.warnings.join('; ')}`);
+    }
+
     // Create sandbox with safe built-ins
     const sandbox = this._createSandbox(context);
 

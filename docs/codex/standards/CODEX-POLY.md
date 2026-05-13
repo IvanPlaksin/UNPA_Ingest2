@@ -1,32 +1,32 @@
-# CODEX-POLY: Протокол Polystore
+# CODEX-POLY: Polystore Protocol
 
-**Статус:** 🟡 Черновик
-**Версия:** 0.1.0
-**Последнее обновление:** 2026-03-12
-
----
-
-## Преамбула
-
-UN ProjectAdvisor — это polystore-система, использующая три хранилища данных:
-
-- **Memgraph** — графовая база данных (узлы, рёбра, свойства, связи)
-- **Qdrant** — векторное хранилище (эмбеддинги, семантический поиск)
-- **Redis** — кэш и очереди сообщений (pub/sub, TTL-кэш, сессии)
-
-Запись в несколько хранилищ **не является атомарной**. Отсутствует распределённый менеджер транзакций, объединяющий все три системы в единую ACID-транзакцию. Это означает, что при записи данных возможны частичные сбои: данные могут быть записаны в Memgraph, но не дойти до Qdrant, или кэш Redis может остаться устаревшим.
-
-Данный протокол определяет:
-
-1. **Порядок записи** — в какой последовательности обновлять хранилища
-2. **Обработку ошибок** — компенсирующие транзакции при частичных сбоях
-3. **Восстановление консистентности** — механизмы обнаружения и исправления рассинхронизации
+**Status:** 🟡 Draft
+**Version:** 0.1.0
+**Last updated:** 2026-03-12
 
 ---
 
-## 7.1 Порядок записи
+## Preamble
 
-### Диаграмма потока записи
+UN ProjectAdvisor is a polystore system using three data stores:
+
+- **Memgraph** — graph database (nodes, edges, properties, relationships)
+- **Qdrant** — vector store (embeddings, semantic search)
+- **Redis** — cache and message queues (pub/sub, TTL-cache, sessions)
+
+Writing to multiple stores **is not atomic**. There is no distributed transaction manager that joins all three systems into a single ACID transaction. This means that partial failures are possible during writes: data may be written to Memgraph but not reach Qdrant, or the Redis cache may remain stale.
+
+This protocol defines:
+
+1. **Write order** — in what sequence to update the stores
+2. **Error handling** — compensating transactions on partial failures
+3. **Consistency recovery** — mechanisms for detecting and correcting desynchronization
+
+---
+
+## 7.1 Write order
+
+### Write flow diagram
 
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
@@ -34,9 +34,9 @@ UN ProjectAdvisor — это polystore-система, использующая 
 │   Memgraph      │────▶│    Qdrant       │────▶│     Redis       │
 │   (primary)     │     │  (secondary)    │     │    (cache)      │
 │                 │     │                 │     │                 │
-│  Граф: узлы,    │     │  Векторы:       │     │  Кэш:           │
-│  рёбра,         │     │  эмбеддинги,    │     │  инвалидация,   │
-│  свойства       │     │  payload        │     │  pub/sub        │
+│  Graph: nodes,  │     │  Vectors:       │     │  Cache:         │
+│  edges,         │     │  embeddings,    │     │  invalidation,  │
+│  properties     │     │  payload        │     │  pub/sub        │
 │                 │     │                 │     │                 │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
        ▲                                               │
@@ -44,25 +44,25 @@ UN ProjectAdvisor — это polystore-система, использующая 
        └───────────────────────────────────────────────┘
 ```
 
-### Обоснование порядка
+### Write order rationale
 
-| Порядок | Хранилище | Причина |
-|---------|-----------|---------|
-| 1-й | **Memgraph** | Источник истины (source of truth). Все сущности получают `nodeId` при создании в графе. Без `nodeId` невозможна запись в Qdrant. |
-| 2-й | **Qdrant** | Вторичное хранилище. Требует `nodeId` из Memgraph для связи вектора с узлом графа. После upsert возвращает `vectorId`, который записывается обратно в Memgraph. |
-| 3-й | **Redis** | Кэш инвалидируется последним. Нет смысла инвалидировать кэш до завершения записи в основные хранилища. Также используется для pub/sub нотификаций о завершении записи. |
+| Order | Store | Reason |
+|-------|-------|--------|
+| 1st | **Memgraph** | Source of truth. All entities receive a `nodeId` when created in the graph. Without a `nodeId`, writing to Qdrant is impossible. |
+| 2nd | **Qdrant** | Secondary store. Requires the `nodeId` from Memgraph to link the vector to the graph node. After upsert, returns a `vectorId` that is written back to Memgraph. |
+| 3rd | **Redis** | Cache is invalidated last. There is no point in invalidating the cache before writing to the primary stores is complete. Also used for pub/sub notifications on write completion. |
 
-### Таблица зависимостей между хранилищами
+### Store dependency table
 
-| Операция | Memgraph → Qdrant | Qdrant → Memgraph | Memgraph → Redis | Redis → Memgraph |
-|----------|--------------------|--------------------|-------------------|-------------------|
-| Создание узла | `nodeId` передаётся как payload ID | `vectorId` записывается в свойство узла | Ключ кэша содержит `nodeId` | Нет зависимости |
-| Обновление свойств | Новый текст → пересчёт эмбеддинга | Нет | Инвалидация ключа `node:{nodeId}` | Нет |
-| Удаление узла | Удаление вектора по `nodeId` | Нет | Удаление всех ключей `*:{nodeId}:*` | Нет |
-| Создание ребра | Нет (рёбра не векторизуются) | Нет | Инвалидация кэша соседей | Нет |
-| Поиск (read) | Нет | Результаты обогащаются свойствами из MG | Кэширование результатов | Нет |
+| Operation | Memgraph → Qdrant | Qdrant → Memgraph | Memgraph → Redis | Redis → Memgraph |
+|-----------|-------------------|--------------------|------------------|------------------|
+| Node creation | `nodeId` passed as payload ID | `vectorId` written to node property | Cache key contains `nodeId` | No dependency |
+| Property update | New text → recompute embedding | None | Invalidate key `node:{nodeId}` | None |
+| Node deletion | Delete vector by `nodeId` | None | Delete all keys `*:{nodeId}:*` | None |
+| Edge creation | None (edges are not vectorized) | None | Invalidate neighbor cache | None |
+| Search (read) | None | Results enriched with properties from MG | Cache query results | None |
 
-### Шаблон операции записи
+### Write operation template
 
 ```javascript
 async function polystoreWrite(entityData, options = {}) {
@@ -70,7 +70,7 @@ async function polystoreWrite(entityData, options = {}) {
   const saga = new PolystoreSaga(operationId);
 
   try {
-    // ── Шаг 1: Memgraph (primary) ──────────────────────────────
+    // ── Step 1: Memgraph (primary) ──────────────────────────────
     const nodeId = entityData.id || crypto.randomUUID();
 
     const mgResult = await saga.addStep({
@@ -92,7 +92,7 @@ async function polystoreWrite(entityData, options = {}) {
       }
     });
 
-    // ── Шаг 2: Qdrant (secondary) ─────────────────────────────
+    // ── Step 2: Qdrant (secondary) ─────────────────────────────
     let vectorId = null;
     if (entityData.text && options.vectorize !== false) {
       const embedding = await teiService.embed(entityData.text);
@@ -122,7 +122,7 @@ async function polystoreWrite(entityData, options = {}) {
 
       vectorId = qdrantResult.vectorId;
 
-      // ── Шаг 2b: Обратная запись vectorId в Memgraph ────────
+      // ── Step 2b: Write back vectorId to Memgraph ────────
       await saga.addStep({
         name: 'UpdateVectorRef',
         execute: async () => {
@@ -141,7 +141,7 @@ async function polystoreWrite(entityData, options = {}) {
       });
     }
 
-    // ── Шаг 3: Redis (cache) ──────────────────────────────────
+    // ── Step 3: Redis (cache) ──────────────────────────────────
     await saga.addStep({
       name: 'InvalidateCache',
       execute: async () => {
@@ -160,7 +160,7 @@ async function polystoreWrite(entityData, options = {}) {
             await redisService.del(key);
           }
         }
-        // Публикация события для подписчиков
+        // Publish event for subscribers
         await redisService.publish('polystore:changes', JSON.stringify({
           operationId,
           type: 'write',
@@ -171,8 +171,8 @@ async function polystoreWrite(entityData, options = {}) {
         return { invalidated: true };
       },
       compensate: async () => {
-        // Кэш не требует компенсации — он самовосстанавливается
-        // через TTL и последующие read-запросы
+        // Cache does not require compensation — it self-heals
+        // through TTL and subsequent read requests
       }
     });
 
@@ -189,14 +189,14 @@ async function polystoreWrite(entityData, options = {}) {
 
 ## 7.2 Compensating transactions
 
-### Принцип компенсации
+### Compensation principle
 
-В отсутствие распределённых транзакций используется паттерн **Saga** — последовательность локальных транзакций с компенсирующими действиями. При сбое на любом шаге выполняется откат всех предыдущих шагов в обратном порядке (LIFO).
+In the absence of distributed transactions, the **Saga** pattern is used — a sequence of local transactions with compensating actions. On failure at any step, all previous steps are rolled back in reverse order (LIFO).
 
-### Диаграмма потока компенсации
+### Compensation flow diagram
 
 ```
-Прямой путь (forward path):
+Forward path:
 ═══════════════════════════════════════════════════════════════
 
   Step 1              Step 2              Step 3
@@ -206,7 +206,7 @@ async function polystoreWrite(entityData, options = {}) {
        │                    │                    │
        ▼                    ▼                    ▼
 
-Компенсация (compensation path, LIFO):
+Compensation path (LIFO):
 ═══════════════════════════════════════════════════════════════
 
                                           Compensate Step 3
@@ -224,34 +224,34 @@ async function polystoreWrite(entityData, options = {}) {
                ROLLED BACK
 
 
-Сценарии сбоев:
+Failure scenarios:
 ═══════════════════════════════════════════════════════════════
 
-  Сбой на Step 1:   Нет компенсации (ничего не записано)
-  Сбой на Step 2:   Compensate Step 1 (удалить узел из MG)
-  Сбой на Step 3:   Compensate Step 2 + Step 1
-  Сбой компенсации: alertInconsistency() → ручное вмешательство
+  Failure at Step 1:   No compensation (nothing written)
+  Failure at Step 2:   Compensate Step 1 (delete node from MG)
+  Failure at Step 3:   Compensate Step 2 + Step 1
+  Compensation failure: alertInconsistency() → manual intervention
 ```
 
-### Класс PolystoreSaga
+### PolystoreSaga class
 
 ```javascript
 class PolystoreSaga {
   constructor(operationId) {
     this.operationId = operationId;
-    this.completedSteps = [];     // Стек выполненных шагов (LIFO для отката)
+    this.completedSteps = [];     // Stack of completed steps (LIFO for rollback)
     this.startedAt = Date.now();
     this.status = 'pending';      // pending | executing | committed | compensating | failed
   }
 
   /**
-   * Добавляет и выполняет шаг саги.
-   * Каждый шаг регистрирует функцию компенсации до выполнения.
-   * При сбое execute — компенсация текущего шага НЕ вызывается
-   * (он не завершился успешно), но все предыдущие — откатываются.
+   * Adds and executes a saga step.
+   * Each step registers its compensation function before execution.
+   * On execute failure — the compensation for the current step is NOT called
+   * (it did not complete successfully), but all previous steps are rolled back.
    *
    * @param {Object} step - { name, execute, compensate }
-   * @returns {*} Результат execute()
+   * @returns {*} Result of execute()
    */
   async addStep(step) {
     this.status = 'executing';
@@ -264,11 +264,11 @@ class PolystoreSaga {
     };
 
     try {
-      // Выполнить прямое действие
+      // Execute the forward action
       const result = await step.execute();
       stepRecord.result = result;
 
-      // Регистрация в стеке ПОСЛЕ успешного выполнения
+      // Register in the stack AFTER successful execution
       this.completedSteps.push(stepRecord);
 
       logger.debug(`[Saga:${this.operationId}] Step "${step.name}" completed`, {
@@ -284,15 +284,15 @@ class PolystoreSaga {
         completedSteps: this.completedSteps.map(s => s.name)
       });
 
-      // Не добавляем текущий шаг — он не завершился
+      // Do not add current step — it did not complete
       throw error;
     }
   }
 
   /**
-   * Компенсация всех выполненных шагов в обратном порядке (LIFO).
-   * Если компенсация шага сама завершается с ошибкой —
-   * продолжаем компенсацию остальных, но помечаем рассинхронизацию.
+   * Compensate all completed steps in reverse order (LIFO).
+   * If a compensation step itself fails —
+   * continue compensating the rest, but mark the desynchronization.
    */
   async compensate() {
     this.status = 'compensating';
@@ -302,7 +302,7 @@ class PolystoreSaga {
       stepsToCompensate: this.completedSteps.map(s => s.name)
     });
 
-    // LIFO — обратный порядок
+    // LIFO — reverse order
     const stepsToUndo = [...this.completedSteps].reverse();
 
     for (const step of stepsToUndo) {
@@ -334,11 +334,11 @@ class PolystoreSaga {
   }
 
   /**
-   * Оповещение о рассинхронизации данных.
-   * Вызывается когда компенсирующая транзакция сама завершается с ошибкой,
-   * оставляя данные в неконсистентном состоянии.
+   * Alert on data desynchronization.
+   * Called when a compensating transaction itself fails,
+   * leaving data in an inconsistent state.
    *
-   * @param {Array} errors - массив { step, error }
+   * @param {Array} errors - array of { step, error }
    */
   async alertInconsistency(errors) {
     const alert = {
@@ -352,7 +352,7 @@ class PolystoreSaga {
       requiresManualIntervention: true
     };
 
-    // Записать в Memgraph для аудита
+    // Write to Memgraph for audit
     try {
       await memgraphService.runQuery(
         `CREATE (a:InconsistencyAlert {
@@ -370,15 +370,15 @@ class PolystoreSaga {
         }
       );
     } catch (dbError) {
-      // Если даже алерт не удалось записать — логируем в stderr
+      // If even the alert could not be written — log to stderr
       console.error('[CRITICAL] Cannot persist inconsistency alert:', alert);
     }
 
-    // Публикация в Redis для мониторинга
+    // Publish to Redis for monitoring
     try {
       await redisService.publish('polystore:inconsistency', JSON.stringify(alert));
     } catch (redisError) {
-      // Redis может быть недоступен — это ожидаемо при каскадном сбое
+      // Redis may be unavailable — expected during cascading failure
     }
 
     logger.error(`[CRITICAL] Polystore inconsistency detected`, alert);
@@ -386,7 +386,7 @@ class PolystoreSaga {
 }
 ```
 
-### Пример использования
+### Usage example
 
 ```javascript
 async function createEntityWithFullSync(entityData) {
@@ -394,7 +394,7 @@ async function createEntityWithFullSync(entityData) {
   const saga = new PolystoreSaga(operationId);
 
   try {
-    // ── Операция 1: Создание узла в Memgraph ──────────────────
+    // ── Operation 1: Create node in Memgraph ──────────────────
     const mgResult = await saga.addStep({
       name: 'CreateNode',
       execute: async () => {
@@ -414,7 +414,7 @@ async function createEntityWithFullSync(entityData) {
       }
     });
 
-    // ── Операция 2: Upsert вектора в Qdrant ───────────────────
+    // ── Operation 2: Upsert vector to Qdrant ───────────────────
     const qdrantResult = await saga.addStep({
       name: 'UpsertVector',
       execute: async () => {
@@ -438,7 +438,7 @@ async function createEntityWithFullSync(entityData) {
       }
     });
 
-    // ── Операция 3: Инвалидация кэша Redis ────────────────────
+    // ── Operation 3: Invalidate Redis cache ────────────────────
     const redisResult = await saga.addStep({
       name: 'InvalidateCache',
       execute: async () => {
@@ -451,8 +451,8 @@ async function createEntityWithFullSync(entityData) {
         return { keysInvalidated: 2 };
       },
       compensate: async () => {
-        // Кэш самовосстанавливается — компенсация не требуется.
-        // При следующем read-запросе кэш будет перестроен из Memgraph.
+        // Cache self-heals — no compensation needed.
+        // On the next read request the cache will be rebuilt from Memgraph.
         logger.info('Compensated: cache invalidation is self-healing, no action needed');
       }
     });
@@ -477,29 +477,29 @@ async function createEntityWithFullSync(entityData) {
 
 ## 7.3 Eventually consistent
 
-### Допустимые временные несоответствия
+### Allowable temporary inconsistencies
 
-В polystore-архитектуре абсолютная консистентность между хранилищами невозможна. Определяем допустимые окна временной неконсистентности:
+In a polystore architecture, absolute consistency between stores is impossible. We define allowable windows of temporary inconsistency:
 
-| Пара хранилищ | Тип рассинхронизации | Допустимое окно | Последствия | Обнаружение |
-|---------------|----------------------|-----------------|-------------|-------------|
-| Memgraph → Qdrant | Узел создан в MG, вектор ещё не записан в Qdrant | **< 5 секунд** | Семантический поиск не находит новый узел. Граф-запросы работают. | `findMissingVectors()` |
-| Qdrant → Redis | Вектор обновлён в Qdrant, кэш Redis содержит старый результат | **< 1 секунда** | Поисковые результаты показывают устаревшие данные | TTL-based expiry |
-| Удалённый узел → Orphaned vector | Узел удалён из MG, вектор остался в Qdrant | **< 1 час** | Поиск может возвращать ссылки на несуществующие узлы | `findOrphanedVectors()` |
-| MG property update → Qdrant payload | Свойство изменено в MG, payload в Qdrant устарел | **< 5 секунд** | Фильтрация по payload вернёт устаревшие данные | Периодическая сверка |
-| Redis cache → MG state | Кэш содержит устаревшие данные | **< TTL (300 сек)** | Read-запросы возвращают устаревшие данные | TTL auto-expiry |
+| Store pair | Type of desynchronization | Allowable window | Consequences | Detection |
+|------------|---------------------------|-----------------|--------------|-----------|
+| Memgraph → Qdrant | Node created in MG, vector not yet written to Qdrant | **< 5 seconds** | Semantic search does not find the new node. Graph queries work. | `findMissingVectors()` |
+| Qdrant → Redis | Vector updated in Qdrant, Redis cache contains old result | **< 1 second** | Search results show stale data | TTL-based expiry |
+| Deleted node → Orphaned vector | Node deleted from MG, vector remains in Qdrant | **< 1 hour** | Search may return references to non-existent nodes | `findOrphanedVectors()` |
+| MG property update → Qdrant payload | Property changed in MG, payload in Qdrant is stale | **< 5 seconds** | Filtering by payload returns stale data | Periodic reconciliation |
+| Redis cache → MG state | Cache contains stale data | **< TTL (300 sec)** | Read requests return stale data | TTL auto-expiry |
 
-### Уровни консистентности
+### Consistency levels
 
-Система поддерживает три уровня консистентности, выбираемых в зависимости от требований операции:
+The system supports three consistency levels, selected based on the requirements of the operation:
 
-| Уровень | Описание | Memgraph | Qdrant | Redis | Latency | Использование |
-|---------|----------|----------|--------|-------|---------|---------------|
-| `STRONG` | Все операции синхронные | sync | sync | sync | Высокая (200-500ms) | Критические записи, финансовые данные |
-| `EVENTUAL` | MG синхронно, остальные асинхронно | sync | async | async | Средняя (50-100ms) | Стандартные операции CRUD |
-| `BEST_EFFORT` | Все операции асинхронные | async | async | async | Низкая (10-30ms) | Bulk import, фоновые задачи |
+| Level | Description | Memgraph | Qdrant | Redis | Latency | Usage |
+|-------|-------------|----------|--------|-------|---------|-------|
+| `STRONG` | All operations synchronous | sync | sync | sync | High (200-500ms) | Critical writes, financial data |
+| `EVENTUAL` | MG synchronous, rest asynchronous | sync | async | async | Medium (50-100ms) | Standard CRUD operations |
+| `BEST_EFFORT` | All operations asynchronous | async | async | async | Low (10-30ms) | Bulk import, background tasks |
 
-### Реализация writeWithConsistency
+### writeWithConsistency implementation
 
 ```javascript
 const ConsistencyLevel = {
@@ -509,11 +509,11 @@ const ConsistencyLevel = {
 };
 
 /**
- * Запись данных с выбранным уровнем консистентности.
+ * Write data with the selected consistency level.
  *
- * @param {Object} entityData - данные для записи
- * @param {string} level - уровень консистентности (STRONG | EVENTUAL | BEST_EFFORT)
- * @returns {Object} результат записи
+ * @param {Object} entityData - data to write
+ * @param {string} level - consistency level (STRONG | EVENTUAL | BEST_EFFORT)
+ * @returns {Object} write result
  */
 async function writeWithConsistency(entityData, level = ConsistencyLevel.EVENTUAL) {
   const operationId = crypto.randomUUID();
@@ -522,7 +522,7 @@ async function writeWithConsistency(entityData, level = ConsistencyLevel.EVENTUA
   switch (level) {
 
     case ConsistencyLevel.STRONG: {
-      // ── Все три шага синхронно, с полной Saga-компенсацией ──
+      // ── All three steps synchronously, with full Saga compensation ──
       const saga = new PolystoreSaga(operationId);
 
       try {
@@ -553,14 +553,14 @@ async function writeWithConsistency(entityData, level = ConsistencyLevel.EVENTUA
     }
 
     case ConsistencyLevel.EVENTUAL: {
-      // ── Memgraph синхронно, Qdrant и Redis — через очередь ──
+      // ── Memgraph synchronously, Qdrant and Redis — via queue ──
       try {
         results.steps.memgraph = await writeToMemgraph(entityData);
       } catch (error) {
         throw new PolystoreWriteError(operationId, error);
       }
 
-      // Асинхронные задачи через Redis queue
+      // Async tasks via Redis queue
       const asyncTasks = {
         qdrant: {
           type: 'UPSERT_VECTOR',
@@ -587,7 +587,7 @@ async function writeWithConsistency(entityData, level = ConsistencyLevel.EVENTUA
     }
 
     case ConsistencyLevel.BEST_EFFORT: {
-      // ── Все три шага асинхронно через очередь ───────────────
+      // ── All three steps asynchronously via queue ───────────────
       const taskId = crypto.randomUUID();
 
       const batchTask = {
@@ -622,11 +622,11 @@ async function writeWithConsistency(entityData, level = ConsistencyLevel.EVENTUA
 
 ## 7.4 Checkpoint/Resume
 
-### Назначение
+### Purpose
 
-Долговременные конвейеры (bulk import, полная переиндексация, GXE-execution) могут обрабатывать тысячи узлов. При сбое нельзя терять прогресс — необходимо возобновление с последнего успешного шага.
+Long-running pipelines (bulk import, full re-indexing, GXE execution) may process thousands of nodes. On failure, progress must not be lost — resumption from the last successful step is required.
 
-### Класс CheckpointManager
+### CheckpointManager class
 
 ```javascript
 class CheckpointManager {
@@ -634,17 +634,17 @@ class CheckpointManager {
     this.pipelineId = pipelineId;
     this.redisService = redisService;
     this.checkpointKey = `checkpoint:${pipelineId}`;
-    this.TTL_SECONDS = 86400; // 24 часа
+    this.TTL_SECONDS = 86400; // 24 hours
   }
 
   /**
-   * Сохраняет checkpoint в Redis с TTL 24 часа.
+   * Saves a checkpoint to Redis with a 24-hour TTL.
    *
-   * @param {Object} state - текущее состояние конвейера
-   * @param {string} state.currentStep - имя текущего шага
-   * @param {number} state.processedCount - количество обработанных элементов
-   * @param {Array<string>} state.completedOps - список завершённых операций
-   * @param {Object} state.context - произвольный контекст для восстановления
+   * @param {Object} state - current pipeline state
+   * @param {string} state.currentStep - name of the current step
+   * @param {number} state.processedCount - number of processed items
+   * @param {Array<string>} state.completedOps - list of completed operations
+   * @param {Object} state.context - arbitrary context for resumption
    */
   async saveCheckpoint(state) {
     const checkpoint = {
@@ -673,9 +673,9 @@ class CheckpointManager {
   }
 
   /**
-   * Загружает последний checkpoint из Redis.
+   * Loads the latest checkpoint from Redis.
    *
-   * @returns {Object|null} состояние checkpoint или null если не найден / истёк TTL
+   * @returns {Object|null} checkpoint state or null if not found / TTL expired
    */
   async loadCheckpoint() {
     const raw = await this.redisService.get(this.checkpointKey);
@@ -702,13 +702,13 @@ class CheckpointManager {
   }
 
   /**
-   * Возобновляет выполнение конвейера с последнего checkpoint.
-   * Пропускает уже завершённые операции.
+   * Resumes pipeline execution from the last checkpoint.
+   * Skips already completed operations.
    *
-   * @param {Array<Object>} operations - полный список операций конвейера
-   *   Каждая операция: { id, name, execute }
-   * @param {Function} onProgress - callback для отслеживания прогресса
-   * @returns {Object} результат выполнения
+   * @param {Array<Object>} operations - full list of pipeline operations
+   *   Each operation: { id, name, execute }
+   * @param {Function} onProgress - callback for progress tracking
+   * @returns {Object} execution result
    */
   async resumeFromCheckpoint(operations, onProgress) {
     const checkpoint = await this.loadCheckpoint();
@@ -724,7 +724,7 @@ class CheckpointManager {
     const results = [];
 
     for (const op of operations) {
-      // Пропустить уже завершённые операции
+      // Skip already completed operations
       if (completedOps.has(op.id)) {
         logger.debug(`[Checkpoint:${this.pipelineId}] Skipping completed op: ${op.name}`);
         continue;
@@ -737,7 +737,7 @@ class CheckpointManager {
         completedOps.add(op.id);
         processedCount++;
 
-        // Сохранить checkpoint
+        // Save checkpoint
         await this.saveCheckpoint({
           currentStep: op.name,
           processedCount,
@@ -759,7 +759,7 @@ class CheckpointManager {
           processedCount
         });
 
-        // Сохранить checkpoint ДО ошибки — при retry пропустим завершённые
+        // Save checkpoint BEFORE the error — on retry skip completed ones
         await this.saveCheckpoint({
           currentStep: op.name,
           processedCount,
@@ -771,7 +771,7 @@ class CheckpointManager {
       }
     }
 
-    // Очистить checkpoint после успешного завершения
+    // Clear checkpoint after successful completion
     await this.redisService.del(this.checkpointKey);
 
     return {
@@ -784,21 +784,21 @@ class CheckpointManager {
 }
 ```
 
-### Частота создания checkpoint
+### Checkpoint frequency
 
-| Тип конвейера | Частота checkpoint | Обоснование |
-|---------------|--------------------|-------------|
-| **Bulk import** | Каждые 100 узлов | Баланс между производительностью и допустимой потерей прогресса. Повторная обработка 100 узлов — приемлемые ~30 секунд. |
-| **Incremental update** | Каждые 10 узлов | Инкрементальные обновления более ценны — каждый узел может содержать уникальные данные. Потеря 10 узлов — допустимо. |
-| **GXE execution** | Каждый узел | Каждый узел GXE-графа может запускать LLM-вызов (дорогой). Повторный вызов LLM — трата бюджета. Checkpoint на каждом шаге обязателен. |
-| **Reindexing** | Каждые 500 векторов | Переиндексация — идемпотентная операция. Повтор 500 upsert в Qdrant — ~10 секунд, приемлемо. |
-| **Graph migration** | Каждый шаг миграции | Миграция меняет структуру. Частичная миграция опаснее частичного импорта. Checkpoint на каждый DDL-шаг. |
+| Pipeline type | Checkpoint frequency | Rationale |
+|---------------|----------------------|-----------|
+| **Bulk import** | Every 100 nodes | Balance between performance and acceptable progress loss. Reprocessing 100 nodes — acceptable ~30 seconds. |
+| **Incremental update** | Every 10 nodes | Incremental updates are more valuable — each node may contain unique data. Losing 10 nodes — acceptable. |
+| **GXE execution** | Every node | Each GXE graph node may trigger an LLM call (expensive). Repeating an LLM call wastes budget. Checkpoint at every step is mandatory. |
+| **Reindexing** | Every 500 vectors | Reindexing is an idempotent operation. Repeating 500 upserts in Qdrant — ~10 seconds, acceptable. |
+| **Graph migration** | Every migration step | Migration changes structure. Partial migration is more dangerous than partial import. Checkpoint at every DDL step. |
 
 ---
 
 ## 7.5 Health checks
 
-### Класс PolystoreHealthChecker
+### PolystoreHealthChecker class
 
 ```javascript
 class PolystoreHealthChecker {
@@ -809,9 +809,9 @@ class PolystoreHealthChecker {
   }
 
   /**
-   * Полная проверка консистентности между хранилищами.
+   * Full consistency check between stores.
    *
-   * @returns {Object} отчёт о рассинхронизациях
+   * @returns {Object} desynchronization report
    */
   async checkConsistency() {
     const report = {
@@ -820,7 +820,7 @@ class PolystoreHealthChecker {
       stats: {}
     };
 
-    // ── Проверка 1: Orphaned vectors ────────────────────────────
+    // ── Check 1: Orphaned vectors ────────────────────────────────
     const orphaned = await this.findOrphanedVectors();
     report.stats.orphanedVectors = orphaned.length;
     if (orphaned.length > 0) {
@@ -828,12 +828,12 @@ class PolystoreHealthChecker {
         type: 'ORPHANED_VECTORS',
         severity: orphaned.length > 100 ? 'HIGH' : 'MEDIUM',
         count: orphaned.length,
-        description: `Найдено ${orphaned.length} векторов в Qdrant без соответствующих узлов в Memgraph`,
-        vectorIds: orphaned.slice(0, 50) // Первые 50 для отчёта
+        description: `Found ${orphaned.length} vectors in Qdrant without corresponding nodes in Memgraph`,
+        vectorIds: orphaned.slice(0, 50) // First 50 for report
       });
     }
 
-    // ── Проверка 2: Missing vectors ─────────────────────────────
+    // ── Check 2: Missing vectors ─────────────────────────────────
     const missing = await this.findMissingVectors();
     report.stats.missingVectors = missing.length;
     if (missing.length > 0) {
@@ -841,12 +841,12 @@ class PolystoreHealthChecker {
         type: 'MISSING_VECTORS',
         severity: missing.length > 50 ? 'HIGH' : 'MEDIUM',
         count: missing.length,
-        description: `Найдено ${missing.length} узлов в Memgraph с vectorId, но без соответствующих записей в Qdrant`,
+        description: `Found ${missing.length} nodes in Memgraph with vectorId but without corresponding records in Qdrant`,
         nodeIds: missing.slice(0, 50)
       });
     }
 
-    // ── Проверка 3: Stale cache ─────────────────────────────────
+    // ── Check 3: Stale cache ─────────────────────────────────────
     const stale = await this.findStaleCache();
     report.stats.staleCacheKeys = stale.length;
     if (stale.length > 0) {
@@ -854,7 +854,7 @@ class PolystoreHealthChecker {
         type: 'STALE_CACHE',
         severity: 'LOW',
         count: stale.length,
-        description: `Найдено ${stale.length} ключей кэша Redis, ссылающихся на несуществующие или изменённые узлы`,
+        description: `Found ${stale.length} Redis cache keys referencing non-existent or changed nodes`,
         keys: stale.slice(0, 20)
       });
     }
@@ -864,14 +864,14 @@ class PolystoreHealthChecker {
   }
 
   /**
-   * Поиск "осиротевших" векторов — записей в Qdrant,
-   * для которых не существует соответствующего узла в Memgraph.
+   * Find "orphaned" vectors — records in Qdrant
+   * for which no corresponding node exists in Memgraph.
    *
-   * Алгоритм: скролл по всем точкам в коллекции Qdrant,
-   * для каждого batch проверяем наличие узла в Memgraph.
+   * Algorithm: scroll through all points in the Qdrant collection,
+   * check existence in Memgraph for each batch.
    *
-   * @param {string} collection - имя коллекции Qdrant (по умолчанию 'default')
-   * @returns {Array<string>} список vectorId без узлов в MG
+   * @param {string} collection - Qdrant collection name (default 'default')
+   * @returns {Array<string>} list of vectorIds without nodes in MG
    */
   async findOrphanedVectors(collection = 'default') {
     const orphaned = [];
@@ -879,24 +879,24 @@ class PolystoreHealthChecker {
     const batchSize = 100;
 
     do {
-      // Скролл по точкам Qdrant
+      // Scroll through Qdrant points
       const scrollResult = await this.qdrant.scroll(collection, {
         limit: batchSize,
         offset: offset,
         with_payload: true,
-        with_vectors: false // Векторы не нужны для проверки
+        with_vectors: false // Vectors not needed for checking
       });
 
       const points = scrollResult.points || [];
       if (points.length === 0) break;
 
-      // Извлечь nodeId из payload каждой точки
+      // Extract nodeId from payload of each point
       const nodeIds = points
         .map(p => p.payload?.nodeId || p.id)
         .filter(Boolean);
 
       if (nodeIds.length > 0) {
-        // Batch-проверка в Memgraph: какие из nodeIds существуют?
+        // Batch check in Memgraph: which nodeIds exist?
         const existResult = await this.memgraph.runQuery(
           `UNWIND $ids AS nid
            OPTIONAL MATCH (n {id: nid})
@@ -910,7 +910,7 @@ class PolystoreHealthChecker {
             .map(r => r.get('nid'))
         );
 
-        // Те, кого нет в Memgraph — orphaned
+        // Those not in Memgraph — orphaned
         for (const point of points) {
           const nodeId = point.payload?.nodeId || point.id;
           if (!existingSet.has(nodeId)) {
@@ -926,16 +926,16 @@ class PolystoreHealthChecker {
   }
 
   /**
-   * Поиск "отсутствующих" векторов — узлов в Memgraph,
-   * у которых есть свойство vectorId, но в Qdrant нет соответствующей записи.
+   * Find "missing" vectors — nodes in Memgraph
+   * that have a vectorId property but have no corresponding record in Qdrant.
    *
-   * @param {string} collection - имя коллекции Qdrant (по умолчанию 'default')
-   * @returns {Array<string>} список nodeId с отсутствующими векторами
+   * @param {string} collection - Qdrant collection name (default 'default')
+   * @returns {Array<string>} list of nodeIds with missing vectors
    */
   async findMissingVectors(collection = 'default') {
     const missing = [];
 
-    // Получить все узлы с vectorId из Memgraph
+    // Get all nodes with vectorId from Memgraph
     const mgResult = await this.memgraph.runQuery(
       `MATCH (n)
        WHERE n.vectorId IS NOT NULL
@@ -947,7 +947,7 @@ class PolystoreHealthChecker {
       vectorId: r.get('vectorId')
     }));
 
-    // Batch-проверка в Qdrant
+    // Batch check in Qdrant
     const batchSize = 100;
     for (let i = 0; i < nodesWithVectors.length; i += batchSize) {
       const batch = nodesWithVectors.slice(i, i + batchSize);
@@ -968,7 +968,7 @@ class PolystoreHealthChecker {
           }
         }
       } catch (error) {
-        // Если коллекция не существует — все векторы отсутствуют
+        // If collection does not exist — all vectors are missing
         if (error.message?.includes('not found')) {
           missing.push(...batch.map(n => n.nodeId));
         } else {
@@ -981,15 +981,15 @@ class PolystoreHealthChecker {
   }
 
   /**
-   * Поиск устаревших записей кэша — ключей в Redis,
-   * ссылающихся на узлы, которые были удалены или изменены в Memgraph.
+   * Find stale cache entries — keys in Redis
+   * referencing nodes that were deleted or changed in Memgraph.
    *
-   * @returns {Array<string>} список устаревших ключей Redis
+   * @returns {Array<string>} list of stale Redis keys
    */
   async findStaleCache() {
     const staleKeys = [];
 
-    // Сканируем ключи node:* в Redis
+    // Scan node:* keys in Redis
     let cursor = '0';
     do {
       const [nextCursor, keys] = await this.redis.scan(cursor, 'MATCH', 'node:*', 'COUNT', 100);
@@ -1004,7 +1004,7 @@ class PolystoreHealthChecker {
         try {
           const cachedData = JSON.parse(cached);
 
-          // Проверить существование и актуальность в Memgraph
+          // Check existence and freshness in Memgraph
           const mgResult = await this.memgraph.runQuery(
             `MATCH (n {id: $id})
              RETURN n.updatedAt AS updatedAt`,
@@ -1012,17 +1012,17 @@ class PolystoreHealthChecker {
           );
 
           if (mgResult.records.length === 0) {
-            // Узел удалён — кэш устарел
+            // Node deleted — cache is stale
             staleKeys.push(key);
           } else {
             const mgUpdatedAt = mgResult.records[0].get('updatedAt');
             if (cachedData.cachedAt && mgUpdatedAt && new Date(mgUpdatedAt) > new Date(cachedData.cachedAt)) {
-              // Узел обновлён после кэширования
+              // Node updated after caching
               staleKeys.push(key);
             }
           }
         } catch (parseError) {
-          // Некорректный JSON в кэше — тоже stale
+          // Invalid JSON in cache — also stale
           staleKeys.push(key);
         }
       }
@@ -1032,10 +1032,10 @@ class PolystoreHealthChecker {
   }
 
   /**
-   * Автоматическое исправление обнаруженных рассинхронизаций.
+   * Automatically repair detected desynchronizations.
    *
-   * @param {Object} report - отчёт от checkConsistency()
-   * @returns {Object} результат ремонта
+   * @param {Object} report - report from checkConsistency()
+   * @returns {Object} repair result
    */
   async autoRepair(report) {
     const repairLog = {
@@ -1049,7 +1049,7 @@ class PolystoreHealthChecker {
         switch (issue.type) {
 
           case 'ORPHANED_VECTORS': {
-            // Удалить осиротевшие векторы из Qdrant
+            // Delete orphaned vectors from Qdrant
             const orphanedIds = issue.vectorIds || [];
             if (orphanedIds.length > 0) {
               await this.qdrant.delete('default', {
@@ -1057,7 +1057,7 @@ class PolystoreHealthChecker {
               });
               repairLog.repaired.push({
                 type: 'ORPHANED_VECTORS',
-                action: 'Удалены осиротевшие векторы из Qdrant',
+                action: 'Deleted orphaned vectors from Qdrant',
                 count: orphanedIds.length
               });
             }
@@ -1065,7 +1065,7 @@ class PolystoreHealthChecker {
           }
 
           case 'MISSING_VECTORS': {
-            // Пересоздать отсутствующие векторы
+            // Recreate missing vectors
             const nodeIds = issue.nodeIds || [];
             let reindexed = 0;
 
@@ -1094,7 +1094,7 @@ class PolystoreHealthChecker {
                     });
                     reindexed++;
                   } else {
-                    // Нет текста — убрать vectorId из узла
+                    // No text — remove vectorId from node
                     await this.memgraph.runQuery(
                       `MATCH (n {id: $id}) REMOVE n.vectorId`,
                       { id: nodeId }
@@ -1112,20 +1112,20 @@ class PolystoreHealthChecker {
 
             repairLog.repaired.push({
               type: 'MISSING_VECTORS',
-              action: 'Пересозданы отсутствующие векторы в Qdrant',
+              action: 'Recreated missing vectors in Qdrant',
               count: reindexed
             });
             break;
           }
 
           case 'STALE_CACHE': {
-            // Удалить устаревшие ключи кэша
+            // Delete stale cache keys
             const keys = issue.keys || [];
             if (keys.length > 0) {
               await this.redis.del(...keys);
               repairLog.repaired.push({
                 type: 'STALE_CACHE',
-                action: 'Удалены устаревшие ключи кэша Redis',
+                action: 'Deleted stale Redis cache keys',
                 count: keys.length
               });
             }
@@ -1150,15 +1150,15 @@ class PolystoreHealthChecker {
 }
 ```
 
-### Расписание проверок
+### Check schedule
 
-| Проверка | Интервал | Обоснование | autoRepair |
-|----------|----------|-------------|------------|
-| **Orphaned vectors** (`findOrphanedVectors`) | Каждые 6 часов | Осиротевшие векторы накапливаются медленно (только при сбоях удаления). 6 часов — достаточно для обнаружения, не нагружает Qdrant скроллом. | Да — удаление из Qdrant |
-| **Missing vectors** (`findMissingVectors`) | Каждые 1 час | Отсутствие векторов влияет на семантический поиск. 1 час — компромисс между актуальностью поиска и нагрузкой на переиндексацию. | Да — пересоздание эмбеддингов |
-| **Stale cache** (`findStaleCache`) | Каждые 15 минут | Устаревший кэш — наименее критичная проблема (TTL 300 секунд самоочищает). 15 минут ловит ключи без TTL и ключи с длинным TTL. | Да — удаление ключей |
-| **Hash chain integrity** | Еженедельно | Проверка целостности цепочки хешей аудит-лога. Дорогая операция (полный обход). Еженедельно достаточно для обнаружения фальсификации. | Нет — ручное расследование |
+| Check | Interval | Rationale | autoRepair |
+|-------|----------|-----------|------------|
+| **Orphaned vectors** (`findOrphanedVectors`) | Every 6 hours | Orphaned vectors accumulate slowly (only on delete failures). 6 hours is enough for detection without overloading Qdrant with scrolling. | Yes — delete from Qdrant |
+| **Missing vectors** (`findMissingVectors`) | Every 1 hour | Missing vectors affect semantic search. 1 hour is a compromise between search freshness and re-indexing load. | Yes — recreate embeddings |
+| **Stale cache** (`findStaleCache`) | Every 15 minutes | Stale cache is the least critical problem (TTL 300 seconds self-cleans). 15 minutes catches keys without TTL and keys with long TTL. | Yes — delete keys |
+| **Hash chain integrity** | Weekly | Checking the integrity of the audit log hash chain. Expensive operation (full traversal). Weekly is sufficient for detecting tampering. | No — manual investigation |
 
 ---
 
-*Этот документ является частью [Кодекса UN ProjectAdvisor](../CODEX_INDEX.md)*
+*This document is part of the [UN ProjectAdvisor Codex](../CODEX_INDEX.md)*

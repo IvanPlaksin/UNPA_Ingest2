@@ -96,16 +96,25 @@ class FindPathTool extends BaseTool {
         `;
         break;
       case 'dijkstra':
-        cypher = `
-          MATCH (start {_id: $fromId}), (end {_id: $toId})
-          CALL gds.shortestPath.dijkstra.stream({
-            nodeQuery: 'MATCH (n) RETURN id(n) AS id',
-            relationshipQuery: 'MATCH (n)-[r]->(m) RETURN id(n) AS source, id(m) AS target, coalesce(r.weight, 1.0) AS weight',
-            startNode: start,
-            endNode: end
-          }) YIELD nodeId, cost
-          RETURN gds.util.asNode(nodeId) AS node, cost
-        `;
+        // GDS library is Memgraph/Neo4j-specific; fall back to shortestPath on AGE
+        if (process.env.GRAPH_DB_BACKEND === 'postgres-age') {
+          cypher = `
+            MATCH (start {_id: $fromId}), (end {_id: $toId}),
+                  p = shortestPath((start)${dirPattern}(end))
+            RETURN p
+          `;
+        } else {
+          cypher = `
+            MATCH (start {_id: $fromId}), (end {_id: $toId})
+            CALL gds.shortestPath.dijkstra.stream({
+              nodeQuery: 'MATCH (n) RETURN id(n) AS id',
+              relationshipQuery: 'MATCH (n)-[r]->(m) RETURN id(n) AS source, id(m) AS target, coalesce(r.weight, 1.0) AS weight',
+              startNode: start,
+              endNode: end
+            }) YIELD nodeId, cost
+            RETURN gds.util.asNode(nodeId) AS node, cost
+          `;
+        }
         break;
       default: // shortestPath
         cypher = `

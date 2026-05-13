@@ -701,4 +701,11 @@ class QdrantService {
     }
 }
 
-module.exports = new QdrantService();
+// Facade: when VECTOR_DB_BACKEND=pgvector, export PgvectorAdapter instead.
+// All 34+ consumers of this module work transparently with either backend.
+if (process.env.VECTOR_DB_BACKEND === 'pgvector') {
+  const { PgvectorAdapter } = require('./storage/adapters/PgvectorAdapter');
+  module.exports = new PgvectorAdapter();
+} else {
+  module.exports = new QdrantService();
+}

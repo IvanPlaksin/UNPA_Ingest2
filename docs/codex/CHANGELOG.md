@@ -1,51 +1,51 @@
-# Changelog — Кодекс UN ProjectAdvisor
+# Changelog — Codex UN ProjectAdvisor
 
-Все значимые изменения в Кодексе документируются здесь.
+All significant changes to the Codex are documented here.
 
-Формат основан на [Keep a Changelog](https://keepachangelog.com/ru/1.0.0/).
+Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [0.1.0] — 2026-03-12
 
-### Добавлено
+### Added
 
-#### Часть 0: AI Манифест
-- Философия системы и роль ИИ-агентов
-- Принципы работы с противоречиями
-- Этические границы автономии
+#### Part 0: AI Manifesto
+- System philosophy and the role of AI agents
+- Principles for handling contradictions
+- Ethical boundaries of autonomy
 
-#### Часть I: CODEX-CRUD
-- Стандарты создания узлов и рёбер
+#### Part I: CODEX-CRUD
+- Standards for creating nodes and edges
 - Fingerprint collision handling
 - Polystore saga pattern (Memgraph → Qdrant → Redis)
 
-#### Часть II: CODEX-META
-- Обязательные поля метаданных (3 уровня)
-- Knowledge Quantum schema (8 блоков)
+#### Part II: CODEX-META
+- Mandatory metadata fields (3 levels)
+- Knowledge Quantum schema (8 blocks)
 - W3C PROV-O mapping
 - Hash chain integrity
 - Bi-temporal model (tt/vt)
 
-#### Часть III: CODEX-VERSION
-- Две модели: NodeVersion vs Domain nodes
-- Bridge pattern для связи моделей
+#### Part III: CODEX-VERSION
+- Two models: NodeVersion vs Domain nodes
+- Bridge pattern for linking models
 - SUPERSEDES chain management
-- Merge/Split/Fork операции
-- God Mode протокол
-- Tombstones и soft delete
+- Merge/Split/Fork operations
+- God Mode protocol
+- Tombstones and soft delete
 
-#### Часть IV: CODEX-NS
-- Четыре namespace (CORE/PROJECT/META/COMMON)
-- Routing rules и auto-detection
+#### Part IV: CODEX-NS
+- Four namespaces (CORE/PROJECT/META/COMMON)
+- Routing rules and auto-detection
 - Cross-namespace query patterns
 - Isolation guarantees
 - ExecutionRecord → META migration
 
-#### Часть V: CODEX-VALID
+#### Part V: CODEX-VALID
 - JSON Schema registry (7 schemas)
 - Validation modes (warn/strict/skip)
 - Error codes (VAL001-VAL009)
 
-#### Часть VI: CODEX-CATALOG
+#### Part VI: CODEX-CATALOG
 - CatalogEntry/GraphVersion/GraphDefinition schema
 - Auto-save policy
 - 3-level deduplication (hash → Jaccard → GNN)
@@ -53,142 +53,142 @@
 - Reuse strategies (DIRECT_REUSE, CLONE_MODIFY, ABSTRACT_INHERIT, CREATE_NEW)
 - Pattern promotion lifecycle
 
-#### Часть VII: CODEX-POLY
+#### Part VII: CODEX-POLY
 - Canonical write order (Memgraph → Qdrant → Redis)
 - Compensating transactions (saga)
 - Consistency levels
-- Checkpoint/Resume для pipelines
-- Health checks и auto-repair
+- Checkpoint/Resume for pipelines
+- Health checks and auto-repair
 
-#### Часть VIII: SELF-EVOLUTION (future)
+#### Part VIII: SELF-EVOLUTION (future)
 - Agent cascade architecture (3-tier)
 - Consensus voting mechanisms (Majority/Weighted/Unanimous)
 - APES (Agent Performance Evolution System)
-- Contradiction detection и resolution
+- Contradiction detection and resolution
 - Self-documentation (ADR auto-generation)
 - Autonomy levels 0-4
 
-### Инфраструктура
+### Infrastructure
 - Schema Registry (`api/src/validation/schema-registry.js`) — 7 JSON schemas
-- Интеграция в `memgraph.service.js` (warn mode по умолчанию)
+- Integration into `memgraph.service.js` (warn mode by default)
 - 34/34 unit tests passing
 - Error codes: VAL001-VAL009, CRUD001-CRUD009, CATALOG001-CATALOG006
 
 ## [0.1.1] — 2026-03-12
 
-### Добавлено
+### Added
 
-#### Часть IX: CODEX-DOMAINS
-- 17 Information Types (двухуровневая архитектура: System Meta + Target Project)
-- Label routing rules (76 labels → 17 типов → 4 namespace)
-- Auto-documentation protocol для автономно создаваемых графов
-- Статистика: 4,662 узла, 18,330 рёбер
+#### Part IX: CODEX-DOMAINS
+- 17 Information Types (two-level architecture: System Meta + Target Project)
+- Label routing rules (76 labels → 17 types → 4 namespaces)
+- Auto-documentation protocol for autonomously created graphs
+- Statistics: 4,662 nodes, 18,330 edges
 
-### Исправлено
+### Fixed
 
-#### FIX-KB-001: ACTIVE_CONFIG аномалия
-- Удалено 137,160 дубликатов рёбер ACTIVE_CONFIG
-- Удалено 20 дубликатов AIConfigSet и 57 AIProviderConfig
-- Исправлен `_setActiveConfigSetInternal()` (row-per-match → two-step)
-- Исправлен `_createConfigSetInternal()` (CREATE → MERGE)
-- Исправлен `_createProviderConfig()` (CREATE → MERGE)
+#### FIX-KB-001: ACTIVE_CONFIG anomaly
+- Removed 137,160 duplicate ACTIVE_CONFIG edges
+- Removed 20 duplicate AIConfigSet and 57 AIProviderConfig
+- Fixed `_setActiveConfigSetInternal()` (row-per-match → two-step)
+- Fixed `_createConfigSetInternal()` (CREATE → MERGE)
+- Fixed `_createProviderConfig()` (CREATE → MERGE)
 
 #### FIX-KB-002: Namespace inconsistency
-- Унифицированы CORE/Core/core → CORE (82 узла)
-- Удалены default/default2 namespace (16 узлов → CORE)
-- Добавлена нормализация namespace в `memgraph.service.js` `mergeNode()`
+- Unified CORE/Core/core → CORE (82 nodes)
+- Removed default/default2 namespaces (16 nodes → CORE)
+- Added namespace normalization in `memgraph.service.js` `mergeNode()`
 
-#### FIX-KB-003: Namespace для всех узлов
-- 2,896 узлов получили namespace (было 63% без namespace → 0%)
-- Маппинг по доменам: PROJECT(2,188), CORE(443+180), META(47)
+#### FIX-KB-003: Namespace for all nodes
+- 2,896 nodes received a namespace (was 63% without namespace → 0%)
+- Mapping by domain: PROJECT(2,188), CORE(443+180), META(47)
 
 #### FIX-KB-004: Namespace mismatches
 - SystemComponent: GXE → CORE (20)
 - BehavioralNode: CORE → PROJECT (18)
 - Notification: CORE → META (15)
-- Унифицированы sql-extraction, iNeed, YOUNEED, core.types.* → 4 стандартных NS
+- Unified sql-extraction, iNeed, YOUNEED, core.types.* → 4 standard NS
 
 ## [0.1.2] — 2026-03-13
 
-### Добавлено
+### Added
 
-#### CC-029: Унификация ExecutionRecord
-- Создан `ExecutionRecorder` (`runtime/persistence/ExecutionRecorder.js`)
-- Интеграция в RuntimeEngine._buildResult() (fire-and-forget)
-- Миграция AOPEG_Execution → ExecutionRecord (META namespace)
-- ExecutionNodeRecordSchema добавлена в Schema Registry (8 schemas)
+#### CC-029: ExecutionRecord unification
+- Created `ExecutionRecorder` (`runtime/persistence/ExecutionRecorder.js`)
+- Integration into RuntimeEngine._buildResult() (fire-and-forget)
+- Migration AOPEG_Execution → ExecutionRecord (META namespace)
+- ExecutionNodeRecordSchema added to Schema Registry (8 schemas)
 
-#### CC-030: E2E тест ExecutionRecord
-- Тестовый скрипт `scripts/test-execution-record.js` (7/7 checks)
-- Исправлен баг: 3 вызова _buildResult() не передавали dag
+#### CC-030: E2E test ExecutionRecord
+- Test script `scripts/test-execution-record.js` (7/7 checks)
+- Fixed bug: 3 calls to _buildResult() did not pass dag
 
 #### CC-031: Production Activation
 - StartupManager (`services/startup/StartupManager.js`)
-- OrphanDetector cron (каждые 6 часов)
-- TombstoneExpirer cron (каждые 24 часа)
+- OrphanDetector cron (every 6 hours)
+- TombstoneExpirer cron (every 24 hours)
 - Health endpoint `/health/codex`
-- Graceful shutdown интеграция
-- Тестовый скрипт `scripts/test-startup-manager.js` (12/12 checks)
+- Graceful shutdown integration
+- Test script `scripts/test-startup-manager.js` (12/12 checks)
 
 #### CC-032: Architecture Decision Records
-- 6 ADR созданы в `docs/codex/adr/`
+- 6 ADRs created in `docs/codex/adr/`
 - ADR-001: Memgraph as Knowledge Graph Store
 - ADR-002: GXE AOPEG Execution Model
 - ADR-003: Four-Namespace Architecture
 - ADR-004: Bi-temporal Versioning with Hash Chain
 - ADR-005: Polystore Architecture
 - ADR-006: Information Types Classification
-- 6 ADR nodes в Memgraph (META namespace)
-- 12 RELATED_TO edges между ADR
+- 6 ADR nodes in Memgraph (META namespace)
+- 12 RELATED_TO edges between ADRs
 
-### Инфраструктура
-- Schema Registry: 8 schemas, 36 тестов
+### Infrastructure
+- Schema Registry: 8 schemas, 36 tests
 - Background jobs: 2 (OrphanDetector 6h, TombstoneExpirer 24h)
-- .env.example обновлён
+- .env.example updated
 
 ## [0.1.3] — 2026-03-19
 
-### Добавлено
+### Added
 
 #### Tool Namespace Architecture (CODEX-DOMAINS §9.7)
-- Поле `toolNamespace` (CODEX/CORE/PROJECT) в tool-definition.schema.json
-- 145 Tool nodes записаны в Memgraph (93 MCP + 52 AOPEG)
+- Field `toolNamespace` (CODEX/CORE/PROJECT) in tool-definition.schema.json
+- 145 Tool nodes recorded in Memgraph (93 MCP + 52 AOPEG)
 - 19 ToolCategory nodes (11 MCP + 8 AOPEG)
-- Классификация: CODEX=11, CORE=104, PROJECT=30
+- Classification: CODEX=11, CORE=104, PROJECT=30
 
 #### MCP Discovery Endpoints
-- `list_tools_by_namespace` — фильтрация tools по namespace с optional category
-- `get_tool_stats` — статистика registry (byLevel, byCategory, byNamespace)
-- Built-in tools в GXEMcpServer (не через registry)
+- `list_tools_by_namespace` — filter tools by namespace with optional category
+- `get_tool_stats` — registry statistics (byLevel, byCategory, byNamespace)
+- Built-in tools in GXEMcpServer (not via registry)
 
 #### Codex Tools → MCP Integration
-- 6 Codex tools мигрированы в MCP: `api/src/mcp/tools/codex/`
+- 6 Codex tools migrated to MCP: `api/src/mcp/tools/codex/`
   - codex.search_rules, codex.get_rule, codex.get_principles
   - codex.get_blackcodex, codex.check_compliance, codex.propose_change
-- Наследуют BaseTool, делегируют в executeCodexTool()
-- Зарегистрированы через createCodexTools() в MCP index
+- Inherit BaseTool, delegate to executeCodexTool()
+- Registered via createCodexTools() in MCP index
 
-#### ToolRegistry расширения
-- `listByNamespace(namespace)` — фильтрация по toolNamespace
-- `listByNamespaceAndCategory(namespace, category)` — двойная фильтрация
-- `getStats()` возвращает `byNamespace` разбивку
+#### ToolRegistry extensions
+- `listByNamespace(namespace)` — filter by toolNamespace
+- `listByNamespaceAndCategory(namespace, category)` — double filter
+- `getStats()` returns `byNamespace` breakdown
 
 #### Seed Scripts
-- `seed-tool-catalog.js` обновлён: CATEGORY_NAMESPACE маппинг, toolNamespace в Cypher
-- `seed-aopeg-executors.js` — новый скрипт с auto-discovery executors из plugins
-- Исправлен баг: `runCypher` → `runQuery` в seed-tool-catalog.js
+- `seed-tool-catalog.js` updated: CATEGORY_NAMESPACE mapping, toolNamespace in Cypher
+- `seed-aopeg-executors.js` — new script with auto-discovery of executors from plugins
+- Fixed bug: `runCypher` → `runQuery` in seed-tool-catalog.js
 
-### Инфраструктура
-- Документация: CODEX-DOMAINS.md §9.7 (9 подсекций)
-- CODEX_INDEX.md обновлён со статистикой tools
-- Tool definition schema расширена (optional toolNamespace field)
+### Infrastructure
+- Documentation: CODEX-DOMAINS.md §9.7 (9 subsections)
+- CODEX_INDEX.md updated with tool statistics
+- Tool definition schema extended (optional toolNamespace field)
 
 ## [Unreleased]
 
-### Планируется
-- Приложение A: JSON Schemas (полный набор)
-- Приложение B: Cypher Templates
-- Приложение C: Error Codes Registry
-- Приложение D: Migration Guide
-- Приложение E: Code Review Checklist
-- Повышение статуса до 🟢 1.0.0 после production validation
+### Planned
+- Appendix A: JSON Schemas (full set)
+- Appendix B: Cypher Templates
+- Appendix C: Error Codes Registry
+- Appendix D: Migration Guide
+- Appendix E: Code Review Checklist
+- Status upgrade to 🟢 1.0.0 after production validation

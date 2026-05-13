@@ -396,22 +396,11 @@ router.post('/ai-assist', async (req, res) => {
 
     let llmService;
     try {
-      llmService = require('../services/llm.service');
-      log(`module loaded, type=${typeof llmService}, keys=${Object.keys(llmService).join(',')}`);
-      if (typeof llmService.getLLMService === 'function') {
-        llmService = llmService.getLLMService();
-        log(`getLLMService() → provider=${llmService.provider}`);
-      } else if (typeof llmService.default?.chat === 'function') {
-        llmService = llmService.default;
-        log(`using .default, provider=${llmService.provider}`);
-      } else if (typeof llmService.chat === 'function') {
-        log(`using module directly, provider=${llmService.provider}`);
-      } else {
-        log(`ERROR: no chat method found on llmService`);
-        return res.status(503).json({ success: false, error: 'LLM service has no chat method' });
-      }
+      const { getInstance: getLLMProvider } = require('../services/llm/LLMProviderService');
+      llmService = getLLMProvider();
+      log(`LLMProviderService loaded, type=${llmService.type}`);
     } catch (e) {
-      log(`ERROR loading llm.service: ${e.message}`);
+      log(`ERROR loading LLMProviderService: ${e.message}`);
       return res.status(503).json({ success: false, error: `LLM service not available: ${e.message}` });
     }
 
@@ -428,6 +417,9 @@ router.post('/ai-assist', async (req, res) => {
 
     const toolActions = [];
 
+    // EXCEPTION: Direct llm.service usage required for tool loop-back (lines below up to llmService.chat call).
+    // LLMProviderService does not support recursive tool execution with a caller-supplied toolExecutor callback.
+    // TODO: Evaluate adding loop-back support to LLMProviderService and migrate this route.
     const toolExecutor = async (name, input) => {
       log(`TOOL CALL: ${name}(${JSON.stringify(input).slice(0, 120)})`);
       const result = await executeAiTool(name, input);
@@ -438,23 +430,25 @@ router.post('/ai-assist', async (req, res) => {
       return result;
     };
 
-    const hasAnthropicKey = !!process.env.ANTHROPIC_API_KEY;
+    const hasAnthropicKey = !!process.env.ANTHROPIC_API_KEY || llmService.type === 'azure';
     const useTools = hasAnthropicKey;
-    log(`anthropicKey=${hasAnthropicKey}, useTools=${useTools}, provider=${hasAnthropicKey ? 'anthropic' : llmService.provider}`);
+    log(`provider=${llmService.type}, useTools=${useTools}`);
 
     log('calling llmService.chat()...');
 
+    // Extract system from messages (LLMProviderService takes system as option)
+    let systemContent = '';
+    const chatMessages = messages.filter(m => {
+      if (m.role === 'system') { systemContent += (systemContent ? '\n\n' : '') + m.content; return false; }
+      return true;
+    });
+
+    const chatOpts = { maxTokens: 4096 };
+    if (systemContent) chatOpts.system = systemContent;
+    if (useTools && AI_TOOLS?.length) chatOpts.tools = AI_TOOLS;
+
     const result = await Promise.race([
-      llmService.chat(
-        messages,
-        useTools ? AI_TOOLS : [],
-        null,
-        {
-          ...(useTools ? { toolExecutor } : {}),
-          provider: hasAnthropicKey ? 'anthropic' : undefined,
-          maxTokens: 4096,
-        }
-      ),
+      llmService.chat(chatMessages, chatOpts),
       new Promise((_, rej) => setTimeout(() => rej(new Error('AI_TIMEOUT')), 60000)),
     ]);
     log(`chat returned, type=${typeof result}, keys=${result ? Object.keys(result).join(',') : 'null'}`);

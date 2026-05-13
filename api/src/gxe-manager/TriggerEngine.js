@@ -673,11 +673,6 @@ class TriggerEngine extends EventEmitter {
             t.enabled = $enabled,
             t.createdAt = $createdAt,
             t.metadata = $metadata
-        WITH t
-        OPTIONAL MATCH (c:CatalogEntry {entryId: $graphId})
-        FOREACH (x IN CASE WHEN c IS NOT NULL THEN [1] ELSE [] END |
-          MERGE (t)-[:TRIGGERS]->(c)
-        )
       `, {
         triggerId: trigger.triggerId,
         graphId: trigger.graphId,
@@ -697,6 +692,15 @@ class TriggerEngine extends EventEmitter {
         createdAt: trigger.createdAt,
         metadata: JSON.stringify(trigger.metadata || {})
       });
+
+      // AGE-compatible conditional relationship: separate query (FOREACH not supported in AGE)
+      if (trigger.graphId) {
+        await session.run(`
+          MATCH (t:TriggerDefinition:META {triggerId: $triggerId})
+          MATCH (c:CatalogEntry {entryId: $graphId})
+          MERGE (t)-[:TRIGGERS]->(c)
+        `, { triggerId: trigger.triggerId, graphId: trigger.graphId });
+      }
     } finally {
       await session.close();
     }

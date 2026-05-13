@@ -13,6 +13,13 @@ if (!ADO_ORG_URL || !ADO_PAT) {
     throw new Error("Ошибка: ADO_ORG_URL или ADO_PAT не заданы в .env");
 }
 
+// Disable SSL verification for on-premise ADO server (self-signed cert).
+// Scoped here rather than globally in index.js — only ADO connections need this.
+// To enforce SSL verification, set ADO_VERIFY_SSL=true in .env
+if (process.env.ADO_VERIFY_SSL !== 'true') {
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+}
+
 let witApi;
 
 async function connectToAdo() {

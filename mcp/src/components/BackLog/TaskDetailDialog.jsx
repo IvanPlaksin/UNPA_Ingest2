@@ -20,6 +20,7 @@ import SubtasksTab from './tabs/SubtasksTab';
 import HistoryTab from './tabs/HistoryTab';
 import CyclesTab from './tabs/CyclesTab';
 import ResolutionTab from './tabs/ResolutionTab';
+import DialoguesTab from './tabs/DialoguesTab';
 
 const PRIORITY_COLORS = {
   P0_CRITICAL: '#d32f2f', P1_HIGH: '#f57c00', P2_MEDIUM: '#1976d2', P3_LOW: '#757575'
@@ -112,6 +113,7 @@ export default function TaskDetailDialog({ item, open, onClose, onTransition }) 
         <Tab label="Resolution" />
         <Tab label="Subtasks" />
         <Tab label="History" />
+        <Tab label="Dialogues" />
       </Tabs>
 
       <DialogContent dividers sx={{ p: 0, minHeight: 350 }}>
@@ -135,6 +137,9 @@ export default function TaskDetailDialog({ item, open, onClose, onTransition }) 
         </TabPanel>
         <TabPanel value={tab} index={6}>
           <HistoryTab task={item} />
+        </TabPanel>
+        <TabPanel value={tab} index={7}>
+          <DialoguesTab backlogId={item.backlogId} />
         </TabPanel>
 
         {showReason && (

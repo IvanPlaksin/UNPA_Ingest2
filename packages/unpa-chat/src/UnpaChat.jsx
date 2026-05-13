@@ -33,6 +33,7 @@ export default function UnpaChat({
   sessionId: initialSessionId,
   welcomeText,
   placeholder,
+  initialPrompt,
   theme = 'dark',
   className = '',
   width = '100%',
@@ -55,7 +56,11 @@ export default function UnpaChat({
   });
 
   useEffect(() => {
-    chat.initialize({ welcomeText });
+    chat.initialize({ welcomeText }).then(() => {
+      if (initialPrompt) {
+        chat.sendMessage(initialPrompt);
+      }
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

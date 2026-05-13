@@ -64,9 +64,16 @@ class InsightsEngine {
 
   /**
    * Collect structural metrics via GraphAnalyzer.
+   * Returns zeroed metrics on any error (insight rules degrade gracefully).
    */
   async _collectStructuralMetrics(namespace) {
-    const analysis = await this.graphAnalyzer.analyze(namespace);
+    let analysis;
+    try {
+      analysis = await this.graphAnalyzer.analyze(namespace);
+    } catch (err) {
+      console.warn('[InsightsEngine] GraphAnalyzer unavailable:', err.message);
+      analysis = { nodeCount: 0, edgeCount: 0, density: 0, hubNodes: [], bridgeEdges: [], orphanNodes: [], connectedComponents: { count: 1 }, avgClusteringCoefficient: 0 };
+    }
 
     return {
       nodeCount: analysis.nodeCount || 0,

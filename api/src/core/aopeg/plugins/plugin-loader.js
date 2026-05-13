@@ -162,7 +162,7 @@ async function loadDomainPlugins() {
     const { workflowPlugin } = require('./workflow');
     const { notificationPlugin } = require('./notification');
     const { SqlExtractionPlugin } = require('./sql-extraction/sql-extraction.plugin');
-    const { flowdeskPlugin } = require('./flowdesk');
+    const { plugin: flowdeskPlugin } = require('../../../../instances/flowdesk');
     const { validationPlugin } = require('./validation');
     const { extractionPlugin } = require('./extraction');
     const { dialoguePlugin } = require('./dialogue');
@@ -201,7 +201,7 @@ async function loadToolPlugins() {
 
     // Wire LLM service to session plugin (adapts llm.service.js chat() → generate())
     try {
-      const llmService = require('../../../services/llm.service');
+      const { getInstance: getLLMProvider } = require('../../../services/llm/LLMProviderService');
       sessionPlugin.setLLMService({
         async generate(options) {
           const messages = [];
@@ -209,9 +209,13 @@ async function loadToolPlugins() {
             messages.push({ role: 'system', content: options.systemPrompt });
           }
           messages.push({ role: 'user', content: options.userPrompt });
-          const result = await llmService.chat(messages);
+          const result = await getLLMProvider().chat(messages);
+          const rawContent = result.content;
+          const content = Array.isArray(rawContent)
+            ? rawContent.filter(b => b.type === 'text').map(b => b.text).join('')
+            : (rawContent || '');
           return {
-            content: result.content || '',
+            content,
             tokensUsed: result.usage?.total_tokens || 0,
           };
         },

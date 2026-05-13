@@ -16,6 +16,10 @@ class GraphSchemaManager {
      * Инициализация полной схемы графа
      */
     async initializeSchema() {
+        // CREATE INDEX ON :Label(prop) and CREATE CONSTRAINT ON are Memgraph-specific.
+        // AGE does not support this syntax — each statement fails after a ~100ms round-trip.
+        if (process.env.GRAPH_DB_BACKEND === 'postgres-age') return true;
+
         console.log('🔧 Initializing graph schema...');
 
         try {

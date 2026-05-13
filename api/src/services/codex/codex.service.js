@@ -406,35 +406,44 @@ class CodexService {
   /**
    * Get full Codex document hierarchy:
    * CodexPart → CodexSection → CodexRule (via CONTAINS_RULE)
+   *
+   * Uses parallel flat queries + JS aggregation to avoid:
+   * - labels() function call (full scan in AGE)
+   * - collect() over complex OPTIONAL MATCH chains (30s timeout)
    */
   async getCodexHierarchy() {
     const mg = getMemgraph();
-    const result = await mg.runQuery(`
-      MATCH (p:CodexPart)
-      OPTIONAL MATCH (p)-[:HAS_SECTION]->(s:CodexSection)
-      OPTIONAL MATCH (s)-[:CONTAINS_RULE]->(r)
-      WHERE r:CodexRule OR r:CodexPattern OR r:CodexDefinition OR r:CodexConstraint
-      WITH p, s, collect(r) as rules
-      RETURN p, s, rules
-      ORDER BY p.order, s.order
-    `);
 
-    // Group rows by part (one row per section)
-    const partsMap = new Map();
-    for (const row of result) {
-      const partId = row.p?.properties?.partId ?? row.p?.partId;
-      if (!partsMap.has(partId)) {
-        partsMap.set(partId, { part: row.p, sections: [] });
-      }
-      if (row.s) {
-        partsMap.get(partId).sections.push({
-          ...(row.s?.properties || row.s),
-          rules: (row.rules || []).map(r => r?.properties || r)
-        });
-      }
+    const [partsResult, sectionsResult, rulesRes, patternsRes, defsRes, constraintsRes] = await Promise.all([
+      mg.runQuery(`MATCH (p:CodexPart) RETURN p`),
+      mg.runQuery(`MATCH (p:CodexPart)-[:HAS_SECTION]->(s:CodexSection) RETURN p.partId AS partId, s`),
+      mg.runQuery(`MATCH (s:CodexSection)-[:CONTAINS_RULE]->(r:CodexRule) RETURN s.sectionId AS sectionId, r AS rNode`),
+      mg.runQuery(`MATCH (s:CodexSection)-[:CONTAINS_RULE]->(r:CodexPattern) RETURN s.sectionId AS sectionId, r AS rNode`),
+      mg.runQuery(`MATCH (s:CodexSection)-[:CONTAINS_RULE]->(r:CodexDefinition) RETURN s.sectionId AS sectionId, r AS rNode`),
+      mg.runQuery(`MATCH (s:CodexSection)-[:CONTAINS_RULE]->(r:CodexConstraint) RETURN s.sectionId AS sectionId, r AS rNode`)
+    ]);
+
+    // Build rules map: sectionId → [rule plain objects]
+    const rulesMap = new Map();
+    for (const row of [...rulesRes, ...patternsRes, ...defsRes, ...constraintsRes]) {
+      const sid = row.sectionId;
+      if (!rulesMap.has(sid)) rulesMap.set(sid, []);
+      rulesMap.get(sid).push(row.rNode?.properties || row.rNode);
     }
 
-    return Array.from(partsMap.values());
+    // Build sections map: partId → [section plain objects with rules]
+    const sectionsMap = new Map();
+    for (const row of sectionsResult) {
+      const pid = row.partId;
+      if (!sectionsMap.has(pid)) sectionsMap.set(pid, []);
+      const sec = row.s?.properties || row.s;
+      sectionsMap.get(pid).push({ ...sec, rules: rulesMap.get(sec.sectionId) || [] });
+    }
+
+    return partsResult.map(row => ({
+      part: row.p,
+      sections: sectionsMap.get(row.p?.properties?.partId ?? row.p?.partId) || []
+    }));
   }
 
   /**
@@ -460,36 +469,29 @@ class CodexService {
     const mg = getMemgraph();
 
     // Fetch static metadata node (version, timestamps)
+    // Note: MERGE ON CREATE SET is not supported in AGE — use MATCH with fallback
     const metaResult = await mg.runQuery(`
-      MERGE (m:CodexMetadata {id: 'codex-metadata'})
-      ON CREATE SET m.version = '0.1.0', m.createdAt = datetime()
+      MATCH (m:CodexMetadata {id: 'codex-metadata'})
       RETURN m
     `);
     const meta = metaResult[0]?.m?.properties || metaResult[0]?.m || {};
 
-    // Compute live counts so UI always reflects actual state
-    // Labels alone are sufficient — no namespace filter (Parts/Sections may lack it)
-    const counts = await mg.runQuery(`
-      OPTIONAL MATCH (r:CodexRule)
-      WITH count(r) AS rulesCount
-      OPTIONAL MATCH (p:CodexPrinciple)
-      WITH rulesCount, count(p) AS principlesCount
-      OPTIONAL MATCH (s:CodexSection)
-      WITH rulesCount, principlesCount, count(s) AS sectionsCount
-      OPTIONAL MATCH (pt:CodexPart)
-      WITH rulesCount, principlesCount, sectionsCount, count(pt) AS partsCount
-      OPTIONAL MATCH (a:CodexADR)
-      RETURN rulesCount, principlesCount, sectionsCount, partsCount, count(a) AS adrsCount
-    `);
+    // Compute live counts with parallel single-label queries (avoids chained OPTIONAL MATCH timeout)
+    const [rulesRes, principlesRes, sectionsRes, partsRes, adrsRes] = await Promise.all([
+      mg.runQuery(`MATCH (r:CodexRule) RETURN count(r) AS cnt`),
+      mg.runQuery(`MATCH (p:CodexPrinciple) RETURN count(p) AS cnt`),
+      mg.runQuery(`MATCH (s:CodexSection) RETURN count(s) AS cnt`),
+      mg.runQuery(`MATCH (pt:CodexPart) RETURN count(pt) AS cnt`),
+      mg.runQuery(`MATCH (a:CodexADR) RETURN count(a) AS cnt`)
+    ]);
 
-    const c = counts[0] || {};
     return {
       ...meta,
-      rulesCount: c.rulesCount ?? meta.rulesCount ?? 0,
-      principlesCount: c.principlesCount ?? meta.principlesCount ?? 0,
-      sectionsCount: c.sectionsCount ?? meta.sectionsCount ?? 0,
-      partsCount: c.partsCount ?? meta.partsCount ?? 0,
-      adrsCount: c.adrsCount ?? meta.adrsCount ?? 0,
+      rulesCount: rulesRes[0]?.cnt ?? meta.rulesCount ?? 0,
+      principlesCount: principlesRes[0]?.cnt ?? meta.principlesCount ?? 0,
+      sectionsCount: sectionsRes[0]?.cnt ?? meta.sectionsCount ?? 0,
+      partsCount: partsRes[0]?.cnt ?? meta.partsCount ?? 0,
+      adrsCount: adrsRes[0]?.cnt ?? meta.adrsCount ?? 0,
     };
   }
 

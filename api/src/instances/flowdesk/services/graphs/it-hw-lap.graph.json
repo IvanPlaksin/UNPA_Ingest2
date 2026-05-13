@@ -1,0 +1,137 @@
+{
+  "id": "flowdesk.process.it-hw-lap",
+  "name": "Laptop Request Workflow",
+  "version": "1.1.0",
+  "namespace": "FLOWDESK",
+  "metadata": {
+    "service_code": "IT-HW-LAP",
+    "sla_hours": 72,
+    "approval_required": true,
+    "domain": "IT"
+  },
+  "nodes": [
+    {
+      "id": "WF-START",
+      "type": "start",
+      "executor": "workflow.start",
+      "config": {
+        "inputs": [
+          { "name": "userId", "type": "string", "required": true },
+          { "name": "serviceCode", "type": "string", "required": true },
+          { "name": "justification", "type": "string", "required": true }
+        ]
+      }
+    },
+    {
+      "id": "N1-VALIDATE",
+      "type": "executor",
+      "executor": "flowdesk.validate-request",
+      "config": {
+        "required_fields": ["userId", "justification"],
+        "min_justification_length": 10
+      }
+    },
+    {
+      "id": "N2-CONTEXT",
+      "type": "executor",
+      "executor": "flowdesk.get-user-context",
+      "config": {
+        "include_manager": true,
+        "include_location": true
+      }
+    },
+    {
+      "id": "N3-CREATE-SR",
+      "type": "executor",
+      "executor": "flowdesk.create-service-request",
+      "config": {
+        "initial_status": "PENDING_APPROVAL",
+        "service_code": "IT-HW-LAP"
+      }
+    },
+    {
+      "id": "N4-APPROVAL",
+      "type": "executor",
+      "executor": "flowdesk.request-approval",
+      "config": {
+        "approver_role": "manager",
+        "timeout_hours": 48,
+        "auto_approve_for_demo": true
+      }
+    },
+    {
+      "id": "N5-APPROVED",
+      "type": "executor",
+      "executor": "flowdesk.update-sr-status",
+      "config": {
+        "status": "APPROVED"
+      }
+    },
+    {
+      "id": "N6-REJECTED",
+      "type": "executor",
+      "executor": "flowdesk.update-sr-status",
+      "config": {
+        "status": "REJECTED"
+      }
+    },
+    {
+      "id": "N7-WORK-ORD",
+      "type": "executor",
+      "executor": "flowdesk.create-work-order",
+      "config": {
+        "type": "HARDWARE_PROVISION",
+        "sla_hours": 72
+      }
+    },
+    {
+      "id": "N9-ASSIGN",
+      "type": "executor",
+      "executor": "flowdesk.assign-handler",
+      "config": {
+        "use_routing": true
+      }
+    },
+    {
+      "id": "N8-NOTIFY-R",
+      "type": "executor",
+      "executor": "flowdesk.send-notification",
+      "config": {
+        "template": "request_rejected",
+        "channel": ["email", "portal"]
+      }
+    },
+    {
+      "id": "N10-NOTIFY-A",
+      "type": "executor",
+      "executor": "flowdesk.send-notification",
+      "config": {
+        "template": "request_approved",
+        "channel": ["email", "portal"]
+      }
+    },
+    {
+      "id": "WF-END",
+      "type": "end",
+      "executor": "workflow.end",
+      "config": {
+        "outputs": ["requestId", "workOrderId", "status"]
+      }
+    }
+  ],
+  "edges": [
+    { "from": "WF-START", "to": "N1-VALIDATE" },
+    { "from": "N1-VALIDATE", "to": "N2-CONTEXT", "condition": "valid" },
+    { "from": "N1-VALIDATE", "to": "WF-END", "condition": "invalid" },
+    { "from": "N2-CONTEXT", "to": "N3-CREATE-SR" },
+    { "from": "N3-CREATE-SR", "to": "N4-APPROVAL" },
+    { "from": "N4-APPROVAL", "to": "N5-APPROVED", "condition": "approved" },
+    { "from": "N4-APPROVAL", "to": "N6-REJECTED", "condition": "rejected" },
+    { "from": "N5-APPROVED", "to": "N7-WORK-ORD" },
+    { "from": "N6-REJECTED", "to": "N8-NOTIFY-R" },
+    { "from": "N7-WORK-ORD", "to": "N9-ASSIGN" },
+    { "from": "N9-ASSIGN", "to": "N10-NOTIFY-A" },
+    { "from": "N8-NOTIFY-R", "to": "WF-END" },
+    { "from": "N10-NOTIFY-A", "to": "WF-END" }
+  ]
+}

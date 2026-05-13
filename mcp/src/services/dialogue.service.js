@@ -42,6 +42,15 @@ export const getSessionContext = (sessionId) =>
 export const getRelatedSessions = (sessionId, limit = 5) =>
   request(`${BASE}/sessions/${sessionId}/related?limit=${limit}`);
 
+export const getRelatedDialoguesForBacklog = (backlogId) =>
+  request(`${BASE}/related/backlog/${encodeURIComponent(backlogId)}`);
+
+export const getProvenanceChain = (type, nodeId) =>
+  request(`${BASE}/provenance/${type}/${encodeURIComponent(nodeId)}`);
+
+export const getAnalytics = (period = 'all') =>
+  request(`${BASE}/analytics?period=${encodeURIComponent(period)}`);
+
 // ── Search ──────────────────────────────────────────────────────────────────
 
 export const searchDialogue = (query, options = {}) =>
@@ -67,6 +76,19 @@ export const getDecisionDetail = (decisionId) =>
 export const getDecisionProvenance = (query, limit = 10) =>
   request(`${BASE}/decisions/provenance?${new URLSearchParams({ query, limit })}`);
 
+// ── Re-analysis ─────────────────────────────────────────────────────────────
+
+export const reanalyzeSession = (sessionId) =>
+  request(`${BASE}/sessions/${sessionId}/reanalyze`, { method: 'POST' });
+
+// ── AI Search ───────────────────────────────────────────────────────────────
+
+export const aiSearchDialogue = (query) =>
+  request(`${BASE}/ai-search`, {
+    method: 'POST',
+    body: JSON.stringify({ query }),
+  });
+
 // ── Stats & Metrics ─────────────────────────────────────────────────────────
 
 export const getStats = () => request(`${BASE}/stats`);
@@ -89,6 +111,8 @@ class DialogueService {
   getSessionContext = getSessionContext;
   getRelatedSessions = getRelatedSessions;
   search = searchDialogue;
+  aiSearch = aiSearchDialogue;
+  reanalyzeSession = reanalyzeSession;
   getDecisions = getDecisions;
   getDecisionDetail = getDecisionDetail;
   getDecisionProvenance = getDecisionProvenance;

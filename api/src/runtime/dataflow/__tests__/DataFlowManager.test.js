@@ -280,7 +280,7 @@ describe('DataFlowManager', () => {
 
       const edge = dfm2.getEdge('e1');
       expect(edge.sourcePortId).toBe('sanitized'); // First output
-      expect(edge.targetPortId).toBe('text');      // First input
+      expect(edge.targetPortId).toBe('_from_A');   // Dynamic fan-in port
     });
   });
 

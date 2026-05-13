@@ -1,9 +1,48 @@
-# Ignore data and dependencies in root and nested directories
+# Dependencies
 **/node_modules/
+
+# Data directories
 **/data/
 **/raw_data/
+uploads/
+**/uploads/
+
+# Environment & secrets — NEVER commit these
 .env
 .env.*
 !.env.example
-api/ADO_req.http
+**/service-account-key.json
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/credentials.json
+**/secrets.json
+
+# Logs
+*.log
+logs/
+**/logs/
+
+# Build artifacts
+**/dist/
+**/coverage/
+**/obj/
+**/bin/
+**/.vs/
+
+# Backup files
+*.bak
+*.tmp
+
+# IDE & tool caches
+.claude/
+.vs/
+.vscode/settings.json
+.vscode/mcp.json
+
+# Docker compose (environment-specific, use .example)
 docker-compose.yml
+
+# HTTP test files (dev only)
+api/ADO_req.http

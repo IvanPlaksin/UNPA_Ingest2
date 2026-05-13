@@ -36,11 +36,13 @@ async function summarizeWithLLM(llmService, text, maxTokens = 150) {
   try {
     const result = await llmService.chat(
       [{ role: 'user', content: SEGMENT_PROMPT(text.slice(0, 3000)) }],
-      [],
-      null,
       { model: process.env.SUMMARY_MODEL || 'claude-haiku-4-5', maxTokens }
     );
-    return (result.content || '').trim();
+    const rawContent = result.content;
+    const content = Array.isArray(rawContent)
+      ? rawContent.filter(b => b.type === 'text').map(b => b.text).join('')
+      : (rawContent || '');
+    return content.trim();
   } catch (err) {
     return null; // trigger fallback
   }
@@ -73,7 +75,8 @@ const dialogueSummarizeExecutor = createSimpleExecutor({
     let llmService = null;
     if (useLLM) {
       try {
-        llmService = require('../../../../../services/llm.service');
+        const { getInstance: getLLMProvider } = require('../../../../../services/llm/LLMProviderService');
+        llmService = getLLMProvider();
       } catch { /* fallback */ }
     }
 
@@ -203,11 +206,12 @@ const dialogueSummarizeExecutor = createSimpleExecutor({
           try {
             const result = await llmService.chat(
               [{ role: 'user', content: SESSION_PROMPT(combinedSummaries.slice(0, 6000)) }],
-              [],
-              null,
               { model: process.env.SUMMARY_MODEL || 'claude-haiku-4-5-20251001', maxTokens: 400 }
             );
-            sessionSummary = (result.content || '').trim();
+            const rc = result.content;
+            sessionSummary = (Array.isArray(rc)
+              ? rc.filter(b => b.type === 'text').map(b => b.text).join('')
+              : (rc || '')).trim();
             stats.llmCalls++;
           } catch { /* fallback */ }
         }

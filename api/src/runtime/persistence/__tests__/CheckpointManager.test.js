@@ -308,11 +308,9 @@ async function runTests() {
   console.log('\n=== Summary ===');
   console.log(`Passed: ${passed}`);
   console.log(`Failed: ${failed}`);
-
-  process.exit(failed > 0 ? 1 : 0);
 }
 
-runTests().catch(err => {
-  console.error('Test error:', err);
-  process.exit(1);
-});
+test('CheckpointManager: all scenarios pass', async () => {
+  await runTests();
+  expect(failed).toBe(0);
+}, 10000);

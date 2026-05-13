@@ -29,6 +29,13 @@ class CommunityDetector {
    * @returns {Promise<CommunityResult>}
    */
   async detect(namespace, opts = {}) {
+    // Label propagation relies on MATCH (n) WHERE n.namespace which forces a
+    // full union-scan of all vertex label tables on AGE (no property indexes).
+    // Skip all Cypher-based community detection on the AGE backend.
+    if (process.env.GRAPH_DB_BACKEND === 'postgres-age') {
+      return { method: 'none', clusters: [], totalCommunities: 0, filteredCommunities: 0, modularity: null };
+    }
+
     const { maxIterations = 20, minCommunitySize = 2, nClusters } = opts;
 
     // Try GNN-based detection first (best quality when model is loaded)
@@ -101,6 +108,11 @@ class CommunityDetector {
   // ─── MAGE Louvain ────────────────────────────────────────────
 
   async _hasMage() {
+    // MAGE procedures are Memgraph-specific; not available in AGE
+    if (process.env.GRAPH_DB_BACKEND === 'postgres-age') {
+      this._mageAvailable = false;
+      return false;
+    }
     if (this._mageAvailable !== null) return this._mageAvailable;
     const session = this._session();
     try {
@@ -144,9 +156,8 @@ class CommunityDetector {
       `, { ns: namespace });
 
       const edgesRes = await session.run(`
-        MATCH (a)-[r]-(b)
-        WHERE a.namespace = $ns AND b.namespace = $ns
-          AND NOT type(r) IN ['CONTAINS_MEMBER', 'PORT_OF', 'BRIDGES_TO', 'CONNECTS_INTERNAL', 'SUBGRAPH_LINK']
+        MATCH (a) WHERE a.namespace = $ns
+        MATCH (a)-[r]-(b) WHERE b.namespace = $ns
         RETURN DISTINCT a.id AS src, b.id AS tgt
       `, { ns: namespace });
 

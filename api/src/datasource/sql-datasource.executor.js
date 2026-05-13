@@ -35,16 +35,16 @@ class SQLDataSourceExecutor extends BaseDataSourceExecutor {
   async getConnection(config) {
     const connectionId = config.sqlConfig?.connectionId;
 
-    // 1. Check pool cache
+    // 1. Static pool (explicit override — highest priority, used in tests and direct injection)
+    if (this.connectionPool) {
+      return this.connectionPool;
+    }
+
+    // 2. Check pool cache
     if (connectionId && this._poolCache.has(connectionId)) {
       const cached = this._poolCache.get(connectionId);
       if (cached.connected) return cached;
       this._poolCache.delete(connectionId);
-    }
-
-    // 2. Static pool fallback
-    if (!connectionId && this.connectionPool) {
-      return this.connectionPool;
     }
 
     // 3. Resolve from domain service

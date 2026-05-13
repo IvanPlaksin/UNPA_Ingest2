@@ -18,8 +18,8 @@ let analyzer = null;
 const getAnalyzer = () => {
   if (!analyzer) {
     const { MSSQLSemanticAnalyzer } = require('../services/connectors');
-    const llmService = require('../services/llm.service');
-    analyzer = new MSSQLSemanticAnalyzer(llmService);
+    const { getInstance: getLLMProvider } = require('../services/llm/LLMProviderService');
+    analyzer = new MSSQLSemanticAnalyzer(getLLMProvider());
   }
   return analyzer;
 };
@@ -318,8 +318,8 @@ const streamAgentImport = async (req, res) => {
 
     let llmService;
     try {
-      llmService = require('../services/llm.service');
-      if (typeof llmService === 'function') llmService = new llmService();
+      const { getInstance: getLLMProvider } = require('../services/llm/LLMProviderService');
+      llmService = getLLMProvider();
     } catch (e) {
       console.warn('[Agent Import] LLM service not available:', e.message);
       llmService = { chat: async () => ({ content: '{}' }) };

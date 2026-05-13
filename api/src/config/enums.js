@@ -54,7 +54,15 @@ const KnowledgeNamespace = Object.freeze({
      * Always used with workspaceId qualifier: workspace:{workspaceId}
      * Read-only access to Global KB; write to Global KB only via Promotion
      */
-    WORKSPACE: 'workspace'
+    WORKSPACE: 'workspace',
+
+    /**
+     * UNIFIED - Global cross-namespace knowledge base
+     * Contains: knowledge quanta from all sources (dialogue sessions, work items, etc.)
+     * Backed by the embeddings_unified Qdrant collection
+     * Read-only search across all promoted knowledge
+     */
+    UNIFIED: 'unified'
 });
 
 /**

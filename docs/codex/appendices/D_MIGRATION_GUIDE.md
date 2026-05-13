@@ -1,13 +1,13 @@
-# Приложение D: Migration Guide
+# Appendix D: Migration Guide
 
-**Статус:** 🔴 Не начат
-**Версия:** -
-**Последнее обновление:** -
+**Status:** 🔴 Not started
+**Version:** -
+**Last updated:** -
 
-## Содержание
+## Contents
 
-Руководство по миграции от текущего состояния к стандартам Кодекса.
+Guide for migrating from the current state to Codex standards.
 
 ---
 
-*Этот документ является частью [Кодекса UN ProjectAdvisor](../CODEX_INDEX.md)*
+*This document is part of the [UN ProjectAdvisor Codex](../CODEX_INDEX.md)*

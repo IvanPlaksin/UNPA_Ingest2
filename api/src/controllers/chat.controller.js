@@ -1,7 +1,7 @@
 
 const geminiService = require('../services/gemini.service');
 const ragService = require('../services/rag.service');
-const llmService = require('../services/llm.service');
+const { getInstance: getLLMProvider } = require('../services/llm/LLMProviderService');
 
 async function handleChatRequest(req, res) {
     // Legacy non-streaming endpoint (kept for compatibility if needed)
@@ -66,15 +66,22 @@ ALWAYS cite sources using [1], [2] if you use the tool results.`;
         ];
 
         // 2. Initial LLM Call (Check for Tools)
-        const firstResponse = await llmService.chat(currentMessages, AVAILABLE_TOOLS);
+        const firstResponse = await getLLMProvider().chat(currentMessages, { tools: AVAILABLE_TOOLS });
 
-        // 3. Handle Tool Calls
-        if (firstResponse.tool_calls && firstResponse.tool_calls.length > 0) {
-            const toolCall = firstResponse.tool_calls[0];
+        // 3. Handle Tool Calls (Anthropic format: content blocks with type=tool_use)
+        const toolUseBlocks = Array.isArray(firstResponse.content)
+            ? firstResponse.content.filter(b => b.type === 'tool_use')
+            : [];
+        if (toolUseBlocks.length > 0) {
+            const toolBlock = toolUseBlocks[0];
+            const toolCall = {
+                function: { name: toolBlock.name, arguments: JSON.stringify(toolBlock.input || {}) },
+                id: toolBlock.id,
+            };
             console.log(`[Chat] Tool Call: ${toolCall.function.name}`);
 
             if (toolCall.function.name === 'search_knowledge_base') {
-                const args = JSON.parse(toolCall.function.arguments);
+                const args = toolBlock.input || {};
                 const query = args.query;
 
                 // Notify Client: Status
@@ -86,13 +93,15 @@ ALWAYS cite sources using [1], [2] if you use the tool results.`;
                 // Notify Client: Sources
                 res.write(`data: ${JSON.stringify({ type: 'sources', sources: sources })}\n\n`);
 
-                // Add Tool Result to History
-                currentMessages.push(firstResponse); // Assistant message with tool_calls
+                // Add Tool Result to History (Anthropic format)
+                currentMessages.push({ role: 'assistant', content: firstResponse.content });
                 currentMessages.push({
-                    role: 'tool',
-                    tool_call_id: toolCall.id,
-                    name: toolCall.function.name,
-                    content: context // The formatted context from RAG
+                    role: 'user',
+                    content: [{
+                        type: 'tool_result',
+                        tool_use_id: toolBlock.id,
+                        content: context,
+                    }],
                 });
             }
         } else {
@@ -104,8 +113,11 @@ ALWAYS cite sources using [1], [2] if you use the tool results.`;
             // BUT, if we already got the answer in firstResponse (because no tool was needed), 
             // we should just send it.
 
-            if (firstResponse.content) {
-                res.write(`data: ${JSON.stringify({ type: 'token', content: firstResponse.content })}\n\n`);
+            const noToolContent = Array.isArray(firstResponse.content)
+                ? firstResponse.content.filter(b => b.type === 'text').map(b => b.text).join('')
+                : (firstResponse.content || '');
+            if (noToolContent) {
+                res.write(`data: ${JSON.stringify({ type: 'token', content: noToolContent })}\n\n`);
                 res.write('data: [DONE]\n\n');
                 res.end();
                 return;
@@ -113,9 +125,12 @@ ALWAYS cite sources using [1], [2] if you use the tool results.`;
         }
 
         // 4. Final Streaming Response (Answer based on Tool Result)
-        await llmService.streamChat(currentMessages, (textChunk) => {
-            res.write(`data: ${JSON.stringify({ type: 'token', content: textChunk })}\n\n`);
-        });
+        const streamObj = getLLMProvider().stream(currentMessages);
+        for await (const event of streamObj) {
+            if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
+                res.write(`data: ${JSON.stringify({ type: 'token', content: event.delta.text })}\n\n`);
+            }
+        }
 
         res.write('data: [DONE]\n\n');
         res.end();

@@ -1,32 +1,32 @@
-# CODEX-VERSION: Стандарт версионности
+# CODEX-VERSION: Versioning Standard
 
-**Статус:** 🟡 Черновик
-**Версия:** 0.1.0
-**Последнее обновление:** 2026-03-12
-
----
-
-## Преамбула
-
-В системе UN ProjectAdvisor сосуществуют две модели данных:
-
-1. **Mutable domain nodes** -- обычные узлы графа знаний (Table, Method, Column и др.), которые обновляются на месте через `SET`. Просты, быстры, не хранят историю.
-
-2. **Immutable NodeVersion** -- append-only цепочки версий с hash chain, аудитом и полной историей изменений. Используются для бизнес-правил, нормативных документов и всего, где требуется доказуемая трассируемость.
-
-Данный стандарт определяет:
-- когда использовать какую модель,
-- как связывать их между собой (Bridge pattern),
-- как строить и обходить SUPERSEDES-цепочки,
-- как обрабатывать merge/split/fork,
-- когда допустимо нарушать immutability (God Mode),
-- как безопасно удалять версии (Tombstones).
+**Status:** 🟡 Draft
+**Version:** 0.1.0
+**Last updated:** 2026-03-12
 
 ---
 
-## 3.1 Две модели -- NodeVersion vs Domain nodes
+## Preamble
 
-### Сравнительная диаграмма
+In the UN ProjectAdvisor system two data models coexist:
+
+1. **Mutable domain nodes** — ordinary knowledge graph nodes (Table, Method, Column, etc.) that are updated in-place via `SET`. Simple, fast, no history stored.
+
+2. **Immutable NodeVersion** — append-only version chains with hash chain, audit, and full change history. Used for business rules, regulatory documents, and anything requiring provable traceability.
+
+This standard defines:
+- when to use which model,
+- how to link them to each other (Bridge pattern),
+- how to build and traverse SUPERSEDES chains,
+- how to handle merge/split/fork,
+- when it is permissible to violate immutability (God Mode),
+- how to safely delete versions (Tombstones).
+
+---
+
+## 3.1 Two models — NodeVersion vs Domain nodes
+
+### Comparison diagram
 
 ```
  MUTABLE (Domain Node)                    IMMUTABLE (NodeVersion)
@@ -38,13 +38,13 @@
  ├─ rowCount: 150000                      ├─ status: "ACTIVE"
  ├─ lastSync: datetime()                  ├─ contentHash: "sha256:a1b2c3..."
  │                                        ├─ previousHash: "sha256:x9y8z7..."
- │  5-10 свойств                          ├─ title: "Правило валидации X"
+ │  5-10 properties                       ├─ title: "Validation Rule X"
  │                                        ├─ content: "{...json...}"
- │  Обновление:                           ├─ author: "agent:advisor"
+ │  Update:                               ├─ author: "agent:advisor"
  │  SET t.rowCount = 200000               ├─ createdAt: datetime()
  │                                        ├─ createdBy: "user:admin"
- │  История: НЕТ                          ├─ validFrom: datetime()
- │  Аудит: НЕТ                            ├─ validUntil: null
+ │  History: NONE                         ├─ validFrom: datetime()
+ │  Audit: NONE                           ├─ validUntil: null
  │                                        ├─ namespace: "un.rules"
  │                                        ├─ tags: ["validation","input"]
  │                                        ├─ metadata: "{...}"
@@ -54,58 +54,58 @@
  │                                        ├─ approvedBy: "user:reviewer"
  │                                        ├─ approvedAt: datetime()
  │                                        ├─ schemaVersion: "1.0"
- │                                        ├─ changeReason: "Уточнение порога"
+ │                                        ├─ changeReason: "Threshold refinement"
  │                                        ├─ diffFromPrevious: "{...patch...}"
  │                                        ├─ embedding: [0.12, 0.34, ...]
  │                                        │
- │                                        │  25 свойств
+ │                                        │  25 properties
  │                                        │
- │                                        │  Обновление: ЗАПРЕЩЕНО
- │                                        │  Создается НОВАЯ версия
- │                                        │  с ребром SUPERSEDES
+ │                                        │  Update: FORBIDDEN
+ │                                        │  A NEW version is created
+ │                                        │  with a SUPERSEDES edge
  │                                        │
- │                                        │  История: ПОЛНАЯ цепочка
- │                                        │  Аудит: hash chain
+ │                                        │  History: FULL chain
+ │                                        │  Audit: hash chain
  └────────────────────                    └────────────────────────────────
 ```
 
-### Таблица выбора модели
+### Model selection table
 
-| Критерий                        | Domain (mutable) | NodeVersion (immutable) |
-|---------------------------------|:-----------------:|:-----------------------:|
-| Нужна история изменений?        | Нет               | Да                      |
-| Аудит критичен?                 | Нет               | Да                      |
-| Частота изменений               | Высокая (>10/день)| Низкая-средняя          |
-| Данные нормативные/юридические? | Нет               | Да                      |
-| Нужно откатить к версии N?      | Невозможно        | Да                      |
-| Объём данных на узел            | Малый (5-10 полей)| Большой (25 полей)      |
-| Скорость записи                 | Быстрая (SET)     | Медленнее (CREATE+EDGE) |
-| Доказуемая целостность          | Нет               | Да (hash chain)         |
+| Criterion                       | Domain (mutable) | NodeVersion (immutable) |
+|---------------------------------|:----------------:|:-----------------------:|
+| Change history needed?          | No               | Yes                     |
+| Audit critical?                 | No               | Yes                     |
+| Change frequency                | High (>10/day)   | Low-medium              |
+| Normative/legal data?           | No               | Yes                     |
+| Need to roll back to version N? | Impossible       | Yes                     |
+| Data volume per node            | Small (5-10 fields) | Large (25 fields)    |
+| Write speed                     | Fast (SET)       | Slower (CREATE+EDGE)    |
+| Provable integrity              | No               | Yes (hash chain)        |
 
-### Маппинг меток к моделям
+### Label to model mapping
 
-| Label графа       | Модель                  | Обоснование                                              |
-|--------------------|-------------------------|----------------------------------------------------------|
-| `Table`            | Domain (mutable)        | Техническое описание, часто синхронизируется              |
-| `Column`           | Domain (mutable)        | Атрибут Table, обновляется при re-scan                    |
-| `Method`           | Domain (mutable)        | Код меняется часто, история в git                        |
-| `BusinessRule`     | NodeVersion (immutable) | Нормативный документ, нужен полный аудит                 |
-| `Policy`           | NodeVersion (immutable) | Юридически значимый, требует трассируемости              |
-| `Requirement`      | NodeVersion (immutable) | Спецификация, нужна история согласований                 |
-| `CatalogEntry`     | Domain + GraphVersion   | Сам каталог mutable, но версии графов immutable          |
-| `ExecutionRecord`  | Domain (immutable by policy) | Создаётся один раз, не меняется, но без hash chain  |
-| `Settings`         | Domain (mutable)        | Конфигурация, история не нужна                           |
-| `CoreComponent`    | Domain (mutable)        | Инфраструктурный узел, обновляется при deploy            |
+| Graph label        | Model                        | Rationale                                                |
+|--------------------|------------------------------|----------------------------------------------------------|
+| `Table`            | Domain (mutable)             | Technical description, frequently synchronized            |
+| `Column`           | Domain (mutable)             | Table attribute, updated on re-scan                       |
+| `Method`           | Domain (mutable)             | Code changes often, history in git                       |
+| `BusinessRule`     | NodeVersion (immutable)      | Regulatory document, full audit required                  |
+| `Policy`           | NodeVersion (immutable)      | Legally significant, requires traceability                |
+| `Requirement`      | NodeVersion (immutable)      | Specification, approval history needed                    |
+| `CatalogEntry`     | Domain + GraphVersion        | Catalog itself is mutable, but graph versions are immutable |
+| `ExecutionRecord`  | Domain (immutable by policy) | Created once, never changed, but without hash chain       |
+| `Settings`         | Domain (mutable)             | Configuration, no history needed                         |
+| `CoreComponent`    | Domain (mutable)             | Infrastructure node, updated on deploy                   |
 
 ---
 
-## 3.2 Bridge pattern: связь между моделями
+## 3.2 Bridge pattern: linking the two models
 
-### Проблема
+### Problem
 
-Domain-узлы и NodeVersion живут в разных моделях и не связаны напрямую. Метод (domain) может реализовывать бизнес-правило (NodeVersion), но как построить ребро между ними, если версия правила меняется?
+Domain nodes and NodeVersion live in different models and are not linked directly. A method (domain) may implement a business rule (NodeVersion), but how do you build an edge between them when the rule version changes?
 
-### Решение: Stable Entity ID + Version Pointer
+### Solution: Stable Entity ID + Version Pointer
 
 ```
   Domain Model                          Immutable Model
@@ -132,61 +132,61 @@ Domain-узлы и NodeVersion живут в разных моделях и не
   ├─────────────────────────────────────┤ │ (:NodeVersion)
   │         (entityId: "BR-001")        │   │ entityId:  "BR-001"
   │                                     │   │ versionId: "BR-001-v3"
-  │                                     │   │ status:    "ACTIVE"    <── текущая
+  │                                     │   │ status:    "ACTIVE"    <── current
   │                                     │   │ content:   "{...}"
 ```
 
-### Правила Bridge pattern
+### Bridge pattern rules
 
-**Правило 1: Используй `entityId`, а не `versionId` для кросс-модельных рёбер.**
+**Rule 1: Use `entityId`, not `versionId`, for cross-model edges.**
 
 ```cypher
-// ПРАВИЛЬНО: ребро ссылается на entityId
+// CORRECT: edge references entityId
 MATCH (m:Method {id: "M-042"})
 MATCH (br:NodeVersion {entityId: "BR-001", status: "ACTIVE"})
 MERGE (m)-[:IMPLEMENTS {entityId: "BR-001"}]->(br)
 ```
 
 ```cypher
-// НЕПРАВИЛЬНО: ребро привязано к конкретной версии
+// INCORRECT: edge tied to a specific version
 MATCH (m:Method {id: "M-042"})
 MATCH (br:NodeVersion {versionId: "BR-001-v3"})
 MERGE (m)-[:IMPLEMENTS]->(br)
-// При появлении v4 это ребро останется на v3!
+// When v4 appears this edge will remain on v3!
 ```
 
-**Правило 2: При SUPERSEDE -- перелинковка входящих рёбер.**
+**Rule 2: On SUPERSEDE — relink incoming edges.**
 
-Когда создаётся новая версия, все входящие кросс-модельные рёбра должны быть перенаправлены на новую ACTIVE-версию:
+When a new version is created, all incoming cross-model edges must be redirected to the new ACTIVE version:
 
 ```javascript
 /**
- * Перелинковка входящих рёбер при создании новой версии.
- * Вызывается ПОСЛЕ создания SUPERSEDES-ребра и смены статуса.
+ * Relink incoming edges on new version creation.
+ * Called AFTER creating the SUPERSEDES edge and changing status.
  *
- * @param {string} entityId   -- стабильный ID сущности
- * @param {string} oldVersionId -- versionId предыдущей (теперь SUPERSEDED) версии
- * @param {string} newVersionId -- versionId новой ACTIVE-версии
+ * @param {string} entityId     — stable entity ID
+ * @param {string} oldVersionId — versionId of the previous (now SUPERSEDED) version
+ * @param {string} newVersionId — versionId of the new ACTIVE version
  */
 async function relinkIncomingEdges(entityId, oldVersionId, newVersionId) {
   const session = driver.session();
   try {
-    // Найти все входящие рёбра к старой версии (кроме SUPERSEDES)
+    // Find all incoming edges to the old version (except SUPERSEDES)
     const result = await session.run(`
       MATCH (source)-[r]->(old:NodeVersion {versionId: $oldVersionId})
       WHERE type(r) <> 'SUPERSEDES'
       MATCH (new:NodeVersion {versionId: $newVersionId})
       WITH source, r, old, new, type(r) AS relType, properties(r) AS relProps
-      // Создать такое же ребро к новой версии
+      // Create the same edge to the new version
       CALL {
         WITH source, new, relType, relProps
         WITH source, new, relType, relProps
         CREATE (source)-[newR:IMPLEMENTS]->(new)
         SET newR = relProps
-        // Примечание: Memgraph не поддерживает динамические типы рёбер.
-        // В реальной системе нужен CASE по relType.
+        // Note: Memgraph does not support dynamic edge types.
+        // In a real system a CASE by relType is needed.
       }
-      // Удалить старое ребро
+      // Delete the old edge
       DELETE r
       RETURN count(*) AS relinked
     `, { oldVersionId, newVersionId });
@@ -198,9 +198,9 @@ async function relinkIncomingEdges(entityId, oldVersionId, newVersionId) {
 }
 ```
 
-**Правило 3: Перелинковка по типам рёбер (Memgraph-совместимый вариант).**
+**Rule 3: Relinking by edge types (Memgraph-compatible variant).**
 
-Поскольку Memgraph не поддерживает динамические типы рёбер в `CREATE`, используем явный маппинг:
+Since Memgraph does not support dynamic edge types in `CREATE`, we use an explicit mapping:
 
 ```javascript
 const BRIDGE_EDGE_TYPES = ['IMPLEMENTS', 'REFERENCES', 'GOVERNED_BY', 'DERIVED_FROM'];
@@ -235,9 +235,9 @@ async function relinkAllBridgeEdges(entityId, oldVersionId, newVersionId) {
 
 ---
 
-## 3.3 SUPERSEDES chain: создание, траверс, инварианты
+## 3.3 SUPERSEDES chain: creation, traversal, invariants
 
-### Структура цепочки
+### Chain structure
 
 ```
   (:NodeVersion)          (:NodeVersion)          (:NodeVersion)
@@ -252,31 +252,31 @@ async function relinkAllBridgeEdges(entityId, oldVersionId, newVersionId) {
   └────────────────────────┘────────────────────────┘
            ^                        ^
            │ SUPERSEDES             │ SUPERSEDES
-           │ (v2 заменяет v1)       │ (v3 заменяет v2)
+           │ (v2 replaces v1)       │ (v3 replaces v2)
            │                        │
       (:NodeVersion v2)        (:NodeVersion v3)
 
-  Направление SUPERSEDES: НОВАЯ -[:SUPERSEDES]-> СТАРАЯ
-  Чтение цепочки: от ACTIVE назад по SUPERSEDES
+  SUPERSEDES direction: NEW -[:SUPERSEDES]-> OLD
+  Reading the chain: from ACTIVE backwards via SUPERSEDES
 ```
 
-### Код создания новой версии
+### New version creation code
 
 ```javascript
 const crypto = require('crypto');
 
 /**
- * Создаёт следующую версию сущности в SUPERSEDES-цепочке.
+ * Creates the next version of an entity in the SUPERSEDES chain.
  *
- * @param {string} entityId    -- стабильный ID сущности
- * @param {object} newContent  -- новое содержимое версии
- * @param {object} meta        -- метаданные (author, changeReason, и т.д.)
- * @returns {object}           -- созданная NodeVersion
+ * @param {string} entityId    — stable entity ID
+ * @param {object} newContent  — new version content
+ * @param {object} meta        — metadata (author, changeReason, etc.)
+ * @returns {object}           — created NodeVersion
  */
 async function createNextVersion(entityId, newContent, meta = {}) {
   const session = driver.session();
   try {
-    // 1. Найти текущую ACTIVE-версию
+    // 1. Find the current ACTIVE version
     const current = await session.run(`
       MATCH (v:NodeVersion {entityId: $entityId, status: "ACTIVE"})
       RETURN v
@@ -291,7 +291,7 @@ async function createNextVersion(entityId, newContent, meta = {}) {
     const currentHash = activeNode.contentHash;
     const currentVersionId = activeNode.versionId;
 
-    // 2. Вычислить hash chain
+    // 2. Calculate hash chain
     const contentStr = JSON.stringify(newContent, Object.keys(newContent).sort());
     const newHash = crypto
       .createHash('sha256')
@@ -301,18 +301,18 @@ async function createNextVersion(entityId, newContent, meta = {}) {
     const newSeq = currentSeq + 1;
     const newVersionId = `${entityId}-v${newSeq}`;
 
-    // 3. Вычислить diff от предыдущей версии
+    // 3. Calculate diff from previous version
     const previousContent = JSON.parse(activeNode.content || '{}');
     const diff = computeDiff(previousContent, newContent);
 
-    // 4. Атомарная транзакция: создать новую версию + SUPERSEDES + обновить статус
+    // 4. Atomic transaction: create new version + SUPERSEDES + update status
     const result = await session.run(`
-      // Пометить текущую как SUPERSEDED
+      // Mark current as SUPERSEDED
       MATCH (old:NodeVersion {versionId: $currentVersionId})
       SET old.status = "SUPERSEDED"
       SET old.supersededAt = datetime()
 
-      // Создать новую версию
+      // Create new version
       CREATE (new:NodeVersion {
         entityId:         $entityId,
         versionId:        $newVersionId,
@@ -341,7 +341,7 @@ async function createNextVersion(entityId, newContent, meta = {}) {
         metadata:         $metadata
       })
 
-      // Создать SUPERSEDES-ребро (новая -> старая)
+      // Create SUPERSEDES edge (new -> old)
       CREATE (new)-[:SUPERSEDES {
         at: datetime(),
         reason: $changeReason
@@ -368,7 +368,7 @@ async function createNextVersion(entityId, newContent, meta = {}) {
 
     const newNode = result.records[0].get('new').properties;
 
-    // 5. Перелинковать Bridge-рёбра
+    // 5. Relink Bridge edges
     await relinkAllBridgeEdges(entityId, currentVersionId, newVersionId);
 
     return newNode;
@@ -378,7 +378,7 @@ async function createNextVersion(entityId, newContent, meta = {}) {
 }
 
 /**
- * Простой diff между двумя объектами.
+ * Simple diff between two objects.
  */
 function computeDiff(oldObj, newObj) {
   const diff = { added: {}, removed: {}, changed: {} };
@@ -396,9 +396,9 @@ function computeDiff(oldObj, newObj) {
 }
 ```
 
-### Cypher-запросы для обхода цепочки
+### Cypher queries for chain traversal
 
-**Получить полную историю сущности (от новейшей к старейшей):**
+**Get full entity history (newest to oldest):**
 
 ```cypher
 MATCH path = (active:NodeVersion {entityId: $entityId, status: "ACTIVE"})
@@ -413,7 +413,7 @@ RETURN ancestor.versionId     AS versionId,
 ORDER BY ancestor.sequenceNumber DESC
 ```
 
-**Найти версию, актуальную на определённую дату:**
+**Find the version current at a specific date:**
 
 ```cypher
 MATCH (v:NodeVersion {entityId: $entityId})
@@ -424,7 +424,7 @@ ORDER BY v.sequenceNumber DESC
 LIMIT 1
 ```
 
-**Проверить целостность hash chain:**
+**Verify hash chain integrity:**
 
 ```cypher
 MATCH path = (active:NodeVersion {entityId: $entityId, status: "ACTIVE"})
@@ -438,43 +438,43 @@ RETURN newer.versionId AS brokenAt,
        older.contentHash AS actual
 ```
 
-### Инварианты SUPERSEDES-цепочки
+### SUPERSEDES chain invariants
 
-| # | Инвариант                                         | Проверка                                                   |
-|---|---------------------------------------------------|------------------------------------------------------------|
-| 1 | Ровно одна ACTIVE-версия на `entityId`            | `COUNT(status="ACTIVE") = 1` для каждого entityId          |
-| 2 | Нет циклов в цепочке SUPERSEDES                   | DFS-обход не возвращается к посещённому узлу                |
-| 3 | `sequenceNumber` строго возрастает по SUPERSEDES   | Каждая `newer.seqNum > older.seqNum`                       |
-| 4 | `previousHash` совпадает с `contentHash` предка    | `newer.previousHash === older.contentHash`                  |
-| 5 | Первая версия (seqNum=1) имеет `previousHash=null`| Начало цепочки не ссылается на предыдущий hash             |
-| 6 | SUPERSEDED-версия не имеет входящих Bridge-рёбер  | Все IMPLEMENTS/REFERENCES указывают только на ACTIVE        |
+| # | Invariant                                         | Check                                                   |
+|---|---------------------------------------------------|---------------------------------------------------------|
+| 1 | Exactly one ACTIVE version per `entityId`          | `COUNT(status="ACTIVE") = 1` for each entityId          |
+| 2 | No cycles in the SUPERSEDES chain                  | DFS traversal does not return to a visited node         |
+| 3 | `sequenceNumber` strictly increases along SUPERSEDES | Each `newer.seqNum > older.seqNum`                    |
+| 4 | `previousHash` matches `contentHash` of ancestor   | `newer.previousHash === older.contentHash`              |
+| 5 | First version (seqNum=1) has `previousHash=null`   | Chain start does not reference a previous hash          |
+| 6 | SUPERSEDED version has no incoming Bridge edges    | All IMPLEMENTS/REFERENCES point only to ACTIVE          |
 
-**Cypher-запрос для проверки инварианта 1:**
+**Cypher query to verify invariant 1:**
 
 ```cypher
 MATCH (v:NodeVersion {status: "ACTIVE"})
 WITH v.entityId AS eid, count(*) AS cnt
 WHERE cnt > 1
 RETURN eid, cnt
-// Результат должен быть пустым
+// Result must be empty
 ```
 
-**Cypher-запрос для проверки инварианта 3:**
+**Cypher query to verify invariant 3:**
 
 ```cypher
 MATCH (newer:NodeVersion)-[:SUPERSEDES]->(older:NodeVersion)
 WHERE newer.sequenceNumber <= older.sequenceNumber
 RETURN newer.versionId AS invalid, newer.sequenceNumber AS newerSeq, older.sequenceNumber AS olderSeq
-// Результат должен быть пустым
+// Result must be empty
 ```
 
 ---
 
 ## 3.4 Merge / Split / Fork
 
-### MERGE: объединение двух сущностей в одну
+### MERGE: combining two entities into one
 
-**Сценарий:** Две бизнес-правила (BR-010, BR-011) оказались дублями и должны быть объединены.
+**Scenario:** Two business rules (BR-010, BR-011) turned out to be duplicates and must be merged.
 
 ```
   BEFORE MERGE:
@@ -484,7 +484,7 @@ RETURN newer.versionId AS invalid, newer.sequenceNumber AS newerSeq, older.seque
   │ entityId: "BR-010"              │ entityId: "BR-011"
   │ versionId: "BR-010-v2"          │ versionId: "BR-011-v3"
   │ status: ACTIVE                  │ status: ACTIVE
-  │ content: "Правило А"            │ content: "Правило Б"
+  │ content: "Rule A"               │ content: "Rule B"
 
 
   AFTER MERGE:
@@ -506,27 +506,27 @@ RETURN newer.versionId AS invalid, newer.sequenceNumber AS newerSeq, older.seque
   │                 │ status: ACTIVE         │
   │                 │ mergedFromIds:          │
   │                 │  ["BR-010","BR-011"]   │
-  │                 │ content: "Объединённое"│
+  │                 │ content: "Combined"    │
   │                 └────────────────────────┘
 ```
 
-**Код MERGE:**
+**MERGE code:**
 
 ```javascript
 /**
- * Объединение двух сущностей в одну.
- * Результат: новая версия primaryEntityId, содержащая данные обеих.
- * Вторая сущность получает статус MERGED.
+ * Merge two entities into one.
+ * Result: a new version of primaryEntityId containing data from both.
+ * The second entity receives MERGED status.
  *
- * @param {string} primaryEntityId   -- entityId, который остаётся
- * @param {string} secondaryEntityId -- entityId, который вливается
- * @param {object} mergedContent     -- объединённое содержимое
- * @param {object} meta              -- метаданные
+ * @param {string} primaryEntityId   — entityId that remains
+ * @param {string} secondaryEntityId — entityId that is absorbed
+ * @param {object} mergedContent     — combined content
+ * @param {object} meta              — metadata
  */
 async function mergeEntities(primaryEntityId, secondaryEntityId, mergedContent, meta = {}) {
   const session = driver.session();
   try {
-    // 1. Создать новую версию primary с объединённым содержимым
+    // 1. Create new version of primary with combined content
     const newVersion = await createNextVersion(primaryEntityId, mergedContent, {
       ...meta,
       changeReason: `MERGE: ${secondaryEntityId} merged into ${primaryEntityId}`,
@@ -537,7 +537,7 @@ async function mergeEntities(primaryEntityId, secondaryEntityId, mergedContent, 
       }
     });
 
-    // 2. Пометить ACTIVE-версию secondary как MERGED
+    // 2. Mark the ACTIVE version of secondary as MERGED
     await session.run(`
       MATCH (v:NodeVersion {entityId: $secondaryEntityId, status: "ACTIVE"})
       SET v.status = "MERGED"
@@ -545,7 +545,7 @@ async function mergeEntities(primaryEntityId, secondaryEntityId, mergedContent, 
       SET v.mergedAt = datetime()
     `, { secondaryEntityId, primaryEntityId });
 
-    // 3. Создать MERGED_FROM-ребро
+    // 3. Create MERGED_FROM edge
     await session.run(`
       MATCH (target:NodeVersion {versionId: $newVersionId})
       MATCH (source:NodeVersion {entityId: $secondaryEntityId, status: "MERGED"})
@@ -558,9 +558,9 @@ async function mergeEntities(primaryEntityId, secondaryEntityId, mergedContent, 
       reason: meta.changeReason || 'Duplicate consolidation'
     });
 
-    // 4. Перенаправить все Bridge-рёбра secondary на новую версию primary
+    // 4. Redirect all Bridge edges of secondary to the new primary version
     await relinkAllBridgeEdges(secondaryEntityId,
-      `${secondaryEntityId}-v*`, // все версии
+      `${secondaryEntityId}-v*`, // all versions
       newVersion.versionId);
 
     return newVersion;
@@ -570,9 +570,9 @@ async function mergeEntities(primaryEntityId, secondaryEntityId, mergedContent, 
 }
 ```
 
-### SPLIT: разделение сущности на две
+### SPLIT: splitting one entity into two
 
-**Сценарий:** Бизнес-правило BR-020 слишком сложное и разделяется на BR-020 (часть А) и BR-021 (часть Б).
+**Scenario:** Business rule BR-020 is too complex and is split into BR-020 (part A) and BR-021 (part B).
 
 ```
   BEFORE SPLIT:
@@ -582,17 +582,17 @@ async function mergeEntities(primaryEntityId, secondaryEntityId, mergedContent, 
   │ entityId: "BR-020"
   │ versionId: "BR-020-v4"
   │ status: ACTIVE
-  │ content: "Сложное правило А+Б"
+  │ content: "Complex rule A+B"
 
 
   AFTER SPLIT:
   ────────────
 
   (:NodeVersion)                            (:NodeVersion)
-  │ entityId: "BR-020"                      │ entityId: "BR-021"        <── НОВЫЙ entityId
+  │ entityId: "BR-020"                      │ entityId: "BR-021"        <── NEW entityId
   │ versionId: "BR-020-v5"                  │ versionId: "BR-021-v1"
   │ status: ACTIVE                          │ status: ACTIVE
-  │ content: "Часть А"                      │ content: "Часть Б"
+  │ content: "Part A"                       │ content: "Part B"
   │ splitInfo: "split, kept part A"         │ splitFromId: "BR-020"
   │                                         │ splitFromVersion: "BR-020-v4"
   │         ^                               │
@@ -604,24 +604,24 @@ async function mergeEntities(primaryEntityId, secondaryEntityId, mergedContent, 
   │  │ status: SUPERSEDED
 ```
 
-**Код SPLIT:**
+**SPLIT code:**
 
 ```javascript
 /**
- * Разделение сущности на две.
- * Оригинальный entityId получает новую версию (часть A).
- * Создаётся новый entityId для части B.
+ * Split an entity into two.
+ * The original entityId receives a new version (part A).
+ * A new entityId is created for part B.
  *
- * @param {string} entityId     -- исходный entityId
- * @param {object} contentPartA -- содержимое для оригинальной сущности
- * @param {object} contentPartB -- содержимое для новой сущности
- * @param {string} newEntityId  -- entityId для новой сущности
- * @param {object} meta         -- метаданные
+ * @param {string} entityId     — source entityId
+ * @param {object} contentPartA — content for the original entity
+ * @param {object} contentPartB — content for the new entity
+ * @param {string} newEntityId  — entityId for the new entity
+ * @param {object} meta         — metadata
  */
 async function splitEntity(entityId, contentPartA, contentPartB, newEntityId, meta = {}) {
   const session = driver.session();
   try {
-    // 1. Получить текущую ACTIVE-версию
+    // 1. Get the current ACTIVE version
     const current = await session.run(`
       MATCH (v:NodeVersion {entityId: $entityId, status: "ACTIVE"})
       RETURN v.versionId AS vid
@@ -629,7 +629,7 @@ async function splitEntity(entityId, contentPartA, contentPartB, newEntityId, me
 
     const sourceVersionId = current.records[0].get('vid');
 
-    // 2. Создать новую версию A (обновление оригинала)
+    // 2. Create new version A (update of original)
     const versionA = await createNextVersion(entityId, contentPartA, {
       ...meta,
       changeReason: `SPLIT: extracted ${newEntityId} from ${entityId}`,
@@ -639,7 +639,7 @@ async function splitEntity(entityId, contentPartA, contentPartB, newEntityId, me
       }
     });
 
-    // 3. Создать первую версию B (новая сущность)
+    // 3. Create first version B (new entity)
     const contentStrB = JSON.stringify(contentPartB, Object.keys(contentPartB).sort());
     const hashB = crypto.createHash('sha256').update(contentStrB).digest('hex');
 
@@ -699,9 +699,9 @@ async function splitEntity(entityId, contentPartA, contentPartB, newEntityId, me
 }
 ```
 
-### FORK: ветвление для альтернатив
+### FORK: branching for alternatives
 
-**Сценарий:** Нужно создать альтернативную версию правила BR-030 для другого региона/контекста. Оригинал остаётся, создаётся независимая ветка.
+**Scenario:** An alternative version of rule BR-030 needs to be created for a different region/context. The original remains; an independent branch is created.
 
 ```
   BEFORE FORK:
@@ -711,19 +711,19 @@ async function splitEntity(entityId, contentPartA, contentPartB, newEntityId, me
   │ entityId: "BR-030"
   │ versionId: "BR-030-v2"
   │ status: ACTIVE
-  │ content: "Глобальное правило"
+  │ content: "Global rule"
 
 
   AFTER FORK:
   ───────────
 
   (:NodeVersion)                            (:NodeVersion)
-  │ entityId: "BR-030"                      │ entityId: "BR-030-EU"     <── НОВЫЙ entityId
+  │ entityId: "BR-030"                      │ entityId: "BR-030-EU"     <── NEW entityId
   │ versionId: "BR-030-v2"                  │ versionId: "BR-030-EU-v1"
   │ status: ACTIVE                          │ status: ACTIVE
-  │ content: "Глобальное правило"            │ content: "Правило для EU"
+  │ content: "Global rule"                  │ content: "EU rule"
   │                                         │ forkedFromId: "BR-030"
-  │ (без изменений!)                        │ forkedFromVersion: "BR-030-v2"
+  │ (no changes!)                           │ forkedFromVersion: "BR-030-v2"
   │                                         │
   │                                         │         ^
   │                                         │         │ FORKED_FROM
@@ -735,27 +735,27 @@ async function splitEntity(entityId, contentPartA, contentPartB, newEntityId, me
   │                                          │ versionId: "BR-030-v2"
 ```
 
-**Отличие FORK от SPLIT:**
-- **SPLIT** -- оригинал меняется (получает новую версию), оба entityId содержат части исходного.
-- **FORK** -- оригинал НЕ меняется, новый entityId начинает независимую жизнь.
+**Difference between FORK and SPLIT:**
+- **SPLIT** — the original changes (receives a new version), both entityIds contain parts of the original.
+- **FORK** — the original does NOT change; the new entityId begins an independent life.
 
-**Код FORK:**
+**FORK code:**
 
 ```javascript
 /**
- * Создание форка сущности.
- * Оригинал остаётся без изменений.
- * Создаётся новый entityId с начальным содержимым, скопированным из оригинала.
+ * Create a fork of an entity.
+ * The original remains unchanged.
+ * A new entityId is created with initial content copied from the original.
  *
- * @param {string} sourceEntityId  -- entityId оригинала
- * @param {string} forkEntityId   -- entityId для форка
- * @param {object} modifications  -- изменения относительно оригинала (опционально)
- * @param {object} meta           -- метаданные
+ * @param {string} sourceEntityId  — entityId of the original
+ * @param {string} forkEntityId   — entityId for the fork
+ * @param {object} modifications  — changes relative to the original (optional)
+ * @param {object} meta           — metadata
  */
 async function forkEntity(sourceEntityId, forkEntityId, modifications = {}, meta = {}) {
   const session = driver.session();
   try {
-    // 1. Получить текущую ACTIVE-версию оригинала
+    // 1. Get the current ACTIVE version of the original
     const current = await session.run(`
       MATCH (v:NodeVersion {entityId: $sourceEntityId, status: "ACTIVE"})
       RETURN v
@@ -768,12 +768,12 @@ async function forkEntity(sourceEntityId, forkEntityId, modifications = {}, meta
     const source = current.records[0].get('v').properties;
     const sourceContent = JSON.parse(source.content || '{}');
 
-    // 2. Применить модификации к содержимому
+    // 2. Apply modifications to the content
     const forkContent = { ...sourceContent, ...modifications };
     const contentStr = JSON.stringify(forkContent, Object.keys(forkContent).sort());
     const hash = crypto.createHash('sha256').update(contentStr).digest('hex');
 
-    // 3. Создать первую версию форка
+    // 3. Create the first version of the fork
     await session.run(`
       CREATE (f:NodeVersion {
         entityId:           $forkEntityId,
@@ -843,19 +843,19 @@ async function forkEntity(sourceEntityId, forkEntityId, modifications = {}, meta
 
 ---
 
-## 3.5 God Mode: контролируемое нарушение immutability
+## 3.5 God Mode: controlled violation of immutability
 
-### Операции, требующие God Mode
+### Operations requiring God Mode
 
-| Операция                        | Причина необходимости God Mode                              | Уровень риска |
-|---------------------------------|-------------------------------------------------------------|:-------------:|
-| Удаление версии из цепочки      | Нарушает hash chain и SUPERSEDES-связность                  | CRITICAL      |
-| Модификация contentHash         | Разрушает доказуемую целостность всей цепочки               | CRITICAL      |
-| Изменение исторического времени | Нарушает хронологическую последовательность                  | HIGH          |
-| Полная очистка (purge) сущности | Удаляет все версии и связи, необратимо                      | CRITICAL      |
-| Исправление повреждённой цепочки| Пересчёт хешей, восстановление SUPERSEDES-рёбер             | HIGH          |
-| Смена entityId                  | Ломает все Bridge-рёбра и внешние ссылки                    | HIGH          |
-| Откат статуса MERGED/DELETED    | Возврат сущности из терминального состояния                  | MEDIUM        |
+| Operation                         | Reason God Mode is required                                 | Risk level    |
+|-----------------------------------|-------------------------------------------------------------|:-------------:|
+| Deleting a version from the chain | Breaks hash chain and SUPERSEDES connectivity               | CRITICAL      |
+| Modifying contentHash             | Destroys the provable integrity of the entire chain         | CRITICAL      |
+| Changing historical time          | Violates chronological order                                | HIGH          |
+| Full entity purge                 | Deletes all versions and relationships, irreversible        | CRITICAL      |
+| Repairing a broken chain          | Recalculating hashes, restoring SUPERSEDES edges            | HIGH          |
+| Changing entityId                 | Breaks all Bridge edges and external references             | HIGH          |
+| Reverting MERGED/DELETED status   | Restoring entity from terminal state                        | MEDIUM        |
 
 ### GodModeSession
 
@@ -863,14 +863,14 @@ async function forkEntity(sourceEntityId, forkEntityId, modifications = {}, meta
 const crypto = require('crypto');
 
 /**
- * Сессия God Mode с таймаутом, верификацией и аудитом.
- * Все действия внутри сессии записываются в hash chain аудита.
+ * God Mode session with timeout, verification, and audit.
+ * All actions within the session are recorded in an audit hash chain.
  */
 class GodModeSession {
   /**
-   * @param {string} adminId         -- ID администратора
-   * @param {string} reason          -- обоснование активации God Mode
-   * @param {number} timeoutMinutes  -- таймаут сессии (по умолчанию 30 мин)
+   * @param {string} adminId         — administrator ID
+   * @param {string} reason          — justification for activating God Mode
+   * @param {number} timeoutMinutes  — session timeout (default 30 min)
    */
   constructor(adminId, reason, timeoutMinutes = 30) {
     this.sessionId = crypto.randomUUID();
@@ -884,11 +884,11 @@ class GodModeSession {
   }
 
   /**
-   * Проверить, что администратор имеет право на God Mode.
-   * В реальной системе -- проверка роли, 2FA, approval workflow.
+   * Verify that the administrator has God Mode rights.
+   * In a real system — role check, 2FA, approval workflow.
    */
   static async verifyAdmin(adminId) {
-    // TODO: интеграция с IAM
+    // TODO: IAM integration
     const ADMIN_IDS = ['user:superadmin', 'user:dba', 'agent:system-repair'];
     if (!ADMIN_IDS.includes(adminId)) {
       throw new Error(`Admin verification failed for: ${adminId}`);
@@ -897,13 +897,13 @@ class GodModeSession {
   }
 
   /**
-   * Создать и верифицировать новую God Mode сессию.
+   * Create and verify a new God Mode session.
    */
   static async create(adminId, reason, timeoutMinutes = 30) {
     await GodModeSession.verifyAdmin(adminId);
     const session = new GodModeSession(adminId, reason, timeoutMinutes);
 
-    // Записать открытие сессии в аудит
+    // Record session opening in audit
     await session._recordAudit('SESSION_OPENED', {
       adminId,
       reason,
@@ -915,7 +915,7 @@ class GodModeSession {
   }
 
   /**
-   * Проверить, что сессия всё ещё активна.
+   * Check that the session is still active.
    */
   isActive() {
     if (this.closed) return false;
@@ -927,13 +927,13 @@ class GodModeSession {
   }
 
   /**
-   * Выполнить действие в God Mode.
-   * Каждое действие записывается в hash chain аудита.
+   * Execute an action in God Mode.
+   * Each action is recorded in the audit hash chain.
    *
-   * @param {string}   actionType -- тип действия (DELETE_VERSION, MODIFY_HASH, и т.д.)
-   * @param {object}   params     -- параметры действия
-   * @param {Function} executor   -- функция, выполняющая действие
-   * @returns {*}                 -- результат executor
+   * @param {string}   actionType — action type (DELETE_VERSION, MODIFY_HASH, etc.)
+   * @param {object}   params     — action parameters
+   * @param {Function} executor   — function that performs the action
+   * @returns {*}                 — executor result
    */
   async execute(actionType, params, executor) {
     if (!this.isActive()) {
@@ -950,13 +950,13 @@ class GodModeSession {
     };
 
     try {
-      // Выполнить действие
+      // Execute the action
       const result = await executor();
 
       actionRecord.status = 'SUCCESS';
       actionRecord.result = result;
 
-      // Записать в hash chain аудита
+      // Record in audit hash chain
       await this._recordAudit(actionType, actionRecord);
 
       this.actions.push(actionRecord);
@@ -974,7 +974,7 @@ class GodModeSession {
   }
 
   /**
-   * Закрыть сессию God Mode.
+   * Close the God Mode session.
    */
   async close() {
     this.closed = true;
@@ -986,8 +986,8 @@ class GodModeSession {
   }
 
   /**
-   * Записать запись аудита с hash chain.
-   * Каждая запись содержит hash предыдущей, образуя неразрывную цепочку.
+   * Record an audit entry with hash chain.
+   * Each entry contains the hash of the previous one, forming an unbreakable chain.
    */
   async _recordAudit(eventType, data) {
     const record = {
@@ -1008,7 +1008,7 @@ class GodModeSession {
     record.auditHash = hash;
     this.lastAuditHash = hash;
 
-    // Сохранить в граф знаний
+    // Save to knowledge graph
     const session = driver.session();
     try {
       await session.run(`
@@ -1037,10 +1037,10 @@ class GodModeSession {
 }
 ```
 
-**Пример использования God Mode:**
+**God Mode usage example:**
 
 ```javascript
-// Исправление повреждённой hash chain
+// Repairing a broken hash chain
 async function repairHashChain(entityId) {
   const godMode = await GodModeSession.create('user:superadmin',
     `Repair corrupted hash chain for ${entityId}`);
@@ -1049,7 +1049,7 @@ async function repairHashChain(entityId) {
     await godMode.execute('REPAIR_HASH_CHAIN', { entityId }, async () => {
       const session = driver.session();
       try {
-        // Получить все версии по порядку
+        // Get all versions in order
         const result = await session.run(`
           MATCH (v:NodeVersion {entityId: $entityId})
           RETURN v ORDER BY v.sequenceNumber ASC
@@ -1063,7 +1063,7 @@ async function repairHashChain(entityId) {
             .update((previousHash || '') + '|' + node.content)
             .digest('hex');
 
-          // GOD MODE: модификация hash (обычно запрещено)
+          // GOD MODE: hash modification (normally forbidden)
           await session.run(`
             MATCH (v:NodeVersion {versionId: $vid})
             SET v.contentHash = $newHash
@@ -1090,32 +1090,32 @@ async function repairHashChain(entityId) {
 
 ---
 
-## 3.6 Tombstones: soft delete с возможностью восстановления
+## 3.6 Tombstones: soft delete with restore capability
 
 ### Soft Delete
 
-При удалении версии она не уничтожается физически, а помечается как DELETED. Создаётся узел Tombstone, который хранит метаданные для возможного восстановления.
+When deleting a version it is not physically destroyed, but marked as DELETED. A Tombstone node is created, which stores metadata for possible restoration.
 
-**Код soft delete:**
+**Soft delete code:**
 
 ```javascript
 /**
- * Мягкое удаление сущности.
- * Создаёт Tombstone, помечает ACTIVE-версию как DELETED,
- * сохраняет осиротевшие рёбра для возможного восстановления.
- * Окно восстановления: 90 дней.
+ * Soft deletion of an entity.
+ * Creates a Tombstone, marks the ACTIVE version as DELETED,
+ * saves orphaned edges for possible restoration.
+ * Restore window: 90 days.
  *
- * @param {string} entityId -- entityId удаляемой сущности
- * @param {string} reason   -- причина удаления
- * @param {string} deletedBy -- кто удаляет
+ * @param {string} entityId  — entityId of the entity being deleted
+ * @param {string} reason    — reason for deletion
+ * @param {string} deletedBy — who is deleting
  */
 async function softDelete(entityId, reason, deletedBy) {
   const session = driver.session();
   try {
     const tombstoneId = `tombstone:${entityId}:${Date.now()}`;
-    const restoreDeadline = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000); // 90 дней
+    const restoreDeadline = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000); // 90 days
 
-    // 1. Собрать информацию об осиротевших рёбрах (до удаления)
+    // 1. Collect information about orphaned edges (before deletion)
     const edgesResult = await session.run(`
       MATCH (v:NodeVersion {entityId: $entityId, status: "ACTIVE"})
       OPTIONAL MATCH (source)-[r]->(v)
@@ -1137,7 +1137,7 @@ async function softDelete(entityId, reason, deletedBy) {
       relProps:        r.get('relProps')
     })).filter(e => e.relType !== null);
 
-    // 2. Создать Tombstone
+    // 2. Create Tombstone
     await session.run(`
       CREATE (t:Tombstone {
         tombstoneId:     $tombstoneId,
@@ -1158,7 +1158,7 @@ async function softDelete(entityId, reason, deletedBy) {
       orphanedEdgesStr: JSON.stringify(orphanedEdges)
     });
 
-    // 3. Пометить ACTIVE-версию как DELETED
+    // 3. Mark ACTIVE version as DELETED
     await session.run(`
       MATCH (v:NodeVersion {entityId: $entityId, status: "ACTIVE"})
       SET v.status = "DELETED"
@@ -1167,7 +1167,7 @@ async function softDelete(entityId, reason, deletedBy) {
       SET v.tombstoneId = $tombstoneId
     `, { entityId, deletedBy, tombstoneId });
 
-    // 4. Удалить осиротевшие Bridge-рёбра (данные уже в Tombstone)
+    // 4. Delete orphaned Bridge edges (data already in Tombstone)
     for (const edgeType of ['IMPLEMENTS', 'REFERENCES', 'GOVERNED_BY', 'DERIVED_FROM']) {
       await session.run(`
         MATCH (source)-[r:${edgeType}]->(v:NodeVersion {entityId: $entityId, status: "DELETED"})
@@ -1187,19 +1187,19 @@ async function softDelete(entityId, reason, deletedBy) {
 }
 ```
 
-### Восстановление из Tombstone
+### Restore from Tombstone
 
 ```javascript
 /**
- * Восстановление сущности из Tombstone.
- * Возвращает статус ACTIVE, восстанавливает Bridge-рёбра.
+ * Restore an entity from Tombstone.
+ * Returns status to ACTIVE, restores Bridge edges.
  *
- * @param {string} tombstoneId -- ID tombstone для восстановления
+ * @param {string} tombstoneId — ID of the tombstone to restore from
  */
 async function restoreFromTombstone(tombstoneId) {
   const session = driver.session();
   try {
-    // 1. Проверить, что Tombstone существует и не истёк
+    // 1. Verify that the Tombstone exists and has not expired
     const tombResult = await session.run(`
       MATCH (t:Tombstone {tombstoneId: $tombstoneId, status: "PENDING"})
       WHERE t.restoreDeadline > datetime()
@@ -1214,7 +1214,7 @@ async function restoreFromTombstone(tombstoneId) {
     const entityId = tombstone.entityId;
     const orphanedEdges = JSON.parse(tombstone.orphanedEdges || '[]');
 
-    // 2. Восстановить статус ACTIVE
+    // 2. Restore ACTIVE status
     await session.run(`
       MATCH (v:NodeVersion {entityId: $entityId, status: "DELETED", tombstoneId: $tombstoneId})
       SET v.status = "ACTIVE"
@@ -1225,11 +1225,11 @@ async function restoreFromTombstone(tombstoneId) {
       SET v.restoredFrom = $tombstoneId
     `, { entityId, tombstoneId });
 
-    // 3. Восстановить Bridge-рёбра
+    // 3. Restore Bridge edges
     let restoredEdges = 0;
     for (const edge of orphanedEdges) {
       try {
-        // Найти source-узел (может быть Domain или NodeVersion)
+        // Find source node (may be Domain or NodeVersion)
         const sourceMatch = edge.sourceVersionId
           ? `(s:NodeVersion {versionId: "${edge.sourceVersionId}"})`
           : edge.sourceId
@@ -1238,10 +1238,10 @@ async function restoreFromTombstone(tombstoneId) {
 
         if (!sourceMatch) continue;
 
-        // Memgraph: нужен явный тип ребра
+        // Memgraph: explicit edge type required
         const edgeType = edge.relType;
         if (!['IMPLEMENTS', 'REFERENCES', 'GOVERNED_BY', 'DERIVED_FROM'].includes(edgeType)) {
-          continue; // Не восстанавливаем неизвестные типы
+          continue; // Do not restore unknown types
         }
 
         await session.run(`
@@ -1255,12 +1255,12 @@ async function restoreFromTombstone(tombstoneId) {
 
         restoredEdges++;
       } catch (err) {
-        // Source-узел мог быть удалён -- пропускаем
+        // Source node may have been deleted — skip
         console.warn(`Could not restore edge: ${err.message}`);
       }
     }
 
-    // 4. Пометить Tombstone как использованный
+    // 4. Mark Tombstone as used
     await session.run(`
       MATCH (t:Tombstone {tombstoneId: $tombstoneId})
       SET t.status = "RESTORED"
@@ -1279,21 +1279,21 @@ async function restoreFromTombstone(tombstoneId) {
 }
 ```
 
-### Жизненный цикл Tombstone
+### Tombstone lifecycle
 
 ```
   (:NodeVersion)                                (:Tombstone)
   │ status: ACTIVE                              │ status: PENDING
-  │                                             │ restoreDeadline: +90 дней
+  │                                             │ restoreDeadline: +90 days
   │                                             │
   ├──── soft delete ────────────────────────────>│
   │                                             │
   │ status: DELETED                             │
   │ tombstoneId: "tombstone:..."                │
   │                                             │
-  │         Два возможных исхода:               │
+  │         Two possible outcomes:              │
   │                                             │
-  │    [A] Восстановление (до дедлайна):        │
+  │    [A] Restore (before deadline):           │
   │         │                                   │
   │         ├── restore ────────────────────────>│ status: RESTORED
   │         │                                   │ restoredAt: datetime()
@@ -1302,31 +1302,31 @@ async function restoreFromTombstone(tombstoneId) {
   │  restoredAt: datetime()                     │
   │  restoredFrom: "tombstone:..."              │
   │                                             │
-  │    [B] Истечение срока (после 90 дней):      │
+  │    [B] Deadline expiry (after 90 days):     │
   │         │                                   │
   │         ├── expire cron ────────────────────>│ status: EXPIRED
   │         │                                   │ expiredAt: datetime()
   │         v                                   │
   │  status: DELETED (permanent)                │
-  │  (данные для физической очистки)             │
+  │  (data ready for physical cleanup)          │
   │                                             │
   └─────────────────────────────────────────────┘
 
-  Сводка переходов:
+  Transition summary:
 
     ACTIVE ──[soft delete]──> DELETED + Tombstone(PENDING)
     DELETED ──[restore]─────> ACTIVE  + Tombstone(RESTORED)
-    DELETED ──[expire 90d]──> DELETED + Tombstone(EXPIRED) ──[purge]──> физическое удаление
+    DELETED ──[expire 90d]──> DELETED + Tombstone(EXPIRED) ──[purge]──> physical deletion
 ```
 
-**Cron-задача для обработки истёкших Tombstone:**
+**Cron task for processing expired Tombstones:**
 
 ```javascript
 /**
- * Обработка истёкших Tombstone.
- * Запускается по расписанию (ежедневно).
- * Помечает истёкшие Tombstone как EXPIRED.
- * Физическое удаление -- отдельный процесс, требующий God Mode.
+ * Process expired Tombstones.
+ * Runs on schedule (daily).
+ * Marks expired Tombstones as EXPIRED.
+ * Physical deletion — a separate process requiring God Mode.
  */
 async function processExpiredTombstones() {
   const session = driver.session();
@@ -1357,4 +1357,4 @@ async function processExpiredTombstones() {
 
 ---
 
-*Этот документ является частью [Кодекса UN ProjectAdvisor](../CODEX_INDEX.md)*
+*This document is part of the [UN ProjectAdvisor Codex](../CODEX_INDEX.md)*

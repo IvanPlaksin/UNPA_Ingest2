@@ -153,6 +153,8 @@ class DialogueWatcher {
       // Step 2: Full Phase 2 pipeline
       await dialogueSegmentExecutor.execute({ sessionId, storeSegments: true }, {});
       await dialogueSummarizeExecutor.execute({ sessionId, level: 'both', useLLM: true, batchSize: 3 }, {});
+      const { dialogueExtractEntitiesExecutor } = require('../executors/dialogue.extract_entities');
+      await dialogueExtractEntitiesExecutor.execute({ sessionId }, {});
       await dialogueEmbedExecutor.execute({ sessionId, targets: ['session_summary', 'segment_summaries'] }, {});
       await dialogueExtractDecisionsExecutor.execute({ sessionId, useLLM: true, minConfidence: 0.45 }, {});
       await dialogueLinkExecutor.execute({ sessionId, linkTypes: ['backlog', 'codex', 'catalog', 'chains'] }, {});

@@ -1,6 +1,3 @@
-import React from 'react';
-import FlowDeskDemo from '../components/FlowDesk/FlowDeskDemo';
-
-export default function FlowDeskPage() {
-  return <FlowDeskDemo />;
-}
+// Compatibility shim — file moved to ../instances/flowdesk/pages/FlowDeskPage.jsx
+export { default } from '../instances/flowdesk/pages/FlowDeskPage.jsx';
+export * from '../instances/flowdesk/pages/FlowDeskPage.jsx';

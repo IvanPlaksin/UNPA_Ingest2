@@ -10,6 +10,7 @@
 'use strict';
 
 const crypto = require('crypto');
+const os = require('os');
 const {
   SOURCE_TYPES,
   EXTRACTOR_TYPES,
@@ -20,6 +21,14 @@ const {
   validateProvenance,
   DEFAULT_WEIGHT_CONFIG
 } = require('../types/provenance.types');
+
+const neo4j = require('neo4j-driver');
+const NAMESPACE = 'SIGILLUM';
+const RECENT_ROUNDS_LIMIT = 100;
+
+function getMemgraph() {
+  try { return require('./memgraph.service'); } catch { return null; }
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PROVENANCE SERVICE CLASS
@@ -42,6 +51,137 @@ class ProvenanceService {
 
     /** @type {string} */
     this.extractorVersion = '1.0.0';
+
+    // Stable per-process identity used as part of ProvenanceRound nodeId
+    this._instanceId = `${os.hostname()}_${process.pid}`;
+    this._dbEnabled = true;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MEMGRAPH PERSISTENCE (dual-write, non-blocking)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  _roundNodeId(roundNumber) {
+    return `provenance_round_${this._instanceId}_${roundNumber}`;
+  }
+
+  async _persistRound(round) {
+    if (!this._dbEnabled) return;
+    const mg = getMemgraph();
+    if (!mg) return;
+    try {
+      await mg.runQuery(
+        `MERGE (r:ProvenanceRound {nodeId: $nodeId})
+         SET r.namespace = $namespace,
+             r.roundNumber = $roundNumber,
+             r.instanceId = $instanceId,
+             r.startedAt = $startedAt,
+             r.status = $status,
+             r.extractorConfigJson = $extractorConfigJson`,
+        {
+          nodeId: this._roundNodeId(round.roundNumber),
+          namespace: NAMESPACE,
+          roundNumber: round.roundNumber,
+          instanceId: this._instanceId,
+          startedAt: round.startedAt.toISOString(),
+          status: round.status,
+          extractorConfigJson: JSON.stringify(round.extractorConfig || {})
+        }
+      );
+    } catch (err) {
+      console.warn(`[ProvenanceService] Memgraph persist failed for round ${round.roundNumber}:`, err.message);
+    }
+  }
+
+  async _updateRoundInDb(roundNumber) {
+    if (!this._dbEnabled) return;
+    const round = this.rounds.get(roundNumber);
+    if (!round) return;
+    const mg = getMemgraph();
+    if (!mg) return;
+    try {
+      await mg.runQuery(
+        `MATCH (r:ProvenanceRound {nodeId: $nodeId})
+         SET r.status = $status,
+             r.completedAt = $completedAt,
+             r.documentsProcessed = $documentsProcessed,
+             r.entitiesExtracted = $entitiesExtracted,
+             r.entitiesMerged = $entitiesMerged,
+             r.entitiesNew = $entitiesNew,
+             r.relationshipsExtracted = $relationshipsExtracted,
+             r.relationshipsNew = $relationshipsNew,
+             r.relationshipsUpdated = $relationshipsUpdated,
+             r.sourceHashesJson = $sourceHashesJson`,
+        {
+          nodeId: this._roundNodeId(roundNumber),
+          status: round.status,
+          completedAt: round.completedAt ? round.completedAt.toISOString() : null,
+          documentsProcessed: round.documentsProcessed,
+          entitiesExtracted: round.entitiesExtracted,
+          entitiesMerged: round.entitiesMerged,
+          entitiesNew: round.entitiesNew,
+          relationshipsExtracted: round.relationshipsExtracted,
+          relationshipsNew: round.relationshipsNew,
+          relationshipsUpdated: round.relationshipsUpdated,
+          sourceHashesJson: JSON.stringify(round.sourceHashes || [])
+        }
+      );
+    } catch (err) {
+      console.warn(`[ProvenanceService] Memgraph update failed for round ${roundNumber}:`, err.message);
+    }
+  }
+
+  async initialize() {
+    const mg = getMemgraph();
+    if (!mg) {
+      console.warn('[ProvenanceService] Memgraph not available — skipping provenance recovery');
+      this._dbEnabled = false;
+      return;
+    }
+    try {
+      const rows = await mg.runQuery(
+        `MATCH (r:ProvenanceRound {namespace: $namespace})
+         RETURN r ORDER BY r.roundNumber DESC LIMIT $limit`,
+        { namespace: NAMESPACE, limit: neo4j.int(RECENT_ROUNDS_LIMIT) }
+      );
+      if (!rows || rows.length === 0) return;
+
+      const toNum = v => (v && typeof v.toNumber === 'function') ? v.toNumber() : (Number(v) || 0);
+
+      let maxRound = 0;
+      for (const row of rows) {
+        const r = row.r && row.r.properties ? row.r.properties : row.r;
+        if (!r || r.roundNumber == null) continue;
+        const round = {
+          roundNumber: toNum(r.roundNumber),
+          startedAt: r.startedAt ? new Date(r.startedAt) : new Date(),
+          completedAt: r.completedAt ? new Date(r.completedAt) : null,
+          status: r.status || 'completed',
+          documentsProcessed: toNum(r.documentsProcessed),
+          entitiesExtracted: toNum(r.entitiesExtracted),
+          entitiesMerged: toNum(r.entitiesMerged),
+          entitiesNew: toNum(r.entitiesNew),
+          relationshipsExtracted: toNum(r.relationshipsExtracted),
+          relationshipsNew: toNum(r.relationshipsNew),
+          relationshipsUpdated: toNum(r.relationshipsUpdated),
+          extractorConfig: r.extractorConfigJson ? JSON.parse(r.extractorConfigJson) : {},
+          sourceHashes: r.sourceHashesJson ? JSON.parse(r.sourceHashesJson) : [],
+          error: null
+        };
+        // Don't overwrite in-memory rounds that started after DB load
+        if (!this.rounds.has(round.roundNumber)) {
+          this.rounds.set(round.roundNumber, round);
+        }
+        if (round.roundNumber > maxRound) maxRound = round.roundNumber;
+      }
+
+      if (maxRound > this.currentRound) {
+        this.currentRound = maxRound;
+      }
+      console.log(`[ProvenanceService] Recovered ${rows.length} rounds from Memgraph; currentRound=${this.currentRound}`);
+    } catch (err) {
+      console.warn('[ProvenanceService] Memgraph recovery failed:', err.message);
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -58,6 +198,7 @@ class ProvenanceService {
     const round = createExtractionRound(this.currentRound, config);
     this.rounds.set(this.currentRound, round);
     console.log(`[ProvenanceService] Started extraction round ${this.currentRound}`);
+    this._persistRound(round).catch(() => {});
     return round;
   }
 
@@ -99,6 +240,7 @@ class ProvenanceService {
     }
 
     Object.assign(round, stats);
+    this._updateRoundInDb(roundNumber).catch(() => {});
   }
 
   /**
@@ -126,6 +268,7 @@ class ProvenanceService {
       merged: round.entitiesMerged,
       relationships: round.relationshipsExtracted
     });
+    this._updateRoundInDb(roundNumber).catch(() => {});
   }
 
   /**
@@ -461,6 +604,11 @@ let instance = null;
 function getProvenanceService() {
   if (!instance) {
     instance = new ProvenanceService();
+    // Fire-and-forget recovery — in-memory state is valid immediately,
+    // Memgraph rounds are merged in once the async query completes.
+    instance.initialize().catch(err =>
+      console.warn('[ProvenanceService] Startup initialization error:', err.message)
+    );
   }
   return instance;
 }

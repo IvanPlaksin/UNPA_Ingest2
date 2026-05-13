@@ -160,6 +160,29 @@ const NAMESPACE_CONFIGS = {
         enabled: true
     },
 
+    [KnowledgeNamespace.UNIFIED]: {
+        namespace: KnowledgeNamespace.UNIFIED,
+        displayName: 'Unified Global Knowledge Base',
+        description: 'Cross-namespace unified collection. Stores promoted knowledge quanta from all sources (dialogue sessions, work items, etc.). Read-only via search.',
+        storage: {
+            graphPrefix: 'unified',
+            qdrantCollection: 'embeddings_unified',
+            redisPrefix: 'unified:',
+            storagePath: '/knowledge/unified'
+        },
+        access: {
+            readRoles: [UserRole.DEVELOPER, UserRole.ARCHITECT, UserRole.MANAGER, UserRole.ADMIN, UserRole.SYSTEM],
+            writeRoles: [UserRole.SYSTEM],
+            adminRoles: [UserRole.ADMIN],
+            publicRead: false
+        },
+        allowedNodeLabels: [
+            'DialogueSession', 'KnowledgeQuantum', 'ProvenanceRound'
+        ],
+        cacheTTL: 300,
+        enabled: true
+    },
+
     [KnowledgeNamespace.WORKSPACE]: {
         namespace: KnowledgeNamespace.WORKSPACE,
         displayName: 'WorkSpace — Isolated Knowledge Extraction Sandbox',
@@ -220,10 +243,11 @@ function getNamespaceConfig(fullNamespace) {
     if (fullNamespace.startsWith('workspace:')) {
         return NAMESPACE_CONFIGS[KnowledgeNamespace.WORKSPACE] || null;
     }
-    // Map lowercase keys to enum values for Codex/BlackCodex
+    // Map lowercase keys to enum values for Codex/BlackCodex/Unified
     const nsMap = {
         codex: KnowledgeNamespace.CODEX,
         blackcodex: KnowledgeNamespace.BLACK_CODEX,
+        unified: KnowledgeNamespace.UNIFIED,
     };
     const namespace = nsMap[fullNamespace] || fullNamespace;
 
