@@ -1,84 +1,40 @@
 # @unpa/chat
 
-Embeddable AI chat component for UNPA FlowDesk integration. Works with GXE RuntimeEngine dialog graphs via the UNPA ProjectAdvisor API.
+Embeddable AI chat component for FlowDesk integration. Connects to the GXE RuntimeEngine API and drives conversational dialog graphs — choices, structured forms, and free-text input — from a single React component.
 
 ---
 
-## Installation from Local Folder
+## Quick Start
 
-### Option 1 — Install directly by path
-
-```bash
-npm install /absolute/path/to/packages/unpa-chat
-```
-
-Example (Windows):
-```bash
-npm install D:\UN\Repos\UNPA\UNPA_Ingest\packages\unpa-chat
-```
-
-Example (Linux/macOS):
-```bash
-npm install /home/user/projects/UNPA_Ingest/packages/unpa-chat
-```
-
-### Option 2 — Add to package.json with relative path
-
-In your project's `package.json`, add:
-
-```json
-{
-  "dependencies": {
-    "@unpa/chat": "file:../path/to/packages/unpa-chat"
-  }
-}
-```
-
-Then run:
+### 1. Install peer dependencies
 
 ```bash
-npm install
+npm install react react-dom \
+  @mui/material @mui/icons-material \
+  @emotion/react @emotion/styled \
+  lucide-react
 ```
 
-> **Note:** After any changes to the package source, re-run `npm install` in the consumer project to pick up the latest build.
+### 2. Install the package
 
----
-
-## Build the Package
-
-Before installing, build the package from its source:
-
+**From a local build** (most common):
 ```bash
-cd packages/unpa-chat
-npm install
-npm run build
+npm install "file:/path/to/UNPA_Ingest/packages/unpa-chat"
 ```
 
-This generates `dist/index.js`, `dist/index.esm.js`, and `dist/styles.css`.
-
----
-
-## Peer Dependencies
-
-Your project must have the following packages installed:
-
+**From a tarball** (received from the UNPA team):
 ```bash
-npm install react react-dom @mui/material @mui/icons-material @emotion/react @emotion/styled lucide-react
+npm install ./unpa-chat-1.0.0.tgz
 ```
 
----
-
-## Usage
-
-### Import styles
-
-In your app entry point (e.g. `main.jsx` or `App.jsx`):
+### 3. Import styles
 
 ```js
+// In your app entry point (main.jsx / index.js)
 import '@unpa/chat/dist/styles.css';
 ```
 
-### Full UI Component
+### 4. Use the component
 
 ```jsx
 import { UnpaChat } from '@unpa/chat';
@@ -86,96 +42,13 @@ import { UnpaChat } from '@unpa/chat';
 function App() {
   return (
     <UnpaChat
-      apiBaseUrl="http://localhost:3010/api/v1"
-      userId="user-123"
-      graphId="flowdesk-intake"
+      apiBaseUrl="/api/v1"       // API base URL or proxy path
+      userId="user-123"          // current user ID
+      graphId="laptop-provisioning"
       theme="dark"
       height="500px"
-      onComplete={(result) => console.log('Completed:', result)}
-      onError={(err) => console.error('Error:', err)}
+      onComplete={(result) => console.log('done', result)}
     />
-  );
-}
-```
-
-### With FormRenderer (for dynamic forms from wait_input nodes)
-
-If your project uses the UNPA FormRenderer for rich form rendering, pass it as a prop:
-
-```jsx
-import { UnpaChat } from '@unpa/chat';
-import FormRenderer from './components/Forms/FormRenderer'; // from your project
-
-function App() {
-  return (
-    <UnpaChat
-      apiBaseUrl="http://localhost:3010/api/v1"
-      userId="user-123"
-      graphId="flowdesk-intake"
-      formRenderer={FormRenderer}
-    />
-  );
-}
-```
-
-Without `formRenderer`, the component falls back to plain HTML textarea/select inputs.
-
-### Custom Form Renderer
-
-For complex STRUCTURAL forms (multi-field forms from `workflow.wait_input` nodes with `structuralGraphId`), provide the host project's FormRenderer component. Without it, the package renders a basic textarea/select fallback.
-
-```jsx
-import { UnpaChat } from '@unpa/chat';
-import FormRenderer from './components/Forms/FormRenderer'; // from your project
-
-<UnpaChat
-  apiBaseUrl="http://localhost:3010/api/v1"
-  userId="user-123"
-  graphId="flowdesk-intake"
-  formRenderer={FormRenderer}
-/>
-```
-
-If `formRenderer` is not provided, the component uses a built-in fallback with plain HTML `<textarea>` and `<select>` inputs — suitable for simple text/choice dialogs.
-
----
-
-### Headless Hook (Custom UI)
-
-```jsx
-import { useUnpaChat } from '@unpa/chat';
-
-function CustomChat() {
-  const {
-    messages,
-    isLoading,
-    dialogState,
-    sessionId,
-    sendMessage,
-    submitForm,
-    handleChoiceClick,
-    reset,
-    initialize,
-  } = useUnpaChat({
-    apiBaseUrl: 'http://localhost:3010/api/v1',
-    userId: 'user-123',
-    graphId: 'flowdesk-intake',
-    onComplete: (result) => console.log('Done:', result),
-    onError: (err) => console.error('Error:', err),
-  });
-
-  return (
-    <div>
-      {messages.map((msg, i) => (
-        <div key={i} className={msg.role}>
-          {msg.text}
-        </div>
-      ))}
-      <input
-        onKeyDown={(e) => e.key === 'Enter' && sendMessage(e.target.value)}
-        disabled={isLoading}
-      />
-    </div>
   );
 }
 ```
@@ -184,75 +57,80 @@ function CustomChat() {
 
 ## Component Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `apiBaseUrl` | `string` | **required** | Base URL of the UNPA API (e.g. `'/api/v1'` or `'http://host/api/v1'`) |
-| `userId` | `string` | **required** | Authenticated user ID |
-| `graphId` | `string` | `undefined` | Dialog graph ID to load |
-| `graphVersion` | `string` | `undefined` | Specific graph version number |
-| `sessionId` | `string` | auto-generated | Override the session identifier |
-| `welcomeText` | `string` | `"How can I help?"` | Initial bot message |
-| `placeholder` | `string` | `"Type your message..."` | Input field placeholder |
-| `theme` | `"dark"` \| `"light"` | `"dark"` | Color theme |
-| `className` | `string` | `""` | Additional CSS class on the root element |
-| `width` | `string \| number` | `"100%"` | Component width |
-| `height` | `string \| number` | `"600px"` | Component height |
-| `style` | `object` | `{}` | Additional inline styles on the root element |
-| `formRenderer` | `React.ComponentType` | `undefined` | FormRenderer component from host project |
-| `onComplete` | `function` | `undefined` | Called when the dialog graph reaches its end node |
-| `onError` | `function` | `undefined` | Called on API or network errors |
+| Prop | Type | Default | Required | Description |
+|------|------|---------|----------|-------------|
+| `apiBaseUrl` | `string` | — | ✓ | API base URL, e.g. `'/api/v1'` or `'https://host/api/v1'` |
+| `userId` | `string` | — | ✓ | Authenticated user ID |
+| `graphId` | `string` | `undefined` | | Dialog graph ID to load |
+| `graphVersion` | `string` | `undefined` | | Specific graph version |
+| `sessionId` | `string` | auto-generated | | Override the session identifier |
+| `welcomeText` | `string` | auto from graph | | Initial bot message |
+| `placeholder` | `string` | `'Type your message...'` | | Input placeholder text |
+| `initialPrompt` | `string` | `undefined` | | Message sent automatically on mount |
+| `theme` | `'dark' \| 'light'` | `'dark'` | | Color theme preset |
+| `className` | `string` | `''` | | Additional CSS class on the root element |
+| `width` | `string \| number` | `'100%'` | | Width (CSS value or pixels) |
+| `height` | `string \| number` | `'600px'` | | Height (CSS value or pixels) |
+| `style` | `object` | `{}` | | Inline styles on the root element |
+| `formRenderer` | `React.ComponentType` | `undefined` | | Host app's FormRenderer for structural forms |
+| `onComplete` | `(result) => void` | `undefined` | | Called when the graph reaches its end node |
+| `onError` | `(error) => void` | `undefined` | | Called on API or network errors |
 
 ---
 
-## useUnpaChat Hook API
+## Headless Hook
 
-```ts
-const {
-  messages,           // { role: 'user'|'bot', text: string, choices?, waitingNode?, isError? }[]
-  isLoading,          // boolean — true while waiting for API response
-  dialogState,        // object — accumulated dialog state from backend
-  sessionId,          // string — current session ID
-  sendMessage,        // (text: string) => Promise<void>
-  submitForm,         // (value: string | object, sourceMessage?) => Promise<void>
-  handleChoiceClick,  // (choice: { value, label }, sourceMessage?) => Promise<void>
-  reset,              // (newGraphId?: string) => Promise<void>
-  initialize,         // (options?: { graphId?, welcomeText? }) => Promise<void>
-} = useUnpaChat(config);
-```
+Use `useUnpaChat` to build a fully custom UI with the same logic:
 
----
+```jsx
+import { useUnpaChat } from '@unpa/chat';
 
-## Custom Theming via CSS Variables
+function CustomChat() {
+  const {
+    messages,
+    isLoading,
+    sendMessage,
+    handleChoiceClick,
+    submitForm,
+    reset,
+  } = useUnpaChat({
+    apiBaseUrl: '/api/v1',
+    userId: 'user-123',
+    graphId: 'laptop-provisioning',
+  });
 
-Override variables on the root element:
-
-```css
-.unpa-chat-root {
-  --unpa-bg-primary: #1a1a2e;
-  --unpa-bg-secondary: #16213e;
-  --unpa-bg-tertiary: #0f3460;
-  --unpa-border: #333355;
-  --unpa-text-primary: #eeeeee;
-  --unpa-text-secondary: #aaaaaa;
-  --unpa-accent: #4fc3f7;
-  --unpa-accent-hover: #81d4fa;
-  --unpa-user-bg: rgba(79, 195, 247, 0.1);
-  --unpa-error-color: #ef5350;
+  return (/* your custom UI */);
 }
 ```
 
 ---
 
-## API Requirements
+## Build the Package
 
-The component communicates with a UNPA ProjectAdvisor backend. Required endpoints:
+If modifying source:
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/api/v1/flowdesk/chat` | Send a message, receive dialog response |
-| `GET` | `/api/v1/graph-catalog/:id` | Load graph metadata (for welcome message) |
+```bash
+cd packages/unpa-chat
+npm install          # install devDependencies
+npm run build        # Rollup → dist/
+```
 
-See UNPA ProjectAdvisor documentation for full API reference.
+Output: `dist/index.js` (CJS), `dist/index.esm.js` (ESM), `dist/styles.css`.
+
+---
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [docs/api-reference.md](docs/api-reference.md) | Complete API: props, hook, types, utilities |
+| [docs/theming.md](docs/theming.md) | CSS variables, class names, custom themes |
+| [docs/custom-forms.md](docs/custom-forms.md) | FormRenderer integration and structural forms |
+| [docs/api-contract.md](docs/api-contract.md) | Backend endpoints this package calls |
+| [docs/examples.md](docs/examples.md) | Full code examples for common scenarios |
+
+For backend setup and proxy configuration, see the main project:
+[docs/FLOWDESK_CHAT_INTEGRATION.md](../../docs/FLOWDESK_CHAT_INTEGRATION.md)
 
 ---
 
