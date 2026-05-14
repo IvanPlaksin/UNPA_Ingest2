@@ -1,10 +1,10 @@
 # FlowDesk AI Chat — Build & Integration Guide
 
-> **Purpose:** This guide covers how to build the `@unpa/chat` React component, distribute it to a recipient (FlowDesk) application, and integrate the FlowDeskProxy as a reference gateway between the client application and the GXE API.
+> **Purpose:** This guide covers how to build the `@unpa/chat` React component, distribute it to the FlowDesk application, and wire up the API proxy layer between the widget and the GXE API.
 >
 > **Roles:**
-> - **UNPA team** — builds and publishes the `@unpa/chat` package
-> - **FlowDesk team** — installs the package, deploys a proxy, embeds the chat widget
+> - **UNPA team** — builds and publishes the `@unpa/chat` package from `packages/unpa-chat/`
+> - **FlowDesk team** — installs the package, configures the proxy, embeds the widget at `/ai-chat`
 
 ---
 
@@ -14,70 +14,67 @@
 2. [UNPA Side: Building the Chat Package](#2-unpa-side-building-the-chat-package)
 3. [FlowDesk Side: Installing the Package](#3-flowdesk-side-installing-the-package)
 4. [FlowDesk Side: Embedding the Widget](#4-flowdesk-side-embedding-the-widget)
-5. [FlowDesk Side: Proxy Setup (Reference Implementation)](#5-flowdesk-side-proxy-setup-reference-implementation)
+5. [Proxy Setup](#5-proxy-setup)
 6. [Configuration Reference](#6-configuration-reference)
 7. [Development Workflow (Full Local Stack)](#7-development-workflow-full-local-stack)
-8. [Production Build](#8-production-build)
-9. [Docker Deployment](#9-docker-deployment)
+8. [Production Build & Deployment](#8-production-build--deployment)
+9. [FlowDeskProxy Reference Implementation](#9-flowdeskproxy-reference-implementation)
 10. [Troubleshooting](#10-troubleshooting)
 
 ---
 
 ## 1. Architecture Overview
 
-The AI chat feature consists of three independent layers. Each layer has a clear owner and deployment boundary:
+The AI chat feature spans three layers. Each has its own deployment boundary:
 
 ```
-┌─────────────────────────────────────────────────────┐
-│              FlowDesk Application (recipient)        │
-│                                                      │
-│  ┌────────────────────────────────┐                  │
-│  │  React SPA                     │                  │
-│  │  import { UnpaChat }           │                  │
-│  │    from '@unpa/chat'           │  ← npm package   │
-│  │                                │    from local    │
-│  │  <UnpaChat                     │    path or tar   │
-│  │    apiBaseUrl="/proxy"         │                  │
-│  │    graphId="laptop-provisioning│                  │
-│  │  />                            │                  │
-│  └───────────────┬────────────────┘                  │
-│                  │ HTTP REST + WebSocket              │
-│  ┌───────────────▼────────────────┐                  │
-│  │  FlowDeskProxy  (port 9000)    │  ← recipient     │
-│  │  ASP.NET Core 8 + SignalR      │    deploys this  │
-│  │  YARP reverse proxy            │    (reference    │
-│  │                                │    impl from     │
-│  │  /hubs/chat  → SignalR hub     │    UNPA repo)    │
-│  │  /proxy/**   → REST controller │                  │
-│  │  /api/**     → YARP → GXE API  │                  │
-│  └───────────────┬────────────────┘                  │
-└──────────────────│──────────────────────────────────┘
-                   │ HTTP (internal network)
-┌──────────────────▼──────────────────────────────────┐
-│              GXE API  (UNPA service)                 │
-│  Node.js/Express  :3010                              │
-│  POST /api/v1/flowdesk/chat                          │
-│  POST /api/v1/flowdesk/laptop/chat                   │
-│  GET  /api/v1/flowdesk/graph-versions                │
-│  ...                                                 │
-│  (independent, separately managed service)           │
-└─────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│                FlowDesk Application                       │
+│                                                           │
+│  React SPA  (FlowDeskPortal / Vite)                       │
+│  ┌───────────────────────────────────┐                    │
+│  │  /ai-chat → <AiChatPage>          │                    │
+│  │    └── <UnpaChat                  │                    │
+│  │          apiBaseUrl={VITE_UNPA_   │  npm package       │
+│  │            API_BASE_URL}          │  file:../packages/ │
+│  │          userId={user.id}         │  unpa-chat         │
+│  │          graphId="<uuid>"         │                    │
+│  │          initialPrompt={...}      │                    │
+│  │        />                         │                    │
+│  └───────────────┬───────────────────┘                    │
+└──────────────────│──────────────────────────────────────┘
+                   │
+       ┌───────────┴──────────────────────────────────────┐
+       │ DEV: Vite dev proxy                               │
+       │  /api/proxy/unpa/** → http://localhost:3010/api/v1│
+       │                                                   │
+       │ PROD: FlowDesk backend (YARP)                     │
+       │  https://{flowdesk-api}/api/proxy/unpa/**         │
+       │    → {GXE API internal}/api/v1/**                 │
+       └───────────────────┬───────────────────────────────┘
+                           │ HTTP (internal)
+┌──────────────────────────▼───────────────────────────────┐
+│              GXE API  (UNPA service, port 3010)           │
+│  POST /api/v1/flowdesk/chat                               │
+│  GET  /api/v1/graph-catalog/{graphId}                     │
+│  GET  /api/v1/flowdesk/graph-versions                     │
+│  GET  /api/v1/flowdesk/health                             │
+│  (independently deployed; never exposed to the browser)   │
+└──────────────────────────────────────────────────────────┘
 ```
 
 ### Why the proxy?
 
-The proxy serves two purposes for the FlowDesk team:
+1. **Address masking** — the GXE API is an internal UNPA service. The browser never sees its address; all requests go through FlowDesk's own domain.
+2. **Path normalization** — the widget calls `/api/proxy/unpa/flowdesk/chat`; the proxy rewrites this to `/api/v1/flowdesk/chat` before forwarding to GXE. Only the proxy configuration needs to change if the GXE API moves.
 
-1. **Address masking** — the GXE API (`https://api.unpa.internal`) is never exposed to the browser. All requests go to FlowDesk's own domain (e.g., `https://flowdesk.example.com/proxy/...`).
+### Package distribution
 
-2. **Address unification** — frontend code uses simple relative paths (`/proxy/chat`, `/hubs/chat`, `/api/v1/...`) regardless of where GXE is actually hosted. Changing the GXE endpoint requires updating only the proxy configuration, not the frontend code.
+`@unpa/chat` is a private React component library. It is not published to npm.
 
-### Package distribution strategy
-
-`@unpa/chat` is a **private React component library**. It is not published to npm. Distribution works via:
-- **Local path** — during development (both repos checked out on the same machine)
-- **npm tarball** — for deployment handoff (`npm pack` → transfer `unpa-chat-1.0.0.tgz` → `npm install`)
-- **Private npm registry** — optional (Azure Artifacts, Verdaccio, GitHub Packages)
+- **Current approach** — the built package (`packages/unpa-chat/`) lives in the FlowDesk `Clients/` directory alongside the portal, installed via a relative `file:` path.
+- **Alternative** — `npm pack` tarball, transferred out-of-band.
+- **Optional** — private npm registry (Azure Artifacts, GitHub Packages).
 
 ---
 
@@ -90,18 +87,16 @@ The proxy serves two purposes for the FlowDesk team:
 | Node.js | 20 LTS |
 | npm | 9+ |
 
-No additional global tools are needed. Rollup is a devDependency.
+Rollup is a devDependency — no global install needed.
 
-### 2.2 Build the package
+### 2.2 Build
 
 ```powershell
 cd d:\UN\Repos\UNPA\UNPA_Ingest\packages\unpa-chat
 
-# Install build dependencies (devDependencies only — peerDeps are not installed)
-npm install
+npm install        # install devDependencies
 
-# Build: produces dist/index.js (CJS), dist/index.esm.js (ESM), dist/styles.css
-npm run build
+npm run build      # Rollup → dist/
 ```
 
 Expected output:
@@ -109,22 +104,20 @@ Expected output:
 ```
 packages/unpa-chat/
   dist/
-    index.js          ← CommonJS bundle (~50 KB)
+    index.js          ← CommonJS bundle
     index.js.map
-    index.esm.js      ← ES Module bundle (~50 KB)
+    index.esm.js      ← ES Module bundle
     index.esm.js.map
     styles.css        ← extracted CSS
 ```
 
-> The `dist/` directory is **committed to git** as the built artifact. Rebuild only when source files in `src/` change.
+> **The `dist/` directory is committed to git** as the built artifact. Rebuild only when source files in `src/` change.
 
-### 2.3 What gets bundled vs. what does not
+### 2.3 Bundled vs. peer dependencies
 
-**Bundled in `dist/`** (self-contained):
-- All source files from `src/`
-- Internal utility functions
+**Bundled** — all source files in `src/`.
 
-**NOT bundled** (peerDependencies — must be provided by the host application):
+**Not bundled** (peerDependencies — must be present in the host app):
 
 | Package | Min version |
 |---------|-------------|
@@ -136,321 +129,255 @@ packages/unpa-chat/
 | `@emotion/styled` | ≥ 11.0.0 |
 | `lucide-react` | ≥ 0.200.0 |
 
-The host application must have all peerDependencies installed. The widget will not render without them.
-
 ### 2.4 Preparing for transfer
 
-**Option A: Local path reference** (when both projects are on the same filesystem)
+**Option A: Shared filesystem** — packages/ lives inside the recipient's repo. No transfer step (current approach).
 
-No extra action needed. See [Section 3](#3-flowdesk-side-installing-the-package).
-
-**Option B: npm tarball** (cross-machine transfer)
+**Option B: Tarball**
 
 ```powershell
 cd d:\UN\Repos\UNPA\UNPA_Ingest\packages\unpa-chat
-
-# Create a versioned tarball
 npm pack
-
-# Output: unpa-chat-1.0.0.tgz
-# Transfer this file to the FlowDesk team
-```
-
-**Option C: Private registry** (optional, for automated CI/CD)
-
-```powershell
-# Publish to Azure Artifacts or similar (requires registry configuration)
-npm publish --registry https://pkgs.dev.azure.com/your-org/_packaging/your-feed/npm/registry/
+# Output: unpa-chat-1.0.0.tgz — transfer to the FlowDesk team
 ```
 
 ---
 
 ## 3. FlowDesk Side: Installing the Package
 
-The FlowDesk application must install `@unpa/chat` and all its peer dependencies.
+### Repository layout
 
-### 3.1 Install peer dependencies
+In the FlowDesk project the package folder lives alongside the portal:
 
-In the FlowDesk React application:
-
-```powershell
-npm install react react-dom @mui/material @mui/icons-material @emotion/react @emotion/styled lucide-react
+```
+FlowDesk\Frontend\Clients\
+  FlowDeskPortal\        ← React application
+  packages\
+    unpa-chat\           ← @unpa/chat source + built dist/
+  shared\
+    ...
 ```
 
-> Skip packages already present in the project.
+### 3.1 package.json entry
 
-### 3.2 Install @unpa/chat
-
-**Option A: Local path** (both repos on same machine)
-
-```powershell
-# From the FlowDesk project root
-npm install "file:../../UNPA_Ingest/packages/unpa-chat"
-
-# Or with a relative or absolute path:
-npm install "file:D:/UN/Repos/UNPA/UNPA_Ingest/packages/unpa-chat"
-```
-
-This adds to `package.json`:
 ```json
 {
   "dependencies": {
-    "@unpa/chat": "file:../../UNPA_Ingest/packages/unpa-chat"
+    "@unpa/chat": "file:../packages/unpa-chat"
   }
 }
 ```
 
-> On `npm install`, npm runs the package's `prepare` script (`npm run build`), rebuilding `dist/` automatically.
+The path `../packages/unpa-chat` is relative to `FlowDeskPortal/`.
 
-**Option B: Tarball** (file received from UNPA team)
-
-```powershell
-# Place unpa-chat-1.0.0.tgz in a local directory, e.g., ./vendor/
-npm install ./vendor/unpa-chat-1.0.0.tgz
-```
-
-**Option C: Private registry**
+### 3.2 Install
 
 ```powershell
-npm install @unpa/chat --registry https://pkgs.dev.azure.com/your-org/_packaging/your-feed/npm/registry/
+# From FlowDeskPortal/
+npm install
 ```
 
-### 3.3 Import CSS
+npm resolves `file:../packages/unpa-chat`, runs the package's `prepare` script (`npm run build`), and symlinks the result into `node_modules/@unpa/chat`.
 
-In the FlowDesk app's entry point (e.g., `main.jsx` or `index.js`):
+> If the UNPA team ships `dist/` pre-built and committed, the `prepare` script is a no-op — the existing `dist/` is used directly.
 
-```javascript
+### 3.3 Import styles
+
+In the app entry point (`main.tsx`):
+
+```ts
 import '@unpa/chat/dist/styles.css';
 ```
 
-This loads the widget's default styling. You can override styles using the `sx` prop or MUI theming.
+### 3.4 TypeScript declarations
+
+The package is authored in JavaScript (JSX). FlowDesk declares the component types locally so TypeScript can type-check usages:
+
+```ts
+// src/declarations.d.ts
+import type { CSSProperties } from 'react';
+
+declare module '@unpa/chat' {
+  export interface UnpaChatProps {
+    apiBaseUrl:     string;
+    userId:         string;
+    graphId?:       string;
+    graphVersion?:  string;
+    sessionId?:     string;
+    welcomeText?:   string;
+    placeholder?:   string;
+    initialPrompt?: string;
+    theme?:         'dark' | 'light';
+    className?:     string;
+    width?:         string | number;
+    height?:        string | number;
+    style?:         CSSProperties;
+    onComplete?:    (result: unknown) => void;
+    onError?:       (err: unknown) => void;
+  }
+
+  export function UnpaChat(props: UnpaChatProps): JSX.Element;
+  export function useUnpaChat(config: object): object;
+  export function UnpaChatProvider(props: object): JSX.Element;
+  export function useUnpaChatContext(): object;
+}
+```
+
+> Update this file whenever new props are added to the package.
 
 ---
 
 ## 4. FlowDesk Side: Embedding the Widget
 
-### 4.1 Basic usage
+### 4.1 AiChatPage — current implementation
 
-```jsx
+The widget is rendered inside a dedicated page component routed at `/ai-chat`:
+
+```ts
+// src/pages/AiChatPage.tsx
+import { useLocation } from 'react-router-dom';
 import { UnpaChat } from '@unpa/chat';
 import '@unpa/chat/dist/styles.css';
+import type { User } from '@shared/api';
 
-function App() {
-  return (
-    <UnpaChat
-      apiBaseUrl="/proxy"       // relative path — proxied by FlowDeskProxy
-      graphId="laptop-provisioning"  // graph ID from the UNPA graph catalog
-      userId={currentUser.id}        // optional: identify the user
-      theme="light"                  // "light" | "dark"
-    />
-  );
+interface AiChatPageProps {
+    user: User;
 }
-```
 
-### 4.2 Props reference
+interface LocationState {
+    initialPrompt?: string;
+}
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `apiBaseUrl` | `string` | — | Base URL for API calls. Use `"/proxy"` when FlowDeskProxy is running. Use `"/api/v1"` for direct API (no proxy). |
-| `graphId` | `string` | — | AOPEG graph ID to execute. Determines the conversation flow. |
-| `userId` | `string` | `null` | Optional user identifier for session tracking and personalization. |
-| `theme` | `"light" \| "dark"` | `"light"` | Visual theme. Inherits MUI ThemeProvider if available. |
-| `sx` | `object` | `{}` | MUI `sx` prop for container styling overrides. |
-| `onComplete` | `function` | `null` | Called when the graph execution completes. Receives `(sessionResult)`. |
+export function AiChatPage({ user }: AiChatPageProps) {
+    const location = useLocation();
+    const state = location.state as LocationState | null;
+    const initialPrompt = state?.initialPrompt;
 
-### 4.3 Using the headless hook
-
-For complete UI control, use `useUnpaChat` directly:
-
-```jsx
-import { useUnpaChat } from '@unpa/chat';
-
-function CustomChat() {
-  const {
-    messages,          // array of { role, content, choices, form }
-    isLoading,         // boolean
-    isComplete,        // boolean — graph finished
-    sendMessage,       // (text: string) => Promise<void>
-    submitChoice,      // (choiceId: string) => Promise<void>
-    submitForm,        // (formData: object) => Promise<void>
-    sessionId,         // current session UUID
-    reset,             // () => void — start a new session
-  } = useUnpaChat({
-    apiBaseUrl: '/proxy',
-    graphId: 'laptop-provisioning',
-    userId: 'user-123',
-  });
-
-  return (
-    <div>
-      {messages.map((msg, i) => (
-        <div key={i} className={msg.role}>
-          {msg.content}
-          {msg.choices && (
-            <div>
-              {msg.choices.map(c => (
-                <button key={c.id} onClick={() => submitChoice(c.id)}>{c.label}</button>
-              ))}
-            </div>
-          )}
+    return (
+        <div className="h-full w-full flex flex-col">
+            <UnpaChat
+                apiBaseUrl={import.meta.env.VITE_UNPA_API_BASE_URL || '/api/proxy/unpa'}
+                userId={user.id}
+                graphId="934e9016-6157-4f76-8dbe-c0f8c9dd08a2"
+                initialPrompt={initialPrompt}
+                theme="light"
+                height="100%"
+                width="100%"
+                onComplete={(result: unknown) => {
+                    console.log('Chat completed:', result);
+                }}
+                onError={(err: unknown) => {
+                    console.error('Chat error:', err);
+                }}
+            />
         </div>
-      ))}
-      <input
-        onKeyDown={e => e.key === 'Enter' && sendMessage(e.target.value)}
-        disabled={isLoading || isComplete}
-      />
-    </div>
-  );
+    );
 }
 ```
 
-### 4.4 API calls made by the widget
+### 4.2 Router registration
 
-The widget calls the following endpoints relative to `apiBaseUrl`:
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/api/v1/flowdesk/chat` | Send a message and receive the next graph step |
-| `GET`  | `/api/v1/flowdesk/chat/:sessionId` | Resume an existing session |
-
-Request body for `POST /api/v1/flowdesk/chat`:
-```json
-{
-  "sessionId": "uuid",
-  "userId":    "user-123",
-  "message":   "I need a laptop",
-  "graphId":   "laptop-provisioning"
-}
+```ts
+// src/App.tsx
+<Route path="/ai-chat" element={<AiChatPage user={user} />} />
 ```
 
-Response shape:
-```json
-{
-  "response":     "What type of work will you be doing?",
-  "choices":      [{ "id": "dev", "label": "Software development" }, ...],
-  "executionLog": [...],
-  "state":        "waiting",
-  "isComplete":   false
-}
+### 4.3 `initialPrompt` navigation flow
+
+The home page contains a `ChatInterface` component with a text input. When the user presses send, React Router navigates to `/ai-chat` and passes the typed text as router state:
+
+```ts
+// shared/features/src/ChatInterface.tsx
+const handleSend = () => {
+    if (!input.trim()) return;
+    navigate('/ai-chat', { state: { initialPrompt: input } });
+};
 ```
+
+`AiChatPage` reads this state via `useLocation()`. The `<UnpaChat>` component receives `initialPrompt` as a prop and automatically sends it as the first message once the graph initializes — the user never has to type it again on the chat page.
+
+### 4.4 Key prop choices
+
+| Prop | Value | Reason |
+|------|-------|--------|
+| `apiBaseUrl` | `VITE_UNPA_API_BASE_URL \|\| '/api/proxy/unpa'` | Env-configurable; defaults to the Vite proxy path |
+| `graphId` | `"934e9016-6157-4f76-8dbe-c0f8c9dd08a2"` | UUID of the deployed GXE dialog graph |
+| `theme` | `"light"` | Matches the FlowDesk portal's light-mode design system |
+| `height` / `width` | `"100%"` | The page container dictates the size via flexbox; the widget fills it |
+| `initialPrompt` | from `location.state` | Bridges home-page chat input → dedicated chat page |
 
 ---
 
-## 5. FlowDesk Side: Proxy Setup (Reference Implementation)
+## 5. Proxy Setup
 
-The `flowdesk-proxy/` directory in the UNPA repository is a **reference implementation** of the gateway that every FlowDesk host should deploy. It is designed to be copied, adapted, and deployed by the recipient team.
+The widget's `apiBaseUrl` points to a proxy path — never directly to the GXE API. The proxy implementation differs between development and production.
 
-### 5.1 What FlowDeskProxy does
+### 5.1 Development — Vite dev server proxy
 
-```
-Browser (FlowDesk SPA)
-  │
-  ├── GET  /hubs/chat          WebSocket (SignalR)
-  │     └── ChatHub.cs         → GxeApiService → GXE API /api/v1/flowdesk/chat
-  │
-  ├── POST /proxy/chat/message  REST fallback
-  │     └── ChatController.cs  → GxeApiService → GXE API /api/v1/flowdesk/chat
-  │
-  └── GET  /api/**              YARP reverse proxy
-        └── appsettings.json   → http://gxe-api-host:3010/api/**
-```
+In dev, Vite's built-in proxy handles the rewrite. No additional proxy process is needed.
 
-The client application never sees the GXE API address. All traffic passes through the proxy on a controlled domain.
-
-### 5.2 Running the proxy in development
-
-**Prerequisites:**
-- .NET 8 SDK: https://dotnet.microsoft.com/download/dotnet/8.0
-- GXE API running on port 3010 (see [DEV_SETUP.md](DEV_SETUP.md))
-
-**Start the proxy:**
-
-```powershell
-cd flowdesk-proxy\FlowDeskProxy
-dotnet run
+```ts
+// vite.config.ts (FlowDeskPortal)
+proxy: {
+    // UNPA chat API — rewrite /api/proxy/unpa/* → /api/v1/* on GXE
+    '/api/proxy/unpa': {
+        target: env.VITE_UNPA_API_PROXY_TARGET,   // http://localhost:3010
+        changeOrigin: true,
+        rewrite: (path: string) =>
+            path.replace(/^\/api\/proxy\/unpa/, '/api/v1'),
+    },
+    // FlowDesk backend API
+    '/api': {
+        target: env.VITE_API_PROXY_TARGET,
+        changeOrigin: true,
+        secure: false,
+        ws: true,
+    },
+},
 ```
 
-The proxy starts on **port 9000** by default. Verify:
+**What this does:**
 
-```powershell
-curl http://localhost:9000/health
-# or open http://localhost:9000 in a browser
+```
+Browser: POST /api/proxy/unpa/flowdesk/chat
+               ↓ Vite rewrites path
+GXE API: POST http://localhost:3010/api/v1/flowdesk/chat
 ```
 
-**Dev configuration** (`appsettings.Development.json`):
+The UNPA-specific rule is listed first (before `/api`) so it matches more specifically and is not swallowed by the general `/api` proxy.
 
-```json
-{
-  "GxeApi": {
-    "BaseUrl": "http://localhost:3010"
-  },
-  "Cors": {
-    "AllowedOrigins": [
-      "http://localhost:3004",
-      "http://localhost:5173"
-    ]
-  }
-}
+### 5.2 Production — FlowDesk backend YARP proxy
+
+In production the `VITE_UNPA_API_BASE_URL` is set to an absolute HTTPS URL pointing to the FlowDesk backend, which forwards the request to the GXE API internally:
+
+```
+Browser: POST https://flowdesk-api.{host}/api/proxy/unpa/flowdesk/chat
+                  ↓ FlowDesk backend YARP
+GXE API: POST {GXE internal URL}/api/v1/flowdesk/chat
 ```
 
-> Place this file at `flowdesk-proxy/FlowDeskProxy/appsettings.Development.json`. It overrides `appsettings.json` when `ASPNETCORE_ENVIRONMENT=Development`.
+This keeps the GXE API address entirely off the client machine.
 
-### 5.3 Running the embedded demo SPA (ClientApp)
+### 5.3 Environment variables
 
-The `ClientApp/` is a standalone React dev app that demonstrates the full chat experience using SignalR. It is for development and demo purposes only.
+`.env` (development):
 
-```powershell
-cd flowdesk-proxy\FlowDeskProxy\ClientApp
-npm install
-npm run dev
-# Opens at http://localhost:3004
+```dotenv
+# Widget reads this via import.meta.env.VITE_UNPA_API_BASE_URL
+VITE_UNPA_API_BASE_URL=/api/proxy/unpa
+
+# Vite dev proxy forwards to this address
+VITE_UNPA_API_PROXY_TARGET=http://localhost:3010
 ```
 
-The Vite dev server proxies all requests to the proxy on port 9000:
-- `/proxy/**` → `http://localhost:9000`
-- `/hubs/**`  → `ws://localhost:9000` (WebSocket)
-- `/api/**`   → `http://localhost:9000` → forwarded to GXE
+`.env.aca` / production:
 
-### 5.4 Configuration: connecting to GXE API
-
-Edit `appsettings.json` (or override via environment variables):
-
-```json
-{
-  "GxeApi": {
-    "BaseUrl": "http://YOUR-GXE-HOST:3010",
-    "TimeoutMs": 30000
-  },
-  "Cors": {
-    "AllowedOrigins": [
-      "https://your-flowdesk-domain.com"
-    ]
-  }
-}
+```dotenv
+# Absolute URL — bypasses Vite proxy (which doesn't run in production)
+VITE_UNPA_API_BASE_URL=https://flowdesk-api.salmonsmoke-6ce7cdfe.eastus.azurecontainerapps.io/api/proxy/unpa
 ```
 
-**Via environment variables** (recommended for production and Docker):
-
-| Environment Variable | Value | Description |
-|---------------------|-------|-------------|
-| `GxeApi__BaseUrl` | `http://gxe-host:3010` | GXE API address (double underscore = nesting) |
-| `GxeApi__TimeoutMs` | `30000` | Request timeout in milliseconds |
-| `Cors__AllowedOrigins__0` | `https://flowdesk.example.com` | First allowed CORS origin |
-| `Cors__AllowedOrigins__1` | `https://flowdesk-staging.example.com` | Additional origins (increment index) |
-| `ASPNETCORE_ENVIRONMENT` | `Development` / `Production` | Switches appsettings files |
-| `ASPNETCORE_URLS` | `http://+:9000` | Binding address |
-
-> ASP.NET Core maps `__` to `:` in configuration keys. `GxeApi__BaseUrl` equals the JSON path `GxeApi.BaseUrl`.
-
-### 5.5 Adapting the proxy for your project
-
-The proxy is designed to be copied into the FlowDesk repository and modified:
-
-1. **Copy** the `flowdesk-proxy/FlowDeskProxy/` directory into the FlowDesk project
-2. **Update** `GxeApi:BaseUrl` to point to the production GXE API endpoint
-3. **Update** `Cors:AllowedOrigins` to match the FlowDesk frontend domain(s)
-4. **Optionally** add authentication middleware (`app.UseAuthentication()`) if FlowDesk has its own auth layer
-5. **Remove** `ClientApp/` if the FlowDesk team has their own separate frontend
+> `VITE_UNPA_API_PROXY_TARGET` is only used by the Vite dev server and is not embedded in the built JS bundle. `VITE_UNPA_API_BASE_URL` is embedded at build time via `import.meta.env`.
 
 ---
 
@@ -458,392 +385,266 @@ The proxy is designed to be copied into the FlowDesk repository and modified:
 
 ### @unpa/chat widget
 
-The widget reads configuration from its props — no environment variables. All config passes through the React component tree.
+| Prop | Source | Dev value | Prod value |
+|------|--------|-----------|------------|
+| `apiBaseUrl` | `import.meta.env.VITE_UNPA_API_BASE_URL` | `/api/proxy/unpa` | Absolute HTTPS URL |
+| `userId` | `user.id` (auth context) | authenticated user id | authenticated user id |
+| `graphId` | hardcoded | `934e9016-6157-4f76-8dbe-c0f8c9dd08a2` | same |
+| `theme` | hardcoded | `"light"` | `"light"` |
 
-| Prop / Parameter | Where set | Example |
-|------------------|-----------|---------|
-| `apiBaseUrl` | React prop | `"/proxy"` (proxy) or `"/api/v1"` (direct) |
-| `graphId` | React prop | `"laptop-provisioning"`, `"hr-onboarding"` |
-| `userId` | React prop | `"user-uuid-here"` |
+### Vite dev proxy
 
-### FlowDeskProxy
-
-| Setting (appsettings.json) | Env Variable Override | Dev Default | Prod Value |
-|----------------------------|-----------------------|-------------|------------|
-| `GxeApi:BaseUrl` | `GxeApi__BaseUrl` | `http://localhost:3010` | GXE API URL |
-| `GxeApi:TimeoutMs` | `GxeApi__TimeoutMs` | `30000` | `30000` |
-| `Cors:AllowedOrigins[0]` | `Cors__AllowedOrigins__0` | `http://localhost:3004` | FlowDesk domain |
-| `ASPNETCORE_URLS` | (env only) | `http://localhost:9000` | `http://+:9000` |
-| `ASPNETCORE_ENVIRONMENT` | (env only) | `Development` | `Production` |
+| Variable | Purpose | Example |
+|----------|---------|---------|
+| `VITE_UNPA_API_BASE_URL` | Widget's `apiBaseUrl` | `/api/proxy/unpa` |
+| `VITE_UNPA_API_PROXY_TARGET` | Where Vite forwards `/api/proxy/unpa/**` | `http://localhost:3010` |
 
 ### Port summary
 
-| Service | Port | Who runs it |
-|---------|------|-------------|
+| Service | Port | Owner |
+|---------|------|-------|
 | GXE API | 3010 | UNPA team |
-| FlowDeskProxy | 9000 | FlowDesk team |
-| ClientApp (dev) | 3004 | FlowDesk dev only |
+| FlowDeskPortal (Vite dev) | 5173 | FlowDesk dev |
+| FlowDesk backend (dev) | varies | FlowDesk dev |
 
 ---
 
 ## 7. Development Workflow (Full Local Stack)
 
-This section describes running the complete development environment on one machine — typical for FlowDesk developers working on the chat integration.
-
-### Step 1: Start the UNPA infrastructure
+### Step 1: Start the GXE API
 
 ```powershell
 cd d:\UN\Repos\UNPA\UNPA_Ingest
 
-# Start databases (Memgraph + Qdrant + Redis + MSSQL)
-docker compose up -d redis memgraph qdrant mssql
+# Start databases
+docker compose up -d redis memgraph qdrant
 
-# Start GXE API
+# Start the API
 cd api
 npm run dev
 # API running at http://localhost:3010
 ```
 
-### Step 2: Start FlowDeskProxy
+Verify:
 
 ```powershell
-cd d:\UN\Repos\UNPA\UNPA_Ingest\flowdesk-proxy\FlowDeskProxy
-
-# First run: restore NuGet packages (automatic on dotnet run)
-dotnet run
-# Proxy running at http://localhost:9000
+curl http://localhost:3010/api/v1/flowdesk/health
 ```
 
-### Step 3: Start the FlowDesk development app
+### Step 2: Configure the FlowDesk portal
 
-**Option A — Use the embedded ClientApp demo:**
+Set the env variables (`.env` in `FlowDeskPortal/`):
+
+```dotenv
+VITE_UNPA_API_BASE_URL=/api/proxy/unpa
+VITE_UNPA_API_PROXY_TARGET=http://localhost:3010
+```
+
+### Step 3: Install and start the portal
 
 ```powershell
-cd d:\UN\Repos\UNPA\UNPA_Ingest\flowdesk-proxy\FlowDeskProxy\ClientApp
-npm install
-npm run dev
-# App at http://localhost:3004
+cd D:\UN\Repos\FlowDesk\FlowDesk\Frontend\Clients\FlowDeskPortal
+
+npm install         # resolves file:../packages/unpa-chat
+npm run dev         # Vite dev server + proxy
+# App at http://localhost:5173
 ```
 
-**Option B — Use your own FlowDesk React app:**
+### Step 4: Rebuild @unpa/chat after changes
 
-Ensure your Vite config proxies requests to the proxy:
-
-```javascript
-// vite.config.js in FlowDesk app
-export default {
-  server: {
-    proxy: {
-      '/proxy': 'http://localhost:9000',
-      '/hubs':  { target: 'http://localhost:9000', ws: true },
-      '/api':   'http://localhost:9000',
-    }
-  }
-}
-```
-
-Then install and use the widget:
+When you modify `packages/unpa-chat/src/`:
 
 ```powershell
-# Install @unpa/chat from local UNPA path
-npm install "file:D:/UN/Repos/UNPA/UNPA_Ingest/packages/unpa-chat"
-
-# Install peer dependencies
-npm install @mui/material @mui/icons-material @emotion/react @emotion/styled lucide-react
+cd D:\UN\Repos\FlowDesk\FlowDesk\Frontend\Clients\packages\unpa-chat
+npm run build
 ```
 
-### Development ports overview
+Vite's HMR picks up the rebuilt `dist/` automatically (no portal restart needed if symlinked correctly). If not, restart the Vite dev server.
 
-| Service | URL | Started by |
-|---------|-----|-----------|
-| GXE API | `http://localhost:3010` | `cd api && npm run dev` |
-| FlowDeskProxy | `http://localhost:9000` | `dotnet run` |
-| ClientApp demo | `http://localhost:3004` | `npm run dev` (ClientApp/) |
-| FlowDesk host (own app) | `http://localhost:5173` (typical) | FlowDesk team |
+### Step 5: Open the chat
+
+Navigate to `http://localhost:5173/ai-chat` directly, or type a message on the home page and press Send — the `ChatInterface` component navigates to `/ai-chat` with the message pre-loaded as `initialPrompt`.
 
 ---
 
-## 8. Production Build
+## 8. Production Build & Deployment
 
 ### 8.1 Build @unpa/chat
 
 ```powershell
 cd packages\unpa-chat
-npm install
 npm run build
-# dist/ is ready for packaging
+# dist/ is updated
 ```
 
-Create a distributable tarball:
+The rebuilt `dist/` is committed to git. When the FlowDesk portal runs `npm install`, it picks up the files from `../packages/unpa-chat/dist/` directly.
+
+### 8.2 Build FlowDeskPortal
 
 ```powershell
-npm pack
-# Creates: unpa-chat-1.0.0.tgz
-```
+cd FlowDeskPortal
 
-Transfer `unpa-chat-1.0.0.tgz` to the FlowDesk team.
+# Set production env (or use the .env.aca file)
+$env:VITE_UNPA_API_BASE_URL = "https://flowdesk-api.{host}/api/proxy/unpa"
 
-### 8.2 Build FlowDeskProxy (standalone .NET)
-
-```powershell
-# 1. Build and bundle the React SPA
-cd flowdesk-proxy\FlowDeskProxy\ClientApp
-npm install
 npm run build
-# Output: flowdesk-proxy/FlowDeskProxy/wwwroot/
-
-# 2. Publish the .NET application
-cd ..\   # flowdesk-proxy/FlowDeskProxy/
-dotnet publish -c Release -o .\bin\publish
+# Output: dist/ — static files to serve from CDN or web server
 ```
 
-The `bin\publish\` directory is self-contained — copy it to the target server and run:
+`VITE_UNPA_API_BASE_URL` is baked into the JS bundle at build time. In production `import.meta.env.VITE_UNPA_API_BASE_URL` resolves to the absolute HTTPS URL, so the widget calls the FlowDesk backend directly — no Vite proxy involved.
 
-```powershell
-# On the target server
-set ASPNETCORE_ENVIRONMENT=Production
-set GxeApi__BaseUrl=http://gxe-api-host:3010
-set Cors__AllowedOrigins__0=https://flowdesk.example.com
-.\bin\publish\FlowDeskProxy.exe     # Windows
-# or
-dotnet .\bin\publish\FlowDeskProxy.dll   # Linux
-```
+### 8.3 FlowDesk backend proxy (YARP)
 
-### 8.3 Behind nginx or IIS
+The FlowDesk backend must forward `/api/proxy/unpa/**` to the GXE API. In `appsettings.json` (or the YARP configuration):
 
-In production, FlowDeskProxy is typically placed behind a reverse proxy that handles TLS:
-
-**nginx example:**
-
-```nginx
-server {
-    listen 443 ssl;
-    server_name flowdesk.example.com;
-
-    ssl_certificate     /etc/ssl/certs/flowdesk.crt;
-    ssl_certificate_key /etc/ssl/private/flowdesk.key;
-
-    location / {
-        proxy_pass         http://localhost:9000;
-        proxy_http_version 1.1;
-
-        # WebSocket support (required for SignalR)
-        proxy_set_header   Upgrade $http_upgrade;
-        proxy_set_header   Connection "upgrade";
-
-        proxy_set_header   Host $host;
-        proxy_set_header   X-Real-IP $remote_addr;
-        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header   X-Forwarded-Proto $scheme;
-
-        proxy_read_timeout 3600s;   # Keep WebSocket connections alive
+```json
+{
+  "ReverseProxy": {
+    "Routes": {
+      "unpa-chat": {
+        "ClusterId": "gxe-api",
+        "Match": { "Path": "/api/proxy/unpa/{**remainder}" },
+        "Transforms": [
+          { "PathPattern": "/api/v1/{**remainder}" }
+        ]
+      }
+    },
+    "Clusters": {
+      "gxe-api": {
+        "Destinations": {
+          "primary": { "Address": "https://gxe-api.internal/" }
+        }
+      }
     }
+  }
 }
 ```
 
-> WebSocket (`Upgrade` header) support is required for SignalR. Without it, SignalR falls back to long-polling, which is slower but functional.
+This mirrors exactly what the Vite dev proxy does: strip `/api/proxy/unpa`, prefix `/api/v1`, forward to GXE.
 
 ---
 
-## 9. Docker Deployment
+## 9. FlowDeskProxy Reference Implementation
 
-A multi-stage `Dockerfile` is provided at `flowdesk-proxy/Dockerfile`. It builds both the React SPA and the ASP.NET Core application in a single image.
+The `flowdesk-proxy/` directory in the UNPA repository is an **ASP.NET Core 8 reference implementation** of a standalone proxy gateway. It is provided as an example for projects that cannot use the Vite dev proxy or an existing backend.
 
-### 9.1 Build the image
+> **FlowDesk does not use this.** FlowDesk routes the UNPA chat traffic through its own backend (see Section 5.2). The reference proxy is here for teams that need a standalone gateway.
 
-From the `flowdesk-proxy/` directory:
+### What it provides
+
+- YARP reverse proxy: `/api/**` → GXE API
+- SignalR hub (`/hubs/chat`) for WebSocket-based streaming (optional future feature)
+- A built-in React demo SPA (`ClientApp/`) for standalone testing
+
+### Running the reference proxy
 
 ```powershell
-cd d:\UN\Repos\UNPA\UNPA_Ingest\flowdesk-proxy
+cd flowdesk-proxy\FlowDeskProxy
 
-docker build -t flowdesk-proxy:latest .
+# appsettings.Development.json
+{
+  "GxeApi": { "BaseUrl": "http://localhost:3010" },
+  "Cors": { "AllowedOrigins": ["http://localhost:5173"] }
+}
+
+dotnet run
+# Proxy at http://localhost:9000
+# Health: http://localhost:9000/health
 ```
 
-Build stages:
-1. **spa-build** (node:20-alpine) — runs `npm run build` → wwwroot/
-2. **dotnet-build** (dotnet/sdk:8.0) — runs `dotnet publish`
-3. **runtime** (dotnet/aspnet:8.0) — minimal runtime image (~230 MB)
-
-### 9.2 Run the container
+### Docker image
 
 ```powershell
-docker run -d \
-  --name flowdesk-proxy \
-  -p 9000:9000 \
+cd flowdesk-proxy
+docker build -t flowdesk-proxy:latest .
+
+docker run -d -p 9000:9000 \
   -e GxeApi__BaseUrl=http://gxe-api-host:3010 \
-  -e Cors__AllowedOrigins__0=https://flowdesk.example.com \
-  -e ASPNETCORE_ENVIRONMENT=Production \
+  -e Cors__AllowedOrigins__0=https://your-frontend.com \
   flowdesk-proxy:latest
 ```
 
-Verify:
+### Adapting for a project
 
-```powershell
-docker logs flowdesk-proxy
-curl http://localhost:9000/health
-```
-
-### 9.3 Docker Compose with GXE API
-
-Add to the FlowDesk project's `docker-compose.yml`:
-
-```yaml
-services:
-
-  # FlowDesk proxy — gateway to the GXE API
-  flowdesk-proxy:
-    image: flowdesk-proxy:latest
-    build:
-      context: ./flowdesk-proxy
-      dockerfile: Dockerfile
-    ports:
-      - "9000:9000"
-    environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      GxeApi__BaseUrl: http://gxe-api:3010      # container name of the GXE API
-      Cors__AllowedOrigins__0: http://localhost:3004
-      Cors__AllowedOrigins__1: https://flowdesk.example.com
-    depends_on:
-      gxe-api:
-        condition: service_healthy
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:9000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # GXE API — provided by the UNPA team (external image or build)
-  gxe-api:
-    image: unpa-api:latest          # image built from UNPA_Ingest/api/
-    ports:
-      - "3010:3000"
-    environment:
-      NODE_ENV: production
-      PORT: 3000
-      MEMGRAPH_URI: bolt://memgraph:7687
-      QDRANT_URL: http://qdrant:6333
-      REDIS_HOST: redis
-      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY}"
-    depends_on:
-      - memgraph
-      - qdrant
-      - redis
-    healthcheck:
-      test: ["CMD", "node", "scripts/docker-healthcheck.js"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
-
-  memgraph:
-    image: memgraph/memgraph:latest
-    ports: ["7687:7687"]
-    volumes: [memgraph-data:/var/lib/memgraph]
-
-  qdrant:
-    image: qdrant/qdrant:latest
-    ports: ["6333:6333"]
-    volumes: [qdrant-data:/qdrant/storage]
-
-  redis:
-    image: redis:7-alpine
-    command: redis-server --appendonly yes
-    volumes: [redis-data:/data]
-
-volumes:
-  memgraph-data:
-  qdrant-data:
-  redis-data:
-```
-
-### 9.4 Connecting to an external GXE API
-
-If GXE API runs on a separate host (not in the same Docker network):
-
-```yaml
-environment:
-  GxeApi__BaseUrl: https://api.unpa.internal   # external address
-```
-
-Ensure the Docker container can reach this address:
-- **Network**: container must not be in an isolated network
-- **TLS**: if the GXE API uses HTTPS with a self-signed cert, add `GxeApi__IgnoreSslErrors=true` (dev only)
-- **Firewall**: port 3010 must be open from the proxy container to the GXE host
+1. Copy `flowdesk-proxy/FlowDeskProxy/` into the target project
+2. Set `GxeApi:BaseUrl` to the internal GXE API address
+3. Set `Cors:AllowedOrigins` to include the frontend origin
+4. Remove `ClientApp/` if the target project has its own frontend
+5. Add authentication middleware if required
 
 ---
 
 ## 10. Troubleshooting
 
+### Widget shows no API response
+
+**Check 1: `VITE_UNPA_API_BASE_URL` is set correctly**
+
+In dev:
+```dotenv
+VITE_UNPA_API_BASE_URL=/api/proxy/unpa
+```
+In the browser Network tab, requests should go to `/api/proxy/unpa/flowdesk/chat`.
+
+**Check 2: Vite proxy target is reachable**
+
+```powershell
+curl http://localhost:3010/api/v1/flowdesk/health
+# Expected: {"status":"ok"}
+```
+
+If this fails, the GXE API is not running. See Step 1 in Section 7.
+
+**Check 3: Path rewrite is correct**
+
+The Vite proxy should strip `/api/proxy/unpa` before forwarding. If you see 404s on the GXE side, the path is not being rewritten. Verify the `rewrite` function in `vite.config.ts`.
+
+### `initialPrompt` is not sent
+
+The `navigate(path, { state })` call in `ChatInterface.tsx` must be passing the state object. Add a `console.log` to `AiChatPage`:
+
+```ts
+console.log('location.state:', location.state);
+```
+
+If `state` is `null`, the navigation call is not passing state (or the user navigated directly to `/ai-chat` without going through the home page — this is expected and correct, `initialPrompt` will simply be `undefined`).
+
 ### Widget does not render — blank area
 
 **Cause:** Missing peer dependency.
 
-**Fix:** Check the browser console for errors like `Cannot resolve '@mui/material'`. Install the missing package:
+**Fix:** Check the browser console for unresolved module errors. Install the missing peer:
 
 ```powershell
-npm install @mui/material @mui/icons-material @emotion/react @emotion/styled
+npm install @mui/material @mui/icons-material @emotion/react @emotion/styled lucide-react
 ```
 
-### Widget renders but shows no response from API
+### TypeScript error: module '@unpa/chat' has no exported member
 
-**Check 1:** Is the proxy running?
-```powershell
-curl http://localhost:9000/proxy/chat/session
-# Should return 405 Method Not Allowed (not a connection error)
-```
+The package has no bundled type declarations. Add or update `src/declarations.d.ts` (see [Section 3.4](#34-typescript-declarations)).
 
-**Check 2:** Is `apiBaseUrl` correct in the widget props?
-- Use `/proxy` when the FlowDeskProxy is running
-- Use `/api/v1` for direct GXE access (no proxy)
-
-**Check 3:** Is the GXE API reachable from the proxy?
-```powershell
-# Test from proxy container (or host)
-curl http://localhost:3010/health
-```
-
-### SignalR WebSocket connection fails
-
-**Cause 1:** CORS origin not in the allowed list.
-
-**Fix:** Add the FlowDesk frontend origin to `Cors:AllowedOrigins` in `appsettings.json`.
-
-**Cause 2:** nginx reverse proxy does not forward `Upgrade` header.
-
-**Fix:** Add WebSocket headers to the nginx config (see [Section 8.3](#83-behind-nginx-or-iis)).
-
-**Cause 3:** SignalR falls back to long-polling automatically if WebSocket fails — this is functional but slower. Check the browser Network tab for `/hubs/chat/negotiate` and the subsequent connection type.
-
-### `npm install "file:..."` does not update after UNPA rebuild
-
-npm caches the package contents. Force a fresh install:
+### @unpa/chat dist/ is stale after source changes
 
 ```powershell
-npm install "file:D:/UN/Repos/UNPA/UNPA_Ingest/packages/unpa-chat" --force
+cd D:\UN\Repos\FlowDesk\FlowDesk\Frontend\Clients\packages\unpa-chat
+npm run build
 ```
 
-Or delete `node_modules/@unpa/chat` and re-install.
-
-### dotnet run fails: port 9000 in use
+Then restart the Vite dev server if HMR did not pick up the change:
 
 ```powershell
-# Find the process using port 9000
-netstat -ano | findstr :9000
-
-# Kill it (replace PID)
-taskkill /PID <PID> /F
+cd D:\UN\Repos\FlowDesk\FlowDesk\Frontend\Clients\FlowDeskPortal
+npm run dev
 ```
 
-### Requests return 502/503 from proxy
+### Production: widget calls fail with CORS error
 
-The proxy is running but cannot reach the GXE API. Check `GxeApi:BaseUrl` in `appsettings.json` and verify the GXE API is up:
-
-```powershell
-curl http://localhost:3010/health
-# Expected: {"status":"ok", ...}
-```
+The production `VITE_UNPA_API_BASE_URL` points to the FlowDesk backend. Ensure:
+1. The FlowDesk backend YARP route for `/api/proxy/unpa/**` is deployed and active.
+2. The FlowDesk backend CORS policy allows the SPA origin.
+3. The GXE API endpoint configured in the FlowDesk backend's YARP cluster is reachable from the backend container.
 
 ---
 
-*For the GXE API deployment and infrastructure setup, see [DEV_SETUP.md](DEV_SETUP.md) and [scripts/migration-runbook.md](../scripts/migration-runbook.md).*
+*For GXE API infrastructure setup, see [DEV_SETUP.md](DEV_SETUP.md).*  
+*For the @unpa/chat API reference, see [../packages/unpa-chat/docs/api-reference.md](../packages/unpa-chat/docs/api-reference.md).*

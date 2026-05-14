@@ -354,31 +354,49 @@ function InputPanel() {
 
 ## 10. Behind a proxy (production deployment)
 
-When deploying behind FlowDeskProxy or any reverse proxy:
+The widget's `apiBaseUrl` should point to the proxy path, never directly to the GXE API. The proxy rewrites the path before forwarding.
 
-```jsx
-// The proxy runs at /api, forwarding to the GXE API internally.
-// The browser never sees the GXE API origin.
+**AiChatPage.tsx** (FlowDesk integration):
+
+```tsx
 <UnpaChat
-  apiBaseUrl="/api/v1"
+  apiBaseUrl={import.meta.env.VITE_UNPA_API_BASE_URL || '/api/proxy/unpa'}
   userId={user.id}
-  graphId="support-triage"
+  graphId="934e9016-6157-4f76-8dbe-c0f8c9dd08a2"
+  initialPrompt={initialPrompt}
+  theme="light"
+  height="100%"
+  width="100%"
 />
 ```
 
-Vite dev server proxy config (`vite.config.js`):
+**Vite dev server proxy** (`vite.config.ts`) — strips `/api/proxy/unpa` and rewrites to `/api/v1` on the GXE API:
 
-```js
-export default {
-  server: {
-    proxy: {
-      '/api': {
-        target: 'http://localhost:9000',  // FlowDeskProxy
-        changeOrigin: true,
-      },
-    },
+```ts
+proxy: {
+  '/api/proxy/unpa': {
+    target: env.VITE_UNPA_API_PROXY_TARGET,  // http://localhost:3010
+    changeOrigin: true,
+    rewrite: (path: string) =>
+      path.replace(/^\/api\/proxy\/unpa/, '/api/v1'),
   },
-};
+},
 ```
 
-See [FLOWDESK_CHAT_INTEGRATION.md](../../docs/FLOWDESK_CHAT_INTEGRATION.md) for FlowDeskProxy setup.
+**.env** (development):
+
+```dotenv
+VITE_UNPA_API_BASE_URL=/api/proxy/unpa
+VITE_UNPA_API_PROXY_TARGET=http://localhost:3010
+```
+
+**.env.production**:
+
+```dotenv
+# Absolute URL — Vite proxy not active in prod; FlowDesk backend YARP forwards to GXE
+VITE_UNPA_API_BASE_URL=https://flowdesk-api.example.com/api/proxy/unpa
+```
+
+The production backend (YARP) mirrors the same path rewrite: `/api/proxy/unpa/**` → `/api/v1/**` on the internal GXE API host.
+
+See [FLOWDESK_CHAT_INTEGRATION.md](../../docs/FLOWDESK_CHAT_INTEGRATION.md) for full proxy setup details.
