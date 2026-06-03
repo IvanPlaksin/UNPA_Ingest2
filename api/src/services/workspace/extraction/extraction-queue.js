@@ -56,39 +56,13 @@ async function initExtractionQueue() {
 
   const conn = getConnection();
 
+  // Queue kept for status queries on legacy job IDs; no Worker needed — all new jobs go to unified-queue.
   _queue = new Queue(QUEUE_NAME, {
     connection: conn.duplicate(),
     defaultJobOptions: DEFAULT_JOB_OPTIONS
   });
 
-  _worker = new Worker(QUEUE_NAME, processJob, {
-    connection: conn.duplicate(),
-    concurrency: WORKER_CONCURRENCY,
-    limiter: { max: 5, duration: 60000 }
-  });
-
-  _queueEvents = new QueueEvents(QUEUE_NAME, { connection: conn.duplicate() });
-
-  _worker.on('completed', (job, result) => {
-    console.log(`${LOG_PREFIX} Job ${job.id} completed`);
-    emitProgress(job.id, { phase: 'completed', progress: 100, result });
-  });
-
-  _worker.on('failed', (job, err) => {
-    console.error(`${LOG_PREFIX} Job ${job?.id} failed: ${err.message}`);
-    emitProgress(job?.id, { phase: 'failed', progress: 0, error: err.message });
-  });
-
-  _worker.on('progress', (job, progress) => {
-    emitProgress(job.id, progress);
-  });
-
-  _worker.on('active', (job) => {
-    console.log(`${LOG_PREFIX} Job ${job.id} started`);
-    emitProgress(job.id, { phase: 'started', progress: 0 });
-  });
-
-  console.log(`${LOG_PREFIX} Initialized (concurrency=${WORKER_CONCURRENCY})`);
+  console.log(`${LOG_PREFIX} Initialized (legacy shim — all new jobs routed to unified-queue)`);
 }
 
 async function shutdownExtractionQueue() {
@@ -96,32 +70,6 @@ async function shutdownExtractionQueue() {
   if (_queueEvents) { await _queueEvents.close(); _queueEvents = null; }
   if (_queue) { await _queue.close(); _queue = null; }
   console.log(`${LOG_PREFIX} Shutdown`);
-}
-
-// ═══════════════════════════════════════════════════════════════
-// JOB PROCESSING
-// ═══════════════════════════════════════════════════════════════
-
-async function processJob(job) {
-  const { workspaceId, sourceId, options = {} } = job.data;
-  console.log(`${LOG_PREFIX} Processing job ${job.id} (ws=${workspaceId}, src=${sourceId})`);
-
-  const { runExtractionPipeline } = require('./extraction-pipeline');
-
-  const onProgress = async (progress) => {
-    try { await job.updateProgress(progress); } catch { /* ignore */ }
-  };
-
-  const result = await runExtractionPipeline(workspaceId, sourceId, {
-    ...options,
-    onProgress
-  });
-
-  if (!result.success) {
-    throw new Error(result.error || 'Extraction failed');
-  }
-
-  return result;
 }
 
 // ═══════════════════════════════════════════════════════════════
