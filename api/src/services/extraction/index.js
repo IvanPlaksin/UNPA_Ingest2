@@ -51,7 +51,20 @@ try {
     workItemExtractor = require('./work-item-extractor');
 } catch (e) { /* not available */ }
 
+// Unified Pipeline (document + workspace extraction)
+const unifiedQueue    = require('./unified-queue');
+const { runPipeline } = require('./unified-pipeline');
+const { getProgress, updateProgress } = require('./progress-bridge');
+const { PIPELINE_STEPS } = require('./pipeline-context');
+
 module.exports = {
+    // ── Unified Pipeline ──
+    ...unifiedQueue,
+    runPipeline,
+    getProgress,
+    updateProgress,
+    PIPELINE_STEPS,
+
     // Pattern-Enhanced Extractor
     PatternEnhancedExtractor,
     createPatternEnhancedExtractor,

@@ -205,19 +205,14 @@ class DocumentProcessingService {
 
     await this._setStatus(docId, 'EXTRACTING');
 
-    // Pre-initialize Redis progress so getProgress never returns 404
-    // while the async pipeline is starting up.
-    const { documentExtractionService } = require('./document-extraction.service');
-    await documentExtractionService._initProgress(docId, new Date().toISOString());
-
-    // Run inline — the BullMQ workspace-extraction worker doesn't call
-    // documentExtractionService and therefore never writes document progress.
-    documentExtractionService.extractDocument(docId, { model: options.model }).catch(async (err) => {
-      console.error(LOG_PREFIX, 'Extraction error for', docId, err.message);
-      await this._setStatus(docId, 'FAILED');
+    // Enqueue via unified BullMQ queue (returns real jobId)
+    const { enqueueDocument } = require('../extraction/unified-queue');
+    const { jobId } = await enqueueDocument(docId, {
+      model: options.model,
+      force: options.force,
     });
 
-    return { documentId: docId, status: 'EXTRACTING', jobId: null };
+    return { documentId: docId, status: 'EXTRACTING', jobId };
   }
 
   // ─── Status & List ────────────────────────────────────────────────────────

@@ -157,10 +157,8 @@ class DraftService {
 
     const result = await mg().runQuery(query, params);
 
-    // Generate and store embedding asynchronously
-    this._indexInQdrant(workspaceId, id, type, family, name, description, content, DraftKnowledgeStatus.DRAFT).catch(err => {
-      console.warn(`${LOG_PREFIX} Embedding indexing deferred for ${id}: ${err.message}`);
-    });
+    // Qdrant indexing is now handled by unified pipeline step 08 (embed-and-index)
+    // to avoid double-indexing and ensure consistent payload format.
 
     const draft = this._buildDraftObject(params);
     console.log(`${LOG_PREFIX} Created ${label} "${name}" in workspace ${workspaceId}`);
@@ -292,17 +290,7 @@ class DraftService {
       throw new Error(`Failed to update draft ${draftId}`);
     }
 
-    // Re-index if content changed
-    if (updates.content !== undefined) {
-      const contentObj = typeof updates.content === 'string' ? JSON.parse(updates.content) : updates.content;
-      this._indexInQdrant(
-        workspaceId, draftId, current.type, current.knowledgeFamily,
-        updates.name || current.name, updates.description || current.description,
-        contentObj, updates.status || current.status
-      ).catch(err => {
-        console.warn(`${LOG_PREFIX} Re-indexing deferred for ${draftId}: ${err.message}`);
-      });
-    }
+    // Qdrant re-indexing on update is handled externally (unified pipeline or manual re-extract)
 
     return this._recordToDraft(result[0]);
   }
@@ -757,8 +745,10 @@ function getDraftService() {
   return _instance;
 }
 
-module.exports = getDraftService();
+const _singleton = getDraftService();
+module.exports = _singleton;
 module.exports.getDraftService = getDraftService;
 module.exports.DraftService = DraftService;
 module.exports.DRAFT_TYPE_LABELS = DRAFT_TYPE_LABELS;
 module.exports.TYPE_TO_FAMILY = TYPE_TO_FAMILY;
+module.exports.getLabelForType = (type) => DRAFT_TYPE_LABELS[type] || 'DraftEntity';

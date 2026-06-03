@@ -120,11 +120,17 @@ router.get('/:id/status', async (req, res) => {
 
 // ─── Extraction progress & results ────────────────────────────────────────────
 
-// GET /api/v1/documents/:id/extraction/progress
+// GET /api/v1/documents/:id/extraction/progress  (HTTP polling)
 router.get('/:id/extraction/progress', async (req, res) => {
   try {
-    const progress = await documentExtractionService.getProgress(req.params.id);
+    // Try unified progress bridge first (new path)
+    const { getProgress } = require('../services/extraction/progress-bridge');
+    const progress = await getProgress(req.params.id);
     if (progress) return res.json({ success: true, data: progress });
+
+    // Fallback: legacy Redis key via old service
+    const legacyProgress = await documentExtractionService.getProgress(req.params.id);
+    if (legacyProgress) return res.json({ success: true, data: legacyProgress });
 
     // No Redis key yet — return queued state if document is in a transient status
     const doc = await documentProcessingService.getDocumentStatus(req.params.id);
@@ -132,17 +138,50 @@ router.get('/:id/extraction/progress', async (req, res) => {
 
     if (['EXTRACTING', 'UPLOADED', 'CLASSIFYING'].includes(doc.status)) {
       return res.json({ success: true, data: {
-        documentId: req.params.id,
-        status: 'queued',
-        overallProgress: 0,
-        currentStep: null,
-        steps: []
+        documentId: req.params.id, status: 'queued',
+        overallProgress: 0, currentStep: null, steps: []
       }});
     }
     res.status(404).json({ success: false, error: 'No extraction progress found' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
+});
+
+// GET /api/v1/documents/:id/extract/:jobId/progress  (SSE stream — same as workspace)
+router.get('/:id/extract/:jobId/progress', (req, res) => {
+  const { subscribeToProgress } = require('../services/extraction/unified-queue');
+  const jobId = req.params.jobId;
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const heartbeat = setInterval(() => res.write(': heartbeat\n\n'), 30000);
+
+  const send = (event, data) => {
+    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+
+  const unsubscribe = subscribeToProgress(jobId, (progress) => {
+    if (progress.phase === 'completed' || progress.phase === 'failed' || progress.phase === 'cancelled') {
+      send('done', progress);
+      cleanup();
+    } else {
+      send('progress', progress);
+    }
+  });
+
+  send('status', { jobId, connected: true });
+
+  function cleanup() {
+    clearInterval(heartbeat);
+    unsubscribe();
+    res.end();
+  }
+
+  req.on('close', cleanup);
 });
 
 // GET /api/v1/documents/:id/extraction/entities

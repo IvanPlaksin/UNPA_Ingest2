@@ -252,14 +252,41 @@ function subscribeToProgress(jobId, callback) {
   return () => progressEmitter.off(event, callback);
 }
 
+// ── Delegate enqueueExtraction to unified queue ────────────
+// The original processJob + worker are kept as dead code during the
+// transition period. New jobs go through unified-queue.js.
+
+async function _enqueueViaUnified(workspaceId, sourceId, options = {}) {
+  const { enqueueWorkspaceSource } = require('../../extraction/unified-queue');
+  return enqueueWorkspaceSource(workspaceId, sourceId, options);
+}
+
+async function _subscribeViaUnified(jobId, callback) {
+  const unifiedQ = require('../../extraction/unified-queue');
+  return unifiedQ.subscribeToProgress(jobId, callback);
+}
+
 module.exports = {
   initExtractionQueue,
   shutdownExtractionQueue,
-  enqueueExtraction,
-  getJobStatus,
-  cancelJob,
-  getQueueStats,
-  getWorkspaceJobs,
-  subscribeToProgress,
-  progressEmitter
+  // Delegates to unified queue
+  enqueueExtraction: (workspaceId, sourceId, options) => _enqueueViaUnified(workspaceId, sourceId, options),
+  getJobStatus: async (jobId) => {
+    const { getJobStatus: unified } = require('../../extraction/unified-queue');
+    return unified(jobId);
+  },
+  cancelJob: async (jobId) => {
+    const { cancelJob: unified } = require('../../extraction/unified-queue');
+    return unified(jobId);
+  },
+  getQueueStats: async () => {
+    const { getQueueStats: unified } = require('../../extraction/unified-queue');
+    return unified();
+  },
+  getWorkspaceJobs: async (workspaceId, options) => {
+    const { getWorkspaceJobs: unified } = require('../../extraction/unified-queue');
+    return unified(workspaceId, options);
+  },
+  subscribeToProgress: (jobId, callback) => _subscribeViaUnified(jobId, callback),
+  progressEmitter,
 };
