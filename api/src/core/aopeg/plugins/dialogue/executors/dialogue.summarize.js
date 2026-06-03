@@ -32,11 +32,11 @@ function truncateSummary(messages, maxChars = 800) {
   return text.length > 200 ? text.slice(0, 200) + '...' : text;
 }
 
-async function summarizeWithLLM(llmService, text, maxTokens = 150) {
+async function summarizeWithLLM(llmService, text, maxTokens = 150, model) {
   try {
     const result = await llmService.chat(
       [{ role: 'user', content: SEGMENT_PROMPT(text.slice(0, 3000)) }],
-      { model: process.env.SUMMARY_MODEL || 'claude-haiku-4-5', maxTokens }
+      { model: model || process.env.SUMMARY_MODEL || 'claude-haiku-4-5-20251001', maxTokens }
     );
     const rawContent = result.content;
     const content = Array.isArray(rawContent)
@@ -70,6 +70,7 @@ const dialogueSummarizeExecutor = createSimpleExecutor({
     const maxTokens = params.maxTokensPerSummary || 150;
     const batchSize = params.batchSize || 5;
     const useLLM = params.useLLM !== false;
+    const model = params.model || process.env.SUMMARY_MODEL || 'claude-haiku-4-5-20251001';
 
     // Load LLM service
     let llmService = null;
@@ -168,7 +169,7 @@ const dialogueSummarizeExecutor = createSimpleExecutor({
 
             let summary;
             if (llmService) {
-              summary = await summarizeWithLLM(llmService, rawText, maxTokens);
+              summary = await summarizeWithLLM(llmService, rawText, maxTokens, model);
               if (summary) {
                 stats.llmCalls++;
                 stats.totalOutputTokens += summary.split(' ').length * 1.3;
@@ -206,7 +207,7 @@ const dialogueSummarizeExecutor = createSimpleExecutor({
           try {
             const result = await llmService.chat(
               [{ role: 'user', content: SESSION_PROMPT(combinedSummaries.slice(0, 6000)) }],
-              { model: process.env.SUMMARY_MODEL || 'claude-haiku-4-5-20251001', maxTokens: 400 }
+              { model, maxTokens: 400 }
             );
             const rc = result.content;
             sessionSummary = (Array.isArray(rc)

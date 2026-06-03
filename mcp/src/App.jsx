@@ -31,6 +31,10 @@ import DialoguePage from './pages/DialoguePage/DialoguePage';
 import ObservabilityPage from './pages/ObservabilityPage';
 import WorkspacesPage from './pages/WorkspacesPage';
 import WorkspaceDetailPage from './pages/WorkspaceDetailPage';
+import DocumentProcessingPage from './pages/DocumentProcessingPage';
+import TriangleExplorerPage from './pages/TriangleExplorerPage';
+import GapManagerPage from './pages/GapManagerPage';
+import KnowledgeHealthPage from './pages/KnowledgeHealthPage';
 import StructuralFormDemoPage from './pages/StructuralFormDemoPage';
 import StructuralEditorPage from './pages/StructuralEditorPage';
 import UnpaChatDemoPage from './pages/UnpaChatDemoPage';
@@ -164,6 +168,18 @@ function App() {
 
                                 {/* Observability Dashboard */}
                                 <Route path="/observability" element={<ObservabilityPage />} />
+
+                                {/* Document Processing — UN document lifecycle */}
+                                <Route path="/documents" element={<DocumentProcessingPage />} />
+
+                                {/* Triangle Explorer — Knowledge Triangle visualization */}
+                                <Route path="/knowledge-triangle" element={<TriangleExplorerPage />} />
+
+                                {/* Gap Manager — centralised gap management */}
+                                <Route path="/gaps" element={<GapManagerPage />} />
+
+                                {/* Knowledge Health — namespace health dashboard */}
+                                <Route path="/knowledge-health" element={<KnowledgeHealthPage />} />
                             </Routes>
                         </Box>
                     </Box>

@@ -56,24 +56,49 @@ async function runRead(cypher, params = {}) {
  *
  * @param {string} userId - User UUID
  * @param {string} serviceCode - Service code (e.g., 'IT-HW-LAP')
+ * @param {object|null} [providedCtx] - Pre-built user context from FlowDesk proxy headers.
+ *   When present the Memgraph User lookup is skipped entirely.
+ *   Shape: { orgUnit: { code, name, path }, location: { dutyStation, country, region } }
  * @returns {object|null} RoutingResult or null if not found
  */
-async function resolveServiceHandler(userId, serviceCode) {
-  // Step 1: Get user context
-  const ctxRecords = await runRead(`
-    MATCH (u:User {id: $userId})-[:BELONGS_TO]->(ou:OrganizationUnit)
-    OPTIONAL MATCH (ou)-[:LOCATED_AT]->(ds:Location {location_type: 'DutyStation'})
-    OPTIONAL MATCH (ds)-[:PART_OF*1..3]->(country:Location {location_type: 'Country'})
-    OPTIONAL MATCH (country)-[:PART_OF*1..2]->(region:Location {location_type: 'Region'})
-    RETURN u.id AS uid, ou.code AS org_code, ou.name AS org_name,
-           ou.hierarchy_path AS org_path,
-           ds.name AS duty_station, country.name AS country, region.name AS region
-    LIMIT 1
-  `, { userId });
+async function resolveServiceHandler(userId, serviceCode, providedCtx = null) {
+  let orgPath;
+  let userContextResult;
 
-  if (ctxRecords.length === 0) return null;
-  const ctx = ctxRecords[0];
-  const orgPath = ctx.get('org_path') || '';
+  if (providedCtx) {
+    // Use context injected by the FlowDesk proxy — no Memgraph User node required
+    orgPath = providedCtx.orgUnit?.path || '';
+    userContextResult = {
+      orgUnit:     providedCtx.orgUnit?.name     || null,
+      orgUnitCode: providedCtx.orgUnit?.code     || null,
+      dutyStation: providedCtx.location?.dutyStation || null,
+      country:     providedCtx.location?.country || null,
+      region:      providedCtx.location?.region  || null,
+    };
+  } else {
+    // Step 1: Get user context from Memgraph
+    const ctxRecords = await runRead(`
+      MATCH (u:User {id: $userId})-[:BELONGS_TO]->(ou:OrganizationUnit)
+      OPTIONAL MATCH (ou)-[:LOCATED_AT]->(ds:Location {location_type: 'DutyStation'})
+      OPTIONAL MATCH (ds)-[:PART_OF*1..3]->(country:Location {location_type: 'Country'})
+      OPTIONAL MATCH (country)-[:PART_OF*1..2]->(region:Location {location_type: 'Region'})
+      RETURN u.id AS uid, ou.code AS org_code, ou.name AS org_name,
+             ou.hierarchy_path AS org_path,
+             ds.name AS duty_station, country.name AS country, region.name AS region
+      LIMIT 1
+    `, { userId });
+
+    if (ctxRecords.length === 0) return null;
+    const ctx = ctxRecords[0];
+    orgPath = ctx.get('org_path') || '';
+    userContextResult = {
+      orgUnit:     ctx.get('org_name'),
+      orgUnitCode: ctx.get('org_code'),
+      dutyStation: ctx.get('duty_station'),
+      country:     ctx.get('country'),
+      region:      ctx.get('region'),
+    };
+  }
 
   // Step 2: Find all handlers for this service, pick best by priority
   // Priority matching: check if handler's mission_id is in user's org hierarchy_path
@@ -129,13 +154,7 @@ async function resolveServiceHandler(userId, serviceCode) {
       scope: bestHandler.get('scope_type') || 'global',
       priority: bestHandler.get('priority'),
     },
-    userContext: {
-      orgUnit: ctx.get('org_name'),
-      orgUnitCode: ctx.get('org_code'),
-      dutyStation: ctx.get('duty_station'),
-      country: ctx.get('country'),
-      region: ctx.get('region'),
-    },
+    userContext: userContextResult,
   };
 }
 

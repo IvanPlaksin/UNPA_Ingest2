@@ -12,6 +12,7 @@ import {
 import StatusChip from './StatusChip';
 import ExtractionProgress from './ExtractionProgress';
 import DataSourceCreateDialog from './DataSourceCreateDialog';
+import AddDocumentSourceDialog from './AddDocumentSourceDialog';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import * as wsApi from '../../services/workspace.service';
 
@@ -21,7 +22,8 @@ const SOURCE_ICONS = {
   TEXT: Type,
   DATABASE: DbIcon,
   API: Globe,
-  FILESYSTEM: FolderOpen
+  FILESYSTEM: FolderOpen,
+  DOCUMENT: FileText,
 };
 
 // Document-style sources — uploaded files, URLs, raw text. These go through
@@ -42,6 +44,7 @@ const SourcesTab = ({ workspaceId }) => {
   const { sources, fetchWorkspace } = useWorkspaceStore();
   const [createOpen, setCreateOpen] = useState(false);
   const [dataSourceCreateOpen, setDataSourceCreateOpen] = useState(false);
+  const [addDocOpen, setAddDocOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedSource, setSelectedSource] = useState(null);
   const [sourceDetails, setSourceDetails] = useState(null);
@@ -168,6 +171,11 @@ const SourcesTab = ({ workspaceId }) => {
           <Tooltip title="Upload a document, URL, or paste text">
             <Button size="small" variant="outlined" startIcon={<Plus size={16} />} onClick={() => { resetCreateForm(); setCreateOpen(true); }}>
               Add Document
+            </Button>
+          </Tooltip>
+          <Tooltip title="Link an already-extracted document from the Documents section">
+            <Button size="small" variant="outlined" startIcon={<FileText size={16} />} onClick={() => setAddDocOpen(true)}>
+              From Documents
             </Button>
           </Tooltip>
           <Tooltip title="Add a SQL/REST/KB/file/composite DataSource (uses the same editor as the Form Builder)">
@@ -412,6 +420,14 @@ const SourcesTab = ({ workspaceId }) => {
         workspaceId={workspaceId}
         initialType="SQL"
         onSaved={handleDataSourceCreated}
+      />
+
+      {/* ═══ ADD FROM DOCUMENTS DIALOG ═══ */}
+      <AddDocumentSourceDialog
+        open={addDocOpen}
+        onClose={() => setAddDocOpen(false)}
+        workspaceId={workspaceId}
+        onAdded={async () => { await fetchWorkspace(workspaceId); }}
       />
 
       {/* ═══ SOURCE DETAIL DIALOG ═══ */}

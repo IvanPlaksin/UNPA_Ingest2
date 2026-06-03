@@ -3,7 +3,7 @@
 service:
   name: "gnn-service"
   version: "0.1.0"
-  port: 5000
+  port: 5001
   debug: true
 
 memgraph:

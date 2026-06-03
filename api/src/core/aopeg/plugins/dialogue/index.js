@@ -18,6 +18,12 @@ const { dialogueSummarizeExecutor } = require('./executors/dialogue.summarize');
 const { dialogueEmbedExecutor } = require('./executors/dialogue.embed');
 const { dialogueExtractDecisionsExecutor } = require('./executors/dialogue.extract_decisions');
 const { dialogueLinkExecutor } = require('./executors/dialogue.link');
+const { dialogueOpenVSCodeExecutor } = require('./executors/dialogue.open_vscode');
+const { dialogueMCPSearchExecutor } = require('./executors/dialogue.mcp_search');
+const { dialogueResumeExecutor } = require('./executors/dialogue.resume');
+const { dialogueTagExecutor } = require('./executors/dialogue.tag');
+const { dialogueExtractMcpConversationsExecutor } = require('./executors/dialogue.extract_mcp_conversations');
+const { dialogueExtractGoalsExecutor }            = require('./executors/dialogue.extract_goals');
 
 // ────────────────────────────────────────────────────────────────────────────
 // PLUGIN METADATA
@@ -116,8 +122,14 @@ class DialoguePlugin extends PluginBase {
     this.addExecutor(segmentExecutorReal);
     this.addExecutor(searchExecutor);
     this.addExecutor(getContextExecutor);
+    this.addExecutor(dialogueOpenVSCodeExecutor);
+    this.addExecutor(dialogueMCPSearchExecutor);
+    this.addExecutor(dialogueResumeExecutor);
+    this.addExecutor(dialogueTagExecutor);
+    this.addExecutor(dialogueExtractMcpConversationsExecutor);
+    this.addExecutor(dialogueExtractGoalsExecutor);
 
-    console.log('[DialoguePlugin] Initialized with 10 executors (Phase 1 complete, P2-002 summarize done)');
+    console.log('[DialoguePlugin] Initialized with 16 executors (goals extractor added)');
   }
 
   async cleanup() {
@@ -145,5 +157,9 @@ module.exports = {
     segment: segmentExecutorReal,
     search: searchExecutor,
     getContext: getContextExecutor,
+    openVSCode: dialogueOpenVSCodeExecutor,
+    mcpSearch: dialogueMCPSearchExecutor,
+    resume: dialogueResumeExecutor,
+    tag: dialogueTagExecutor,
   },
 };

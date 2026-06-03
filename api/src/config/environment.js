@@ -63,7 +63,8 @@ const defaults = {
     enableWebSocket: process.env.ENABLE_WEBSOCKET !== 'false',
     enableJobQueue: process.env.ENABLE_JOB_QUEUE !== 'false',
     enableMetrics: process.env.ENABLE_METRICS !== 'false',
-    enableSwagger: process.env.ENABLE_SWAGGER !== 'false'
+    enableSwagger: process.env.ENABLE_SWAGGER !== 'false',
+    petriValidation: process.env.PETRI_VALIDATION_ENABLED === 'true'
   },
   errorHandler: {
     includeStack: NODE_ENV !== 'production',

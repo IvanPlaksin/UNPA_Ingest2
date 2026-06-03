@@ -82,7 +82,8 @@ async function classify(req, res) {
 async function route(req, res) {
   try {
     await ensureInit();
-    const { text, userId } = req.body;
+    const { text, userId: bodyUserId } = req.body;
+    const userId = req.flowdeskUser?.userId || bodyUserId;
     if (!text) return res.status(400).json({ error: 'text is required' });
     if (!userId) return res.status(400).json({ error: 'userId is required' });
 
@@ -133,8 +134,8 @@ async function route(req, res) {
       };
     }
 
-    // Step 2: Route
-    const routingResult = await routing.resolveServiceHandler(userId, serviceCode);
+    // Step 2: Route — pass FlowDesk user context when available to skip Memgraph user lookup
+    const routingResult = await routing.resolveServiceHandler(userId, serviceCode, req.flowdeskUser || null);
 
     if (!routingResult) {
       return res.json({
@@ -275,12 +276,13 @@ async function createRequest(req, res) {
     const workflowRunner = require('../services/workflow-runner.js');
     if (!workflowRunner.executorMap?.size) workflowRunner.init();
 
-    const { serviceCode, userId, justification, additionalData } = req.body;
+    const { serviceCode, userId: bodyUserId, justification, additionalData } = req.body;
+    const userId = req.flowdeskUser?.userId || bodyUserId;
     if (!serviceCode) return res.status(400).json({ error: 'serviceCode is required' });
     if (!userId) return res.status(400).json({ error: 'userId is required' });
 
-    // Get graph ID from Memgraph
-    const routingResult = await routing.resolveServiceHandler(userId, serviceCode);
+    // Get graph ID from Memgraph — pass FlowDesk context to skip Memgraph user lookup
+    const routingResult = await routing.resolveServiceHandler(userId, serviceCode, req.flowdeskUser || null);
 
     // Check for gxe_graph_id
     const graphId = routingResult?.service?.gxeGraphId;
@@ -352,7 +354,8 @@ async function chat(req, res) {
       console.warn('[FlowDesk] runtime-chat not available, using dialog-session fallback');
     }
 
-    const { sessionId, userId, message, graphVersion, graphId } = req.body;
+    const { sessionId, userId: bodyUserId, message, graphVersion, graphId } = req.body;
+    const userId = req.flowdeskUser?.userId || bodyUserId;
     if (!sessionId) return res.status(400).json({ error: 'sessionId is required' });
     if (!userId) return res.status(400).json({ error: 'userId is required' });
     if (!message) return res.status(400).json({ error: 'message is required' });

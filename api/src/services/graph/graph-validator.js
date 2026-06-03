@@ -4,7 +4,17 @@
  *
  * Part of the Graph Generation Enhancement pipeline:
  * [Task] → [Tool Filter] → [LLM Generation] → [Graph Validator] → [Output]
+ *
+ * Petri Net soundness check (async, optional):
+ * Calls gnn-service /petri/validate when PETRI_VALIDATION_ENABLED=true.
+ * Graceful degradation: unavailable service → skipped (non-blocking).
  */
+
+const { PetriClient } = require('../petri/petri-client');
+
+function _isPetriEnabled() {
+  return process.env.PETRI_VALIDATION_ENABLED === 'true';
+}
 
 class GraphValidator {
   /**
@@ -342,6 +352,85 @@ class GraphValidator {
     }
 
     return unknownTools;
+  }
+
+  /**
+   * Validate graph WF-net soundness via Petri Net formalism (async).
+   *
+   * Requires PETRI_VALIDATION_ENABLED=true and gnn-service running.
+   * Graceful degradation: returns skipped=true if disabled or service unavailable.
+   *
+   * @param {Array} nodes - ReactFlow nodes
+   * @param {Array} edges - ReactFlow edges
+   * @param {string} [graphId] - Optional identifier for logging
+   * @returns {Promise<{valid, skipped, reason?, issues, warnings, metrics}>}
+   */
+  async validateSoundness(nodes, edges, graphId = null) {
+    if (!_isPetriEnabled()) {
+      return { valid: true, skipped: true, reason: 'PETRI_VALIDATION_DISABLED', issues: [], warnings: [] };
+    }
+
+    const client = new PetriClient();
+
+    if (!await client.isAvailable()) {
+      console.warn('[GraphValidator] Petri service unavailable — soundness check skipped');
+      return { valid: true, skipped: true, reason: 'PETRI_SERVICE_UNAVAILABLE', issues: [], warnings: [] };
+    }
+
+    try {
+      const result = await client.validateGraph(nodes, edges, graphId);
+      return {
+        valid: result.sound,
+        skipped: false,
+        issues: result.errors || [],
+        warnings: result.warnings || [],
+        metrics: result.metrics || {}
+      };
+    } catch (err) {
+      console.warn('[GraphValidator] Petri validation error (skipping):', err.message);
+      return { valid: true, skipped: true, reason: 'PETRI_SERVICE_ERROR', issues: [], warnings: [] };
+    }
+  }
+
+  /**
+   * Format a soundness validation failure into an actionable error object.
+   *
+   * @param {Object} soundnessResult - Result from validateSoundness()
+   * @param {Array} nodes - Graph nodes (for label lookup)
+   * @returns {Object|null} - null if sound, error object if not
+   */
+  formatSoundnessError(soundnessResult, nodes = []) {
+    if (soundnessResult.valid || soundnessResult.skipped) return null;
+
+    const nodeLabels = Object.fromEntries(
+      (nodes || []).map(n => [n.id, n.data?.label || n.id])
+    );
+
+    const suggestions = {
+      dead_transition: 'Connect this node to the rest of the graph or remove it (skip-cascade risk)',
+      no_entry: 'Ensure the graph has a single entry node with no incoming edges',
+      no_exit: 'Ensure the graph has a single exit node with no outgoing edges',
+      woflan: 'Check for unreachable nodes or branches that never reach the terminal node'
+    };
+
+    const issues = (soundnessResult.issues || []).map(msg => {
+      const type = msg.includes('dead') ? 'dead_transition'
+        : msg.includes('entry') ? 'no_entry'
+        : msg.includes('exit') ? 'no_exit'
+        : 'woflan';
+      return {
+        type,
+        message: msg,
+        suggestion: suggestions[type] || 'Review graph structure'
+      };
+    });
+
+    return {
+      code: 'GRAPH_SOUNDNESS_ERROR',
+      message: 'Graph failed Petri Net soundness check — potential deadlock or unreachable nodes',
+      issues,
+      warnings: soundnessResult.warnings || []
+    };
   }
 
   /**

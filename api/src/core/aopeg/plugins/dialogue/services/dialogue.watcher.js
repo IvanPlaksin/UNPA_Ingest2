@@ -150,6 +150,11 @@ class DialogueWatcher {
         return;
       }
 
+      // Auto-continuation: on new session, check for related past sessions
+      if (wasNew) {
+        this._checkContinuation(sessionId, dialogue).catch(() => {});
+      }
+
       // Step 2: Full Phase 2 pipeline
       await dialogueSegmentExecutor.execute({ sessionId, storeSegments: true }, {});
       await dialogueSummarizeExecutor.execute({ sessionId, level: 'both', useLLM: true, batchSize: 3 }, {});
@@ -165,6 +170,12 @@ class DialogueWatcher {
         const { getDialogueMetrics } = require('./dialogue.metrics');
         getDialogueMetrics().recordPipelineRun(Date.now() - pipelineStart, sessionId);
       } catch { /* non-fatal */ }
+
+      // Trigger UMAP layout refresh every 5 processed sessions (non-blocking)
+      this._knowledgeLayoutCounter = (this._knowledgeLayoutCounter || 0) + 1;
+      if (this._knowledgeLayoutCounter % 5 === 0) {
+        this._triggerKnowledgeLayout().catch(() => {});
+      }
     } catch (err) {
       console.error(`[DialogueWatcher] Error processing ${shortPath}: ${err.message}`);
       this._stats.failed++;
@@ -174,6 +185,73 @@ class DialogueWatcher {
       } catch { /* non-fatal */ }
     } finally {
       this.processing.delete(filePath);
+    }
+  }
+
+  async _triggerKnowledgeLayout() {
+    try {
+      const { dialogueKnowledgeLayoutExecutor } = require('../executors/dialogue.knowledge-layout');
+      const result = await dialogueKnowledgeLayoutExecutor.execute({}, {});
+      if (result.success) {
+        console.log(`[DialogueWatcher] Knowledge layout refreshed: ${result.output?.count} entities`);
+      }
+    } catch (err) {
+      console.warn('[DialogueWatcher] Knowledge layout refresh failed:', err.message);
+    }
+  }
+
+  async _checkContinuation(newSessionId, dialogue) {
+    try {
+      // Build a query from the first user message of the new session
+      const firstMsg = dialogue.messages?.find(m => m.role === 'user')?.content || '';
+      const query = typeof firstMsg === 'string'
+        ? firstMsg.slice(0, 200)
+        : (firstMsg[0]?.text || '').slice(0, 200);
+
+      if (!query.trim()) return;
+
+      const { DialogueSearchService } = require('./dialogue.search');
+      const { DialogueQdrantService } = require('./dialogue.qdrant');
+      const { EmbeddingService } = require('../../../../../services/structuring/embeddings/EmbeddingService');
+      const mg = require('../../../../../services/memgraph.service');
+
+      const searchSvc = new DialogueSearchService(
+        new DialogueQdrantService(),
+        mg,
+        new EmbeddingService()
+      );
+
+      const results = await searchSvc.search({ query, topK: 3, source: 'all' });
+      const candidates = (results.results || []).filter(r =>
+        r.sessionId !== newSessionId && r.score > 0.72
+      );
+
+      if (candidates.length === 0) return;
+
+      const top = candidates[0];
+      const hint = {
+        newSessionId,
+        relatedSessionId: top.sessionId,
+        relatedTitle: top.title || top.aiTitle || top.sessionId,
+        score: top.score,
+        detectedAt: new Date().toISOString(),
+      };
+
+      // Store in Redis with 5-minute TTL
+      try {
+        const redis = require('../../../../../services/redis.service');
+        await redis.set('dialogue:continuation:hint', JSON.stringify(hint), 300);
+      } catch { /* Redis not available */ }
+
+      // Broadcast via WebSocket if available
+      try {
+        const ws = require('../../../../../services/websocket').websocketService;
+        ws?.broadcastAll({ type: 'dialogue:continuation', ...hint });
+      } catch { /* non-fatal */ }
+
+      console.log(`[DialogueWatcher] Continuation hint: "${top.title}" (score ${top.score.toFixed(2)})`);
+    } catch (err) {
+      console.warn('[DialogueWatcher] Continuation check failed:', err.message);
     }
   }
 }

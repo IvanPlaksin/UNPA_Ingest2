@@ -328,6 +328,152 @@ class WorkspaceDataSourceService {
   }
 
   /**
+   * Link an already-extracted Document (status=COMPLETED) to a workspace as a
+   * KB DataSource. Creates:
+   *   - A v2 DataSource (sourceType=KB) with Cypher queries over the document's
+   *     EntityMention nodes in Memgraph.
+   *   - A paired SourceReference (sourceType=DOCUMENT) so the source appears in
+   *     the workspace SourcesTab.
+   *
+   * Idempotent: if a SourceReference with the same documentId already exists
+   * in this workspace, the existing record is returned.
+   *
+   * @param {string} workspaceId
+   * @param {string} documentId
+   * @returns {Promise<{dataSourceGraphId, sourceId, source, dataSource}>}
+   */
+  async createFromDocument(workspaceId, documentId) {
+    const workspace = await ws().get(workspaceId);
+    if (!workspace) throw new Error(`WorkSpace not found: ${workspaceId}`);
+
+    // Idempotency check
+    const existing = await mg().runQuery(
+      `MATCH (w:WorkSpace {id: $wsId})-[:HAS_SOURCE]->(s:SourceReference {documentId: $docId})
+       RETURN s.id AS sourceId, s.dataSourceGraphId AS graphId`,
+      { wsId: workspaceId, docId: documentId }
+    );
+    if (existing.length > 0) {
+      return {
+        dataSourceGraphId: existing[0].graphId,
+        sourceId:          existing[0].sourceId,
+        alreadyLinked:     true,
+      };
+    }
+
+    // Load document — must be COMPLETED
+    const rows = await mg().runQuery(
+      `MATCH (d:Document {id: $id})
+       RETURN d.id AS id, d.originalname AS originalname,
+              d.documentTitle AS documentTitle, d.documentType AS documentType,
+              d.epistemicLayer AS epistemicLayer, d.kqsScore AS kqsScore,
+              d.namespace AS namespace, d.status AS status,
+              d.fileSize AS fileSize, d.sourceUrl AS sourceUrl`,
+      { id: documentId }
+    );
+    if (!rows.length) throw new Error(`Document not found: ${documentId}`);
+    const doc = rows[0];
+    if (doc.status !== 'COMPLETED') {
+      throw new Error(`Document must be COMPLETED before adding as data source (current: ${doc.status})`);
+    }
+
+    const docName = doc.documentTitle || doc.originalname || documentId;
+
+    // KB DataSource — Cypher queries over EntityMention nodes
+    const kbConfig = {
+      queryType: 'cypher',
+      cypherQuery:
+        `MATCH (d:Document {id: '${documentId}'})-[:MENTIONS]->(em:EntityMention) ` +
+        `RETURN em.id AS value, em.name AS label, em.type AS type, ` +
+        `em.category AS category, em.relevance AS relevance, em.match AS match ` +
+        `ORDER BY em.relevance DESC, em.name LIMIT 1000`,
+      cypherCountQuery:
+        `MATCH (d:Document {id: '${documentId}'})-[:MENTIONS]->(em:EntityMention) ` +
+        `RETURN count(em) AS total`,
+      cypherSearchQuery:
+        `MATCH (d:Document {id: '${documentId}'})-[:MENTIONS]->(em:EntityMention) ` +
+        `WHERE toLower(em.name) CONTAINS toLower($searchText) OR toLower(em.match) CONTAINS toLower($searchText) ` +
+        `RETURN em.id AS value, em.name AS label, em.type AS type, ` +
+        `em.category AS category, em.relevance AS relevance, em.match AS match ` +
+        `LIMIT 100`,
+      namespace: workspace.namespace || '',
+    };
+
+    const graphId = `ds_doc_${documentId.slice(0, 8)}_${Date.now().toString(36)}`;
+    const dsConfig = {
+      graphId,
+      name:       docName,
+      namespace:  workspace.namespace,
+      sourceType: 'KB',
+      config: {
+        description:     `Extracted entities from: ${docName}`,
+        valueField:      'value',
+        labelField:      'label',
+        metadataFields:  ['type', 'category', 'relevance', 'match'],
+        cacheStrategy:   'ttl',
+        cacheTTL:        3600,
+        documentId,
+        documentType:    doc.documentType  || null,
+        epistemicLayer:  doc.epistemicLayer || null,
+        kqsScore:        doc.kqsScore       || null,
+      },
+      kbConfig,
+      sqlConfig:       null,
+      apiConfig:       null,
+      fileConfig:      null,
+      compositeConfig: null,
+    };
+
+    const createdGraphId = await v2().create(dsConfig);
+    const created        = await v2().get(createdGraphId);
+
+    // Paired SourceReference with sourceType=DOCUMENT
+    const { v4: uuidv4 } = require('uuid');
+    const sourceId = uuidv4();
+    const now      = new Date().toISOString();
+
+    await mg().runQuery(
+      `MATCH (w:WorkSpace {id: $wsId})
+       CREATE (s:SourceReference {
+         id: $id, workspaceId: $wsId,
+         filename: $filename, mimeType: 'application/x-document',
+         sizeBytes: $sizeBytes, sourceType: 'DOCUMENT',
+         uri: $uri, dataSourceGraphId: $dataSourceGraphId,
+         documentId: $documentId, documentType: $documentType,
+         epistemicLayer: $epistemicLayer, kqsScore: $kqsScore,
+         status: 'INDEXED', uploadedAt: $now
+       })
+       CREATE (w)-[:HAS_SOURCE]->(s)
+       SET w.sourceCount = w.sourceCount + 1, w.updatedAt = $now`,
+      {
+        wsId: workspaceId, id: sourceId,
+        filename: docName,
+        sizeBytes: doc.fileSize || 0,
+        uri: doc.sourceUrl || `document://${documentId}`,
+        dataSourceGraphId: createdGraphId,
+        documentId,
+        documentType:   doc.documentType   || null,
+        epistemicLayer: doc.epistemicLayer  || null,
+        kqsScore:       doc.kqsScore        || null,
+        now,
+      }
+    );
+
+    console.log(`${LOG_PREFIX} linked Document ${documentId} → DataSource ${createdGraphId} in workspace ${workspaceId}`);
+
+    return {
+      dataSourceGraphId: createdGraphId,
+      sourceId,
+      source: {
+        id: sourceId, filename: docName,
+        sourceType: 'DOCUMENT',
+        documentId, documentType: doc.documentType, epistemicLayer: doc.epistemicLayer,
+        dataSourceGraphId: createdGraphId, status: 'INDEXED', uploadedAt: now,
+      },
+      dataSource: created,
+    };
+  }
+
+  /**
    * Best-effort cleanup when a workspace source is deleted.
    * Drops the linked v2 DataSource if one exists.
    */

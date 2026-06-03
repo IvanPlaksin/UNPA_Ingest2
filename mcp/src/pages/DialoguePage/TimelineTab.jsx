@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import {
   Box, Chip, Select, MenuItem, FormControl, InputLabel,
   Pagination, CircularProgress, Typography, Stack, Paper,
-  Collapse, Divider, Tooltip, IconButton,
+  Collapse, Divider, Tooltip, IconButton, InputBase,
 } from '@mui/material';
-import { ExpandMore, ExpandLess, Link as LinkIcon, AutoFixHigh, Check } from '@mui/icons-material';
+import { ExpandMore, ExpandLess, Link as LinkIcon, AutoFixHigh, Check, Search as SearchIcon, Clear as ClearIcon } from '@mui/icons-material';
 import { useLocation } from 'react-router-dom';
-import { useDialogueSessions, useRelatedSessions, useSessionReanalyze } from '../../hooks/useDialogue';
+import { useDialogueSessions, useRelatedSessions, useSessionReanalyze, useSessionTextSearch } from '../../hooks/useDialogue';
 import SessionDetailDrawer from '../../components/Dialogue/SessionDetailDrawer';
 import {
   parseSmartTitle, parseTopics, inferSessionType, SESSION_TYPE_STYLE as TYPE_STYLE,
@@ -308,7 +308,9 @@ function SessionCard({ session, idx, total, onOpen }) {
 export default function TimelineTab() {
   const [filters, setFilters] = useState({ platform: '', limit: 20, offset: 0, sort: 'startedAt_desc' });
   const [selectedSessionId, setSelectedSessionId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const { sessions, loading, pagination } = useDialogueSessions(filters);
+  const { results: searchResults, loading: searchLoading, searchDebounced, clear: clearSearch } = useSessionTextSearch();
   const location = useLocation();
 
   useEffect(() => {
@@ -320,8 +322,46 @@ export default function TimelineTab() {
   const pageCount = pagination ? Math.ceil(pagination.total / filters.limit) : 0;
   const currentPage = Math.floor(filters.offset / filters.limit) + 1;
 
+  const isSearching = searchQuery.trim().length > 0;
+
+  const handleSearchChange = (e) => {
+    const val = e.target.value;
+    setSearchQuery(val);
+    if (val.trim()) {
+      searchDebounced(val, { platform: filters.platform });
+    } else {
+      clearSearch();
+    }
+  };
+
+  const handleSearchClear = () => {
+    setSearchQuery('');
+    clearSearch();
+  };
+
   return (
     <Box>
+      {/* Search bar */}
+      <Paper
+        variant="outlined"
+        sx={{ display: 'flex', alignItems: 'center', mb: 2, px: 1.5, py: 0.5 }}
+      >
+        <SearchIcon sx={{ color: 'text.secondary', mr: 1, fontSize: 20 }} />
+        <InputBase
+          fullWidth
+          placeholder="Search sessions by title, summary, or topic…"
+          value={searchQuery}
+          onChange={handleSearchChange}
+          sx={{ fontSize: '0.9rem' }}
+        />
+        {searchLoading && <CircularProgress size={16} sx={{ mr: 1 }} />}
+        {searchQuery && (
+          <IconButton size="small" onClick={handleSearchClear} sx={{ opacity: 0.6 }}>
+            <ClearIcon sx={{ fontSize: 16 }} />
+          </IconButton>
+        )}
+      </Paper>
+
       {/* Filter row */}
       <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
         <FormControl size="small" sx={{ minWidth: 160 }}>
@@ -350,47 +390,76 @@ export default function TimelineTab() {
           </Select>
         </FormControl>
 
-        {pagination && (
+        {!isSearching && pagination && (
           <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'center' }}>
             {pagination.total} sessions total
           </Typography>
         )}
       </Stack>
 
-      {/* Sessions list */}
-      {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-          <CircularProgress />
-        </Box>
-      ) : sessions.length === 0 ? (
-        <Typography color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
-          No sessions found
-        </Typography>
+      {isSearching ? (
+        /* Search results */
+        <>
+          {!searchLoading && (
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+              {searchResults.length > 0
+                ? `${searchResults.length} result${searchResults.length !== 1 ? 's' : ''} for "${searchQuery}"`
+                : `No results for "${searchQuery}"`
+              }
+            </Typography>
+          )}
+          {searchResults.length > 0 && (
+            <Paper variant="outlined">
+              {searchResults.map((session, idx) => (
+                <SessionCard
+                  key={session.sessionId}
+                  session={session}
+                  idx={idx}
+                  total={searchResults.length}
+                  onOpen={setSelectedSessionId}
+                />
+              ))}
+            </Paper>
+          )}
+        </>
       ) : (
-        <Paper variant="outlined">
-          {sessions.map((session, idx) => (
-            <SessionCard
-              key={session.sessionId}
-              session={session}
-              idx={idx}
-              total={sessions.length}
-              onOpen={setSelectedSessionId}
-            />
-          ))}
-        </Paper>
-      )}
+        /* Normal paginated list */
+        <>
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : sessions.length === 0 ? (
+            <Typography color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
+              No sessions found
+            </Typography>
+          ) : (
+            <Paper variant="outlined">
+              {sessions.map((session, idx) => (
+                <SessionCard
+                  key={session.sessionId}
+                  session={session}
+                  idx={idx}
+                  total={sessions.length}
+                  onOpen={setSelectedSessionId}
+                />
+              ))}
+            </Paper>
+          )}
 
-      {/* Pagination */}
-      {pageCount > 1 && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-          <Pagination
-            count={pageCount}
-            page={currentPage}
-            onChange={(_e, page) => setFilters(f => ({ ...f, offset: (page - 1) * f.limit }))}
-            color="primary"
-            size="small"
-          />
-        </Box>
+          {/* Pagination */}
+          {pageCount > 1 && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+              <Pagination
+                count={pageCount}
+                page={currentPage}
+                onChange={(_e, page) => setFilters(f => ({ ...f, offset: (page - 1) * f.limit }))}
+                color="primary"
+                size="small"
+              />
+            </Box>
+          )}
+        </>
       )}
 
       <SessionDetailDrawer

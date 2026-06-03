@@ -14,3 +14,6 @@ export { ExtractRelationsExecutor } from './extract-relations.executor';
 export { ClassifyContentExecutor } from './classify-content.executor';
 export { WriteGraphExecutor } from './write-graph.executor';
 export { WriteVectorExecutor } from './write-vector.executor';
+export { BuildTriangleExecutor } from './build-triangle.executor';
+export { CalculateKQSExecutor } from './calculate-kqs.executor';
+export { ExtractUNSOPExecutor } from './extract-un-sop.executor';

@@ -33,6 +33,14 @@ export const getSessions = (filters = {}) => {
   return request(`${BASE}/sessions?${params}`);
 };
 
+export const textSearchSessions = (q, options = {}) => {
+  const params = new URLSearchParams({ q });
+  if (options.platform) params.set('platform', options.platform);
+  if (options.limit != null) params.set('limit', options.limit);
+  if (options.offset != null) params.set('offset', options.offset);
+  return request(`${BASE}/sessions/text-search?${params}`);
+};
+
 export const getSession = (sessionId, full = false) =>
   request(`${BASE}/sessions/${sessionId}${full ? '?full=true' : ''}`);
 
@@ -80,6 +88,27 @@ export const getDecisionProvenance = (query, limit = 10) =>
 
 export const reanalyzeSession = (sessionId) =>
   request(`${BASE}/sessions/${sessionId}/reanalyze`, { method: 'POST' });
+
+export const analyzeSessionGoals = (sessionId) =>
+  request(`${BASE}/sessions/${sessionId}/analyze-goals`, { method: 'POST' });
+
+export const getLinkedConversations = (sessionId) =>
+  request(`${BASE}/sessions/${sessionId}/linked-conversations`);
+
+export const prepareDevCollectorTaskSession = (rank) =>
+  request(`${BASE}/devcollector/prepare-session`, {
+    method: 'POST',
+    body: JSON.stringify({ rank }),
+  });
+
+export const getDevCollectorReport = () =>
+  request(`${BASE}/devcollector/report`);
+
+export const runDevCollectorAnalyze = (model = 'claude-sonnet-4-6') =>
+  request(`${BASE}/devcollector/analyze`, {
+    method: 'POST',
+    body: JSON.stringify({ model }),
+  });
 
 // ── AI Search ───────────────────────────────────────────────────────────────
 

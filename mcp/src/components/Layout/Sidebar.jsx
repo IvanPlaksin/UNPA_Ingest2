@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { MessageSquare, Database, GitGraph, Settings, Search, LayoutDashboard, ListTodo, FolderTree, Bot, FlaskConical, Layers, Microscope, Workflow, Brain, Network, Globe, DatabaseZap, Activity, ClipboardList, BookOpen, BarChart3, FolderKanban, PenTool, FormInput, ChevronDown, ChevronRight, Headphones } from 'lucide-react';
+import { MessageSquare, Database, GitGraph, Settings, Search, LayoutDashboard, ListTodo, FolderTree, Bot, FlaskConical, Layers, Microscope, Workflow, Brain, Network, Globe, DatabaseZap, Activity, ClipboardList, BookOpen, BarChart3, FolderKanban, PenTool, FormInput, ChevronDown, ChevronRight, Headphones, FileText, Triangle, AlertTriangle, HeartPulse } from 'lucide-react';
 import {
     Box,
     Drawer,
@@ -114,6 +114,10 @@ const Sidebar = () => {
 
                     <SectionHeader title="Knowledge" />
                     <NavItem to="/knowledge" icon={Database} label="Overview" />
+                    <NavItem to="/documents" icon={FileText} label="Documents" />
+                    <NavItem to="/knowledge-triangle" icon={Triangle} label="Triangle Explorer" />
+                    <NavItem to="/gaps" icon={AlertTriangle} label="Gap Manager" />
+                    <NavItem to="/knowledge-health" icon={HeartPulse} label="Health Dashboard" />
                     <NavItem to="/knowledge/graph" icon={GitGraph} label="Knowledge Graph" />
                     <NavItem to="/knowledge/planes" icon={Layers} label="Knowledge Planes" />
                     <NavItem to="/knowledge/crud" icon={DatabaseZap} label="Graph Manager" />

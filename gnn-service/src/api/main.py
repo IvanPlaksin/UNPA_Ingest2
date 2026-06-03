@@ -5,11 +5,38 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
-from .routes import router
-from .dspy_routes import router as dspy_router
-from .model_routes import router as model_router
 from .health_routes import router as health_router
+from .knowledge_map_routes import router as knowledge_map_router
 from ..config import CONFIG
+
+# Optional routes that depend on torch/heavy ML packages
+try:
+    from .routes import router
+    _gnn_router = router
+except (ImportError, Exception) as _e:
+    print(f"[GNN] GNN routes unavailable (torch not installed): {_e}")
+    _gnn_router = None
+
+try:
+    from .dspy_routes import router as dspy_router
+    _dspy_router = dspy_router
+except (ImportError, Exception) as _e:
+    print(f"[GNN] DSPy routes unavailable: {_e}")
+    _dspy_router = None
+
+try:
+    from .model_routes import router as model_router
+    _model_router = model_router
+except (ImportError, Exception) as _e:
+    print(f"[GNN] Model routes unavailable: {_e}")
+    _model_router = None
+
+try:
+    from .petri_routes import router as petri_router
+    _petri_router = petri_router
+except (ImportError, Exception) as _e:
+    print(f"[GNN] Petri routes unavailable: {_e}")
+    _petri_router = None
 
 app = FastAPI(
     title="UN ProjectAdvisor GNN Service",
@@ -27,10 +54,16 @@ app.add_middleware(
 )
 
 # Include routes
-app.include_router(health_router)                       # /health, /health/ready, /health/live
-app.include_router(model_router)                         # /api/v1/models/...
-app.include_router(router, prefix="/api/v1/gnn")         # /api/v1/gnn/...
-app.include_router(dspy_router, prefix="/api/v1")        # /api/v1/dspy/...
+app.include_router(health_router)                                            # /health, /health/ready, /health/live
+app.include_router(knowledge_map_router, prefix="/api/v1/knowledge-map")    # /api/v1/knowledge-map/...
+if _model_router:
+    app.include_router(_model_router)                                        # /api/v1/models/...
+if _gnn_router:
+    app.include_router(_gnn_router, prefix="/api/v1/gnn")                   # /api/v1/gnn/...
+if _dspy_router:
+    app.include_router(_dspy_router, prefix="/api/v1")                      # /api/v1/dspy/...
+if _petri_router:
+    app.include_router(_petri_router, prefix="/petri")                      # /petri/...
 
 # Prometheus metrics endpoint
 try:
@@ -54,6 +87,7 @@ async def root():
             "models": "/api/v1/models",
             "gnn_api": "/api/v1/gnn",
             "dspy_api": "/api/v1/dspy",
+            "petri_api": "/petri",
             "metrics": "/metrics",
             "docs": "/docs"
         }

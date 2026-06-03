@@ -8,7 +8,7 @@ import {
   AutoAwesome, Search as SearchIcon, ExpandMore, ExpandLess, Link as LinkIcon,
   Psychology, Hub,
 } from '@mui/icons-material';
-import { useDialogueSearch, useDecisionProvenance, useRelatedSessions, useAISearch } from '../../hooks/useDialogue';
+import { useDialogueSearch, useDecisionProvenance, useRelatedSessions, useAISearch, useSessionTextSearch } from '../../hooks/useDialogue';
 import SessionDetailDrawer from '../../components/Dialogue/SessionDetailDrawer';
 import {
   parseSmartTitle, parseTopics, inferSessionType, SESSION_TYPE_STYLE as TYPE_STYLE,
@@ -314,22 +314,34 @@ function AIStrategyPanel({ strategy, reasoning, searchParams }) {
 
 export default function SearchTab() {
   const [query, setQuery] = useState('');
-  const [searchMode, setSearchMode] = useState('ai'); // 'ai' | 'vector'
+  const [searchMode, setSearchMode] = useState('ai'); // 'ai' | 'vector' | 'text'
   const [useProvenance, setUseProvenance] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState(null);
 
   const { results: vectorResults, loading: vectorLoading, searchDebounced } = useDialogueSearch();
   const { results: provenanceResults, loading: provenanceLoading, trace } = useDecisionProvenance(null);
   const { results: aiResults, strategy, reasoning, searchParams, loading: aiLoading, aiAvailable, search: aiSearch } = useAISearch();
+  const { results: textSearchRaw, loading: textLoading, searchDebounced: textSearchDebounced, clear: clearTextSearch } = useSessionTextSearch();
 
   const isAI = searchMode === 'ai';
-  const loading = isAI ? aiLoading : (useProvenance ? provenanceLoading : vectorLoading);
-  const results = isAI ? aiResults : (useProvenance ? provenanceResults : vectorResults);
+  const isText = searchMode === 'text';
+
+  const textResults = textSearchRaw.map(s => ({
+    id: s.sessionId,
+    score: 0,
+    payload: s,
+  }));
+
+  const loading = isAI ? aiLoading : isText ? textLoading : (useProvenance ? provenanceLoading : vectorLoading);
+  const results = isAI ? aiResults : isText ? textResults : (useProvenance ? provenanceResults : vectorResults);
 
   const handleChange = (e) => {
     const q = e.target.value;
     setQuery(q);
-    if (!isAI) {
+    if (isText) {
+      if (q.trim()) textSearchDebounced(q);
+      else clearTextSearch();
+    } else if (!isAI) {
       if (useProvenance) trace(q);
       else searchDebounced(q, { expandGraph: true, limit: 20 });
     }
@@ -360,13 +372,17 @@ export default function SearchTab() {
             <AutoAwesome sx={{ fontSize: 15 }} />
             <Typography variant="caption" fontWeight={600}>AI Search</Typography>
           </ToggleButton>
-          <ToggleButton value="vector" sx={{ gap: 0.5, px: 1.5 }}>
+          <ToggleButton value="text" sx={{ gap: 0.5, px: 1.5 }}>
             <SearchIcon sx={{ fontSize: 15 }} />
+            <Typography variant="caption" fontWeight={600}>Text</Typography>
+          </ToggleButton>
+          <ToggleButton value="vector" sx={{ gap: 0.5, px: 1.5 }}>
+            <Psychology sx={{ fontSize: 15 }} />
             <Typography variant="caption" fontWeight={600}>Vector</Typography>
           </ToggleButton>
         </ToggleButtonGroup>
 
-        {!isAI && (
+        {!isAI && !isText && (
           <FormControlLabel
             control={
               <Switch size="small" checked={useProvenance}
@@ -378,14 +394,23 @@ export default function SearchTab() {
         )}
       </Stack>
 
+      {/* Vector mode warning */}
+      {!isAI && !isText && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          Vector search requires embedding service (may be slow). Use Text mode for instant results.
+        </Alert>
+      )}
+
       {/* Search input */}
       <TextField
         fullWidth
         placeholder={isAI
           ? 'Describe what you\'re looking for — press Enter to search with AI...'
-          : (useProvenance
-            ? 'Search decisions by topic, technology, pattern...'
-            : 'Search dialogues, sessions, discussions...')
+          : isText
+            ? 'Search sessions by title, summary, or topic…'
+            : (useProvenance
+              ? 'Search decisions by topic, technology, pattern...'
+              : 'Search dialogues, sessions, discussions...')
         }
         value={query}
         onChange={handleChange}
@@ -401,7 +426,7 @@ export default function SearchTab() {
           ),
         }}
         size="small"
-        sx={{ mb: isAI ? 0.5 : 2 }}
+        sx={{ mb: (isAI || isText) ? 0.5 : 2 }}
       />
 
       {/* AI mode hint */}
@@ -410,6 +435,13 @@ export default function SearchTab() {
           {aiAvailable
             ? 'AI analyzes your query → forms search criteria → vector + graph search'
             : 'AI unavailable (no API key) — using direct semantic search'}
+        </Typography>
+      )}
+
+      {/* Text mode hint */}
+      {isText && (
+        <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mb: 2 }}>
+          Fast keyword search across session titles, summaries, and topics
         </Typography>
       )}
 
@@ -432,7 +464,7 @@ export default function SearchTab() {
       )}
 
       {/* Results */}
-      {!isAI && useProvenance ? (
+      {!isAI && !isText && useProvenance ? (
         <Box>
           {results.map((result, idx) => (
             <DecisionCard key={result.decisionId || idx} result={result} />

@@ -146,6 +146,75 @@ const dialogueExtractDecisionsExecutor = createSimpleExecutor({
       } catch { /* fallback */ }
     }
 
+    // ── mergedText fast-path ──────────────────────────────────────────────────
+    // When caller supplies a pre-built merged transcript (all participants, all
+    // conversations), skip the JSONL+segment machinery and treat the entire text
+    // as a single virtual segment. Uses the same marker-score → LLM pipeline.
+    if (params.mergedText) {
+      const stats = {
+        segmentsAnalyzed: 1, candidateSegments: 0,
+        decisionsExtracted: 0, decisionsSkipped: 0,
+        byCategory: {}, byConfidence: { high: 0, medium: 0, low: 0 },
+        source: 'merged_transcript',
+      };
+      const allDecisions = [];
+      const CHUNK = 8000;
+      const text  = params.mergedText;
+      const chunks = [];
+      for (let i = 0; i < text.length; i += CHUNK - 500) {   // 500-char overlap
+        chunks.push(text.slice(i, i + CHUNK));
+        if (i + CHUNK >= text.length) break;
+      }
+      stats.segmentsAnalyzed = chunks.length;
+      const SYNTHETIC_SEG = 'merged-segment-0';
+      for (const chunk of chunks) {
+        const { score } = scoreSegment(chunk);
+        if (score < CANDIDATE_THRESHOLD) continue;
+        stats.candidateSegments++;
+        if (!llmService) continue;
+        const extracted = await extractWithLLM(llmService, chunk, model);
+        for (const dec of extracted) {
+          if ((dec.confidence ?? 0) < minConfidence) { stats.decisionsSkipped++; continue; }
+          const decisionId = makeDecisionId(sessionId, SYNTHETIC_SEG, dec.title || '');
+          const status = (dec.confidence ?? 0) >= 0.7 ? 'accepted' : 'proposed';
+          try {
+            await memgraphService.runQuery(
+              `MERGE (d:ArchDecision { decisionId: $decisionId })
+               ON CREATE SET d.title=$title, d.context=$context, d.decision=$decision,
+                 d.rationale=$rationale, d.alternatives=$alternatives,
+                 d.consequences=$consequences, d.category=$category,
+                 d.confidence=$confidence, d.status=$status, d.sessionId=$sessionId,
+                 d.segmentId=$segmentId, d.namespace='DIALOGUE', d.createdAt=$createdAt
+               ON MATCH SET d.confidence=$confidence, d.status=$status`,
+              { decisionId, title: dec.title||'', context: dec.context||'',
+                decision: dec.decision||'', rationale: dec.rationale||'',
+                alternatives: JSON.stringify(dec.alternatives||[]),
+                consequences: JSON.stringify(dec.consequences||[]),
+                category: dec.category||'architecture', confidence: dec.confidence??0.5,
+                status, sessionId, segmentId: SYNTHETIC_SEG,
+                createdAt: new Date().toISOString() }
+            );
+            await memgraphService.runQuery(
+              `MATCH (d:ArchDecision { decisionId: $did }), (s:DialogueSession { sessionId: $sid })
+               MERGE (d)-[:DECIDED_IN_SESSION]->(s)`,
+              { did: decisionId, sid: sessionId }
+            );
+          } catch (err) {
+            console.warn(`[dialogue.extract_decisions] mergedText store failed: ${err.message}`);
+          }
+          const conf = dec.confidence ?? 0;
+          if (conf >= 0.7) stats.byConfidence.high++;
+          else if (conf >= 0.5) stats.byConfidence.medium++;
+          else stats.byConfidence.low++;
+          stats.byCategory[dec.category] = (stats.byCategory[dec.category]||0) + 1;
+          stats.decisionsExtracted++;
+          allDecisions.push({ decisionId, ...dec, status, sessionId, segmentId: SYNTHETIC_SEG });
+        }
+      }
+      console.log(`[dialogue.extract_decisions] mergedText ${sessionId}: ${chunks.length} chunks, ${stats.candidateSegments} candidates, ${stats.decisionsExtracted} decisions`);
+      return createSuccessResult({ sessionId, decisions: allDecisions, stats }, stats, 1.0);
+    }
+
     // Load segments with their messages from Memgraph + JSONL
     const sessRows = await memgraphService.runQuery(
       `MATCH (s:DialogueSession { sessionId: $sid }) RETURN s`,

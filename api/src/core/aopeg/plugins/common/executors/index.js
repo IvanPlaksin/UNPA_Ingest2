@@ -16,6 +16,7 @@ const { SLACalculateExecutor } = require('./sla-calculate.executor');
 const { SLACheckExecutor } = require('./sla-check.executor');
 const { TransformExecutor } = require('./transform.executor');
 const { AiAgentExecutor } = require('./ai-agent.executor');
+const { KnowledgeTriangleEnrichExecutor } = require('./knowledge-triangle-enrich.executor');
 
 module.exports = {
   StartExecutor,
@@ -35,4 +36,5 @@ module.exports = {
   SLACheckExecutor,
   TransformExecutor,
   AiAgentExecutor,
+  KnowledgeTriangleEnrichExecutor,
 };

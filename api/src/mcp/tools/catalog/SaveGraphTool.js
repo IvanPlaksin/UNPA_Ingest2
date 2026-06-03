@@ -58,7 +58,7 @@ class SaveGraphTool extends BaseTool {
       parentGraphId, parentNodeId, changelog, reuseStrategy, sourceGraphId
     } = args;
 
-    // ═══ STEP 1: VALIDATE ═══
+    // ═══ STEP 1: STRUCTURAL VALIDATION ═══
     const validator = createGraphValidator(server);
     const validation = validator.validate({ nodes, edges });
 
@@ -93,6 +93,15 @@ class SaveGraphTool extends BaseTool {
         return this.error('Graph validation failed (not auto-fixable): ' +
           validation.errors.map(e => e.message).join('; '));
       }
+    }
+
+    // ═══ STEP 1b: PETRI NET SOUNDNESS VALIDATION (async, optional) ═══
+    const soundness = await validator.validateSoundness(finalNodes, finalEdges, name);
+    if (!soundness.valid && !soundness.skipped) {
+      const soundnessError = validator.formatSoundnessError(soundness, finalNodes);
+      return this.error(
+        `${soundnessError.message}. Issues: ${soundnessError.issues.map(i => i.message).join('; ')}`
+      );
     }
 
     const catalog = getCatalog();

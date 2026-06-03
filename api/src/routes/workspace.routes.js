@@ -38,6 +38,7 @@ router.get('/:id/stats',            (req, res, next) => controller.getStats(req,
 
 router.post('/:id/sources',                        (req, res, next) => controller.addSource(req, res, next));
 router.post('/:id/sources/upload', upload.single('file'), (req, res, next) => controller.uploadSource(req, res, next));
+router.post('/:id/sources/from-document',          (req, res, next) => controller.addSourceFromDocument(req, res, next));
 router.get('/:id/sources',                         (req, res, next) => controller.listSources(req, res, next));
 router.get('/:id/sources/:sourceId',                (req, res, next) => controller.getSource(req, res, next));
 router.get('/:id/sources/:sourceId/details',        (req, res, next) => controller.getSourceDetails(req, res, next));

@@ -10,6 +10,8 @@ import {
   searchDialogue,
   aiSearchDialogue,
   reanalyzeSession,
+  analyzeSessionGoals,
+  getLinkedConversations,
   getDecisions,
   getDecisionDetail,
   getDecisionProvenance,
@@ -18,6 +20,9 @@ import {
   getRelatedDialoguesForBacklog,
   getProvenanceChain,
   getAnalytics,
+  textSearchSessions,
+  getDevCollectorReport,
+  runDevCollectorAnalyze,
 } from '../services/dialogue.service';
 
 export function useDialogueSessions(filters = {}) {
@@ -336,4 +341,128 @@ export function useDialogueAnalytics(period = 'all') {
 
   useEffect(() => { fetch(); }, [fetch]);
   return { data, loading, error, refetch: fetch };
+}
+
+export function useSessionTextSearch() {
+  const [results, setResults] = useState([]);
+  const [pagination, setPagination] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const timerRef = useRef(null);
+
+  const search = useCallback(async (q, options = {}) => {
+    if (!q || !q.trim()) {
+      setResults([]);
+      setPagination(null);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await textSearchSessions(q, options);
+      setResults(data.sessions || []);
+      setPagination(data.pagination || null);
+    } catch (err) {
+      setError(err.message);
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const searchDebounced = useCallback((q, options = {}) => {
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => search(q, options), 350);
+  }, [search]);
+
+  const clear = useCallback(() => {
+    clearTimeout(timerRef.current);
+    setResults([]);
+    setPagination(null);
+    setError(null);
+  }, []);
+
+  return { results, pagination, loading, error, search, searchDebounced, clear };
+}
+
+export function useSessionAnalyzeGoals() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [lastSessionId, setLastSessionId] = useState(null);
+  const [result, setResult] = useState(null);
+
+  const analyze = useCallback(async (sessionId) => {
+    setLoading(true);
+    setError(null);
+    setLastSessionId(sessionId);
+    try {
+      const data = await analyzeSessionGoals(sessionId);
+      setResult(data.analysis || null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { analyze, loading, error, lastSessionId, result };
+}
+
+export function useLinkedConversations(sessionId) {
+  const [conversations, setConversations] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!sessionId) { setConversations([]); return; }
+    setLoading(true);
+    setError(null);
+    getLinkedConversations(sessionId)
+      .then(data => setConversations(data.conversations || []))
+      .catch(err => setError(err.message))
+      .finally(() => setLoading(false));
+  }, [sessionId]);
+
+  return { conversations, loading, error };
+}
+
+export function useDevCollectorReport() {
+  const [report, setReport] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [rev, setRev] = useState(0);
+
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    getDevCollectorReport()
+      .then(data => setReport(data.report || null))
+      .catch(err => setError(err.message))
+      .finally(() => setLoading(false));
+  }, [rev]);
+
+  const refetch = useCallback(() => setRev(r => r + 1), []);
+  return { report, loading, error, refetch };
+}
+
+export function useDevCollectorAnalyze() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const analyze = useCallback(async (model, callback) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await runDevCollectorAnalyze(model);
+      const meta = data.pending ? { pending: true, sessionCount: data.sessionCount, openTaskCount: data.openTaskCount } : null;
+      callback?.(data.report || null, meta);
+    } catch (err) {
+      setError(err.message);
+      callback?.(null, null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { analyze, loading, error };
 }

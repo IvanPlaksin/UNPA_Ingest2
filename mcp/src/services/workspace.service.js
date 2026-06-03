@@ -117,6 +117,11 @@ export const deleteSource = async (wsId, sourceId) => {
   return data;
 };
 
+export const addSourceFromDocument = async (wsId, documentId) => {
+  const { data } = await api.post(`/${wsId}/sources/from-document`, { documentId });
+  return data;
+};
+
 // ==================== DRAFTS ====================
 
 export const listDrafts = async (wsId, params = {}) => {

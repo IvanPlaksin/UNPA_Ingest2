@@ -3,6 +3,9 @@
 const express = require('express');
 const router = express.Router();
 const controller = require('../controller/flowdesk.controller.js');
+const { flowdeskUserMiddleware } = require('../../../middleware/flowdesk-user.middleware');
+
+router.use(flowdeskUserMiddleware);
 
 router.get('/health', controller.health);
 router.post('/classify', controller.classify);

@@ -673,6 +673,27 @@ class WorkspaceController {
     }
   }
 
+  /**
+   * POST /api/v1/workspaces/:id/sources/from-document
+   * Body: { documentId }
+   *
+   * Links an already-extracted Document (status=COMPLETED) as a KB DataSource
+   * + SourceReference in the workspace.
+   */
+  async addSourceFromDocument(req, res, next) {
+    try {
+      const { documentId } = req.body || {};
+      if (!documentId) {
+        return res.status(400).json({ success: false, error: { code: 'BAD_REQUEST', message: 'documentId is required' } });
+      }
+      const wsDsService = require('../services/workspace/workspace-datasource.service');
+      const result = await wsDsService.createFromDocument(req.params.id, documentId);
+      res.status(result.alreadyLinked ? 200 : 201).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // ==================== STRUCTURAL IMPORT ====================
 
   /**

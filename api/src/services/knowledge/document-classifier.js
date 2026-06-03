@@ -24,8 +24,16 @@ class DocumentClassifier {
 
     const scores = [];
     for (const rule of rules) {
-      const score = this.scoreDocument(documentText, metadata, rule);
-      scores.push({ document_type_id: rule.document_type_id, document_type_name: rule.document_type_name, score, threshold: rule.threshold });
+      const { score, signals } = this.scoreDocument(documentText, metadata, rule);
+      scores.push({
+        document_type_id:   rule.document_type_id,
+        document_type_name: rule.document_type_name,
+        epistemicLayer:     rule.epistemicLayer,
+        normativeWeight:    rule.normativeWeight,
+        score,
+        signals,
+        threshold:          rule.threshold
+      });
     }
 
     scores.sort((a, b) => b.score - a.score);
@@ -39,64 +47,85 @@ class DocumentClassifier {
     }
 
     return {
-      document_type_id: isClassified ? top.document_type_id : 'unknown',
+      document_type_id:   isClassified ? top.document_type_id   : 'unknown',
       document_type_name: isClassified ? top.document_type_name : 'Unknown',
-      confidence: Math.round(top.score * 100) / 100,
-      confidence_level: top.score >= 0.85 ? 'HIGH' : top.score >= 0.6 ? 'MEDIUM' : 'LOW',
-      alternatives: scores.slice(1, 4).map(s => ({ document_type_id: s.document_type_id, document_type_name: s.document_type_name, confidence: Math.round(s.score * 100) / 100 })),
+      confidence:         Math.round(top.score * 100) / 100,
+      confidence_level:   top.score >= 0.85 ? 'HIGH' : top.score >= 0.6 ? 'MEDIUM' : 'LOW',
+      epistemicLayer:     isClassified ? (top.epistemicLayer  || null) : null,
+      normativeWeight:    isClassified ? (top.normativeWeight != null ? top.normativeWeight : null) : null,
+      signals:            top.signals || [],
+      alternatives:       scores.slice(1, 4).map(s => ({
+        document_type_id:   s.document_type_id,
+        document_type_name: s.document_type_name,
+        confidence:         Math.round(s.score * 100) / 100
+      })),
       requires_llm_classification: !isClassified,
       recommended_prompts: recommendedPrompts
     };
   }
 
   /**
-   * Score document against a classifier rule
+   * Score document against a classifier rule.
+   * Returns { score, signals } where signals is an array of per-signal contributions.
    */
   scoreDocument(text, metadata, rule) {
     let rules;
     try { rules = typeof rule.rules === 'string' ? JSON.parse(rule.rules) : rule.rules; }
-    catch { return 0; }
+    catch { return { score: 0, signals: [] }; }
 
     const textLower = (text || '').toLowerCase();
     const textUpper = (text || '').toUpperCase();
-    let totalScore = 0;
+    let totalScore  = 0;
+    const signals   = [];
 
     for (const r of rules) {
       if (r.signal === 'keyword_match' && r.keywords) {
-        const matches = r.keywords.filter(kw => textLower.includes(kw.toLowerCase())).length;
-        totalScore += (matches / Math.max(r.keywords.length, 1)) * (r.weight || 0);
+        const matched = r.keywords.filter(kw => textLower.includes(kw.toLowerCase()));
+        const contribution = (matched.length / Math.max(r.keywords.length, 1)) * (r.weight || 0);
+        totalScore += contribution;
+        signals.push({ signal: 'keyword_match', matched: matched.length, total: r.keywords.length, contribution: Math.round(contribution * 1000) / 1000 });
       }
 
       if (r.signal === 'section_match' && r.sections) {
-        const matches = r.sections.filter(s => textUpper.includes(s.toUpperCase())).length;
-        totalScore += (matches / Math.max(r.sections.length, 1)) * (r.weight || 0);
+        const matched = r.sections.filter(s => textUpper.includes(s.toUpperCase()));
+        const contribution = (matched.length / Math.max(r.sections.length, 1)) * (r.weight || 0);
+        totalScore += contribution;
+        signals.push({ signal: 'section_match', matched: matched.length, total: r.sections.length, contribution: Math.round(contribution * 1000) / 1000, matchedSections: matched });
       }
 
       if (r.signal === 'structure_match') {
+        let contribution = 0;
         if (r.pattern === 'numbered_paragraphs') {
           const matches = text.match(/^\d+\./gm) || [];
-          totalScore += Math.min(matches.length / 10, 1) * (r.weight || 0);
+          contribution = Math.min(matches.length / 10, 1) * (r.weight || 0);
         }
         if (r.pattern === 'lettered_sections') {
           const matches = text.match(/^[A-Z]\.\s+[A-Z]/gm) || [];
-          totalScore += Math.min(matches.length / 5, 1) * (r.weight || 0);
+          contribution = Math.min(matches.length / 5, 1) * (r.weight || 0);
         }
+        totalScore += contribution;
+        signals.push({ signal: 'structure_match', pattern: r.pattern, contribution: Math.round(contribution * 1000) / 1000 });
       }
 
       if (r.signal === 'header_match' && r.pattern) {
+        let contribution = 0;
         try {
-          if (new RegExp(r.pattern, 'i').test(text)) totalScore += (r.weight || 0);
+          if (new RegExp(r.pattern, 'i').test(text)) contribution = (r.weight || 0);
         } catch { /* invalid regex */ }
+        totalScore += contribution;
+        signals.push({ signal: 'header_match', pattern: r.pattern, matched: contribution > 0, contribution: Math.round(contribution * 1000) / 1000 });
       }
 
       if (r.signal === 'title_match' && r.keywords && metadata.document_title) {
         const titleLower = metadata.document_title.toLowerCase();
-        const matches = r.keywords.filter(kw => titleLower.includes(kw.toLowerCase())).length;
-        totalScore += (matches / Math.max(r.keywords.length, 1)) * (r.weight || 0);
+        const matched = r.keywords.filter(kw => titleLower.includes(kw.toLowerCase()));
+        const contribution = (matched.length / Math.max(r.keywords.length, 1)) * (r.weight || 0);
+        totalScore += contribution;
+        signals.push({ signal: 'title_match', matched: matched.length, total: r.keywords.length, contribution: Math.round(contribution * 1000) / 1000 });
       }
     }
 
-    return Math.min(totalScore, 1.0);
+    return { score: Math.min(totalScore, 1.0), signals };
   }
 
   /**
@@ -137,17 +166,43 @@ class DocumentClassifier {
   async listDocumentTypes() {
     const result = await mg().runQuery(`
       MATCH (r:DocumentTypeRegistry)-[:HAS_TYPE]->(dt:DocumentType)
-      OPTIONAL MATCH (dt)-[:HAS_PROMPT]->(p:ExtractionPrompt {is_active: true})
-      RETURN dt.id as id, dt.name as name, dt.description as description,
-             collect(DISTINCT p.prompt_type) as availablePrompts
-      ORDER BY dt.name
+      WITH dt.id as id, dt.name as name, dt.description as description,
+           dt.epistemicLayer as epistemicLayer, dt.normativeWeight as normativeWeight
+      OPTIONAL MATCH (dt2:DocumentType {id: id})-[:HAS_PROMPT]->(p:ExtractionPrompt {is_active: true})
+      WITH id, name, description, epistemicLayer, normativeWeight,
+           collect(DISTINCT p.prompt_type) as availablePrompts
+      RETURN id, name, description, epistemicLayer, normativeWeight, availablePrompts
+      ORDER BY epistemicLayer, name
     `);
 
     return result.map(r => ({
       id: r.id,
       name: r.name,
       description: r.description,
+      epistemicLayer: r.epistemicLayer || null,
+      normativeWeight: r.normativeWeight != null ? r.normativeWeight : null,
       availablePrompts: r.availablePrompts || []
+    }));
+  }
+
+  /**
+   * List document types filtered by epistemic layer (L0-L5).
+   * Used by Knowledge Triangle queries to find normative/empirical sources.
+   */
+  async listDocumentTypesByLayer(layer) {
+    const result = await mg().runQuery(`
+      MATCH (r:DocumentTypeRegistry)-[:HAS_TYPE]->(dt:DocumentType)
+      WHERE dt.epistemicLayer = $layer
+      RETURN dt.id as id, dt.name as name, dt.epistemicLayer as epistemicLayer,
+             dt.normativeWeight as normativeWeight
+      ORDER BY dt.normativeWeight DESC
+    `, { layer });
+
+    return result.map(r => ({
+      id: r.id,
+      name: r.name,
+      epistemicLayer: r.epistemicLayer,
+      normativeWeight: r.normativeWeight
     }));
   }
 
@@ -212,19 +267,26 @@ class DocumentClassifier {
   }
 
   /**
-   * Load all active classifier rules
+   * Load all active classifier rules (including epistemic layer + normative weight)
    */
   async loadClassifierRules() {
     const result = await mg().runQuery(`
       MATCH (dt:DocumentType)-[:HAS_CLASSIFIER]->(cr:ClassifierRule {is_active: true})
-      RETURN dt.id as document_type_id, dt.name as document_type_name, cr.rules as rules, cr.threshold as threshold
+      RETURN dt.id          AS document_type_id,
+             dt.name        AS document_type_name,
+             dt.epistemicLayer   AS epistemicLayer,
+             dt.normativeWeight  AS normativeWeight,
+             cr.rules       AS rules,
+             cr.threshold   AS threshold
     `);
 
     return result.map(r => ({
-      document_type_id: r.document_type_id,
+      document_type_id:   r.document_type_id,
       document_type_name: r.document_type_name,
-      rules: r.rules,
-      threshold: r.threshold || 0.6
+      epistemicLayer:     r.epistemicLayer  || null,
+      normativeWeight:    r.normativeWeight != null ? r.normativeWeight : null,
+      rules:              r.rules,
+      threshold:          r.threshold || 0.6
     }));
   }
 }

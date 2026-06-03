@@ -717,7 +717,11 @@ class IngestionPlugin extends PluginBase {
     this.addExecutor(writeVectorExecutor);
     this.addExecutor(consolidateSubgraphExecutor);
 
-    console.log('[IngestionPlugin] Initialized with 10 executors (real service implementations)');
+    // TypeScript executor: UN SOP structural extractor
+    const { ExtractUNSOPExecutor } = require('./executors/extract-un-sop.executor');
+    this.addExecutor(new ExtractUNSOPExecutor());
+
+    console.log('[IngestionPlugin] Initialized with 11 executors (real service implementations)');
   }
 
   async cleanup() {

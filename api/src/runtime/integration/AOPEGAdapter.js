@@ -28,6 +28,7 @@ const EXECUTOR_TO_TOOL_MAP = {
   'ingestion.classify_content': 'ai.classify',
   'ingestion.write_graph': 'graph.create_node',
   'ingestion.write_vector': 'vector.write',
+  'ingestion.extract_un_sop': 'extraction.un_sop',
 
   // RAG domain
   'rag.search': 'vector.search',
@@ -63,6 +64,7 @@ const MCP_TOOL_ALIAS_MAP = {
   'vector.write':                 'ingestion.write_vector',
   'ai.rerank':                    'rag.rerank',
   'ai.chat':                      'rag.chat',
+  'extraction.un_sop':            'ingestion.extract_un_sop',
 };
 
 /**
