@@ -47,18 +47,15 @@ module.exports = async function extractEntitiesStep(ctx) {
 // ── Claude Code CLI (DOCUMENT mode) ────────────────────────
 
 async function extractViaClaudeCode(ctx) {
-  const aiSvc = require('../../knowledge/document-ai-extraction.service');
+  const { documentAIExtractionService: aiSvc } = require('../../knowledge/document-ai-extraction.service');
   const text = ctx.text;
-  const meta = {
-    title: ctx.sourceRef?.filename || ctx.sourceRef?.title || '',
-    documentType: ctx.documentType || ctx.sourceRef?.documentType || 'UNKNOWN',
-    epistemicLayer: ctx.epistemicLayer || ctx.sourceRef?.epistemicLayer || '',
-    publishedDate: ctx.sourceRef?.publishedDate || '',
-    unSymbol: ctx.sourceRef?.unSymbol || '',
-    model: ctx.options?.model,
-  };
 
-  const result = await aiSvc.extractDocument(text, meta);
+  const result = await aiSvc.extractDocument(
+    ctx.sourceId,
+    text,
+    ctx.sourceRef,
+    { model: ctx.options?.model }
+  );
   if (!result?.entities) return [];
 
   return result.entities.map(e => ({
@@ -91,7 +88,7 @@ async function extractViaLLMProvider(ctx) {
 // ── Regex fallback ──────────────────────────────────────────
 
 async function extractViaRegex(ctx) {
-  const aiSvc = require('../../knowledge/document-ai-extraction.service');
+  const { documentAIExtractionService: aiSvc } = require('../../knowledge/document-ai-extraction.service');
   if (typeof aiSvc.extractViaRegex !== 'function') return [];
   return aiSvc.extractViaRegex(ctx.text, {
     documentType: ctx.documentType,

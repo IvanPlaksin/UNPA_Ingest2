@@ -145,9 +145,40 @@ async function storeResult(ctx) {
 
 async function buildTriangleHook(ctx) {
   try {
-    const triangleSvc = require('../../knowledge/knowledge-triangle.service');
-    const result = await triangleSvc.buildTriangleEdges(ctx.sourceId, ctx.entities, ctx.sourceRef);
-    return result || {};
+    const { knowledgeTriangleService } = require('../../knowledge/knowledge-triangle.service');
+    const layer = ctx.sourceRef?.epistemicLayer || ctx.epistemicLayer;
+    const result = { processesLinked: 0, edges: { governs: 0, operationalizes: 0, revealsGapIn: 0 } };
+    if (!layer || ctx.entities.length === 0) return result;
+
+    const entityNames = [...new Set(ctx.entities.map(e => e.name).filter(Boolean))];
+    const matches = await mg().runQuery(
+      `UNWIND $names AS n
+       MATCH (kn:KnowledgeNode) WHERE toLower(kn.name) CONTAINS toLower(n)
+       RETURN kn.id AS id LIMIT 20`,
+      { names: entityNames.slice(0, 50) }
+    ).catch(() => []);
+
+    for (const m of matches) {
+      const targetId = m.id;
+      if (!targetId || targetId === ctx.sourceId) continue;
+      try {
+        if (['L0', 'L1', 'L2'].includes(layer)) {
+          await knowledgeTriangleService.createGovernsEdge(ctx.sourceId, targetId).catch(() => {});
+          result.edges.governs++;
+        } else if (layer === 'L3') {
+          await knowledgeTriangleService.createOperationalizesEdge(ctx.sourceId, targetId).catch(() => {});
+          result.edges.operationalizes++;
+        } else if (layer === 'L4') {
+          await knowledgeTriangleService.createRevealsGapEdge(ctx.sourceId, targetId, {
+            gapType: 'COMPLIANCE', severity: 'MEDIUM',
+            title: `Gap detected from ${ctx.sourceRef?.originalname || ctx.sourceId}`
+          }).catch(() => {});
+          result.edges.revealsGapIn++;
+        }
+        result.processesLinked++;
+      } catch { /* skip individual edge errors */ }
+    }
+    return result;
   } catch (err) {
     return { error: err.message };
   }
@@ -156,9 +187,13 @@ buildTriangleHook.hookName = 'buildTriangle';
 
 async function calculateKQSHook(ctx) {
   try {
-    const kqsSvc = require('../../knowledge/kqs.service');
-    const result = await kqsSvc.calculateForDocument(ctx.sourceId, ctx.entities);
-    return result || {};
+    const { kqsService } = require('../../knowledge/kqs.service');
+    const entityIds = ctx.entities.map(e => e.id).filter(Boolean);
+    if (entityIds.length > 0) {
+      await kqsService.calculateKQSBatch(entityIds.slice(0, 50), { persist: true }).catch(() => {});
+    }
+    const docKqs = await kqsService.calculateKQSById(ctx.sourceId, { persist: true }).catch(() => null);
+    return { score: docKqs?.kqs ?? null, entitiesScored: entityIds.length };
   } catch (err) {
     return { error: err.message };
   }
@@ -167,9 +202,9 @@ calculateKQSHook.hookName = 'calculateKQS';
 
 async function detectGapsHook(ctx) {
   try {
-    const gapSvc = require('../../knowledge/gap-detection.service');
-    const result = await gapSvc.detectStaleGaps(ctx.sourceId);
-    return result || {};
+    const { gapDetectionService } = require('../../knowledge/gap-detection.service');
+    const stale = await gapDetectionService.findStaleGaps({ daysOld: 90, limit: 100 });
+    return { count: Array.isArray(stale) ? stale.length : 0 };
   } catch (err) {
     return { error: err.message };
   }
