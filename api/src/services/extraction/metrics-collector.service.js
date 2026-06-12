@@ -66,6 +66,7 @@ class ExtractionMetricsCollector {
          id: $id, extractionJobId: $jobId,
          documentId: $docId, methodologyId: $methodId,
          documentType: $docType, epistemicLayer: $layer,
+         methodologySource: $methSource, appliedRuleId: $ruleId,
 
          totalDurationMs:  $totalMs,
          phase1DurationMs: $p1ms,
@@ -90,8 +91,10 @@ class ExtractionMetricsCollector {
         jobId:    this.extractionJobId,
         docId:    this.documentId,
         methodId: ctx.methodologyId || null,
-        docType:  ctx.documentType  || null,
-        layer:    ctx.epistemicLayer || null,
+        docType:    ctx.documentType     || null,
+        layer:      ctx.epistemicLayer   || null,
+        methSource: ctx.methodology?._source || null,
+        ruleId:     ctx.methodology?._ruleId || null,
 
         totalMs,
         p1ms: this._phases['extract-entities']?.durationMs ?? null,

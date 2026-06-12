@@ -111,9 +111,40 @@ class MethodologyService {
 
   /**
    * Select the best methodology for a document profile.
-   * Matching priority: exact docType+layer > exact docType > exact layer > DEFAULT
+   *
+   * Resolution order:
+   *   1. ACTIVE DerivedRule match (learned from metrics)
+   *   2. Catalog match: exact docType+layer > docType > layer > DEFAULT fallback
+   *
+   * Returns { methodology, source: 'DERIVED_RULE'|'CATALOG_MATCH', ruleId? }
+   * but also returns the methodology directly for backward compatibility.
    */
   async getMethodologyForDocument({ documentType = null, epistemicLayer = null, extractionDepth = 'STANDARD' } = {}) {
+    // 1. Check ACTIVE DerivedRules first
+    try {
+      const { ruleDerivationService } = require('./rule-derivation.service');
+      const rule = await ruleDerivationService.findMatchingRule({ documentType, epistemicLayer });
+      if (rule?.recommendsMethodologyId) {
+        const methodology = await this.getMethodology(rule.recommendsMethodologyId);
+        if (methodology) {
+          methodology._source  = 'DERIVED_RULE';
+          methodology._ruleId  = rule.id;
+          return methodology;
+        }
+      }
+    } catch (e) {
+      // Rule derivation service not available — fall through to catalog
+    }
+
+    // 2. Catalog resolution
+    const methodology = await this._resolveFromCatalog(documentType, epistemicLayer, extractionDepth);
+    if (methodology) {
+      methodology._source = 'CATALOG_MATCH';
+    }
+    return methodology;
+  }
+
+  async _resolveFromCatalog(documentType, epistemicLayer, extractionDepth) {
     // Try: match by docType AND layer
     if (documentType && epistemicLayer) {
       const rows = await mg().runQuery(
