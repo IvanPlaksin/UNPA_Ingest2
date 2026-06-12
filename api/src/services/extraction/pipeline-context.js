@@ -1,5 +1,7 @@
 'use strict';
 
+const { v4: uuidv4 } = require('uuid');
+
 /**
  * PipelineContext — the single mutable object flowing through all 10 pipeline steps.
  *
@@ -30,6 +32,9 @@ const PIPELINE_STEPS = [
  * @property {Object}   options           - Caller-supplied options
  * @property {string}   [jobId]           - BullMQ job ID (if queued)
  * @property {Object}   [bullJob]         - BullMQ Job instance (for updateProgress)
+ * @property {string}   extractionJobId   - UUIDv4 for full traceability across nodes/edges/result
+ * @property {string}   [methodologyId]   - Methodology.id used for this extraction (resolved by adapter)
+ * @property {Object}   [methodology]     - Full Methodology object (prompts, config, hooks)
  *
  * -- populated by steps --
  * @property {string}   text
@@ -67,6 +72,7 @@ function createContext(mode, sourceId, adapter, options = {}, overrides = {}) {
     options,
     jobId: options.jobId || null,
     bullJob: options.bullJob || null,
+    extractionJobId: options.extractionJobId || uuidv4(),
 
     // Populated by steps
     text: '',

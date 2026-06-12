@@ -34,6 +34,23 @@ async function loadSource(ctx) {
   ctx.epistemicLayer = doc.epistemicLayer  || null;
   ctx.domain         = null;
 
+  // Resolve methodology for this document (non-fatal — pipeline works without it)
+  try {
+    const { methodologyService } = require('../../extraction/methodology.service');
+    const extractionDepth = ctx.options?.extractionDepth || 'STANDARD';
+    const methodology = await methodologyService.getMethodologyForDocument({
+      documentType:   ctx.documentType,
+      epistemicLayer: ctx.epistemicLayer,
+      extractionDepth,
+    });
+    if (methodology) {
+      ctx.methodology   = methodology;
+      ctx.methodologyId = methodology.id;
+    }
+  } catch (e) {
+    // Methodology catalog not seeded yet or unavailable — continue without
+  }
+
   // Extract text using doc.storagePath + doc.originalname
   const text = await docSvc._readText(doc.storagePath, doc.originalname);
   ctx.text = text || '';
@@ -54,7 +71,8 @@ async function persistGraph(ctx) {
        ON CREATE SET em.id = $id, em.match = $match,
                      em.category = $cat, em.epistemicLayer = $layer,
                      em.relevance = $relevance, em.confidence = $conf,
-                     em.extractedByAI = $byAI, em.createdAt = $now
+                     em.extractedByAI = $byAI, em.createdAt = $now,
+                     em.extractionJobId = $jobId
        ON MATCH  SET em.match = $match, em.category = $cat,
                      em.relevance = $relevance, em.confidence = $conf
        MERGE (d)-[:MENTIONS]->(em)`,
@@ -68,6 +86,7 @@ async function persistGraph(ctx) {
         conf: e.confidence || 0.8,
         byAI: e.extractedByAI !== false,
         now,
+        jobId: ctx.extractionJobId || null,
       }
     ).catch(() => {});
 
@@ -93,7 +112,8 @@ async function persistGraph(ctx) {
       await mg().runQuery(
         `MATCH (a:EntityMention {id: $aId}), (b:EntityMention {id: $bId})
          MERGE (a)-[r:RELATED_TO {documentId: $docId, type: $relType}]->(b)
-         ON CREATE SET r.context = $ctx, r.confidence = $conf, r.extractedAt = $now
+         ON CREATE SET r.context = $ctx, r.confidence = $conf, r.extractedAt = $now,
+                       r.extractionJobId = $jobId
          ON MATCH  SET r.context = $ctx, r.confidence = $conf`,
         {
           aId: src.nodeId, bId: tgt.nodeId, docId: ctx.sourceId,
@@ -101,6 +121,7 @@ async function persistGraph(ctx) {
           ctx:  rel.context   || null,
           conf: rel.confidence ?? 0.8,
           now,
+          jobId: ctx.extractionJobId || null,
         }
       ).catch(() => {});
       relCount++;
@@ -125,6 +146,7 @@ async function storeResult(ctx) {
   await mg().runQuery(
     `CREATE (r:ExtractionResult {
        id: $id, documentId: $docId, mode: 'DOCUMENT', pipelineVersion: 'unified-v1',
+       extractionJobId: $jobId, methodologyId: $methodId,
        startedAt: $startedAt, completedAt: $now, durationMs: $dur,
        entitiesExtracted: $entities, relationsFound: $relations,
        vectorsIndexed: $vectors, gapsDetected: $gaps,
@@ -134,6 +156,8 @@ async function storeResult(ctx) {
      })`,
     {
       id: resId, docId: ctx.sourceId,
+      jobId: ctx.extractionJobId || null,
+      methodId: ctx.methodologyId || null,
       startedAt: ctx.startedAt, now, dur: ctx.stats.durationMs,
       entities: ctx.stats.entitiesExtracted, relations: ctx.stats.relationsFound,
       vectors: ctx.stats.vectorsIndexed, gaps: gapsDetected, kqs: kqsScore,

@@ -13,6 +13,7 @@
 
 const { createContext, addLog, overallProgress } = require('./pipeline-context');
 const { updateProgress, completeProgress, failProgress } = require('./progress-bridge');
+const { metricsCollectorService } = require('./metrics-collector.service');
 
 const STEPS = [
   require('./pipeline-steps/01-load-source.step'),
@@ -39,8 +40,9 @@ const STEPS = [
 async function runPipeline(mode, sourceId, adapter, options = {}) {
   const ctx = createContext(mode, sourceId, adapter, options);
   const startMs = Date.now();
+  const collector = metricsCollectorService.start(ctx);
 
-  addLog(ctx, 'pipeline', `Starting pipeline mode=${mode} source=${sourceId}`);
+  addLog(ctx, 'pipeline', `Starting pipeline mode=${mode} source=${sourceId} job=${ctx.extractionJobId}`);
   await updateProgress(ctx, { step: 'load-source', status: 'running' });
 
   try {
@@ -48,9 +50,17 @@ async function runPipeline(mode, sourceId, adapter, options = {}) {
       const stepName = step.name || 'unknown';
       addLog(ctx, 'pipeline', `→ ${stepName}`);
 
+      collector.recordPhaseStart(stepName);
       await updateProgress(ctx, { step: stepName });
 
       await step(ctx);
+
+      collector.recordPhaseEnd(stepName);
+
+      // Record entity confidence after extraction step
+      if (stepName === 'extract-entities' && ctx.entities) {
+        ctx.entities.forEach(e => collector.recordEntity(e));
+      }
 
       // After each step, update progress
       await updateProgress(ctx, {
@@ -61,12 +71,20 @@ async function runPipeline(mode, sourceId, adapter, options = {}) {
 
     ctx.stats.durationMs = Date.now() - startMs;
     addLog(ctx, 'pipeline', `Pipeline completed in ${ctx.stats.durationMs}ms`);
+
+    // Persist metrics (non-fatal)
+    await collector.finalize(ctx).catch(e => addLog(ctx, 'pipeline', `Metrics persist failed: ${e.message}`, 'warn'));
+
     await completeProgress(ctx, buildResult(ctx, true));
     return buildResult(ctx, true);
 
   } catch (err) {
     ctx.stats.durationMs = Date.now() - startMs;
     addLog(ctx, 'pipeline', `Pipeline FAILED: ${err.message}`, 'error');
+    collector.recordError(err.message);
+
+    // Persist metrics even on failure (non-fatal)
+    await collector.finalize(ctx).catch(() => {});
     await failProgress(ctx, err);
 
     // Best-effort status update via adapter
@@ -86,6 +104,8 @@ function buildResult(ctx, success, error = null) {
     error: error ? error.message : null,
     mode: ctx.mode,
     sourceId: ctx.sourceId,
+    extractionJobId: ctx.extractionJobId,
+    methodologyId: ctx.methodologyId || null,
     resultId: ctx.resultId,
     stats: { ...ctx.stats },
     steps: ctx.steps.map(s => ({
