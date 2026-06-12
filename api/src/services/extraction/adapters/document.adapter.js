@@ -72,7 +72,10 @@ async function persistGraph(ctx) {
                      em.category = $cat, em.epistemicLayer = $layer,
                      em.relevance = $relevance, em.confidence = $conf,
                      em.extractedByAI = $byAI, em.createdAt = $now,
-                     em.extractionJobId = $jobId
+                     em.extractionJobId = $jobId,
+                     em.chunkIndex = $chunkIdx,
+                     em.charOffsetStart = $charStart,
+                     em.charOffsetEnd = $charEnd
        ON MATCH  SET em.match = $match, em.category = $cat,
                      em.relevance = $relevance, em.confidence = $conf
        MERGE (d)-[:MENTIONS]->(em)`,
@@ -86,7 +89,10 @@ async function persistGraph(ctx) {
         conf: e.confidence || 0.8,
         byAI: e.extractedByAI !== false,
         now,
-        jobId: ctx.extractionJobId || null,
+        jobId:     ctx.extractionJobId || null,
+        chunkIdx:  e.chunkIndex  ?? null,
+        charStart: e.charOffsetStart ?? null,
+        charEnd:   e.charOffsetEnd   ?? null,
       }
     ).catch(() => {});
 

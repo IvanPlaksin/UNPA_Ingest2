@@ -39,6 +39,7 @@ const PIPELINE_STEPS = [
  * -- populated by steps --
  * @property {string}   text
  * @property {string[]} chunks
+ * @property {Object[]} chunkMetadata    - [{chunkIndex, charOffsetStart, charOffsetEnd, sourceLength}]
  * @property {Object[]} entities
  * @property {Object[]} relations
  * @property {Map}      specializedItems  - type → item[]
@@ -77,6 +78,7 @@ function createContext(mode, sourceId, adapter, options = {}, overrides = {}) {
     // Populated by steps
     text: '',
     chunks: [],
+    chunkMetadata: [],
     entities: [],
     relations: [],
     specializedItems: new Map(),

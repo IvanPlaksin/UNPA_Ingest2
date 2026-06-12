@@ -15,6 +15,26 @@ module.exports = async function chunkTextStep(ctx) {
   startStep(ctx, 'chunk-text');
   ctx.chunks = chunkText(ctx.text, MAX_CHUNK_SIZE, CHUNK_OVERLAP);
   ctx.stats.chunksCount = ctx.chunks.length;
-  addLog(ctx, 'chunk-text', `Split into ${ctx.chunks.length} chunk(s)`);
+
+  // Build chunk metadata (charOffsets) by finding each chunk in the source text.
+  // Used downstream for positional provenance on EntityMention nodes (P1-004).
+  ctx.chunkMetadata = _buildChunkMetadata(ctx.text, ctx.chunks);
+
+  addLog(ctx, 'chunk-text', `Split into ${ctx.chunks.length} chunk(s), metadata tracked`);
   completeStep(ctx, 'chunk-text', { chunks: ctx.chunks.length });
 };
+
+function _buildChunkMetadata(fullText, chunks) {
+  const meta = [];
+  let searchFrom = 0;
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+    const trimmed = chunk.trim();
+    const start = fullText.indexOf(trimmed, searchFrom > 0 ? Math.max(0, searchFrom - 500) : 0);
+    const charOffsetStart = start >= 0 ? start : -1;
+    const charOffsetEnd   = start >= 0 ? start + trimmed.length : -1;
+    meta.push({ chunkIndex: i, charOffsetStart, charOffsetEnd, sourceLength: fullText.length });
+    if (start >= 0) searchFrom = start + Math.floor(trimmed.length * 0.5);
+  }
+  return meta;
+}

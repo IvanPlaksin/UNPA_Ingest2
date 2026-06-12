@@ -92,7 +92,10 @@ async function ensureDocumentsCollection() {
           optimizers_config: { default_segment_number: 2 },
         });
         // Payload indexes for filtering
-        for (const field of ['documentId', 'type', 'epistemicLayer', 'memgraphNodeLabel', 'knowledgeFamily']) {
+        for (const field of [
+          'documentId', 'type', 'epistemicLayer', 'memgraphNodeLabel', 'knowledgeFamily',
+          'extractionJobId', 'methodologyId', 'graphNodeId', 'vectorType',
+        ]) {
           await q.client.createPayloadIndex(DOCS_COLLECTION, {
             field_name: field, field_schema: 'keyword',
           }).catch(() => {});
@@ -203,20 +206,47 @@ async function embedAndIndex(ctx) {
 function buildPayload(t, ctx) {
   const entity = t.entity || t;
   return {
-    memgraphNodeId:    t.nodeId,
-    memgraphNodeLabel: t.nodeLabel,
+    // Cross-reference (graph ↔ vector)
+    graphNodeId:       t.nodeId,
+    graphLabel:        t.nodeLabel,
+    vectorType:        _vectorType(t.nodeLabel),
+    memgraphNodeId:    t.nodeId,     // kept for backward compat
+    memgraphNodeLabel: t.nodeLabel,  // kept for backward compat
+
+    // Source context
     mode:              ctx.mode,
     sourceId:          ctx.sourceId,
     workspaceId:       ctx.workspaceId || null,
     documentId:        ctx.mode === 'DOCUMENT' ? ctx.sourceId : null,
+    sourceDocumentId:  ctx.mode === 'DOCUMENT' ? ctx.sourceId : null,
+    sourceDocumentSymbol: ctx.sourceRef?.unSymbol || null,
+
+    // Provenance
+    extractionJobId:   ctx.extractionJobId || null,
+    methodologyId:     ctx.methodologyId   || null,
+
+    // Entity attributes
     name:              entity.name || '',
     type:              entity.type || '',
+    entityType:        entity.type || '',
     knowledgeFamily:   entity.knowledgeFamily || TYPE_TO_FAMILY[entity.type] || 'SEMANTIC',
     status:            entity.status || null,
-    epistemicLayer:    entity.epistemicLayer || null,
-    confidence:        entity.confidence || null,
+    epistemicLayer:    entity.epistemicLayer || ctx.epistemicLayer || null,
+    confidence:        entity.confidence != null ? (typeof entity.confidence === 'number' ? entity.confidence : (entity.confidence?.low ?? null)) : null,
+
+    // Embedding metadata
+    embeddingModel:    'MiniLM-L6-v2',
     indexedAt:         new Date().toISOString(),
   };
+}
+
+function _vectorType(nodeLabel) {
+  if (!nodeLabel) return 'entity';
+  const l = nodeLabel.toLowerCase();
+  if (l.includes('mention')) return 'entity_mention';
+  if (l.includes('draft'))   return 'draft_entity';
+  if (l.includes('es'))      return 'canonical_entity';
+  return 'entity';
 }
 
 module.exports = { embedAndIndex, buildEmbedText, DOCS_COLLECTION };
