@@ -82,6 +82,33 @@ async function persistGraph(ctx) {
   }
 
   ctx.persistedIds = ids;
+
+  // Persist RELATED_TO edges between EntityMention nodes (from Phase 2 claude-code extraction)
+  if (ctx.relations && ctx.relations.length > 0) {
+    let relCount = 0;
+    for (const rel of ctx.relations) {
+      const src = ids.get(rel.sourceEntity);
+      const tgt = ids.get(rel.targetEntity);
+      if (!src || !tgt || src.nodeId === tgt.nodeId) continue;
+      await mg().runQuery(
+        `MATCH (a:EntityMention {id: $aId}), (b:EntityMention {id: $bId})
+         MERGE (a)-[r:RELATED_TO {documentId: $docId, type: $relType}]->(b)
+         ON CREATE SET r.context = $ctx, r.confidence = $conf, r.extractedAt = $now
+         ON MATCH  SET r.context = $ctx, r.confidence = $conf`,
+        {
+          aId: src.nodeId, bId: tgt.nodeId, docId: ctx.sourceId,
+          relType: rel.relationType || 'RELATED_TO',
+          ctx:  rel.context   || null,
+          conf: rel.confidence ?? 0.8,
+          now,
+        }
+      ).catch(() => {});
+      relCount++;
+    }
+    ctx.stats.relationsFound = relCount;
+    const { addLog } = require('../pipeline-context');
+    addLog(ctx, 'persist-graph', `Persisted ${relCount} RELATED_TO edges`);
+  }
 }
 
 // ── STORE RESULT ────────────────────────────────────────────

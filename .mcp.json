@@ -17,7 +17,7 @@
         "MEMGRAPH_USER": "memgraph",
         "MEMGRAPH_PASSWORD": "secret_password_123",
         "TEI_URL": "http://localhost:8081",
-        "CLAUDE_SESSION_KEY": "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",
+        "CLAUDE_SESSION_KEY": "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",
         "CLAUDE_ORGANIZATION_ID": "990e8979-b161-420d-925c-9818eebb3718",
         "CLAUDE_PROJECT_ID": "019b8d63-3b21-758b-8a74-16eec3d3e14a",
         "CLAUDE_BASE_URL": "https://claude.ai/api",

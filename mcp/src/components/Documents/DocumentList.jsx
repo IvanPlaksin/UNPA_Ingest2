@@ -13,6 +13,7 @@
  *   onRefresh   () => void       — reload list
  */
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Box, Table, TableHead, TableBody, TableRow, TableCell,
     TableSortLabel, TablePagination,
@@ -22,7 +23,7 @@ import {
 } from '@mui/material';
 import {
     Search, RefreshCw, CheckCircle, AlertCircle, Clock,
-    XCircle, Eye, Play, RotateCcw, FileText, ExternalLink, Zap
+    XCircle, Eye, Play, RotateCcw, FileText, ExternalLink, Zap, Info
 } from 'lucide-react';
 
 const STATUSES = ['', 'UPLOADED', 'CLASSIFYING', 'CLASSIFIED', 'NEEDS_REVIEW', 'EXTRACTING', 'COMPLETED', 'FAILED'];
@@ -112,6 +113,7 @@ function formatBytes(bytes) {
 }
 
 export default function DocumentList({ documents = [], loading, onReview, onExtract, onForceExtract, onReclassify, onRefresh }) {
+    const navigate = useNavigate();
     const [search,    setSearch]    = useState('');
     const [status,    setStatus]    = useState('');
     const [layer,     setLayer]     = useState('');
@@ -280,6 +282,11 @@ export default function DocumentList({ documents = [], loading, onReview, onExtr
                                     </TableCell>
                                     <TableCell align="right">
                                         <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                                            <Tooltip title="Document card">
+                                                <IconButton size="small" onClick={() => navigate('/documents/' + doc.id)}>
+                                                    <Info size={15} />
+                                                </IconButton>
+                                            </Tooltip>
                                             <Tooltip title="Review classification">
                                                 <span>
                                                     <IconButton size="small" onClick={() => onReview?.(doc)}>
@@ -340,6 +347,7 @@ export default function DocumentList({ documents = [], loading, onReview, onExtr
                 rowsPerPage={rowsPerPage}
                 rowsPerPageOptions={[25]}
             />
+
         </Box>
     );
 }

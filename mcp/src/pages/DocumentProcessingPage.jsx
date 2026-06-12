@@ -15,26 +15,28 @@
  *   │ Upload zone  │ Document list (table + filters)               │
  *   │ (left col)   │ (right, main area)                            │
  *   └──────────────┴───────────────────────────────────────────────┘
- *   ClassificationReview — right-side drawer (classification)
+ *   DocumentCardDialog    — tabbed card with Overview/Classification/Knowledge/MARC21
  *   ExtractionDialog      — centered dialog (progress → results)
  */
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import {
     Box, Typography, Stack, Chip, Divider, FormControl,
     InputLabel, Select, MenuItem, Alert, Paper,
-    Dialog, DialogTitle, DialogContent, IconButton
+    Dialog, DialogTitle, DialogContent, IconButton,
+    Tabs, Tab
 } from '@mui/material';
-import { FileText, CheckCircle, AlertCircle, Clock, XCircle, X } from 'lucide-react';
+import { FileText, CheckCircle, AlertCircle, Clock, XCircle, X, Globe } from 'lucide-react';
 
 import DocumentUpload from '../components/Documents/DocumentUpload';
 import DocumentList from '../components/Documents/DocumentList';
-import ClassificationReview from '../components/Documents/ClassificationReview';
 import ExtractionProgress from '../components/Documents/ExtractionProgress';
 import ExtractionResults from '../components/Documents/ExtractionResults';
+import SourceCatalogTab from '../components/Documents/SourceCatalog/SourceCatalogTab';
+import DocumentCardDialog from '../components/Documents/DocumentCardDialog';
 import {
-    listDocuments, getDocumentStats, listDocumentTypes,
-    classifyDocument, extractDocument, getExtractionModels
+    listDocuments, getDocumentStats,
+    classifyDocument, extractDocument, getExtractionModels, getDocument
 } from '../services/documentProcessing.service';
 
 const NAMESPACES = ['', 'DEFAULT', 'INEED', 'KM', 'HR', 'FINANCE', 'PROCUREMENT', 'LEGAL', 'IT', 'AUDIT'];
@@ -52,17 +54,25 @@ const EXTR_CLOSED = { open: false, documentId: null, documentName: '', mode: 'pr
 
 export default function DocumentProcessingPage() {
     const navigate = useNavigate();
+    const location = useLocation();
     const [searchParams] = useSearchParams();
 
+    const { sourceId, documentId } = useParams();
+
+    const activeTab = (location.pathname.startsWith('/documents/sources')) ? 1 : 0;
+
+    function handleTabChange(_, v) {
+        navigate(v === 1 ? '/documents/sources' : '/documents', { replace: true });
+    }
     const [namespace,        setNamespace]        = useState(searchParams.get('namespace') || '');
     const [documents,        setDocuments]        = useState([]);
     const [loading,          setLoading]          = useState(false);
     const [stats,            setStats]            = useState(null);
-    const [docTypes,         setDocTypes]         = useState([]);
-    const [reviewDoc,        setReviewDoc]        = useState(null);
-    const [reviewOpen,       setReviewOpen]       = useState(false);
+    const [cardInitialTab,   setCardInitialTab]   = useState('overview');
     const [notification,     setNotification]     = useState(null);
     const [extrDialog,       setExtrDialog]       = useState(EXTR_CLOSED);
+    const [cardDoc,          setCardDoc]          = useState(null);
+    const [cardDocLoading,   setCardDocLoading]   = useState(false);
     const [extractionModel,  setExtractionModel]  = useState('claude-code');
     const [availableModels,  setAvailableModels]  = useState([
         { id: 'claude-code',              displayName: 'Claude Code',        tier: 'recommended', isDefault: true },
@@ -87,9 +97,8 @@ export default function DocumentProcessingPage() {
         setLoading(false);
     }, [namespace]);
 
-    // Load document types + extraction models once on mount
+    // Load extraction models once on mount
     useEffect(() => {
-        listDocumentTypes().then(setDocTypes).catch(() => {});
         getExtractionModels()
             .then(setAvailableModels)
             .catch(() => {});
@@ -105,6 +114,16 @@ export default function DocumentProcessingPage() {
         return () => clearInterval(timer);
     }, [documents, loadData]);
 
+    // Deep-link: fetch document when /documents/:documentId is active
+    useEffect(() => {
+        if (!documentId) { setCardDoc(null); return; }
+        setCardDocLoading(true);
+        getDocument(documentId)
+            .then(doc => setCardDoc(doc))
+            .catch(() => setCardDoc(null))
+            .finally(() => setCardDocLoading(false));
+    }, [documentId]);
+
     function notify(type, msg) {
         setNotification({ type, msg });
         setTimeout(() => setNotification(null), 5000);
@@ -116,15 +135,17 @@ export default function DocumentProcessingPage() {
     }
 
     function handleReview(doc) {
-        setReviewDoc(doc);
-        setReviewOpen(true);
+        setCardInitialTab('classification');
+        navigate(`/documents/${doc.id}`);
     }
 
-    async function handleExtract(doc, modelOverride) {
-        const model = modelOverride || extractionModel;
+    async function handleExtract(doc, options = {}) {
+        const model          = options.model || extractionModel;
+        const extractionMode = options.extractionMode || 'FULL';
         try {
-            await extractDocument(doc.id, { model });
-            notify('info', `Extraction started for "${doc.originalname}"`);
+            await extractDocument(doc.id, { model, extractionMode });
+            const modeLabel = extractionMode === 'SELECTIVE' ? ' (important segments only)' : '';
+            notify('info', `Extraction started for "${doc.originalname}"${modeLabel}`);
             loadData();
             setExtrDialog({ open: true, documentId: doc.id, documentName: doc.originalname, mode: 'progress' });
         } catch (e) {
@@ -132,12 +153,12 @@ export default function DocumentProcessingPage() {
         }
     }
 
-    async function handleForceExtract(doc) {
+    async function handleForceExtract(doc, options = {}) {
+        const extractionMode = options?.extractionMode || 'FULL';
         try {
-            await extractDocument(doc.id, { model: extractionModel, force: true });
+            await extractDocument(doc.id, { model: extractionModel, force: true, extractionMode });
             notify('info', `Re-extraction started for "${doc.originalname}"`);
             loadData();
-            // Switch to progress mode (keeps dialog open if already showing results)
             setExtrDialog(prev =>
                 prev.open && prev.documentId === doc.id
                     ? { ...prev, mode: 'progress' }
@@ -180,57 +201,69 @@ export default function DocumentProcessingPage() {
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 2.5, overflow: 'hidden' }}>
 
             {/* ── Header ── */}
-            <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" spacing={1} sx={{ mb: 2 }}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" spacing={1} sx={{ mb: 1.5 }}>
                 <Stack direction="row" spacing={1.5} alignItems="center">
                     <FileText size={22} />
-                    <Typography variant="h6" fontWeight={700}>Document Processing</Typography>
-                    {stats?.total != null && (
+                    <Typography variant="h6" fontWeight={700}>Documents</Typography>
+                    {activeTab === 0 && stats?.total != null && (
                         <Chip label={`${stats.total} total`} size="small" variant="outlined" />
                     )}
                 </Stack>
 
-                <Stack direction="row" spacing={1} alignItems="center">
-                    {STATS_CONFIG.map(({ key, label, color, Icon }) => {
-                        const count = getStatCount(key);
-                        if (!count) return null;
-                        return (
-                            <Chip
-                                key={key}
-                                icon={<Icon size={13} />}
-                                label={`${count} ${label}`}
-                                color={color}
-                                size="small"
-                                variant="outlined"
-                            />
-                        );
-                    })}
-                    <Divider orientation="vertical" flexItem />
-                    <FormControl size="small" sx={{ minWidth: 200 }}>
-                        <InputLabel>Extraction Model</InputLabel>
-                        <Select value={extractionModel} label="Extraction Model" onChange={e => setExtractionModel(e.target.value)}>
-                            {availableModels.map(m => (
-                                <MenuItem key={m.id} value={m.id}>
-                                    <Stack direction="row" spacing={0.75} alignItems="center">
-                                        <Typography variant="body2">{m.displayName}</Typography>
-                                        {m.isDefault && (
-                                            <Chip label="default" size="small"
-                                                sx={{ height: 16, fontSize: '0.6rem',
-                                                    bgcolor: '#2563eb',
-                                                    color: '#fff' }} />
-                                        )}
-                                    </Stack>
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-                    <FormControl size="small" sx={{ minWidth: 140 }}>
-                        <InputLabel>Namespace</InputLabel>
-                        <Select value={namespace} label="Namespace" onChange={e => setNamespace(e.target.value)}>
-                            {NAMESPACES.map(ns => <MenuItem key={ns} value={ns}>{ns || 'All namespaces'}</MenuItem>)}
-                        </Select>
-                    </FormControl>
-                </Stack>
+                {activeTab === 0 && (
+                    <Stack direction="row" spacing={1} alignItems="center">
+                        {STATS_CONFIG.map(({ key, label, color, Icon }) => {
+                            const count = getStatCount(key);
+                            if (!count) return null;
+                            return (
+                                <Chip
+                                    key={key}
+                                    icon={<Icon size={13} />}
+                                    label={`${count} ${label}`}
+                                    color={color}
+                                    size="small"
+                                    variant="outlined"
+                                />
+                            );
+                        })}
+                        <Divider orientation="vertical" flexItem />
+                        <FormControl size="small" sx={{ minWidth: 200 }}>
+                            <InputLabel>Extraction Model</InputLabel>
+                            <Select value={extractionModel} label="Extraction Model" onChange={e => setExtractionModel(e.target.value)}>
+                                {availableModels.map(m => (
+                                    <MenuItem key={m.id} value={m.id}>
+                                        <Stack direction="row" spacing={0.75} alignItems="center">
+                                            <Typography variant="body2">{m.displayName}</Typography>
+                                            {m.isDefault && (
+                                                <Chip label="default" size="small"
+                                                    sx={{ height: 16, fontSize: '0.6rem',
+                                                        bgcolor: '#2563eb',
+                                                        color: '#fff' }} />
+                                            )}
+                                        </Stack>
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                        <FormControl size="small" sx={{ minWidth: 140 }}>
+                            <InputLabel>Namespace</InputLabel>
+                            <Select value={namespace} label="Namespace" onChange={e => setNamespace(e.target.value)}>
+                                {NAMESPACES.map(ns => <MenuItem key={ns} value={ns}>{ns || 'All namespaces'}</MenuItem>)}
+                            </Select>
+                        </FormControl>
+                    </Stack>
+                )}
             </Stack>
+
+            {/* ── Tabs ── */}
+            <Tabs value={activeTab} onChange={handleTabChange}
+                sx={{ borderBottom: 1, borderColor: 'divider', mb: 1.5, minHeight: 36 }}
+                TabIndicatorProps={{ style: { height: 2 } }}>
+                <Tab label="Documents" icon={<FileText size={14} />} iconPosition="start"
+                    sx={{ minHeight: 36, fontSize: '0.8rem', textTransform: 'none', py: 0 }} />
+                <Tab label="Source Catalog" icon={<Globe size={14} />} iconPosition="start"
+                    sx={{ minHeight: 36, fontSize: '0.8rem', textTransform: 'none', py: 0 }} />
+            </Tabs>
 
             {/* ── Notification ── */}
             {notification && (
@@ -243,79 +276,88 @@ export default function DocumentProcessingPage() {
                 </Alert>
             )}
 
-            {/* ── Main content ── */}
-            <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', gap: 2 }}>
+            {/* ── Tab: Documents ── */}
+            {activeTab === 0 && (
+                <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', gap: 2 }}>
 
-                {/* Left: Upload zone */}
-                <Box sx={{ width: 280, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <Paper variant="outlined" sx={{ p: 2 }}>
-                        <Typography variant="subtitle2" fontWeight={700} gutterBottom>Upload Documents</Typography>
-                        <DocumentUpload
-                            namespace={namespace}
-                            onUploadComplete={handleUploadComplete}
-                            onError={e => notify('error', e.response?.data?.error || e.message)}
+                    {/* Left: Upload zone */}
+                    <Box sx={{ width: 280, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <Paper variant="outlined" sx={{ p: 2 }}>
+                            <Typography variant="subtitle2" fontWeight={700} gutterBottom>Upload Documents</Typography>
+                            <DocumentUpload
+                                namespace={namespace}
+                                onUploadComplete={handleUploadComplete}
+                                onError={e => notify('error', e.response?.data?.error || e.message)}
+                            />
+                        </Paper>
+
+                        {/* Quick guide */}
+                        <Paper variant="outlined" sx={{ p: 2 }}>
+                            <Typography variant="subtitle2" fontWeight={700} gutterBottom>Processing Flow</Typography>
+                            {[
+                                { step: '1', label: 'Upload', desc: 'File stored, auto-classify starts' },
+                                { step: '2', label: 'Classify', desc: 'UN type + L0-L5 layer detected' },
+                                { step: '3', label: 'Review', desc: 'Override if confidence < 70%' },
+                                { step: '4', label: 'Extract', desc: 'Knowledge triangle built in Memgraph' },
+                            ].map(({ step, label, desc }) => (
+                                <Stack key={step} direction="row" spacing={1} sx={{ mb: 1 }} alignItems="flex-start">
+                                    <Chip label={step} size="small" sx={{ minWidth: 24, height: 20, fontSize: '0.7rem' }} />
+                                    <Box>
+                                        <Typography variant="caption" fontWeight={700}>{label}</Typography>
+                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>{desc}</Typography>
+                                    </Box>
+                                </Stack>
+                            ))}
+                        </Paper>
+                    </Box>
+
+                    {/* Right: Document list */}
+                    <Paper variant="outlined" sx={{ flex: 1, p: 2, overflow: 'auto' }}>
+                        <Typography variant="subtitle2" fontWeight={700} gutterBottom>
+                            Documents{namespace ? ` — ${namespace}` : ' — All namespaces'}
+                        </Typography>
+                        <DocumentList
+                            documents={documents}
+                            loading={loading}
+                            onReview={handleReview}
+                            onExtract={handleExtract}
+                            onForceExtract={handleForceExtract}
+                            onReclassify={handleReclassify}
+                            onRefresh={loadData}
                         />
                     </Paper>
-
-                    {/* Quick guide */}
-                    <Paper variant="outlined" sx={{ p: 2 }}>
-                        <Typography variant="subtitle2" fontWeight={700} gutterBottom>Processing Flow</Typography>
-                        {[
-                            { step: '1', label: 'Upload', desc: 'File stored, auto-classify starts' },
-                            { step: '2', label: 'Classify', desc: 'UN type + L0-L5 layer detected' },
-                            { step: '3', label: 'Review', desc: 'Override if confidence < 70%' },
-                            { step: '4', label: 'Extract', desc: 'Knowledge triangle built in Memgraph' },
-                        ].map(({ step, label, desc }) => (
-                            <Stack key={step} direction="row" spacing={1} sx={{ mb: 1 }} alignItems="flex-start">
-                                <Chip label={step} size="small" sx={{ minWidth: 24, height: 20, fontSize: '0.7rem' }} />
-                                <Box>
-                                    <Typography variant="caption" fontWeight={700}>{label}</Typography>
-                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>{desc}</Typography>
-                                </Box>
-                            </Stack>
-                        ))}
-                    </Paper>
                 </Box>
+            )}
 
-                {/* Right: Document list */}
-                <Paper variant="outlined" sx={{ flex: 1, p: 2, overflow: 'auto' }}>
-                    <Typography variant="subtitle2" fontWeight={700} gutterBottom>
-                        Documents{namespace ? ` — ${namespace}` : ' — All namespaces'}
-                    </Typography>
-                    <DocumentList
-                        documents={documents}
-                        loading={loading}
-                        onReview={handleReview}
-                        onExtract={handleExtract}
-                        onForceExtract={handleForceExtract}
-                        onReclassify={handleReclassify}
-                        onRefresh={loadData}
+            {/* ── Tab: Source Catalog ── */}
+            {activeTab === 1 && (
+                <Box sx={{ flex: 1, overflow: 'hidden' }}>
+                    <SourceCatalogTab
+                        initialSourceId={sourceId}
+                        onSourceBrowse={(id) => navigate(`/documents/sources/${id}`, { replace: true })}
+                        onBrowseClose={() => navigate('/documents/sources', { replace: true })}
+                        onDocumentImported={() => {
+                            notify('success', 'Document imported — switching to Documents tab');
+                            navigate('/documents', { replace: true });
+                            loadData();
+                        }}
                     />
-                </Paper>
-            </Box>
+                </Box>
+            )}
 
-            {/* ── Classification Review drawer ── */}
-            <ClassificationReview
-                open={reviewOpen}
-                document={reviewDoc}
-                documentTypes={docTypes}
-                selectedModel={extractionModel}
-                onClose={() => setReviewOpen(false)}
-                onOverride={(doc) => { notify('success', 'Classification overridden'); loadData(); }}
-                onExtract={(doc) => {
-                    // extraction already triggered inside ClassificationReview — just show progress
-                    setReviewOpen(false);
-                    setExtrDialog({ open: true, documentId: doc.id, documentName: doc.originalname, mode: 'progress' });
-                    loadData();
+            {/* ── Document Card Dialog (deep-link /documents/:documentId) ── */}
+            <DocumentCardDialog
+                open={Boolean(cardDoc) || cardDocLoading}
+                onClose={() => {
+                    setCardDoc(null);
+                    setCardInitialTab('overview');
+                    navigate('/documents', { replace: true });
                 }}
-                onViewResults={(doc) => {
-                    setReviewOpen(false);
-                    setExtrDialog({ open: true, documentId: doc.id, documentName: doc.originalname, mode: 'results' });
-                }}
-                onForceExtract={(doc) => {
-                    setReviewOpen(false);
-                    handleForceExtract(doc);
-                }}
+                doc={cardDoc}
+                extractionModel={extractionModel}
+                initialTab={cardInitialTab}
+                onExtract={handleExtract}
+                onForceExtract={handleForceExtract}
             />
 
             {/* ── Extraction dialog (progress → results) ── */}

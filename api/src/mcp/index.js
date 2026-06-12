@@ -19,6 +19,7 @@ const documentTools = require('./tools/document/index.js');
 const codexTools = require('./tools/codex/index.js');
 const workspaceTools = require('./tools/workspace/index.js');
 const dialogueTools = require('./tools/dialogue/index.js');
+const sourceTools = require('./tools/sources/index.js');
 
 function createAllTools() {
   return [
@@ -38,6 +39,7 @@ function createAllTools() {
     ...codexTools.createCodexTools(),
     ...workspaceTools.createWorkspaceTools(),
     ...dialogueTools.createDialogueTools(),
+    ...sourceTools.createSourceCatalogTools(),
   ];
 }
 

@@ -1,9 +1,13 @@
 'use strict';
 
 const { addLog, startStep, completeStep, failStep } = require('../pipeline-context');
+const { updateProgress } = require('../progress-bridge');
 
 module.exports = async function extractEntitiesStep(ctx) {
   startStep(ctx, 'extract-entities');
+  // Flush "running" status to Redis immediately — this step is slow (Claude Code subprocess)
+  // and without this push the UI shows "pending" for the full duration of extraction.
+  await updateProgress(ctx, { step: 'extractEntitiesStep' }).catch(() => {});
   try {
     addLog(ctx, 'extract-entities', `Provider=${ctx.adapter.aiProvider}, chunks=${ctx.chunks.length}`);
 
@@ -54,9 +58,22 @@ async function extractViaClaudeCode(ctx) {
     ctx.sourceId,
     text,
     ctx.sourceRef,
-    { model: ctx.options?.model }
+    { model: ctx.options?.model, extractionMode: ctx.options?.extractionMode || 'FULL' }
   );
   if (!result?.entities) return [];
+
+  // Relationships from Phase 2 are pre-populated here so Step 04 can skip them.
+  if (Array.isArray(result.relationships) && result.relationships.length > 0) {
+    ctx.relations = result.relationships.map(r => ({
+      sourceEntity: r.sourceEntityName,
+      targetEntity: r.targetEntityName,
+      relationType: r.relationType,
+      context:      r.context      || null,
+      confidence:   r.confidence   ?? 0.8,
+    }));
+    ctx.stats.relationsFound = ctx.relations.length;
+    addLog(ctx, 'extract-entities', `Phase 2: ${ctx.relations.length} relationships pre-loaded`);
+  }
 
   return result.entities.map(e => ({
     id: require('crypto').randomUUID(),

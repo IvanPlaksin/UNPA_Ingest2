@@ -69,6 +69,34 @@ router.post('/:id/classify/override', async (req, res) => {
   }
 });
 
+// ─── Structure Analysis ───────────────────────────────────────────────────────
+
+// POST /api/v1/documents/:id/analyze-structure
+// Heuristically analyse document logical structure (sections, preamble, operative, etc.)
+// and save the result to the Document node as documentStructure JSON.
+router.post('/:id/analyze-structure', async (req, res) => {
+  try {
+    const structure = await documentProcessingService.analyzeDocumentStructure(req.params.id);
+    res.json({ success: true, data: structure });
+  } catch (err) {
+    const code = err.message.includes('not found') ? 404 : 500;
+    res.status(code).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/v1/documents/:id/structure
+// Return the stored documentStructure (from last analyze-structure run).
+router.get('/:id/structure', async (req, res) => {
+  try {
+    const doc = await documentProcessingService.getDocumentStatus(req.params.id);
+    if (!doc) return res.status(404).json({ success: false, error: 'Document not found' });
+    if (!doc.documentStructure) return res.status(404).json({ success: false, error: 'Structure not yet analysed. POST /analyze-structure first.' });
+    res.json({ success: true, data: doc.documentStructure });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ─── Extraction ───────────────────────────────────────────────────────────────
 
 router.post('/:id/extract', async (req, res) => {
@@ -79,6 +107,50 @@ router.post('/:id/extract', async (req, res) => {
     const code = err.message.includes('not found') ? 404
                : err.message.includes('must be') ? 400 : 500;
     res.status(code).json({ success: false, error: err.message });
+  }
+});
+
+// ─── Metadata Refetch (MARCXML) ───────────────────────────────────────────────
+
+// POST /api/v1/documents/:id/refetch-metadata
+// Fetches fresh MARC21 XML from the document's sourceUrl (UNDL only) and
+// updates unSymbol, documentTitle, publishedDate and marcData on the Document node.
+router.post('/:id/refetch-metadata', async (req, res) => {
+  try {
+    const doc = await documentProcessingService.getDocumentStatus(req.params.id);
+    if (!doc) return res.status(404).json({ success: false, error: 'Document not found' });
+    if (!doc.sourceUrl) return res.status(400).json({ success: false, error: 'Document has no sourceUrl' });
+
+    const recidMatch = doc.sourceUrl.match(/digitallibrary\.un\.org\/record\/(\d+)/);
+    if (!recidMatch) {
+      return res.status(400).json({
+        success: false,
+        error: 'Only UN Digital Library sources are supported for metadata refetch'
+      });
+    }
+
+    const { sourceCatalogEnrichmentService } = require('../services/knowledge/source-catalog-enrichment.service');
+    const enriched = await sourceCatalogEnrichmentService.fetchMarcRecord(recidMatch[1]);
+    if (!enriched) {
+      return res.status(502).json({ success: false, error: 'Failed to fetch MARCXML from source' });
+    }
+
+    const marc   = enriched.marcData;
+    const mgSvc  = require('../services/memgraph.service');
+    const now    = new Date().toISOString();
+    const sets   = ['d.marcData = $marcData', 'd.metaRefreshedAt = $now', 'd.updatedAt = $now'];
+    const params = { id: req.params.id, marcData: JSON.stringify(marc), now };
+
+    if (marc.symbol)    { sets.push('d.unSymbol = $sym');        params.sym   = marc.symbol; }
+    if (marc.fullTitle) { sets.push('d.documentTitle = $title'); params.title = marc.fullTitle; }
+    if (marc.dateIssued){ sets.push('d.publishedDate = $pub');   params.pub   = marc.dateIssued; }
+
+    await mgSvc.runQuery(`MATCH (d:Document {id: $id}) SET ${sets.join(', ')}`, params);
+
+    const updated = await documentProcessingService.getDocumentStatus(req.params.id);
+    res.json({ success: true, data: updated });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
@@ -184,11 +256,54 @@ router.get('/:id/extract/:jobId/progress', (req, res) => {
   req.on('close', cleanup);
 });
 
+// GET /api/v1/documents/:id/graph — entity graph (nodes + entity-entity relationships)
+router.get('/:id/graph', async (req, res) => {
+  try {
+    const graph = await documentExtractionService.getDocumentGraph(req.params.id);
+    res.json({ success: true, data: graph });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // GET /api/v1/documents/:id/extraction/entities
 router.get('/:id/extraction/entities', async (req, res) => {
   try {
     const entities = await documentExtractionService.getEntities(req.params.id);
     res.json({ success: true, count: entities.length, data: entities });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/v1/documents/:id/extraction/relations
+// Returns RELATED_TO edges between EntityMention nodes extracted from this document.
+router.get('/:id/extraction/relations', async (req, res) => {
+  try {
+    const mg = require('../services/memgraph.service');
+    const rows = await mg.runQuery(
+      `MATCH (a:EntityMention {documentId: $docId})-[r:RELATED_TO]->(b:EntityMention {documentId: $docId})
+       RETURN a.id AS sourceId, a.name AS sourceName, a.type AS sourceType,
+              b.id AS targetId, b.name AS targetName, b.type AS targetType,
+              r.type AS relType, r.context AS context,
+              r.confidence AS confidence, r.extractedAt AS extractedAt
+       ORDER BY r.confidence DESC
+       LIMIT 100`,
+      { docId: req.params.id }
+    );
+    const relations = rows.map(r => ({
+      sourceId:   r.sourceId,
+      sourceName: r.sourceName,
+      sourceType: r.sourceType,
+      targetId:   r.targetId,
+      targetName: r.targetName,
+      targetType: r.targetType,
+      relType:    r.relType    || 'RELATED_TO',
+      context:    r.context    || null,
+      confidence: typeof r.confidence === 'number' ? r.confidence : (r.confidence?.low ?? null),
+      extractedAt: r.extractedAt || null,
+    }));
+    res.json({ success: true, count: relations.length, data: relations });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

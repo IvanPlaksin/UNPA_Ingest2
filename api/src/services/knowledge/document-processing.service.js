@@ -161,6 +161,25 @@ class DocumentProcessingService {
     );
     const meta = types[0] || {};
 
+    // Auto-register new document type if it doesn't exist in the knowledge base
+    if (!types.length) {
+      console.log(LOG_PREFIX, `Auto-registering new document type: ${typeCode}`);
+      await mg().runQuery(
+        `MERGE (dt:DocumentType {id: $id})
+         ON CREATE SET dt.name        = $name,
+                       dt.description = $desc,
+                       dt.namespace   = 'USER_DEFINED',
+                       dt.version     = '1.0.0',
+                       dt.createdAt   = $now`,
+        {
+          id:   typeCode,
+          name: typeCode.replace(/[_-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+          desc: `User-defined document type, auto-registered during classification override.`,
+          now:  new Date().toISOString(),
+        }
+      ).catch(e => console.warn(LOG_PREFIX, 'Auto-register doc type error:', e.message));
+    }
+
     await mg().runQuery(
       `MATCH (d:Document {id: $id})
        SET d.documentType            = $docType,
@@ -215,6 +234,30 @@ class DocumentProcessingService {
     return { documentId: docId, status: 'EXTRACTING', jobId };
   }
 
+  // ─── Structure Analysis ───────────────────────────────────────────────────
+
+  /**
+   * Analyze the logical structure of a document and save to Memgraph.
+   * Returns the structure object.
+   */
+  async analyzeDocumentStructure(docId) {
+    const doc = await this._loadDoc(docId);
+    if (!doc) throw new Error(`Document ${docId} not found`);
+
+    const text = await this._readDocumentText(doc.storagePath);
+    const { documentStructureService } = require('./document-structure.service');
+    const structure = documentStructureService.analyzeStructure(text, doc.documentType);
+
+    const now = new Date().toISOString();
+    await mg().runQuery(
+      `MATCH (d:Document {id: $id})
+       SET d.documentStructure = $structure, d.structureAnalyzedAt = $now, d.updatedAt = $now`,
+      { id: docId, structure: JSON.stringify(structure), now }
+    );
+
+    return structure;
+  }
+
   // ─── Status & List ────────────────────────────────────────────────────────
 
   async getDocumentStatus(docId) {
@@ -233,7 +276,9 @@ class DocumentProcessingService {
               d.fileSize as fileSize, d.uploadedAt as uploadedAt, d.updatedAt as updatedAt,
               d.sourceUrl as sourceUrl, d.sourceRepository as sourceRepository,
               d.unSymbol as unSymbol, d.documentTitle as documentTitle,
-              d.publishedDate as publishedDate`,
+              d.publishedDate as publishedDate,
+              d.marcData as marcData, d.metaRefreshedAt as metaRefreshedAt,
+              d.documentStructure as documentStructure, d.structureAnalyzedAt as structureAnalyzedAt`,
       { id: docId }
     );
     if (!rows.length) return null;
@@ -349,9 +394,11 @@ class DocumentProcessingService {
   }
 
   _formatDoc(r) {
-    let alts = [], signals = [];
-    try { alts = JSON.parse(r.classificationAlternatives || '[]'); } catch { alts = []; }
-    try { signals = JSON.parse(r.classificationSignals || '[]'); } catch { signals = []; }
+    let alts = [], signals = [], marc = null, structure = null;
+    try { alts       = JSON.parse(r.classificationAlternatives || '[]'); } catch { alts = []; }
+    try { signals    = JSON.parse(r.classificationSignals || '[]'); }     catch { signals = []; }
+    try { marc       = JSON.parse(r.marcData || 'null'); }                catch { marc = null; }
+    try { structure  = JSON.parse(r.documentStructure || 'null'); }       catch { structure = null; }
     return {
       id:                        r.id,
       filename:                  r.filename,
@@ -369,11 +416,15 @@ class DocumentProcessingService {
       fileSize:                  r.fileSize,
       uploadedAt:                r.uploadedAt,
       updatedAt:                 r.updatedAt,
-      sourceUrl:                 r.sourceUrl   || null,
+      sourceUrl:                 r.sourceUrl        || null,
       sourceRepository:          r.sourceRepository || null,
-      unSymbol:                  r.unSymbol    || null,
-      documentTitle:             r.documentTitle || null,
-      publishedDate:             r.publishedDate || null
+      unSymbol:                  r.unSymbol         || null,
+      documentTitle:             r.documentTitle    || null,
+      publishedDate:             r.publishedDate    || null,
+      marcData:                  marc,
+      metaRefreshedAt:           r.metaRefreshedAt     || null,
+      documentStructure:         structure,
+      structureAnalyzedAt:       r.structureAnalyzedAt || null,
     };
   }
 }

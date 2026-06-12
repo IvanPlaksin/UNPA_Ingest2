@@ -1,19 +1,22 @@
 /**
  * ClassificationReview
  *
- * Side-panel that shows classification result, confidence, layers,
- * alternatives, provenance. Allows override, re-classify, extract.
+ * Shows classification result, confidence, layers, alternatives, signals,
+ * provenance. Allows override, re-classify, extract.
+ *
+ * variant='drawer' (default) — right-side Drawer with own header + scrolling footer
+ * variant='inline' — pure panel rendered inside a parent container (DocumentCardDialog tab)
+ *   In inline mode, extraction is delegated to the parent via onExtract/onForceExtract.
  *
  * Process log: every operation (classify / extract / override) is recorded
  * with timestamps, before/after stats, and full error text.
- * The log is preserved while the drawer is open for the same document.
  */
 import React, { useState, useEffect, useRef } from 'react';
 import {
     Drawer, Box, Typography, Stack, Chip, Divider,
     Button, Select, MenuItem, FormControl, InputLabel,
     TextField, Alert, IconButton, LinearProgress, Tooltip,
-    CircularProgress, Collapse, Paper
+    CircularProgress, Collapse, FormControlLabel, Checkbox
 } from '@mui/material';
 import {
     X, CheckCircle, AlertCircle, Edit2, Play,
@@ -76,7 +79,6 @@ function LogEntry({ entry }) {
                         />
                     </Stack>
 
-                    {/* Stats row */}
                     {entry.stats && (
                         <Stack direction="row" spacing={1.5} sx={{ mt: 0.5 }} flexWrap="wrap">
                             {entry.stats.prevType != null && entry.stats.newType != null && (
@@ -106,7 +108,6 @@ function LogEntry({ entry }) {
                         </Stack>
                     )}
 
-                    {/* Error message */}
                     {entry.message && (
                         <Typography variant="caption" color={isError ? 'error.main' : 'text.secondary'}
                             sx={{ display: 'block', mt: 0.5, fontSize: '0.68rem', wordBreak: 'break-word' }}>
@@ -122,6 +123,7 @@ function LogEntry({ entry }) {
 export default function ClassificationReview({
     open, document: doc, documentTypes = [],
     selectedModel: selectedModelProp,
+    variant = 'drawer',
     onClose, onConfirm, onOverride, onExtract, onViewResults, onForceExtract
 }) {
     const [overriding,     setOverriding]     = useState(false);
@@ -132,11 +134,11 @@ export default function ClassificationReview({
     const [localDoc,       setLocalDoc]       = useState(doc);
     const [processLog,     setProcessLog]     = useState([]);
     const [logsOpen,       setLogsOpen]       = useState(false);
+    const [extractionMode, setExtractionMode] = useState('FULL');
 
     const selectedModel = selectedModelProp || DEFAULT_MODEL;
     const prevDocId = useRef(null);
 
-    // Reset state when a new document is opened
     useEffect(() => {
         if (doc?.id !== prevDocId.current) {
             prevDocId.current = doc?.id || null;
@@ -146,6 +148,7 @@ export default function ClassificationReview({
             setOverrideReason('');
             setProcessLog([]);
             setLogsOpen(false);
+            setExtractionMode('FULL');
         } else {
             setLocalDoc(doc);
         }
@@ -160,7 +163,6 @@ export default function ClassificationReview({
                 setLocalDoc(updated);
                 if (!['CLASSIFYING', 'EXTRACTING'].includes(updated.status)) {
                     clearInterval(timer);
-                    // Update the last running log entry when operation completes
                     setProcessLog(prev => {
                         const copy = [...prev];
                         const last = copy.findLastIndex(e => e.status === 'running' || e.status === 'started');
@@ -195,7 +197,9 @@ export default function ClassificationReview({
     const canForce      = ['FAILED', 'COMPLETED'].includes(localDoc?.status);
     const isProcessing  = ['CLASSIFYING', 'EXTRACTING'].includes(localDoc?.status);
     const alts          = localDoc?.classificationAlternatives || [];
+    const signals       = localDoc?.classificationSignals || [];
     const layer         = localDoc?.epistemicLayer;
+    const hasDocStructure = !!localDoc?.documentStructure;
 
     function appendLog(entry) {
         const e = { id: Date.now(), timestamp: new Date().toISOString(), ...entry };
@@ -232,8 +236,7 @@ export default function ClassificationReview({
     async function handleReclassify() {
         setSaving(true);
         const id = appendLog({ label: 'Re-classify', status: 'running',
-            stats: { prevType: localDoc.documentType,
-                     prevConfidence: localDoc.classificationConfidence } });
+            stats: { prevType: localDoc.documentType, prevConfidence: localDoc.classificationConfidence } });
         try {
             await classifyDocument(localDoc.id);
             const updated = await getDocumentStatus(localDoc.id);
@@ -241,8 +244,7 @@ export default function ClassificationReview({
             updateLog(id, { status: 'success',
                 stats: { prevType: localDoc.documentType, newType: updated.documentType,
                          prevConfidence: localDoc.classificationConfidence,
-                         newConfidence: updated.classificationConfidence,
-                         layer: updated.epistemicLayer } });
+                         newConfidence: updated.classificationConfidence, layer: updated.epistemicLayer } });
         } catch (e) {
             const msg = e.response?.data?.error || e.message;
             updateLog(id, { status: 'error', message: msg });
@@ -252,9 +254,14 @@ export default function ClassificationReview({
     }
 
     async function handleExtract() {
+        if (variant === 'inline') {
+            // Delegate to parent (DocumentCardDialog → page's handleExtract)
+            onExtract?.(localDoc, { model: selectedModel, extractionMode });
+            return;
+        }
+        // Drawer variant: call service directly with process log
         setExtracting(true);
-        const id = appendLog({ label: `Extract — ${selectedModel}`, status: 'running',
-            stats: { model: selectedModel } });
+        const id = appendLog({ label: `Extract — ${selectedModel}`, status: 'running', stats: { model: selectedModel } });
         try {
             await extractDocument(localDoc.id, { model: selectedModel });
             const updated = await getDocumentStatus(localDoc.id);
@@ -270,6 +277,284 @@ export default function ClassificationReview({
     }
 
     const hasErrors = processLog.some(e => e.status === 'error');
+
+    /* ── shared body content ─────────────────────────────────────────────── */
+
+    const bodyContent = (
+        <>
+            {/* Status banner */}
+            {isProcessing && (
+                <Alert severity="info" sx={{ mb: 2 }}>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                        <CircularProgress size={14} />
+                        <span>{localDoc.status === 'CLASSIFYING' ? 'Classification in progress…' : 'Extraction in progress…'}</span>
+                    </Stack>
+                </Alert>
+            )}
+            {localDoc?.status === 'FAILED' && (
+                <Alert severity="error" sx={{ mb: 2 }}>Process failed — see log below.</Alert>
+            )}
+
+            {/* Detected type */}
+            <Typography variant="overline" color="text.disabled" fontWeight={700}>Detected Type</Typography>
+            <Box sx={{ p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1, mb: 2, mt: 0.5 }}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Typography variant="subtitle2" fontWeight={700} sx={{ fontFamily: 'monospace' }}>
+                        {localDoc?.documentType || '—'}
+                    </Typography>
+                    {localDoc?.classificationOverridden && (
+                        <Chip label="Overridden" size="small" color="warning" variant="outlined" />
+                    )}
+                </Stack>
+            </Box>
+
+            {/* Epistemic Layer */}
+            <Typography variant="overline" color="text.disabled" fontWeight={700}>Epistemic Layer</Typography>
+            <Box sx={{ p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1, mb: 2, mt: 0.5 }}>
+                {layer ? (
+                    <Stack direction="row" spacing={1.5} alignItems="center">
+                        <Chip label={layer} size="small"
+                            sx={{ bgcolor: LAYER_COLORS[layer] || 'grey.500', color: '#fff', fontWeight: 700 }} />
+                        <Typography variant="body2">{LAYER_LABELS[layer] || layer}</Typography>
+                    </Stack>
+                ) : (
+                    <Typography variant="body2" color="text.secondary">Not determined</Typography>
+                )}
+                {localDoc?.normativeWeight != null && (
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                        Normative weight: {localDoc.normativeWeight}
+                    </Typography>
+                )}
+            </Box>
+
+            {/* Confidence */}
+            <Typography variant="overline" color="text.disabled" fontWeight={700}>Confidence</Typography>
+            <Box sx={{ mb: 2, mt: 0.5 }}>
+                <Stack direction="row" spacing={1} alignItems="center">
+                    <LinearProgress
+                        variant="determinate" value={confidencePct}
+                        color={isLowConf ? 'warning' : 'success'}
+                        sx={{ flex: 1, height: 8, borderRadius: 4 }}
+                    />
+                    <Typography variant="body2" fontWeight={700}>{confidencePct}%</Typography>
+                    {isLowConf && (
+                        <Tooltip title="Confidence below 70% — manual review recommended">
+                            <AlertCircle size={16} style={{ color: '#f59e0b' }} />
+                        </Tooltip>
+                    )}
+                </Stack>
+            </Box>
+
+            {/* Alternative Classifications */}
+            {alts.length > 0 && (
+                <>
+                    <Typography variant="overline" color="text.disabled" fontWeight={700}>Alternative Classifications</Typography>
+                    <Stack spacing={0.5} sx={{ mb: 2, mt: 0.5 }}>
+                        {alts.map((a, i) => (
+                            <Stack key={i} direction="row" justifyContent="space-between" alignItems="center"
+                                sx={{ px: 1.5, py: 0.75, bgcolor: 'action.hover', borderRadius: 1 }}>
+                                <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>{a.document_type_id}</Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                    {Math.round((a.confidence || 0) * 100)}%
+                                </Typography>
+                            </Stack>
+                        ))}
+                    </Stack>
+                </>
+            )}
+
+            {/* Classification Signals */}
+            {signals.length > 0 && (
+                <>
+                    <Typography variant="overline" color="text.disabled" fontWeight={700}>Classification Signals</Typography>
+                    <Stack spacing={0.3} sx={{ mb: 2, mt: 0.5 }}>
+                        {signals.map((s, i) => (
+                            <Stack key={i} direction="row" spacing={0.5} alignItems="flex-start">
+                                <Box sx={{ width: 4, height: 4, borderRadius: '50%', bgcolor: 'text.disabled', flexShrink: 0, mt: 0.8 }} />
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.68rem', lineHeight: 1.5 }}>
+                                    {typeof s === 'string' ? s : JSON.stringify(s)}
+                                </Typography>
+                            </Stack>
+                        ))}
+                    </Stack>
+                </>
+            )}
+
+            {/* Provenance */}
+            {(localDoc?.unSymbol || localDoc?.sourceUrl || localDoc?.sourceRepository || localDoc?.documentTitle || localDoc?.publishedDate) && (
+                <>
+                    <Divider sx={{ my: 2 }} />
+                    <Typography variant="overline" color="text.disabled" fontWeight={700}>Provenance</Typography>
+                    <Box sx={{ p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1, mt: 0.5, mb: 2 }}>
+                        {localDoc.documentTitle && (
+                            <Typography variant="body2" fontWeight={600} gutterBottom>{localDoc.documentTitle}</Typography>
+                        )}
+                        <Stack spacing={0.5}>
+                            {localDoc.unSymbol && (
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <Typography variant="caption" color="text.secondary" sx={{ minWidth: 90 }}>UN Symbol</Typography>
+                                    <Typography variant="caption" sx={{ fontFamily: 'monospace', fontWeight: 700 }}>{localDoc.unSymbol}</Typography>
+                                </Stack>
+                            )}
+                            {localDoc.sourceRepository && (
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <Typography variant="caption" color="text.secondary" sx={{ minWidth: 90 }}>Repository</Typography>
+                                    <Chip label={localDoc.sourceRepository} size="small" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700 }} />
+                                </Stack>
+                            )}
+                            {localDoc.publishedDate && (
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <Typography variant="caption" color="text.secondary" sx={{ minWidth: 90 }}>Published</Typography>
+                                    <Typography variant="caption">{localDoc.publishedDate}</Typography>
+                                </Stack>
+                            )}
+                            {localDoc.sourceUrl && (
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <Typography variant="caption" color="text.secondary" sx={{ minWidth: 90 }}>Source URL</Typography>
+                                    <a href={localDoc.sourceUrl} target="_blank" rel="noopener noreferrer"
+                                        style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: '#2563eb', textDecoration: 'none' }}>
+                                        <ExternalLink size={12} /> View original
+                                    </a>
+                                </Stack>
+                            )}
+                        </Stack>
+                    </Box>
+                </>
+            )}
+
+            <Divider sx={{ my: 2 }} />
+
+            {/* Override section */}
+            {!overriding ? (
+                <Button variant="outlined" size="small" startIcon={<Edit2 size={14} />}
+                    onClick={() => setOverriding(true)} disabled={isProcessing} fullWidth>
+                    Override Classification
+                </Button>
+            ) : (
+                <Box sx={{ p: 2, border: 1, borderColor: 'primary.main', borderRadius: 1, bgcolor: 'action.hover' }}>
+                    <Typography variant="subtitle2" fontWeight={700} gutterBottom>Override Classification</Typography>
+                    <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
+                        <InputLabel>Document Type</InputLabel>
+                        <Select value={overrideType} label="Document Type" onChange={e => setOverrideType(e.target.value)}>
+                            {documentTypes.map(t => (
+                                <MenuItem key={t.id} value={t.id}>
+                                    <Stack>
+                                        <Typography variant="body2" fontWeight={600}>{t.id}</Typography>
+                                        {t.epistemicLayer && (
+                                            <Typography variant="caption" color="text.secondary">
+                                                {LAYER_LABELS[t.epistemicLayer] || t.epistemicLayer}
+                                            </Typography>
+                                        )}
+                                    </Stack>
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                    <TextField fullWidth size="small" label="Reason (optional)"
+                        value={overrideReason} onChange={e => setOverrideReason(e.target.value)} sx={{ mb: 1.5 }} />
+                    <Stack direction="row" spacing={1}>
+                        <Button size="small" variant="contained" onClick={handleOverride} disabled={!overrideType || saving}>
+                            {saving ? 'Saving…' : 'Apply Override'}
+                        </Button>
+                        <Button size="small" onClick={() => setOverriding(false)}>Cancel</Button>
+                    </Stack>
+                </Box>
+            )}
+
+            {/* Process Log */}
+            {processLog.length > 0 && (
+                <Box sx={{ mt: 2 }}>
+                    <Divider />
+                    <Stack direction="row" alignItems="center" justifyContent="space-between"
+                        sx={{ mt: 1, cursor: 'pointer', userSelect: 'none' }}
+                        onClick={() => setLogsOpen(v => !v)}>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                            {hasErrors ? <XCircle size={14} color="#ef4444" /> : <CheckCircle size={14} color="#22c55e" />}
+                            <Typography variant="caption" fontWeight={600}>
+                                Process Log — {processLog.length} operation(s)
+                                {hasErrors && (
+                                    <span style={{ color: '#ef4444' }}>
+                                        {' '}· {processLog.filter(e => e.status === 'error').length} error(s)
+                                    </span>
+                                )}
+                            </Typography>
+                        </Stack>
+                        <IconButton size="small">
+                            {logsOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                        </IconButton>
+                    </Stack>
+                    <Collapse in={logsOpen}>
+                        <Stack spacing={0.75} sx={{ mt: 0.75 }}>
+                            {processLog.map(entry => <LogEntry key={entry.id} entry={entry} />)}
+                        </Stack>
+                    </Collapse>
+                </Box>
+            )}
+
+            {/* Inline-only: extraction mode + action buttons */}
+            {variant === 'inline' && (
+                <Box sx={{ mt: 2 }}>
+                    <Divider sx={{ mb: 1.5 }} />
+
+                    {(canExtract || canForce) && hasDocStructure && (
+                        <Tooltip title={`Selective: extract only ${localDoc.documentStructure.stats?.importantSegments ?? '?'} important segments (${Math.round((localDoc.documentStructure.stats?.importantWordRatio || 0) * 100)}% of words)`}>
+                            <FormControlLabel
+                                sx={{ mb: 1 }}
+                                control={
+                                    <Checkbox size="small" sx={{ py: 0, pr: 0.5 }}
+                                        checked={extractionMode === 'SELECTIVE'}
+                                        onChange={e => setExtractionMode(e.target.checked ? 'SELECTIVE' : 'FULL')}
+                                    />
+                                }
+                                label={
+                                    <Typography variant="caption" sx={{ fontSize: '0.72rem' }}>
+                                        Important segments only
+                                    </Typography>
+                                }
+                            />
+                        </Tooltip>
+                    )}
+
+                    <Stack spacing={1}>
+                        {canExtract && (
+                            <Button variant="contained" color="primary" fullWidth
+                                startIcon={<Play size={14} />}
+                                onClick={handleExtract} disabled={isProcessing}>
+                                {selectedModel === 'regex' ? 'Extract (Pattern Matching)' : 'Extract with Claude Code'}
+                            </Button>
+                        )}
+                        {canForce && (
+                            <Button variant="contained" color="warning" fullWidth
+                                startIcon={<Zap size={14} />}
+                                onClick={() => onForceExtract?.(localDoc, { extractionMode })}>
+                                Re-extract (force)
+                            </Button>
+                        )}
+                        {localDoc?.status === 'COMPLETED' && onViewResults && (
+                            <Button variant="outlined" color="success" fullWidth
+                                startIcon={<Layers size={14} />}
+                                onClick={() => onViewResults(localDoc)}>
+                                View Extraction Results
+                            </Button>
+                        )}
+                        <Button variant="outlined" fullWidth
+                            startIcon={<RotateCcw size={14} />}
+                            onClick={handleReclassify} disabled={isProcessing || saving}>
+                            Re-classify
+                        </Button>
+                    </Stack>
+                </Box>
+            )}
+        </>
+    );
+
+    /* ── inline variant — no Drawer wrapper ─────────────────────────────── */
+
+    if (variant === 'inline') {
+        return <Box>{bodyContent}</Box>;
+    }
+
+    /* ── drawer variant ─────────────────────────────────────────────────── */
 
     return (
         <Drawer
@@ -296,231 +581,38 @@ export default function ClassificationReview({
 
             {/* Body */}
             <Box sx={{ flex: 1, overflowY: 'auto', p: 2 }}>
-
-                {/* Status banner */}
-                {isProcessing && (
-                    <Alert severity="info" icon={<CircularProgress size={16} />} sx={{ mb: 2 }}>
-                        {localDoc.status === 'CLASSIFYING' ? 'Classification in progress…' : 'Extraction in progress…'}
-                    </Alert>
-                )}
-                {localDoc?.status === 'FAILED' && (
-                    <Alert severity="error" sx={{ mb: 2 }}>Process failed — see log below.</Alert>
-                )}
-
-                {/* Detected type */}
-                <Typography variant="overline" color="text.disabled" fontWeight={700}>Detected Type</Typography>
-                <Box sx={{ p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1, mb: 2, mt: 0.5 }}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
-                        <Typography variant="subtitle2" fontWeight={700} sx={{ fontFamily: 'monospace' }}>
-                            {localDoc?.documentType || '—'}
-                        </Typography>
-                        {localDoc?.classificationOverridden && (
-                            <Chip label="Overridden" size="small" color="warning" variant="outlined" />
-                        )}
-                    </Stack>
-                </Box>
-
-                {/* Epistemic Layer */}
-                <Typography variant="overline" color="text.disabled" fontWeight={700}>Epistemic Layer</Typography>
-                <Box sx={{ p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1, mb: 2, mt: 0.5 }}>
-                    {layer ? (
-                        <Stack direction="row" spacing={1.5} alignItems="center">
-                            <Chip label={layer} size="small"
-                                sx={{ bgcolor: LAYER_COLORS[layer] || 'grey.500', color: '#fff', fontWeight: 700 }} />
-                            <Typography variant="body2">{LAYER_LABELS[layer] || layer}</Typography>
-                        </Stack>
-                    ) : (
-                        <Typography variant="body2" color="text.secondary">Not determined</Typography>
-                    )}
-                    {localDoc?.normativeWeight != null && (
-                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                            Normative weight: {localDoc.normativeWeight}
-                        </Typography>
-                    )}
-                </Box>
-
-                {/* Confidence */}
-                <Typography variant="overline" color="text.disabled" fontWeight={700}>Confidence</Typography>
-                <Box sx={{ mb: 2, mt: 0.5 }}>
-                    <Stack direction="row" spacing={1} alignItems="center">
-                        <LinearProgress
-                            variant="determinate"
-                            value={confidencePct}
-                            color={isLowConf ? 'warning' : 'success'}
-                            sx={{ flex: 1, height: 8, borderRadius: 4 }}
-                        />
-                        <Typography variant="body2" fontWeight={700}>{confidencePct}%</Typography>
-                        {isLowConf && (
-                            <Tooltip title="Confidence below 70% — manual review recommended">
-                                <AlertCircle size={16} style={{ color: '#f59e0b' }} />
-                            </Tooltip>
-                        )}
-                    </Stack>
-                </Box>
-
-                {/* Alternatives */}
-                {alts.length > 0 && (
-                    <>
-                        <Typography variant="overline" color="text.disabled" fontWeight={700}>Alternative Classifications</Typography>
-                        <Stack spacing={0.5} sx={{ mb: 2, mt: 0.5 }}>
-                            {alts.map((a, i) => (
-                                <Stack key={i} direction="row" justifyContent="space-between" alignItems="center"
-                                    sx={{ px: 1.5, py: 0.75, bgcolor: 'action.hover', borderRadius: 1 }}>
-                                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>{a.document_type_id}</Typography>
-                                    <Typography variant="caption" color="text.secondary">
-                                        {Math.round((a.confidence || 0) * 100)}%
-                                    </Typography>
-                                </Stack>
-                            ))}
-                        </Stack>
-                    </>
-                )}
-
-                {/* Provenance */}
-                {(localDoc?.unSymbol || localDoc?.sourceUrl || localDoc?.sourceRepository || localDoc?.documentTitle || localDoc?.publishedDate) && (
-                    <>
-                        <Divider sx={{ my: 2 }} />
-                        <Typography variant="overline" color="text.disabled" fontWeight={700}>Provenance</Typography>
-                        <Box sx={{ p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1, mt: 0.5, mb: 2 }}>
-                            {localDoc.documentTitle && (
-                                <Typography variant="body2" fontWeight={600} gutterBottom>{localDoc.documentTitle}</Typography>
-                            )}
-                            <Stack spacing={0.5}>
-                                {localDoc.unSymbol && (
-                                    <Stack direction="row" spacing={1} alignItems="center">
-                                        <Typography variant="caption" color="text.secondary" sx={{ minWidth: 90 }}>UN Symbol</Typography>
-                                        <Typography variant="caption" sx={{ fontFamily: 'monospace', fontWeight: 700 }}>{localDoc.unSymbol}</Typography>
-                                    </Stack>
-                                )}
-                                {localDoc.sourceRepository && (
-                                    <Stack direction="row" spacing={1} alignItems="center">
-                                        <Typography variant="caption" color="text.secondary" sx={{ minWidth: 90 }}>Repository</Typography>
-                                        <Chip label={localDoc.sourceRepository} size="small" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700 }} />
-                                    </Stack>
-                                )}
-                                {localDoc.publishedDate && (
-                                    <Stack direction="row" spacing={1} alignItems="center">
-                                        <Typography variant="caption" color="text.secondary" sx={{ minWidth: 90 }}>Published</Typography>
-                                        <Typography variant="caption">{localDoc.publishedDate}</Typography>
-                                    </Stack>
-                                )}
-                                {localDoc.sourceUrl && (
-                                    <Stack direction="row" spacing={1} alignItems="center">
-                                        <Typography variant="caption" color="text.secondary" sx={{ minWidth: 90 }}>Source URL</Typography>
-                                        <a href={localDoc.sourceUrl} target="_blank" rel="noopener noreferrer"
-                                            style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: '#2563eb', textDecoration: 'none' }}>
-                                            <ExternalLink size={12} /> View original
-                                        </a>
-                                    </Stack>
-                                )}
-                            </Stack>
-                        </Box>
-                    </>
-                )}
-
-                <Divider sx={{ my: 2 }} />
-
-                {/* Override section */}
-                {!overriding ? (
-                    <Button variant="outlined" size="small" startIcon={<Edit2 size={14} />}
-                        onClick={() => setOverriding(true)} disabled={isProcessing} fullWidth>
-                        Override Classification
-                    </Button>
-                ) : (
-                    <Box sx={{ p: 2, border: 1, borderColor: 'primary.main', borderRadius: 1, bgcolor: 'action.hover' }}>
-                        <Typography variant="subtitle2" fontWeight={700} gutterBottom>Override Classification</Typography>
-                        <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
-                            <InputLabel>Document Type</InputLabel>
-                            <Select value={overrideType} label="Document Type" onChange={e => setOverrideType(e.target.value)}>
-                                {documentTypes.map(t => (
-                                    <MenuItem key={t.id} value={t.id}>
-                                        <Stack>
-                                            <Typography variant="body2" fontWeight={600}>{t.id}</Typography>
-                                            {t.epistemicLayer && (
-                                                <Typography variant="caption" color="text.secondary">
-                                                    {LAYER_LABELS[t.epistemicLayer] || t.epistemicLayer}
-                                                </Typography>
-                                            )}
-                                        </Stack>
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                        <TextField fullWidth size="small" label="Reason (optional)"
-                            value={overrideReason} onChange={e => setOverrideReason(e.target.value)} sx={{ mb: 1.5 }} />
-                        <Stack direction="row" spacing={1}>
-                            <Button size="small" variant="contained" onClick={handleOverride} disabled={!overrideType || saving}>
-                                {saving ? 'Saving…' : 'Apply Override'}
-                            </Button>
-                            <Button size="small" onClick={() => setOverriding(false)}>Cancel</Button>
-                        </Stack>
-                    </Box>
-                )}
-
-                {/* ── Process Log ── */}
-                {processLog.length > 0 && (
-                    <Box sx={{ mt: 2 }}>
-                        <Divider />
-                        <Stack direction="row" alignItems="center" justifyContent="space-between"
-                            sx={{ mt: 1, cursor: 'pointer', userSelect: 'none' }}
-                            onClick={() => setLogsOpen(v => !v)}>
-                            <Stack direction="row" spacing={1} alignItems="center">
-                                {hasErrors
-                                    ? <XCircle size={14} color="#ef4444" />
-                                    : <CheckCircle size={14} color="#22c55e" />}
-                                <Typography variant="caption" fontWeight={600}>
-                                    Process Log — {processLog.length} operation(s)
-                                    {hasErrors && (
-                                        <span style={{ color: '#ef4444' }}>
-                                            {' '}· {processLog.filter(e => e.status === 'error').length} error(s)
-                                        </span>
-                                    )}
-                                </Typography>
-                            </Stack>
-                            <IconButton size="small">
-                                {logsOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-                            </IconButton>
-                        </Stack>
-
-                        <Collapse in={logsOpen}>
-                            <Stack spacing={0.75} sx={{ mt: 0.75 }}>
-                                {processLog.map(entry => (
-                                    <LogEntry key={entry.id} entry={entry} />
-                                ))}
-                            </Stack>
-                        </Collapse>
-                    </Box>
-                )}
+                {bodyContent}
             </Box>
 
             {/* Footer actions */}
             <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider', flexShrink: 0 }}>
                 <Stack spacing={1}>
                     {canExtract && (
-                        <Button variant="contained" color="primary"
+                        <Button variant="contained" color="primary" fullWidth
                             startIcon={extracting ? <CircularProgress size={14} color="inherit" /> : <Play size={14} />}
-                            onClick={handleExtract} disabled={extracting || isProcessing} fullWidth>
+                            onClick={handleExtract} disabled={extracting || isProcessing}>
                             {extracting ? 'Starting extraction…'
                                 : selectedModel === 'regex' ? 'Extract (Pattern Matching)'
                                 : 'Extract with Claude Code'}
                         </Button>
                     )}
                     {canForce && (
-                        <Button variant="contained" color="warning"
+                        <Button variant="contained" color="warning" fullWidth
                             startIcon={<Zap size={14} />}
-                            onClick={() => onForceExtract?.(localDoc)} fullWidth>
+                            onClick={() => onForceExtract?.(localDoc)}>
                             Re-extract (force)
                         </Button>
                     )}
                     {localDoc?.status === 'COMPLETED' && onViewResults && (
-                        <Button variant="outlined" color="success"
+                        <Button variant="outlined" color="success" fullWidth
                             startIcon={<Layers size={14} />}
-                            onClick={() => onViewResults(localDoc)} fullWidth>
+                            onClick={() => onViewResults(localDoc)}>
                             View Extraction Results
                         </Button>
                     )}
-                    <Button variant="outlined" startIcon={<RotateCcw size={14} />}
-                        onClick={handleReclassify} disabled={isProcessing || saving} fullWidth>
+                    <Button variant="outlined" fullWidth
+                        startIcon={<RotateCcw size={14} />}
+                        onClick={handleReclassify} disabled={isProcessing || saving}>
                         Re-classify
                     </Button>
                 </Stack>

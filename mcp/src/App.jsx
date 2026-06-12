@@ -38,6 +38,7 @@ import KnowledgeHealthPage from './pages/KnowledgeHealthPage';
 import StructuralFormDemoPage from './pages/StructuralFormDemoPage';
 import StructuralEditorPage from './pages/StructuralEditorPage';
 import UnpaChatDemoPage from './pages/UnpaChatDemoPage';
+import EntityStorePage from './pages/EntityStorePage';
 
 // import './index.css'; // Removing in favor of CssBaseline and MUI styles
 
@@ -171,6 +172,9 @@ function App() {
 
                                 {/* Document Processing — UN document lifecycle */}
                                 <Route path="/documents" element={<DocumentProcessingPage />} />
+                                <Route path="/documents/sources" element={<DocumentProcessingPage />} />
+                                <Route path="/documents/sources/:sourceId" element={<DocumentProcessingPage />} />
+                                <Route path="/documents/:documentId" element={<DocumentProcessingPage />} />
 
                                 {/* Triangle Explorer — Knowledge Triangle visualization */}
                                 <Route path="/knowledge-triangle" element={<TriangleExplorerPage />} />
@@ -180,6 +184,7 @@ function App() {
 
                                 {/* Knowledge Health — namespace health dashboard */}
                                 <Route path="/knowledge-health" element={<KnowledgeHealthPage />} />
+                                <Route path="/entity-store" element={<EntityStorePage />} />
                             </Routes>
                         </Box>
                     </Box>

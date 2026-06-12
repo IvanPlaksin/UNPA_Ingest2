@@ -352,7 +352,8 @@ class DocumentExtractionService {
       `MATCH (d:Document {id: $id})-[:MENTIONS]->(e:EntityMention)
        RETURN e.id AS id, e.name AS name, e.type AS type,
               e.category AS category, e.epistemicLayer AS epistemicLayer,
-              e.match AS match, e.relevance AS relevance, e.extractedByAI AS extractedByAI
+              e.match AS match, e.relevance AS relevance, e.extractedByAI AS extractedByAI,
+              e.esEntityId AS esEntityId
        ORDER BY e.relevance DESC, e.type, e.name`,
       { id: docId }
     );
@@ -365,8 +366,51 @@ class DocumentExtractionService {
       match:          r.match || null,
       relevance:      r.relevance || null,
       extractedByAI:  r.extractedByAI || false,
+      esEntityId:     r.esEntityId || null,
       confidence:     null
     }));
+  }
+
+  async getDocumentGraph(docId) {
+    const [entities, relationships] = await Promise.all([
+      mg().runQuery(
+        `MATCH (d:Document {id: $id})-[:MENTIONS]->(e:EntityMention)
+         RETURN e.id AS id, e.name AS name, e.type AS type,
+                e.category AS category, e.epistemicLayer AS epistemicLayer,
+                e.match AS match, e.relevance AS relevance, e.extractedByAI AS extractedByAI,
+                e.isExisting AS isExisting, e.description AS description
+         ORDER BY e.relevance DESC, e.type, e.name`,
+        { id: docId }
+      ),
+      mg().runQuery(
+        `MATCH (d:Document {id: $id})-[:MENTIONS]->(em1:EntityMention),
+               (d)-[:MENTIONS]->(em2:EntityMention),
+               (em1)-[r]->(em2)
+         WHERE em1.id <> em2.id
+         RETURN em1.id AS sourceId, em2.id AS targetId, type(r) AS relType
+         LIMIT 500`,
+        { id: docId }
+      ),
+    ]);
+    return {
+      entities: entities.map(r => ({
+        id:             r.id,
+        name:           r.name,
+        type:           r.type,
+        category:       r.category       || null,
+        epistemicLayer: r.epistemicLayer  || null,
+        match:          r.match           || null,
+        description:    r.description     || r.match || null,
+        relevance:      r.relevance       || null,
+        extractedByAI:  r.extractedByAI   || false,
+        isExisting:     r.isExisting      || false,
+      })),
+      relationships: relationships.map(r => ({
+        sourceId: r.sourceId,
+        targetId: r.targetId,
+        relType:  r.relType,
+      })),
+    };
   }
 
   async getExtractionResult(docId) {
@@ -514,7 +558,8 @@ class DocumentExtractionService {
       `MATCH (d:Document {id: $id})
        RETURN d.id as id, d.storagePath as storagePath, d.originalname as originalname,
               d.status as status, d.namespace as namespace,
-              d.epistemicLayer as epistemicLayer, d.documentType as documentType`,
+              d.epistemicLayer as epistemicLayer, d.documentType as documentType,
+              d.documentStructure as documentStructure`,
       { id: docId }
     );
     return rows[0] || null;

@@ -75,3 +75,39 @@ export async function listDocumentTypes() {
     const { data } = await axios.get(`${base}/types`);
     return data.data;
 }
+
+/** Get full document by ID (single record with all metadata). */
+export async function getDocument(documentId) {
+    const { data } = await axios.get(`${base}/${documentId}/status`);
+    return data.data;
+}
+
+/** Re-fetch MARC21 metadata from the document's sourceUrl and save to Memgraph. */
+export async function refetchMetadata(documentId) {
+    const { data } = await axios.post(`${base}/${documentId}/refetch-metadata`);
+    return data.data;
+}
+
+/** Analyse document logical structure (sections, preamble, operative clauses, etc.) and save. */
+export async function analyzeStructure(documentId) {
+    const { data } = await axios.post(`${base}/${documentId}/analyze-structure`);
+    return data.data;
+}
+
+/** Get saved document structure (from last analyzeStructure call). */
+export async function getDocumentStructure(documentId) {
+    const { data } = await axios.get(`${base}/${documentId}/structure`);
+    return data.data;
+}
+
+/** Get all extracted entities linked to a document. */
+export async function getDocumentEntities(documentId) {
+    const { data } = await axios.get(`${base}/${documentId}/extraction/entities`);
+    return data.data;
+}
+
+/** Get entity graph (entities + entity-entity relationships) for knowledge graph visualization. */
+export async function getDocumentGraph(documentId) {
+    const { data } = await axios.get(`${base}/${documentId}/graph`);
+    return data.data;
+}

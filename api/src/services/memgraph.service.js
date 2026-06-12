@@ -987,6 +987,10 @@ class MemgraphService {
     async close() {
         await this.driver.close();
     }
+
+    async getVertexLabelById() {
+        return null;
+    }
 }
 
 // ────────────────────────────────────────────────────────────────────────────

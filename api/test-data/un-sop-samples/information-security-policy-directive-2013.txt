@@ -1,0 +1,121 @@
+INFORMATION SECURITY POLICY DIRECTIVE
+FOR THE UNITED NATIONS SECRETARIAT
+
+7 March 2013
+
+Pursuant to ST/SGB/2007/6 (Organization of the Secretariat of the United Nations)
+and in accordance with Article 97 of the Charter of the United Nations,
+the following provisions are promulgated.
+
+
+Section 1
+Objective
+
+1.1 The objective of this Information Security Policy Directive is to establish the
+framework within which all information held by the United Nations Secretariat
+is protected against unauthorized access, use, disclosure, disruption, modification,
+or destruction.
+
+1.2 This directive shall apply to all staff members of the United Nations Secretariat
+and to all contractors, consultants and other individuals who have been granted
+access to United Nations information assets.
+
+
+Section 2
+Strategic Principles
+
+2.1 Information security shall be managed on a risk basis, with controls selected
+and implemented in proportion to the assessed risks.
+
+2.2 The information security programme for the United Nations Secretariat
+is managed utilizing a risk management approach that seeks to achieve an
+appropriate balance between security and operational requirements.
+
+2.3 All staff members shall be responsible for protecting United Nations information
+assets in their custody and must exercise the care of a prudent person.
+
+
+Section 3
+Commitments
+
+3.1 The United Nations Secretariat shall ensure that appropriate levels of security
+are implemented to protect the confidentiality, integrity and availability of its
+information assets.
+
+3.2 The Secretariat shall develop and maintain an information security programme
+that is aligned with internationally recognized standards, in particular
+the ISO/IEC 27000 series.
+
+3.3 Senior managers shall provide leadership and visible support for information
+security and must ensure that information security requirements are integrated
+into the planning of their programmes and operations.
+
+
+Section 4
+Organization of Information Security
+
+4.1 The Chief Information Technology Officer is responsible for the management
+of the information security programme of the United Nations Secretariat.
+
+4.2 The Information Security Section shall support departments and offices in
+the implementation of this directive and related information security standards.
+
+4.3 Each department and office shall designate an Information Security Focal Point
+who is responsible for coordinating information security activities within
+their department or office.
+
+
+Section 5
+Roles and Responsibilities
+
+5.1 The Chief Information Technology Officer shall:
+(a) Develop and maintain the information security programme;
+(b) Report annually to the Secretary-General on the state of information security;
+(c) Issue and maintain information security standards and guidelines;
+(d) Provide oversight and guidance on information security matters.
+
+5.2 The Information Security Section is responsible for:
+(a) Conducting risk assessments;
+(b) Monitoring compliance with information security requirements;
+(c) Providing security awareness training.
+
+5.3 Information Security Focal Points shall:
+(a) Promote security awareness within their department or office;
+(b) Report security incidents to the Information Security Section;
+(c) Assist in the implementation of information security standards.
+
+5.4 All staff members must:
+(a) Comply with this directive and related security standards;
+(b) Protect the information assets under their custody;
+(c) Report security incidents and vulnerabilities without delay.
+
+5.5 The Secretary-General is responsible for the overall information security
+posture of the United Nations Secretariat.
+
+
+Section 6
+Final Provisions
+
+6.1 This directive replaces ST/AI/2002/5 (Protection of personal information
+regarding clients of the programme for victims of abuse).
+
+6.2 This directive relates to ST/SGB/2007/6 and supplements the provisions
+contained therein regarding the management of information technology resources.
+
+6.3 This directive shall enter into force on 7 March 2013.
+
+6.4 The Secretary-General may issue administrative instructions implementing
+this directive pursuant to the authority conferred by Article 97 of the Charter.
+
+
+Annex A
+Information Security Levels
+
+A.1 RESTRICTED — Information requiring basic safeguards to prevent unauthorized
+disclosure.
+
+A.2 CONFIDENTIAL — Information whose unauthorized disclosure could cause
+harm to the interests of the Organization.
+
+A.3 STRICTLY CONFIDENTIAL — Information whose unauthorized disclosure could
+cause serious harm, including threats to life or security.

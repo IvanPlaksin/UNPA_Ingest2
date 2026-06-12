@@ -12,6 +12,11 @@ module.exports = async function extractRelationsStep(ctx) {
     skipStep(ctx, 'extract-relations', 'Not enough entities');
     return;
   }
+  // Relations pre-populated by extractEntitiesStep (document/claude-code Phase 2) — skip workspace extractor
+  if (ctx.relations && ctx.relations.length > 0) {
+    skipStep(ctx, 'extract-relations', `Pre-extracted (${ctx.relations.length} rels)`);
+    return;
+  }
 
   startStep(ctx, 'extract-relations');
   try {
