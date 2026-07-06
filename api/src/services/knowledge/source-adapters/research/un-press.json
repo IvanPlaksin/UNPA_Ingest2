@@ -1,0 +1,17 @@
+{
+  "key": "un-press",
+  "name": "UN Press Releases",
+  "family": "rss-feed",
+  "capabilities": ["search", "browseAll", "paginate"],
+  "filterSchema": [
+    { "type": "dateFrom", "param": "_clientDateFrom", "label": "From date", "clientSide": true },
+    { "type": "dateTo", "param": "_clientDateTo", "label": "To date", "clientSide": true },
+    { "type": "keyword", "param": "_clientKeyword", "label": "Keyword (title/description)", "clientSide": true }
+  ],
+  "config": { "url": "https://press.un.org/en/rss.xml" },
+  "download": { "mode": "record-page", "notes": "item link is an HTML press-release page on press.un.org (URLs end in .doc.htm or reference blog pages); no direct PDF and no enclosure element." },
+  "enrich": { "mode": "none", "notes": "no per-item metadata API" },
+  "methodologyMarkdown": "## Overview\nUN Press Releases is the RSS 2.0 feed of press.un.org — the UN Meetings Coverage and Press Releases service. It carries official meeting summaries, Security Council and General Assembly coverage, Secretary-General statements, senior appointments and administrative notices, spanning humanitarian, security and institutional affairs.\n\n## Search\nClient-side keyword filtering over RSS item title/description; no server query API. The feed URL is fixed and returns a single undifferentiated stream, so keyword matching (including document-symbol patterns such as SC/ or GA/) must be performed in-memory as a substring scan over each item's title and description.\n\n## Filters\nOnly client-side filters are possible: publication date range (from pubDate) and keyword. Items carry no `<category>` tags and no symbol patterns (e.g. SC/12345, GA/...) in structured markup, so subject or organ filtering must be inferred client-side from the title text.\n\n## Download\nThe retrievable document is the item `<link>` HTML press-release page; observed URLs end in `.doc.htm` or reference blog pages. There is no `<enclosure>` element and no direct PDF link.\n\n## Metadata & Enrichment\nNot supported.\n\n## Limitations\nFeed returns only the most recent ~10 items — a notably small window; no historical pagination and no archive parameter, so frequent polling is required to avoid missing releases.",
+  "verified": true,
+  "probeNotes": "Reachable, valid RSS 2.0. Channel title 'UN Meetings Coverage and Press Releases'. Observed 10 items (small window). Fields present: title, link, description, guid, pubDate. NO enclosure, NO <category> tags, NO symbol patterns. Item links end in .doc.htm. No PDF links."
+}

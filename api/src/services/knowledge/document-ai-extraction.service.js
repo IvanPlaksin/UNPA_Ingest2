@@ -74,18 +74,58 @@ const AVAILABLE_MODELS = [
 
 // ─── Prompt ───────────────────────────────────────────────────────────────────
 
-// System prompt for entity extraction (no MCP tools — single turn, fast)
-const ENTITY_SYSTEM_PROMPT = `You are a UN document analysis expert. Extract structured knowledge from official UN documents. Respond ONLY with valid JSON — no markdown, no explanation.`;
+const ENTITY_SYSTEM_PROMPT = `You are a senior UN document knowledge engineer. Extract comprehensive structured knowledge from official UN documents into a knowledge graph. Be thorough — capture every significant entity and relationship. Respond ONLY with valid JSON — no markdown, no explanation.`;
 
-// System prompt for relationship extraction (MCP tools allowed — multi-turn)
-const RELATION_SYSTEM_PROMPT = `You are a UN document relationship analyst with access to the project knowledge base via MCP tools. Identify relationships between entities found in a UN document, enriched with knowledge base context. You may call MCP tools before answering. Your FINAL response must be ONLY valid JSON — no markdown fences, no explanation text.`;
+const RELATION_SYSTEM_PROMPT = `You are a UN institutional knowledge analyst with access to the project knowledge base via MCP tools. Your goal is to build a dense, high-quality relationship graph from a UN document. Use MCP tools to enrich with existing knowledge. Your FINAL response must be ONLY valid JSON — no markdown fences, no explanation text.`;
+
+// ── Entity type taxonomy (two-level) ─────────────────────────────────────────
+const ENTITY_TYPE_GUIDE = `
+ENTITY TYPES — choose the most specific:
+
+AGENTS (who acts):
+  Person       — named individual (Secretary-General, Ambassador, Dr. Jane Smith)
+  Organization — institution, body, agency (UNDP, Security Council, ACABQ, ICC)
+  Actor        — named role/position without specific person (Special Rapporteur, Chair, Focal Point)
+
+ARTIFACTS (what is created):
+  Document     — complete document (resolution, report, charter)
+  DocumentRef  — reference/citation to another document (A/RES/77/1, S/2024/100)
+  Policy       — normative rule, regulation, mandate (Staff Rule 1.2, IPSAS)
+  System       — IT system, platform, tool (Umoja, iNeed, Oracle)
+  Technology   — technology standard, framework, protocol (AI, blockchain, IPSAS)
+
+CONCEPTS (abstract):
+  Concept      — principle, doctrine, abstract idea (sustainable development, human rights)
+  Process      — procedural workflow (procurement, recruitment, audit cycle)
+  Event        — dated or named occurrence (World Summit, COP28, 79th GA session)
+
+CONTEXT (where/when):
+  Location     — geographic entity (New York, Geneva, Member States, Africa)
+
+WORK (tracking):
+  WorkItem     — specific task, project, deliverable (ICTS modernization project)`;
+
+// ── Epistemic layer classification ────────────────────────────────────────────
+const EPISTEMIC_LAYER_GUIDE = `
+EPISTEMIC LAYER — classify based on text markers:
+
+L0_NORMATIVE    — Rules, laws, mandates. Markers: "shall", "must", "requires", "mandates", "decides", "prohibits"
+                  Examples: Charter articles, GA/SC resolutions with operative clauses, Staff Rules
+
+L1_STRUCTURAL   — Org structure, hierarchy, composition. Markers: "reports to", "composed of", "established by", "led by", "member of"
+                  Examples: Org charts, committee membership, reporting lines, budgetary structure
+
+L2_OPERATIONAL  — Procedures, workflows, how-to. Markers: "procedure", "process", "steps", "workflow", "implement", "execute"
+                  Examples: Procurement SOP, recruitment process, financial closure procedure
+
+L3_INFORMATIONAL — Facts, data, outcomes, events. Markers: "reported", "occurred", "noted", "statistics", "as of", "during"
+                  Examples: Meeting outcomes, budget figures, staffing numbers, incident reports
+
+L4_ANALYTICAL   — Assessments, recommendations, analysis. Markers: "recommends", "suggests", "finds", "assesses", "gap", "risk"
+                  Examples: Audit findings, JIU recommendations, strategic assessments, gap analysis`;
 
 /**
- * Build extraction prompt.
- * @param {string}   text               — document text (possibly pre-marked)
- * @param {object}   doc                — document metadata
- * @param {object[]} premarkedEntities  — entities already found by pre-marking [{id, name, type, count}]
- * @param {string}   extractionMode     — 'FULL' | 'SELECTIVE'
+ * Build entity extraction prompt (Phase 1 — no MCP, single turn).
  */
 function buildPrompt(text, doc, premarkedEntities = [], extractionMode = 'FULL') {
   const meta = [
@@ -96,52 +136,61 @@ function buildPrompt(text, doc, premarkedEntities = [], extractionMode = 'FULL')
   ].filter(Boolean).join('\n');
 
   const entityLegend = premarkedEntities.length > 0
-    ? `\nKNOWN ENTITIES (already marked in text as [[ENT:id:type:name]]):\n` +
-      premarkedEntities.slice(0, 40).map(e =>
+    ? `\nKNOWN ENTITIES (pre-marked in text as [[ENT:id:type:name]]):\n` +
+      premarkedEntities.slice(0, 50).map(e =>
         `  - id=${e.id} type=${e.type} name="${e.name}" (×${e.count})`
       ).join('\n') +
-      `\n\nFor entities marked [[ENT:...]] in the text: include them in your "entities" array ` +
-      `using the EXACT same "id" field value. Focus your discovery on NEW entities not yet marked.\n`
+      `\n\nFor [[ENT:...]] markers: include with EXACT same "id", set isExisting=true. ` +
+      `Prioritize discovering NEW entities not yet marked.\n`
     : '';
 
   const modeNote = extractionMode === 'SELECTIVE'
-    ? '\nNOTE: This text contains only the important/operative sections of the document.\n'
+    ? '\nNOTE: Text contains only operative/important sections.\n'
     : '';
 
-  const textLimit = premarkedEntities.length > 0 ? 18000 : 14000; // marked text is longer
+  const textLimit = premarkedEntities.length > 0 ? 22000 : 18000;
 
   return `${ENTITY_SYSTEM_PROMPT}
 
-${meta ? `DOCUMENT METADATA:\n${meta}\n` : ''}${entityLegend}${modeNote}
+${meta ? `DOCUMENT METADATA:\n${meta}\n` : ''}${ENTITY_TYPE_GUIDE}
+${EPISTEMIC_LAYER_GUIDE}
+${entityLegend}${modeNote}
 DOCUMENT TEXT:
 ${text.slice(0, textLimit)}
 
-Return a JSON object with this exact structure:
+Return a JSON object with EXACTLY this structure:
 {
-  "summary": "2-3 paragraph executive summary",
-  "keyProvisions": ["array of key mandates/requirements, max 10, one sentence each"],
+  "summary": "2-4 paragraph executive summary covering mandate, key actors, main outcomes",
+  "keyProvisions": ["max 12 key mandates/requirements, one sentence each, verbatim or near-verbatim"],
   "entities": [
     {
-      "id": "existing-uuid-if-premarked-else-omit",
-      "type": "Organization|System|DocumentRef|Person|WorkItem|Technology|Policy|Process",
-      "name": "canonical name",
-      "match": "exact text from document",
-      "category": "short category",
+      "id": "existing-uuid-if-premarked-else-OMIT-field",
+      "type": "Person|Organization|Actor|Document|DocumentRef|Policy|System|Technology|Concept|Process|Event|Location|WorkItem",
+      "name": "canonical name (official, full, consistent)",
+      "match": "exact text phrase from document",
+      "description": "1-2 sentences describing this entity's role/significance in this document",
+      "category": "brief category label (e.g. UN Principal Organ, IT Platform, Mandate)",
+      "epistemicLayer": "L0_NORMATIVE|L1_STRUCTURAL|L2_OPERATIONAL|L3_INFORMATIONAL|L4_ANALYTICAL",
       "relevance": "HIGH|MEDIUM|LOW",
-      "isExisting": true
+      "temporal": "ISO year/period if entity is time-bound, else omit",
+      "isExisting": false
     }
   ],
-  "topics": ["3-7 subject area tags"],
-  "documentLanguage": "English|French|...",
+  "topics": ["4-8 subject area tags"],
+  "documentLanguage": "English|French|Spanish|Arabic|Russian|Chinese",
   "confidence": 0.0-1.0
 }
 
-Entity rules: Include ALL UN orgs (UNDP, WFP, OIOS...), document symbols (A/RES/69/262...), IT systems (Umoja, iNeed...), named persons, project names. For [[ENT:id:type:name]] markers, extract the entity WITH the provided id and set isExisting=true. Max 80 entities total.`;
+EXTRACTION RULES:
+- Include ALL: UN bodies (GA, SC, ECOSOC, Secretariat depts), agencies (UNDP, WFP, UNICEF...), document citations (A/RES/..., S/2024/...), named persons, IT systems (Umoja, iNeed...), geographic regions, key policy concepts
+- description: mandatory for HIGH relevance entities; brief for others
+- epistemicLayer: use text markers above; default L3_INFORMATIONAL if ambiguous
+- For [[ENT:id:type:name]] markers: exact id, isExisting=true
+- Max 60 entities; prefer quality over quantity`;
 }
 
 /**
- * Build relationship extraction prompt (used in a SEPARATE MCP-enabled subprocess).
- * Receives the entity names already extracted so Claude focuses on linking them.
+ * Build relationship extraction prompt (Phase 2 — MCP enabled, up to 8 turns).
  */
 function buildRelationshipPrompt(entities, text, doc) {
   const docMeta = [
@@ -150,43 +199,72 @@ function buildRelationshipPrompt(entities, text, doc) {
     doc.documentType  ? `Type: ${doc.documentType}`   : '',
   ].filter(Boolean).join(' | ');
 
-  const entityList = entities.slice(0, 60)
-    .map(e => `  - ${e.name} (${e.type})`)
+  const entityList = entities.slice(0, 80)
+    .map(e => `  [${e.type}] ${e.name}${e.description ? ` — ${e.description.slice(0, 80)}` : ''}`)
     .join('\n');
 
   return `${RELATION_SYSTEM_PROMPT}
 
 DOCUMENT: ${docMeta}
 
-ENTITIES ALREADY IDENTIFIED IN THIS DOCUMENT:
+ENTITIES EXTRACTED FROM THIS DOCUMENT (${entities.length} total):
 ${entityList}
 
-DOCUMENT TEXT (excerpt):
-${text.slice(0, 10000)}
+DOCUMENT TEXT (full operative excerpt):
+${text.slice(0, 14000)}
 
-YOUR TASK: Find relationships between the entities listed above.
+YOUR TASK: Build a comprehensive relationship graph between the entities above.
+
+RELATIONSHIP TYPE GUIDE (semantic weight in parentheses):
+  GOVERNS (1.0)        — direct regulatory authority over an entity
+  MANDATES (0.95)      — formal mandate/authorization issued
+  IMPLEMENTS (0.95)    — technical realization of a policy/mandate
+  ESTABLISHES (0.85)   — creates or founds an entity
+  ESTABLISHED_BY (0.85)— was created by an entity
+  DEFINES (0.9)        — provides definitional authority
+  REQUIRES (0.85)      — creates mandatory dependency
+  OVERSEES (0.9)       — supervisory/oversight relationship
+  REPORTS_TO (0.8)     — accountability/reporting chain
+  PART_OF (0.75)       — structural containment or membership
+  CHAIRED_BY (0.75)    — leadership/chairmanship
+  AUTHORED_BY (0.7)    — document authorship/creation
+  FUNDED_BY (0.65)     — financial dependency
+  REFERENCES (0.6)     — explicit citation or reference
+  COOPERATES_WITH (0.5)— collaborative relationship
+  SUPPORTS (0.5)       — enabling/supporting relationship
+  MENTIONS (0.3)       — weak mention without formal link
+  RELATED_TO (0.2)     — generic/unclassified
 
 WORKFLOW:
-1. For 2-3 of the most important entities, call search_knowledge (e.g. search_knowledge("UNDP Security Council mandate")) to get knowledge-base background.
-2. For suspected pairs, call query_knowledge_graph to confirm:
-   MATCH (a)-[r]->(b) WHERE toLower(a.name) CONTAINS "entity_name" RETURN a.name, type(r), b.name LIMIT 8
-3. Identify relationships from DOCUMENT TEXT (priority) and from KNOWLEDGE BASE (supplement).
-4. Output ONLY the JSON below — no preamble, no explanation.
+1. Scan document text for explicit relationship statements (parse operative clauses, preamble, annexes).
+2. For 3-5 key entities (major orgs, key policies), call search_knowledge to enrich from knowledge base.
+   Example: search_knowledge("Security Council OIOS oversight mandate")
+3. For suspected institutional relationships, confirm via:
+   MATCH (a:ESEntity)-[r]->(b:ESEntity) WHERE toLower(a.name) CONTAINS "entity" RETURN a.name, type(r), b.name, r.confidence LIMIT 10
+4. Build relationships: document text first (higher confidence), knowledge base second (lower confidence).
+5. Output ONLY the JSON — no preamble, no explanation.
 
 Return ONLY:
 {
   "relationships": [
     {
-      "sourceEntityName": "exact name from the entities list above",
-      "targetEntityName": "exact name from the entities list above",
-      "relationType": "AUTHORED_BY|REFERENCES|ESTABLISHED_BY|MANDATES|OVERSEES|REPORTS_TO|COOPERATES_WITH|FUNDED_BY|CHAIRED_BY|PART_OF|IMPLEMENTS|GOVERNS|RELATED_TO",
-      "context": "verbatim sentence from document OR 'Source: knowledge base — <snippet>'",
-      "confidence": 0.0-1.0
+      "sourceEntityName": "exact name matching the list above",
+      "targetEntityName": "exact name matching the list above",
+      "relationType": "one of the relationship types above",
+      "context": "verbatim sentence from document proving this relationship (up to 600 chars) OR 'KB: <knowledge base snippet>'",
+      "confidence": 0.0-1.0,
+      "bidirectional": false
     }
   ]
 }
 
-Rules: sourceEntityName/targetEntityName must exactly match names in the list. Max 40 relationships. Include only relationships with clear textual or knowledge-base evidence.`;
+RULES:
+- sourceEntityName / targetEntityName must EXACTLY match names in the list
+- Include EVERY relationship you can find with evidence — be thorough
+- Prefer specific types over RELATED_TO; use RELATED_TO only when no specific type fits
+- confidence: 0.9+ for explicit text, 0.7-0.9 for clear implication, 0.5-0.7 for knowledge-base inference
+- bidirectional: true only for peer relationships (COOPERATES_WITH, RELATED_TO)
+- Max 60 relationships; no self-loops`;
 }
 
 // ─── Claude Code subprocess ────────────────────────────────────────────────────
@@ -208,13 +286,16 @@ function findClaudeBinary() {
 }
 
 // Entity extraction: max-turns 1, no MCP, fast and reliable.
-function runClaudeCode(promptText, model, timeoutMs = 180000) {
+function runClaudeCode(promptText, model, timeoutMs = 600000) {
+  const t0 = Date.now();
+  const tlog = (msg) => console.log(`[ClaudeCode][+${Date.now()-t0}ms] ${msg}`);
   return new Promise((resolve, reject) => {
     const binary = findClaudeBinary();
     if (!binary) {
       reject(new Error(`Claude Code binary not found. Set CLAUDE_CODE_PATH or install @anthropic-ai/claude-code.`));
       return;
     }
+    tlog(`spawn: binary=${binary.slice(-20)} model=${model} promptLen=${promptText.length} cwd=${os.tmpdir()}`);
 
     const args = [
       '--print',
@@ -224,6 +305,8 @@ function runClaudeCode(promptText, model, timeoutMs = 180000) {
       '--no-session-persistence',
       '--verbose',
       '--max-turns',     '1',
+      '--tools',         '',       // Disable all built-in tools — entity extraction must be text-only
+      '--strict-mcp-config',       // Ignore all global MCP configs — no server init delays
     ];
 
     let proc;
@@ -232,6 +315,7 @@ function runClaudeCode(promptText, model, timeoutMs = 180000) {
         env: { ...process.env },
         windowsHide: true,
         stdio: ['pipe', 'pipe', 'pipe'],
+        cwd: os.tmpdir(),
       });
     } catch (err) {
       reject(new Error(`Failed to spawn Claude Code: ${err.message}`));
@@ -261,11 +345,13 @@ function runClaudeCode(promptText, model, timeoutMs = 180000) {
     proc.stderr.on('data', d => { stderr += d.toString('utf8'); });
 
     const timer = setTimeout(() => {
+      tlog(`TIMEOUT after ${timeoutMs}ms — killing`);
       proc.kill('SIGTERM');
       reject(new Error(`Claude Code timed out after ${timeoutMs / 1000}s`));
     }, timeoutMs);
 
     proc.on('close', code => {
+      tlog(`close: code=${code} result=${result !== null ? 'OK' : 'null'} hasError=${hasError} stderr=${stderr.length}B`);
       clearTimeout(timer);
       if (result !== null) { resolve(result); return; }
       if (hasError || code !== 0) {
@@ -276,11 +362,13 @@ function runClaudeCode(promptText, model, timeoutMs = 180000) {
     });
 
     proc.on('error', err => {
+      tlog(`error: ${err.message}`);
       clearTimeout(timer);
       reject(new Error(`Failed to spawn Claude Code: ${err.message}`));
     });
 
     proc.stdin.write(promptText, 'utf8');
+    tlog(`stdin written (${promptText.length} chars), waiting for response...`);
     proc.stdin.end();
   });
 }
@@ -389,7 +477,7 @@ async function runViaAPI(promptText, model) {
   const llm = getInstance();
   const result = await llm.chat(
     [{ role: 'user', content: promptText }],
-    { model, maxTokens: 4096, temperature: 0.1 }
+    { model, maxTokens: 4096, temperature: 0.1, caller: 'extraction_pipeline' }
   );
   const content = Array.isArray(result.content)
     ? result.content.filter(b => b.type === 'text').map(b => b.text).join('')
@@ -453,9 +541,14 @@ class DocumentAIExtractionService {
     const entityPrompt = buildPrompt(premarkedText, doc, premarkedEntities, extractionMode);
     let parsed;
 
+    let rawPhase1Output = null;
     const binary = findClaudeBinary();
     if (binary) {
       const raw = await runClaudeCode(entityPrompt, actualModel);
+      rawPhase1Output = typeof raw === 'string' ? raw.slice(0, 10000) : null;
+      if (!raw || (!raw.trim().startsWith('{') && !raw.trim().startsWith('['))) {
+        console.error(LOG_PREFIX, `Phase 1 unexpected response (first 200 chars): ${String(raw).slice(0, 200)}`);
+      }
       parsed    = parseClaudeOutput(raw);
       console.log(LOG_PREFIX, `Phase 1 OK — ${(parsed.entities || []).length} entities`);
     } else {
@@ -468,15 +561,18 @@ class DocumentAIExtractionService {
 
     const entities = (parsed.entities || [])
       .filter(e => e && e.name && e.type)
-      .slice(0, 100)
+      .slice(0, 60)
       .map(e => ({
-        id:         e.id && String(e.id).length > 8 ? String(e.id) : uuidv4(),
-        type:       e.type,
-        name:       String(e.name).trim(),
-        match:      String(e.match || e.name).trim(),
-        category:   e.category || null,
-        relevance:  e.relevance || 'MEDIUM',
-        isExisting: Boolean(e.isExisting),
+        id:             e.id && String(e.id).length > 8 ? String(e.id) : uuidv4(),
+        type:           e.type,
+        name:           String(e.name).trim(),
+        match:          String(e.match || e.name).trim(),
+        description:    e.description ? String(e.description).trim().slice(0, 300) : null,
+        category:       e.category || null,
+        epistemicLayer: e.epistemicLayer || 'L3_INFORMATIONAL',
+        relevance:      e.relevance || 'MEDIUM',
+        temporal:       e.temporal ? String(e.temporal).trim() : null,
+        isExisting:     Boolean(e.isExisting),
       }));
 
     // ── Phase 2: Relationship extraction (max-turns 5, with MCP, non-fatal) ─
@@ -498,13 +594,14 @@ class DocumentAIExtractionService {
             if (!ok) console.warn(LOG_PREFIX, `Rel dropped: "${r.sourceEntityName}" → "${r.targetEntityName}"`);
             return ok;
           })
-          .slice(0, 40)
+          .slice(0, 60)
           .map(r => ({
             sourceEntityName: entityNameMap.get(String(r.sourceEntityName).trim().toLowerCase()),
             targetEntityName: entityNameMap.get(String(r.targetEntityName).trim().toLowerCase()),
             relationType:     String(r.relationType).trim().toUpperCase(),
-            context:          String(r.context || '').trim().slice(0, 600),
+            context:          String(r.context || '').trim().slice(0, 1000),
             confidence:       typeof r.confidence === 'number' ? Math.min(1, Math.max(0, r.confidence)) : 0.8,
+            bidirectional:    Boolean(r.bidirectional),
           }));
 
         console.log(LOG_PREFIX, `Phase 2 OK — ${relationships.length} relationships`);
@@ -523,6 +620,7 @@ class DocumentAIExtractionService {
       documentLanguage: parsed.documentLanguage  || null,
       confidence:       parsed.confidence        || 0.8,
       model,
+      rawPhase1Output,
     };
   }
 
@@ -533,23 +631,30 @@ class DocumentAIExtractionService {
       await this.mg.runQuery(
         `MATCH (d:Document {id: $docId})
          MERGE (em:EntityMention {type: $type, name: $name, documentId: $docId})
-         ON CREATE SET em.id           = $id,
-                       em.match        = $match,
-                       em.category     = $cat,
-                       em.relevance    = $relevance,
+         ON CREATE SET em.id             = $id,
+                       em.match          = $match,
+                       em.description    = $description,
+                       em.category       = $cat,
+                       em.relevance      = $relevance,
                        em.epistemicLayer = $layer,
+                       em.temporal       = $temporal,
                        em.extractedByAI  = true,
                        em.isExisting     = $isExisting,
-                       em.createdAt    = $now
-         ON MATCH  SET em.match        = $match,
-                       em.relevance    = $relevance,
-                       em.extractedByAI = true,
-                       em.isExisting    = $isExisting
+                       em.createdAt      = $now
+         ON MATCH  SET em.match          = $match,
+                       em.description    = $description,
+                       em.relevance      = $relevance,
+                       em.epistemicLayer = $layer,
+                       em.extractedByAI  = true,
+                       em.isExisting     = $isExisting
          MERGE (d)-[:MENTIONS]->(em)`,
         {
           docId, id: e.id, type: e.type, name: e.name, match: e.match,
-          cat: e.category, relevance: e.relevance, isExisting: e.isExisting || false,
-          layer: doc.epistemicLayer || null, now,
+          description: e.description || null,
+          cat: e.category, relevance: e.relevance,
+          layer: e.epistemicLayer || 'L3_INFORMATIONAL',
+          temporal: e.temporal || null,
+          isExisting: e.isExisting || false, now,
         }
       ).catch(err => console.warn(LOG_PREFIX, 'entity persist:', err.message));
     }
@@ -561,18 +666,21 @@ class DocumentAIExtractionService {
         `MATCH (a:EntityMention {name: $aName, documentId: $docId}),
                (b:EntityMention {name: $bName, documentId: $docId})
          MERGE (a)-[r:RELATED_TO {documentId: $docId, type: $relType}]->(b)
-         ON CREATE SET r.context     = $context,
-                       r.confidence  = $confidence,
-                       r.extractedAt = $now
-         ON MATCH  SET r.context     = $context,
-                       r.confidence  = $confidence`,
+         ON CREATE SET r.context       = $context,
+                       r.confidence   = $confidence,
+                       r.bidirectional = $bidirectional,
+                       r.extractedAt  = $now
+         ON MATCH  SET r.context       = $context,
+                       r.confidence   = $confidence,
+                       r.bidirectional = $bidirectional`,
         {
           docId,
-          aName:      rel.sourceEntityName,
-          bName:      rel.targetEntityName,
-          relType:    rel.relationType,
-          context:    rel.context,
-          confidence: rel.confidence,
+          aName:         rel.sourceEntityName,
+          bName:         rel.targetEntityName,
+          relType:       rel.relationType,
+          context:       rel.context,
+          confidence:    rel.confidence,
+          bidirectional: rel.bidirectional || false,
           now,
         }
       ).catch(err => console.warn(LOG_PREFIX, 'relation persist:', err.message));
@@ -602,4 +710,4 @@ class DocumentAIExtractionService {
 }
 
 const documentAIExtractionService = new DocumentAIExtractionService();
-module.exports = { documentAIExtractionService, DocumentAIExtractionService, AVAILABLE_MODELS, DEFAULT_MODEL };
+module.exports = { documentAIExtractionService, DocumentAIExtractionService, AVAILABLE_MODELS, DEFAULT_MODEL, CLAUDE_CODE_MODEL, runClaudeCode };

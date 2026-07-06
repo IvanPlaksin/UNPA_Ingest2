@@ -145,44 +145,45 @@ class MethodologyService {
   }
 
   async _resolveFromCatalog(documentType, epistemicLayer, extractionDepth) {
-    // Try: match by docType AND layer
+    // Try: match by docType AND layer (any depth — methodology owns its depth)
     if (documentType && epistemicLayer) {
       const rows = await mg().runQuery(
-        `MATCH (m:Methodology {status: 'ACTIVE', extractionDepth: $depth})
+        `MATCH (m:Methodology {status: 'ACTIVE'})
          WHERE $docType IN m.targetDocTypes AND $layer IN m.targetLayers
          RETURN m.id AS id ORDER BY m.createdAt DESC LIMIT 1`,
-        { depth: extractionDepth, docType: documentType, layer: epistemicLayer }
+        { docType: documentType, layer: epistemicLayer }
       );
       if (rows.length) return this.getMethodology(rows[0].id);
     }
 
-    // Try: match by docType only
+    // Try: match by docType only (any depth)
     if (documentType) {
       const rows = await mg().runQuery(
-        `MATCH (m:Methodology {status: 'ACTIVE', extractionDepth: $depth})
+        `MATCH (m:Methodology {status: 'ACTIVE'})
          WHERE $docType IN m.targetDocTypes
          RETURN m.id AS id ORDER BY m.createdAt DESC LIMIT 1`,
-        { depth: extractionDepth, docType: documentType }
+        { docType: documentType }
       );
       if (rows.length) return this.getMethodology(rows[0].id);
     }
 
-    // Try: match by layer only
+    // Try: match by layer only (any depth)
     if (epistemicLayer) {
       const rows = await mg().runQuery(
-        `MATCH (m:Methodology {status: 'ACTIVE', extractionDepth: $depth})
+        `MATCH (m:Methodology {status: 'ACTIVE'})
          WHERE $layer IN m.targetLayers
          RETURN m.id AS id ORDER BY m.createdAt DESC LIMIT 1`,
-        { depth: extractionDepth, layer: epistemicLayer }
+        { layer: epistemicLayer }
       );
       if (rows.length) return this.getMethodology(rows[0].id);
     }
 
-    // Fallback: DEFAULT methodology (empty targetDocTypes)
+    // Fallback: DEFAULT methodology (empty targetDocTypes), prefer requested depth
     const rows = await mg().runQuery(
-      `MATCH (m:Methodology {status: 'ACTIVE', extractionDepth: $depth})
+      `MATCH (m:Methodology {status: 'ACTIVE'})
        WHERE size(m.targetDocTypes) = 0
-       RETURN m.id AS id ORDER BY m.createdAt ASC LIMIT 1`,
+       RETURN m.id AS id, m.extractionDepth AS depth ORDER BY
+         CASE m.extractionDepth WHEN $depth THEN 0 ELSE 1 END, m.createdAt ASC LIMIT 1`,
       { depth: extractionDepth }
     );
     if (rows.length) return this.getMethodology(rows[0].id);

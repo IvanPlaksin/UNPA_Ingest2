@@ -1,4 +1,4 @@
-/**
+﻿/**
  * RankingPanel — AI-powered backlog ranking with namespace grouping and detailed rationale.
  */
 
@@ -38,15 +38,15 @@ function TaskCard({ item, idx }) {
             #{idx + 1}
           </Typography>
           <Typography variant="body2" sx={{ fontWeight: 600, flex: 1 }}>{item.title}</Typography>
-          <Chip label={item.backlogId} size="small" variant="outlined" sx={{ fontSize: 10, height: 20 }} />
+          <Chip label={item.backlogId} size="small" variant="outlined" sx={{ fontSize: 12, height: 20 }} />
           <Chip label={item.priority} size="small" sx={{
-            fontSize: 10, height: 20,
+            fontSize: 12, height: 20,
             bgcolor: (PRIORITY_COLORS[item.priority] || '#555') + '22',
             color: PRIORITY_COLORS[item.priority] || '#555', fontWeight: 700
           }} />
-          {item.effort && <Chip label={item.effort} size="small" variant="outlined" sx={{ fontSize: 10, height: 20 }} />}
+          {item.effort && <Chip label={item.effort} size="small" variant="outlined" sx={{ fontSize: 12, height: 20 }} />}
           <Chip label={item.namespace || 'CORE'} size="small" sx={{
-            fontSize: 10, height: 20,
+            fontSize: 12, height: 20,
             bgcolor: (NS_COLORS[item.namespace] || '#555') + '22',
             color: NS_COLORS[item.namespace] || '#555', fontWeight: 600
           }} />
@@ -232,7 +232,7 @@ export default function RankingPanel() {
                   </Typography>
                   <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
                     {(batch.tasks || []).map((task, tIdx) => (
-                      <Chip key={tIdx} label={task} size="small" variant="outlined" sx={{ fontSize: 11 }} />
+                      <Chip key={tIdx} label={task} size="small" variant="outlined" sx={{ fontSize: 13 }} />
                     ))}
                   </Stack>
                 </CardContent>

@@ -97,6 +97,20 @@ router.get('/:id/structure', async (req, res) => {
   }
 });
 
+// ─── Reprocess Failed ─────────────────────────────────────────────────────────
+
+// POST /api/v1/documents/reprocess-failed
+// Re-queues every document in FAILED or EXTRACTION_FAILED status for extraction.
+// Optional body: { namespace, model }
+router.post('/reprocess-failed', async (req, res) => {
+  try {
+    const result = await documentProcessingService.reprocessFailedDocuments(req.body || {});
+    res.status(202).json({ success: true, data: result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ─── Extraction ───────────────────────────────────────────────────────────────
 
 router.post('/:id/extract', async (req, res) => {
@@ -332,6 +346,8 @@ router.get('/', async (req, res) => {
       limit:     limit  ? parseInt(limit, 10)  : 50,
       offset:    offset ? parseInt(offset, 10) : 0
     });
+    const bySt = docs.reduce((acc, d) => { acc[d.status] = (acc[d.status] || 0) + 1; return acc; }, {});
+    console.log(`[TEST-LOG][GET /documents] Returned ${docs.length} docs — ${JSON.stringify(bySt)}`);
     res.json({ success: true, count: docs.length, data: docs });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });

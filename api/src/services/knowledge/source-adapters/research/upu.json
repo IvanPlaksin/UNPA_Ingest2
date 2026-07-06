@@ -1,0 +1,24 @@
+{
+  "key": "upu",
+  "name": "UPU Publications",
+  "family": "url-catalog",
+  "capabilities": ["browseAll", "paginate", "download"],
+  "filterSchema": [],
+  "config": {
+    "url": "https://www.upu.int/en/universal-postal-union/activities/research-publications/all-publications",
+    "searchUrlTemplate": "",
+    "linkFilter": "",
+    "includeAllLinks": false
+  },
+  "download": {
+    "mode": "record-page",
+    "notes": "Publication cards link to record pages under /en/publications/{category}/{issue}/{slug}. The PDF is exposed on the record page. Two-step crawl (all-publications listing -> record -> PDF) required."
+  },
+  "enrich": {
+    "mode": "none",
+    "notes": "Title, date and category available from listing/record pages; no repository API."
+  },
+  "methodologyMarkdown": "## Overview\nThe Universal Postal Union publications area is a server-rendered CMS site. The landing page at /en/Publications features a few highlighted items plus an 'All Publications' link to the full catalogue at /en/universal-postal-union/activities/research-publications/all-publications, which should be used as the browse root.\n\n## Search\nNo dedicated publications search endpoint was verified, so the search capability is not claimed. Discovery is via the All-Publications listing and category grouping (think-tank briefs, regional development plans, etc.).\n\n## Filters\nPublications are organized by category in the URL path (/en/publications/{category}/...). These act as browse facets rather than a queryable filter API; no formal schema declared.\n\n## Download\nCards link to record pages at /en/publications/{category}/{issue}/{slug}. The PDF is exposed on the record page, not the landing page, so a two-step crawl is required.\n\n## Metadata & Enrichment\nTitle, publication date and category are in server-rendered HTML. No JSON/REST API; enrichment is HTML-based.\n\n## Limitations\nThe /en/Publications landing surfaces only a few featured items; the real catalogue is behind the 'All Publications' link. No verified search endpoint. Pagination behavior on the all-publications listing should be confirmed at crawl time. Behind a CDN; use a realistic User-Agent.",
+  "verified": true,
+  "probeNotes": "WebFetch of /en/Publications succeeded: server-rendered HTML, featured items only + 'All Publications' link to /en/universal-postal-union/activities/research-publications/all-publications. Record URL pattern /en/publications/{category}/{issue}/{slug} confirmed. No search endpoint found -> search omitted; browse root set to all-publications."
+}

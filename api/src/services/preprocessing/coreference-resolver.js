@@ -15,7 +15,8 @@
 
 'use strict';
 
-const { getInstance: getLLMProvider } = require('../llm/LLMProviderService');
+const { getScopedProvider } = require('../llm-access-control.service');
+const llmProvider = getScopedProvider('preprocessing');
 
 /**
  * Pronoun patterns for detection
@@ -129,7 +130,7 @@ Return ONLY valid JSON in this format:
   "replacements": [{"from": "he", "to": "John Smith", "position": 15}]
 }`;
 
-        const response = await getLLMProvider().chat([
+        const response = await llmProvider.chat([
             { role: 'user', content: prompt }
         ], {
             system: 'You are a linguistic expert specializing in coreference resolution. Replace pronouns with their referents. Return only valid JSON.',

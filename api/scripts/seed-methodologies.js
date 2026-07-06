@@ -107,7 +107,7 @@ async function seed({ reset = false } = {}) {
     name: 'METH-RES-L0',
     version: '1.0',
     description: 'Deep extraction for GA/SC resolutions and decisions (L0-L1)',
-    targetDocTypes: ['RESOLUTION', 'DECISION'],
+    targetDocTypes: ['SC_RES', 'GA_RES', 'SC_PRST', 'RESOLUTION', 'DECISION'],
     targetLayers: ['L0', 'L1'],
     extractionDepth: 'DEEP',
     promptTemplates: [
@@ -124,7 +124,7 @@ async function seed({ reset = false } = {}) {
     name: 'METH-REPORT',
     version: '1.0',
     description: 'Standard extraction for SG/committee reports (L3-L4)',
-    targetDocTypes: ['REPORT', 'ANALYTICAL_STUDY', 'NOTE'],
+    targetDocTypes: ['SG_REP', 'OIOS_REP', 'JIU_REP', 'BOA_REP', 'ICT_STRAT', 'REPORT', 'ANALYTICAL_STUDY', 'NOTE'],
     targetLayers: ['L3', 'L4'],
     extractionDepth: 'STANDARD',
     promptTemplates: [
@@ -141,7 +141,7 @@ async function seed({ reset = false } = {}) {
     name: 'METH-POLICY',
     version: '1.0',
     description: 'Deep extraction for policy instruments (ST/SGB, ST/AI) L0-L2',
-    targetDocTypes: ['POLICY', 'ADMINISTRATIVE_INSTRUCTION', 'BULLETIN'],
+    targetDocTypes: ['ST_SGB', 'ST_AI', 'ST_IC', 'POLICY', 'ADMINISTRATIVE_INSTRUCTION', 'BULLETIN'],
     targetLayers: ['L0', 'L1', 'L2'],
     extractionDepth: 'DEEP',
     promptTemplates: [

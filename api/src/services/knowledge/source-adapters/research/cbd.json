@@ -1,0 +1,24 @@
+{
+  "key": "cbd",
+  "name": "CBD Documents",
+  "family": "url-catalog",
+  "capabilities": ["search", "browseAll", "paginate", "download"],
+  "filterSchema": [],
+  "config": {
+    "url": "https://www.cbd.int/documents",
+    "searchUrlTemplate": "https://www.cbd.int/documents?search={query}",
+    "linkFilter": ".pdf",
+    "includeAllLinks": false
+  },
+  "download": {
+    "mode": "direct-pdf",
+    "notes": "Documents are served as direct .pdf links under /doc/ (e.g. /doc/meetings/*.pdf, /doc/lists/*.pdf). Resolve relative hrefs against https://www.cbd.int."
+  },
+  "enrich": {
+    "mode": "none",
+    "notes": "No public repository/item API; PDFs are linked directly from server-rendered listing pages. Metadata (title, language) must be derived from anchor text and filename."
+  },
+  "methodologyMarkdown": "## Overview\nThe Convention on Biological Diversity (CBD) publishes meeting documents, decisions, lists and code-of-conduct materials at https://www.cbd.int/documents. The site is a traditional server-rendered Drupal-style catalog, not a JS SPA, so a plain HTTP GET returns real anchor tags with document hrefs that can be scraped directly.\n\n## Search\nThere is no JSON/REST search API. A server-side search form exists with facets (Subject, Country, Year 1988-2027, Month, Title keyword). The documented search URL https://www.cbd.int/documents?search={query} loads a server-rendered results page; more advanced filtering is form-driven. Simple keyword search via the query parameter is the reliable entry point.\n\n## Filters\nThe HTML form exposes Subject, Country, Year and Month facets, but these are not cleanly reflected as stable URL query parameters in the catalog view, so no filterSchema is declared. Year/subject filtering would require replicating the form POST.\n\n## Download\nDocuments appear as direct .pdf links (paths under /doc/, e.g. /doc/meetings/...pdf, /doc/lists/events-scbd.pdf). Downloading is a straightforward GET of the resolved absolute URL. Multilingual variants (ar/en/es/fr/ru/zh) are common and encoded in the filename.\n\n## Metadata & Enrichment\nNo per-document metadata endpoint. Title and language come from anchor text and filename suffix. No enrichment adapter is warranted.\n\n## Limitations\nServer-rendered and scrapable, but the search/facet system is form-based rather than a clean parameterized API, limiting programmatic filtering. Multilingual duplicates require de-duplication by base filename.",
+  "verified": true,
+  "probeNotes": "WebFetch of https://www.cbd.int/documents?search=biodiversity returned server-rendered HTML with real .pdf anchor hrefs (/doc/meetings/*.pdf, /doc/lists/events-scbd.pdf) and a search form with Subject/Country/Year/Month facets. No JS-only shell, no repository API found."
+}

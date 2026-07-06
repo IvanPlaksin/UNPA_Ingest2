@@ -1,0 +1,24 @@
+{
+  "key": "iaea",
+  "name": "IAEA Publications",
+  "family": "url-catalog",
+  "capabilities": ["browseAll"],
+  "filterSchema": [],
+  "config": {
+    "url": "https://www.iaea.org/publications",
+    "searchUrlTemplate": "https://www.iaea.org/publications/search?keywords={query}",
+    "linkFilter": ".pdf",
+    "includeAllLinks": false
+  },
+  "download": {
+    "mode": "record-page",
+    "notes": "Publications are accessed via record/landing pages (www.iaea.org/publications/<id>/<slug>) that link to a downloadable PDF, or via the legacy www-pub.iaea.org / pub.iaea.org book pages. Not verified live due to WAF blocking."
+  },
+  "enrich": {
+    "mode": "none",
+    "notes": "A search facet UI exists (title, keyword, ISBN, ISSN, series, topic, type, year) but no confirmed public JSON API. IAEA also runs data.iaea.org (CKAN, datastore_search JSON) and www-nds.iaea.org data APIs, but those serve nuclear datasets, not the publications catalog."
+  },
+  "methodologyMarkdown": "## Overview\nThe IAEA publishes scientific and technical books and reports across several hosts: www.iaea.org/publications (main catalog, with /publications/search facet UI), the legacy www-pub.iaea.org / pub.iaea.org book pages, and www-nds.iaea.org/publications for nuclear-data publications.\n\n## Search\nThe catalog has a facet-based advanced search at https://www.iaea.org/publications/search (title, keyword, ISBN/ISSN, series, topic, type, year of publication). A plausible URL is .../search?keywords={query}, but this could NOT be verified: every automated GET to iaea.org, www-nds.iaea.org and pub.iaea.org returned HTTP 402/403 (WAF/edge protection). No public JSON search API for the publications catalog was found. Separate JSON APIs exist for nuclear data (data.iaea.org CKAN datastore_search, www-nds.iaea.org data/livechart APIs) but they do not cover publications.\n\n## Filters\nFacets (topic, type, year) exist in the UI but were not confirmed as stable URL query parameters, so no filterSchema is declared.\n\n## Download\nPublications are reached through record/landing pages that expose a PDF download; some legacy books live on www-pub.iaea.org. Download mode is treated as record-page.\n\n## Metadata & Enrichment\nRich bibliographic metadata (ISBN/ISSN/series) is shown on record pages but there is no confirmed metadata API, so no enrichment adapter is defined.\n\n## Limitations\nBLOCKED: all live probes returned HTTP 402/403 from the IAEA edge/WAF, so nothing was verified against real HTML. Scraping will require a headless browser with realistic headers/cookies. Until then capabilities are limited to a browseAll stub; search/filter/download details are inferred from public documentation, not confirmed.",
+  "verified": false,
+  "probeNotes": "All live fetches failed: www.iaea.org/publications -> HTTP 402, www.iaea.org/publications/search -> HTTP 402, pub.iaea.org/books -> HTTP 402, www-nds.iaea.org/publications -> HTTP 402, and search-param variants -> HTTP 402. Structure inferred from WebSearch results (facet search UI at /publications/search; separate CKAN/nuclear-data JSON APIs that do not cover publications). WAF blocks plain HTTP GET; headless browser needed."
+}

@@ -67,6 +67,26 @@ services:
       - "1433:1433"
 
   # ─────────────────────────────────────────────────────────────
+  # GLiNER — reload on code changes, expose port
+  # ─────────────────────────────────────────────────────────────
+  gliner:
+    build:
+      context: ./api/services/gliner
+      dockerfile: Dockerfile
+    volumes:
+      - ./api/services/gliner/app:/app/app:ro
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "5100", "--reload"]
+    ports:
+      - "${GLINER_PORT:-5100}:5100"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # ─────────────────────────────────────────────────────────────
   # Frontend — Vite dev server with HMR
   # ─────────────────────────────────────────────────────────────
   frontend:

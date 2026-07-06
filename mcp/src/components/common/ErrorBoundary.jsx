@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ErrorBoundary (PH-004)
  *
  * Catches React rendering errors and displays a user-friendly fallback
@@ -32,19 +32,19 @@ const styles = {
   }),
   icon: { fontSize: 32, opacity: 0.5, marginBottom: 8 },
   title: { fontWeight: 600, fontSize: 14, marginBottom: 4 },
-  message: { fontSize: 12, color: '#8b949e', marginBottom: 12, maxWidth: 400 },
+  message: { fontSize: 13, color: '#8b949e', marginBottom: 12, maxWidth: 400 },
   btnRow: { display: 'flex', gap: 8 },
   retryBtn: {
-    padding: '6px 14px', fontSize: 12, fontWeight: 500, border: 'none',
+    padding: '6px 14px', fontSize: 13, fontWeight: 500, border: 'none',
     borderRadius: 6, cursor: 'pointer', background: '#238636', color: '#fff'
   },
   detailsBtn: {
-    padding: '6px 14px', fontSize: 12, fontWeight: 500, border: '1px solid #30363d',
+    padding: '6px 14px', fontSize: 13, fontWeight: 500, border: '1px solid #30363d',
     borderRadius: 6, cursor: 'pointer', background: 'transparent', color: '#8b949e'
   },
   stack: {
     marginTop: 12, padding: 10, background: '#0d1117', borderRadius: 6,
-    fontSize: 10, fontFamily: 'monospace', color: '#c9d1d9', overflow: 'auto',
+    fontSize: 12, fontFamily: 'monospace', color: '#c9d1d9', overflow: 'auto',
     maxHeight: 200, maxWidth: '100%', whiteSpace: 'pre-wrap', wordBreak: 'break-all',
     border: '1px solid #30363d'
   }

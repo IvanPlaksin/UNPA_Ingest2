@@ -4,8 +4,17 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig({
     plugins: [react()],
+    resolve: {
+        dedupe: ['react', 'react-dom', 'three', '@react-three/fiber'],
+    },
     optimizeDeps: {
-        include: ['elkjs/lib/elk.bundled.js'],
+        include: [
+            'elkjs/lib/elk.bundled.js',
+            '@react-three/fiber',
+            '@react-three/drei',
+            '@react-three/postprocessing',
+            'three',
+        ],
     },
     server: {
         host: true,

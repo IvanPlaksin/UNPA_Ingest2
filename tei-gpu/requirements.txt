@@ -1,0 +1,7 @@
+# torch is provided by the base image (pytorch/pytorch:2.1.0-cuda12.1-cudnn8),
+# which ships CUDA kernels for Pascal (sm_61) through Hopper.
+sentence-transformers==2.7.0
+transformers==4.39.3
+fastapi==0.110.1
+uvicorn[standard]==0.29.0
+pydantic==2.7.1

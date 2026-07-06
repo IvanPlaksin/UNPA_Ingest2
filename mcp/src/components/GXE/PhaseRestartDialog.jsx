@@ -1,4 +1,4 @@
-/**
+﻿/**
  * PhaseRestartDialog
  *
  * Dialog for restarting extraction phases.
@@ -214,7 +214,7 @@ export default function PhaseRestartDialog({
               ))}
             </Box>
 
-            <Typography sx={{ color: '#8b949e', fontSize: 12, mt: 2 }}>
+            <Typography sx={{ color: '#8b949e', fontSize: 13, mt: 2 }}>
               Estimated time: ~{estimateMinutes(phasesToRerun)} minutes
             </Typography>
           </>

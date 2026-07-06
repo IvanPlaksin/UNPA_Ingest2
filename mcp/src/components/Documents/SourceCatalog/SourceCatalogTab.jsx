@@ -32,6 +32,12 @@ const TYPE_META = {
   OAI_PMH:      { label: 'OAI-PMH',           color: 'error',     Icon: Database },
 };
 
+// Short labels for capability chips shown on each source card.
+const CAP_SHORT = {
+  search: 'search', browseAll: 'browse', paginate: 'pages', filter: 'filters',
+  sort: 'sort', download: 'download', enrich: 'metadata', fulltext: 'full-text',
+};
+
 function SourceCard({ source, onEdit, onDelete, onBrowse, onCopyLink }) {
   const meta = TYPE_META[source.type] || { label: source.type, color: 'default', Icon: Globe };
   const { Icon } = meta;
@@ -100,6 +106,16 @@ function SourceCard({ source, onEdit, onDelete, onBrowse, onCopyLink }) {
               <Chip label={`+${source.tags.length - 4}`} size="small"
                 sx={{ fontSize: '0.6rem', height: 16 }} />
             )}
+          </Stack>
+        )}
+
+        {/* Capability chips */}
+        {source.capabilities?.capabilities?.length > 0 && (
+          <Stack direction="row" spacing={0.5} flexWrap="wrap" sx={{ mb: 0.5 }}>
+            {source.capabilities.capabilities.map(c => (
+              <Chip key={c} label={CAP_SHORT[c] || c} size="small" variant="outlined" color="success"
+                sx={{ fontSize: '0.55rem', height: 15 }} />
+            ))}
           </Stack>
         )}
 

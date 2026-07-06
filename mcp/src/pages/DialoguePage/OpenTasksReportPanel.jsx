@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+﻿import React, { useState, useCallback } from 'react';
 import {
   Box, Typography, Stack, Chip, Paper, Collapse, Divider,
   IconButton, Tooltip, Select, MenuItem, FormControl, CircularProgress,
@@ -210,7 +210,7 @@ function TaskCard({ task }) {
             minWidth: 28, height: 28, borderRadius: '50%',
             bgcolor: 'primary.main', color: 'primary.contrastText',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 12, fontWeight: 700, flexShrink: 0, mt: 0.2,
+            fontSize: 13, fontWeight: 700, flexShrink: 0, mt: 0.2,
           }}>
             {task.rank}
           </Box>
@@ -224,7 +224,7 @@ function TaskCard({ task }) {
                 label={task.category?.replace('_', ' ')}
                 size="small"
                 color={CATEGORY_COLOR[task.category] || 'default'}
-                sx={{ height: 16, fontSize: 10 }}
+                sx={{ height: 16, fontSize: 12 }}
               />
               <Tooltip title={statusCfg.label}>
                 <statusCfg.Icon sx={{ fontSize: 14, color: statusCfg.color }} />
@@ -304,7 +304,7 @@ function TaskCard({ task }) {
               <Stack direction="row" spacing={0.5} flexWrap="wrap">
                 {task.dependencies.map((d, i) => (
                   <Chip key={i} label={d} size="small" variant="outlined"
-                    sx={{ height: 18, fontSize: 10 }} />
+                    sx={{ height: 18, fontSize: 12 }} />
                 ))}
               </Stack>
             </Box>
@@ -322,7 +322,7 @@ function TaskCard({ task }) {
                 color="success"
                 startIcon={<Launch sx={{ fontSize: 13 }} />}
                 onClick={() => setLaunchOpen(true)}
-                sx={{ fontSize: 11, py: 0.3, px: 1, whiteSpace: 'nowrap' }}
+                sx={{ fontSize: 13, py: 0.3, px: 1, whiteSpace: 'nowrap' }}
               >
                 Launch in Claude Code
               </Button>
@@ -332,7 +332,7 @@ function TaskCard({ task }) {
                 startIcon={<OpenInNew sx={{ fontSize: 13 }} />}
                 component="a"
                 href={vsUri}
-                sx={{ fontSize: 11, py: 0.3, px: 1, whiteSpace: 'nowrap' }}
+                sx={{ fontSize: 13, py: 0.3, px: 1, whiteSpace: 'nowrap' }}
               >
                 Source session
               </Button>

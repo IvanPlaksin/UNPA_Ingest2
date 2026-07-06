@@ -81,7 +81,7 @@ async function extractWithLLM(llmService, text, model) {
   try {
     const result = await llmService.chat(
       [{ role: 'user', content: EXTRACT_PROMPT(text.slice(0, 4000)) }],
-      { model, maxTokens: 800 }
+      { model, maxTokens: 800, caller: 'aopeg_dialogue' }
     );
     const rawContent = result.content;
     const raw = (Array.isArray(rawContent)

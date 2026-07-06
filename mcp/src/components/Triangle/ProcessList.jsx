@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ProcessList — Triangle Explorer
  *
  * Displays KnowledgeNode "process" nodes with triangle completeness summaries.
@@ -212,7 +212,7 @@ export default function ProcessList({ namespace, selectedId, onSelect }) {
                                             label={row.counts.gaps}
                                             size="small"
                                             color="warning"
-                                            sx={{ height: 18, fontSize: 11 }}
+                                            sx={{ height: 18, fontSize: 13 }}
                                         />
                                     ) : (
                                         <Typography variant="caption" color="text.disabled">—</Typography>
@@ -239,7 +239,7 @@ export default function ProcessList({ namespace, selectedId, onSelect }) {
                 <Stack direction="row" spacing={1.5} flexWrap="wrap">
                     {Object.entries({ full: '●', partial: '◐', minimal: '◔', none: '○' }).map(([label, icon]) => (
                         <Stack key={label} direction="row" spacing={0.25} alignItems="center">
-                            <span style={{ color: COMPLETENESS_COLORS[label], fontSize: 12 }}>{icon}</span>
+                            <span style={{ color: COMPLETENESS_COLORS[label], fontSize: 13 }}>{icon}</span>
                             <Typography variant="caption" color="text.secondary">
                                 {label.charAt(0).toUpperCase() + label.slice(1)}
                             </Typography>

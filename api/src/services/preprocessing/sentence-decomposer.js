@@ -15,7 +15,8 @@
 
 'use strict';
 
-const { getInstance: getLLMProvider } = require('../llm/LLMProviderService');
+const { getScopedProvider } = require('../llm-access-control.service');
+const llmProvider = getScopedProvider('preprocessing');
 
 /**
  * Sentence complexity levels
@@ -183,7 +184,7 @@ Sentence: "${sentence}"
 
 Return ONLY a JSON array of strings, no explanation:`;
 
-        const response = await getLLMProvider().chat([
+        const response = await llmProvider.chat([
             { role: 'user', content: prompt }
         ], {
             system: 'You are a linguistic expert. Decompose complex sentences into simple ones. Return only valid JSON arrays.',

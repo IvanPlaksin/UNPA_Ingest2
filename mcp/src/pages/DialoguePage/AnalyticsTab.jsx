@@ -1,4 +1,4 @@
-/**
+﻿/**
  * AnalyticsTab — DevDialogue Analytics Dashboard (Variant C / Full)
  *
  * Features:
@@ -244,7 +244,7 @@ export default function AnalyticsTab() {
         {/* Watcher status */}
         {watcherStatus && (
           <Stack direction="row" spacing={0.5} alignItems="center">
-            <FiberManualRecord sx={{ fontSize: 10, color: 'success.main' }} />
+            <FiberManualRecord sx={{ fontSize: 13, color: 'success.main' }} />
             <Typography variant="caption" color="text.secondary">Watcher active</Typography>
           </Stack>
         )}
@@ -315,11 +315,11 @@ export default function AnalyticsTab() {
           <ResponsiveContainer width="100%" height={180}>
             <AreaChart data={timeline} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="date" tick={{ fontSize: 10 }}
+              <XAxis dataKey="date" tick={{ fontSize: 13 }}
                 tickFormatter={v => v.slice(5)} interval="preserveStartEnd" />
-              <YAxis tick={{ fontSize: 10 }} />
+              <YAxis tick={{ fontSize: 13 }} />
               <RTooltip content={<CustomTooltip />} />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Legend wrapperStyle={{ fontSize: 13 }} />
               <Area type="monotone" dataKey="sessions" name="Sessions"
                 stroke="#1976d2" fill="#e3f2fd" strokeWidth={2} dot={false} />
               <Area type="monotone" dataKey="decisions" name="Decisions"
@@ -394,8 +394,8 @@ export default function AnalyticsTab() {
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={byStatus} layout="vertical" margin={{ top: 0, right: 10, left: 10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
-                <XAxis type="number" tick={{ fontSize: 10 }} />
-                <YAxis type="category" dataKey="status" tick={{ fontSize: 10 }} width={60} />
+                <XAxis type="number" tick={{ fontSize: 13 }} />
+                <YAxis type="category" dataKey="status" tick={{ fontSize: 13 }} width={60} />
                 <RTooltip content={<CustomTooltip />} />
                 <Bar dataKey="count" name="Count" radius={[0, 4, 4, 0]}>
                   {byStatus.map(r => (
@@ -416,8 +416,8 @@ export default function AnalyticsTab() {
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={byConfidence} margin={{ top: 0, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="bucket" tick={{ fontSize: 9 }} />
-                <YAxis tick={{ fontSize: 10 }} />
+                <XAxis dataKey="bucket" tick={{ fontSize: 13 }} />
+                <YAxis tick={{ fontSize: 13 }} />
                 <RTooltip content={<CustomTooltip />} />
                 <Bar dataKey="count" name="Decisions" fill={CONF_COLOR} radius={[3, 3, 0, 0]} />
               </BarChart>

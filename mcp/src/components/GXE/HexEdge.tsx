@@ -1,4 +1,4 @@
-/**
+﻿/**
  * HexEdge.tsx — PCB-style ReactFlow edge type (Step 4.2)
  *
  * Renders polyline segments from HexRoute with glow, parallel offset,
@@ -215,7 +215,7 @@ const HexEdge: React.FC<EdgeProps<HexEdgeData>> = ({
                 pointerEvents: 'all',
                 padding: '2px 8px',
                 borderRadius: 4,
-                fontSize: 11,
+                fontSize: 13,
                 background: '#21262d',
                 border: '1px solid #30363d',
                 color: '#f0f6fc',

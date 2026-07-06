@@ -40,6 +40,18 @@ router.post('/', async (req, res) => {
   }
 });
 
+// ── Get default (must be before /:id) ───────────────────────────
+
+router.get('/default', async (req, res) => {
+  try {
+    const result = await sourceCatalogService.getDefault();
+    if (!result) return res.status(404).json({ success: false, error: 'No default source configured' });
+    res.json({ success: true, data: result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ── Get ─────────────────────────────────────────────────────────
 
 router.get('/:id', async (req, res) => {
@@ -75,20 +87,46 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// ── Set default ─────────────────────────────────────────────────
+
+router.post('/:id/set-default', async (req, res) => {
+  try {
+    const result = await sourceCatalogService.setDefault(req.params.id);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ── Browse ──────────────────────────────────────────────────────
 
 router.post('/:id/browse', async (req, res) => {
   try {
-    const { query = '', page = 1, limit = 30 } = req.body;
+    const { query = '', page = 1, limit = 30, filters = {}, sort = null } = req.body;
     const result = await sourceCatalogService.browse(req.params.id, {
       query,
       page:  Math.max(1, parseInt(page, 10) || 1),
       limit: Math.min(100, parseInt(limit, 10) || 30),
+      filters: (filters && typeof filters === 'object') ? filters : {},
+      sort,
     });
     res.json({ success: true, data: result });
   } catch (err) {
-    const code = err.message.includes('not found') ? 404 : 500;
+    const code = err.code === 'CAPABILITY_NOT_SUPPORTED' ? 422
+               : err.message.includes('not found') ? 404 : 500;
     res.status(code).json({ success: false, error: err.message });
+  }
+});
+
+// ── Capabilities ────────────────────────────────────────────────
+
+router.get('/:id/capabilities', async (req, res) => {
+  try {
+    const result = await sourceCatalogService.getCapabilities(req.params.id);
+    if (!result) return res.status(404).json({ success: false, error: 'Not found' });
+    res.json({ success: true, data: result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 

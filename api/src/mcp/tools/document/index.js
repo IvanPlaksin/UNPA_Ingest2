@@ -124,12 +124,42 @@ class RegisterExtractionPromptTool extends BaseTool {
   }
 }
 
+class ReprocessFailedDocumentsTool extends BaseTool {
+  getDefinition() {
+    return {
+      id: 'document.reprocess_failed',
+      name: 'Reprocess Failed Documents',
+      version: '1.0.0',
+      level: 2,
+      category: 'document',
+      description: 'Re-queue all documents in FAILED or EXTRACTION_FAILED status for extraction. Resets each document to CLASSIFIED and enqueues a new BullMQ job. Returns how many were queued vs errored.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          namespace: { type: 'string', description: 'Optional namespace filter — only reprocess docs in this namespace' },
+          model: { type: 'string', description: 'Optional model override for extraction (e.g. "gpt-4o")' }
+        }
+      },
+      safetyLevel: 'AUTO',
+      sideEffects: ['WRITE']
+    };
+  }
+
+  async execute(args = {}) {
+    const axios = require('axios');
+    const port = process.env.PORT || 3010;
+    const { data } = await axios.post(`http://localhost:${port}/api/v1/documents/reprocess-failed`, args || {});
+    return this.success(data.data);
+  }
+}
+
 function createDocumentTools() {
   return [
     new ClassifyDocumentTool(),
     new GetExtractionPromptTool(),
     new ListDocumentTypesTool(),
-    new RegisterExtractionPromptTool()
+    new RegisterExtractionPromptTool(),
+    new ReprocessFailedDocumentsTool()
   ];
 }
 

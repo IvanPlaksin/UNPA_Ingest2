@@ -1,4 +1,4 @@
-/**
+﻿/**
  * CatalogAIPanel (UTC-004)
  *
  * AI chat panel embedded in UnifiedToolCatalog. Two tabs:
@@ -25,23 +25,23 @@ import { useSSEStream } from '../../hooks/useSSEStream';
 const API_BASE = '/api/v1';
 
 const S = {
-  root: { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: '#0d1117', color: '#e2e8f0', fontSize: 11 },
+  root: { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: '#0d1117', color: '#e2e8f0', fontSize: 13 },
   tabBar: { display: 'flex', borderBottom: '1px solid #30363d', flexShrink: 0 },
   tab: (active) => ({
-    flex: 1, padding: '6px 8px', textAlign: 'center', cursor: 'pointer', fontSize: 10, fontWeight: 500,
+    flex: 1, padding: '6px 8px', textAlign: 'center', cursor: 'pointer', fontSize: 13, fontWeight: 500,
     background: active ? '#161b22' : 'transparent', color: active ? '#e2e8f0' : '#8b949e',
     borderBottom: active ? '2px solid #58a6ff' : '2px solid transparent', transition: 'all 0.15s'
   }),
   messages: { flex: 1, overflowY: 'auto', padding: 8, minHeight: 0 },
   msg: (role) => ({
-    padding: '6px 8px', borderRadius: 6, marginBottom: 6, fontSize: 11, lineHeight: 1.4, whiteSpace: 'pre-wrap',
+    padding: '6px 8px', borderRadius: 6, marginBottom: 6, fontSize: 13, lineHeight: 1.4, whiteSpace: 'pre-wrap',
     background: role === 'user' ? '#1c2333' : 'transparent',
     borderLeft: role === 'user' ? '2px solid #58a6ff' : '2px solid #30363d'
   }),
   inputRow: { display: 'flex', gap: 4, padding: '6px 8px', borderTop: '1px solid #30363d', flexShrink: 0 },
   input: {
     flex: 1, background: '#0d1117', border: '1px solid #30363d', borderRadius: 6,
-    padding: '5px 8px', color: '#e2e8f0', fontSize: 11, outline: 'none', resize: 'none'
+    padding: '5px 8px', color: '#e2e8f0', fontSize: 13, outline: 'none', resize: 'none'
   },
   sendBtn: (disabled) => ({
     background: disabled ? '#21262d' : '#238636', border: 'none', borderRadius: 6,
@@ -52,12 +52,12 @@ const S = {
     background: '#161b22'
   },
   matchScore: (score) => ({
-    fontSize: 10, fontWeight: 600, padding: '1px 5px', borderRadius: 4,
+    fontSize: 13, fontWeight: 600, padding: '1px 5px', borderRadius: 4,
     background: score > 0.8 ? '#238636' : score > 0.6 ? '#b08800' : '#484f58',
     color: '#fff'
   }),
   actionBtn: (color = '#30363d') => ({
-    padding: '3px 8px', fontSize: 10, border: 'none', borderRadius: 4,
+    padding: '3px 8px', fontSize: 13, border: 'none', borderRadius: 4,
     background: color, color: '#e2e8f0', cursor: 'pointer'
   })
 };
@@ -172,15 +172,15 @@ const CatalogAIPanel = ({ workspaceId, workspaceName, selectedNodes = [], mode =
       {activeTab === 'chat' ? (
         <>
           {isReconnecting && (
-            <div style={{ padding: '4px 8px', background: '#3a2a00', borderBottom: '1px solid #30363d', fontSize: 10, color: '#fbbf24', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <div style={{ padding: '4px 8px', background: '#3a2a00', borderBottom: '1px solid #30363d', fontSize: 13, color: '#fbbf24', display: 'flex', alignItems: 'center', gap: 4 }}>
               <WifiOff size={10} />
               Reconnecting... (attempt {reconnectInfo?.attempt}/{reconnectInfo?.maxRetries})
             </div>
           )}
           {streamError && (
-            <div style={{ padding: '4px 8px', background: '#3a1d1d', borderBottom: '1px solid #30363d', fontSize: 10, color: '#fca5a5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ padding: '4px 8px', background: '#3a1d1d', borderBottom: '1px solid #30363d', fontSize: 13, color: '#fca5a5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>{streamError}</span>
-              <button style={{ background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer', fontSize: 10 }} onClick={clearError}>dismiss</button>
+              <button style={{ background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer', fontSize: 13 }} onClick={clearError}>dismiss</button>
             </div>
           )}
           <div style={S.messages}>
@@ -188,7 +188,7 @@ const CatalogAIPanel = ({ workspaceId, workspaceName, selectedNodes = [], mode =
               <div style={{ textAlign: 'center', color: '#484f58', padding: 16 }}>
                 <Sparkles size={20} style={{ opacity: 0.3, marginBottom: 6 }} />
                 <div>Ask me about tools, graph templates, or patterns</div>
-                {workspaceId && <div style={{ fontSize: 10, marginTop: 4 }}>I can also analyze your workspace graph</div>}
+                {workspaceId && <div style={{ fontSize: 13, marginTop: 4 }}>I can also analyze your workspace graph</div>}
               </div>
             )}
             {messages.map((m, i) => (
@@ -198,7 +198,7 @@ const CatalogAIPanel = ({ workspaceId, workspaceName, selectedNodes = [], mode =
               <div style={S.msg('assistant')}>{streamBuffer}</div>
             )}
             {streaming && !streamBuffer && (
-              <div style={{ padding: 8, color: '#8b949e', fontSize: 10 }}>Thinking…</div>
+              <div style={{ padding: 8, color: '#8b949e', fontSize: 13 }}>Thinking…</div>
             )}
             <div ref={messagesEndRef} />
           </div>
@@ -227,7 +227,7 @@ const CatalogAIPanel = ({ workspaceId, workspaceName, selectedNodes = [], mode =
           {workspaceId && (
             <>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <span style={{ fontSize: 10, color: '#8b949e' }}>
+                <span style={{ fontSize: 13, color: '#8b949e' }}>
                   {patternsLoading ? 'Scanning…' : `${patterns.length} pattern match${patterns.length !== 1 ? 'es' : ''}`}
                 </span>
                 <button style={S.actionBtn()} onClick={scanPatterns} disabled={patternsLoading}>
@@ -236,13 +236,13 @@ const CatalogAIPanel = ({ workspaceId, workspaceName, selectedNodes = [], mode =
               </div>
 
               {patternsError && (
-                <div style={{ padding: 6, background: '#3a1d1d', borderRadius: 4, color: '#fca5a5', fontSize: 10, marginBottom: 6 }}>
+                <div style={{ padding: 6, background: '#3a1d1d', borderRadius: 4, color: '#fca5a5', fontSize: 13, marginBottom: 6 }}>
                   {patternsError}
                 </div>
               )}
 
               {patterns.length === 0 && !patternsLoading && !patternsError && (
-                <div style={{ textAlign: 'center', color: '#484f58', padding: 16, fontSize: 10 }}>
+                <div style={{ textAlign: 'center', color: '#484f58', padding: 16, fontSize: 13 }}>
                   No pattern matches found. Your workspace subgraphs don't resemble existing catalog entries.
                 </div>
               )}
@@ -284,12 +284,12 @@ const PatternMatchCard = ({ result, onReplace }) => {
         </button>
       </div>
 
-      <div style={{ fontSize: 10, color: '#8b949e', marginBottom: 4 }}>
+      <div style={{ fontSize: 13, color: '#8b949e', marginBottom: 4 }}>
         Your subgraph: {sg.nodeCount}n • Catalog: {topMatch.catalogEntry.nodeCount}n • {topMatch.matchReason}
       </div>
 
       {expanded && (
-        <div style={{ fontSize: 10, marginBottom: 6 }}>
+        <div style={{ fontSize: 13, marginBottom: 6 }}>
           <div style={{ color: '#8b949e', marginBottom: 2 }}>Subgraph: {sg.textSummary?.slice(0, 100)}</div>
           <div style={{ color: '#8b949e' }}>Catalog: {topMatch.catalogEntry.description?.slice(0, 100)}</div>
           <div style={{ marginTop: 4 }}>
@@ -315,7 +315,7 @@ const PatternMatchCard = ({ result, onReplace }) => {
           <Replace size={10} style={{ marginRight: 3 }} /> Replace
         </button>
         {result.matches.length > 1 && (
-          <span style={{ fontSize: 9, color: '#484f58', alignSelf: 'center' }}>
+          <span style={{ fontSize: 13, color: '#484f58', alignSelf: 'center' }}>
             +{result.matches.length - 1} more
           </span>
         )}

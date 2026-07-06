@@ -1,0 +1,78 @@
+{
+  "key": "fao",
+  "name": "FAO Knowledge Repository",
+  "family": "dspace",
+  "capabilities": [
+    "search",
+    "pagination",
+    "sort",
+    "dateFilter",
+    "typeFilter",
+    "languageFilter",
+    "collectionFilter",
+    "facets",
+    "itemMetadata",
+    "bitstreamDownload"
+  ],
+  "filterSchema": [
+    {
+      "type": "dateFrom",
+      "param": "f.dateIssued.min",
+      "label": "Issued year from (DSpace date facet range; use full year, e.g. 2020)"
+    },
+    {
+      "type": "dateTo",
+      "param": "f.dateIssued.max",
+      "label": "Issued year to"
+    },
+    {
+      "type": "docType",
+      "param": "f.taxonomyType",
+      "label": "FAO content type (facet value, e.g. 'Book', 'Report'); dc.type carried per record"
+    },
+    {
+      "type": "language",
+      "param": "f.isoLanguage",
+      "label": "Language (value is full name, e.g. 'English','French','Spanish'; append ',equals')"
+    }
+  ],
+  "config": {
+    "endpoint": "https://openknowledge.fao.org/server/api/discover/search/objects",
+    "method": "GET",
+    "searchParam": "query",
+    "queryParams": {
+      "sort": "dc.date.issued,DESC",
+      "_note_filters": "DSpace filter syntax: append &f.<facet>=<value>,equals (e.g. f.isoLanguage=English,equals). Date range: f.dateIssued.min / f.dateIssued.max."
+    },
+    "pageParam": "page",
+    "limitParam": "size",
+    "pageParamStyle": "zero-based",
+    "responseMapping": {
+      "items": "_embedded.searchResult._embedded.objects[]._embedded.indexableObject",
+      "title": "metadata['dc.title'][0].value",
+      "url": "metadata['dc.identifier.uri'][0].value",
+      "date": "metadata['dc.date.issued'][0].value",
+      "total": "_embedded.searchResult.page.totalElements",
+      "description": "metadata['dc.description.abstract'][0].value",
+      "id": "uuid",
+      "type": "metadata['dc.type'][0].value",
+      "language": "metadata['dc.language.iso'][0].value"
+    },
+    "headers": {
+      "Referer": "https://openknowledge.fao.org/"
+    }
+  },
+  "download": {
+    "mode": "dspace-bitstream",
+    "urlPattern": "https://openknowledge.fao.org/server/api/core/bitstreams/{bitstreamUuid}/content",
+    "notes": "Two-step: GET /server/api/core/items/{uuid}/bundles -> pick bundle name 'ORIGINAL' -> its _links.bitstreams -> GET bitstreams list -> each bitstream _links.content -> /server/api/core/bitstreams/{bitstreamUuid}/content. Bundles observed: ORIGINAL, PWS, TEXT, THUMBNAIL. Requires browser-like User-Agent + Referer header (server 403s default UA)."
+  },
+  "enrich": {
+    "mode": "dspace-item",
+    "endpoint": "https://openknowledge.fao.org/server/api/core/items/{uuid}",
+    "notes": "Full item metadata already present in the search indexableObject (dc.* and fao.* fields incl. fao.identifier.doi, fao.subject.agrovoc, dc.contributor.author). For abstract/authors no extra call is usually needed. GET items/{uuid} available for canonical metadata."
+  },
+  "methodologyMarkdown": "## Overview\nFAO's Knowledge Repository (openknowledge.fao.org) runs DSpace 7 and exposes the standard DSpace REST/HAL discovery API. This is the preferred ingestion path over HTML scraping. The repository holds ~47,000+ items (books, reports, briefs) with rich dc.* and FAO-specific fao.* metadata.\n\n## Search\nCall GET /server/api/discover/search/objects with the free-text term in the `query` parameter. Results arrive under `_embedded.searchResult._embedded.objects[]._embedded.indexableObject`. Each item carries `uuid`, `name`, and a `metadata` map keyed by Dublin Core fields. Sorting uses `sort=dc.date.issued,DESC` (verified). Total hit count is `_embedded.searchResult.page.totalElements`.\n\n## Filters\nDSpace uses discovery facets. The live facet endpoint (/server/api/discover/facets) confirms facets: dateIssued (date), isoLanguage, collection, taxonomyTier, taxonomyType, taxonomyCategory, agrovoc, isPartOfSeries. Apply a filter by appending `&f.<facet>=<value>,equals` — e.g. `f.isoLanguage=English,equals`. IMPORTANT: the language value is the full English name ('English','French'...), not the ISO code ('en' returns 0 hits). Date range filtering uses `f.dateIssued.min` and `f.dateIssued.max`. The response echoes `appliedFilters` for validation.\n\n## Download\nPDFs live in the item's ORIGINAL bundle. Resolve via GET /server/api/core/items/{uuid}/bundles, select the bundle named ORIGINAL, follow its bitstreams link, then fetch /server/api/core/bitstreams/{bitstreamUuid}/content.\n\n## Metadata & Enrichment\nThe search payload is already metadata-rich (title, issued date, handle URI, type, language, abstract, authors, DOI, AGROVOC subjects, series). GET /server/api/core/items/{uuid} returns canonical item metadata if needed.\n\n## Limitations\nThe server returns HTTP 403 to default/bot User-Agents; requests MUST send a browser-like User-Agent AND a Referer: https://openknowledge.fao.org/ header. Pagination is zero-based via `page`/`size`. Very large `size` values may be capped by DSpace (typical max 100).",
+  "verified": true,
+  "probeNotes": "GET /server/api/discover/search/objects?query=climate&size=2 -> HTTP 200 with browser UA + Referer (default UA => 403). page.totalElements=47157, totalPages=23579. indexableObject metadata verified: dc.title='Climate shocks and youth labour', dc.date.issued='2026', dc.identifier.uri='https://openknowledge.fao.org/handle/20.500.14283/cd8526en', dc.type='Book (series)', dc.language.iso='English'. Facets endpoint returned dateIssued/isoLanguage/collection/taxonomy*. Filter f.isoLanguage=English,equals -> 33919 hits (value 'en' -> 0, so casing/full-name required); appliedFilters echoed. sort=dc.date.issued,DESC -> 200. /core/items/{uuid}/bundles -> ORIGINAL,PWS,TEXT,THUMBNAIL."
+}

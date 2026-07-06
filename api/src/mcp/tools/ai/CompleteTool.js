@@ -1,5 +1,6 @@
 const { BaseTool } = require('../primitives/BaseTool.js');
-const { getInstance: getLLMProvider } = require('../../../services/llm/LLMProviderService');
+const { getScopedProvider } = require('../../../services/llm-access-control.service');
+const llmProvider = getScopedProvider('mcp_tools');
 
 class CompleteTool extends BaseTool {
   getDefinition() {
@@ -131,7 +132,7 @@ class CompleteTool extends BaseTool {
   }
 
   async completeAnthropic(prompt, systemPrompt, model, maxTokens, temperature, stopSequences) {
-    const data = await getLLMProvider().chat(
+    const data = await llmProvider.chat(
       [{ role: 'user', content: prompt }],
       {
         model,

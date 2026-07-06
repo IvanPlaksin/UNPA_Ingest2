@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   Box, Chip, Select, MenuItem, FormControl, InputLabel,
   Pagination, CircularProgress, Typography, Stack, Paper,
@@ -50,7 +50,7 @@ function RelatedSessionMiniCard({ session, onOpen }) {
             label={type}
             size="small"
             variant="outlined"
-            sx={{ height: 18, fontSize: 10, borderColor: style.border, color: style.color }}
+            sx={{ height: 18, fontSize: 12, borderColor: style.border, color: style.color }}
           />
           {session.startedAt && (
             <Typography variant="caption" color="text.disabled" sx={{ alignSelf: 'center' }}>
@@ -62,7 +62,7 @@ function RelatedSessionMiniCard({ session, onOpen }) {
               label={`${Math.round(session.chainScore * 100)}% match`}
               size="small"
               color={session.chainScore >= 0.8 ? 'success' : 'default'}
-              sx={{ height: 18, fontSize: 10 }}
+              sx={{ height: 18, fontSize: 12 }}
             />
           )}
         </Stack>
@@ -130,7 +130,7 @@ function RelatedPanel({ session, onOpen }) {
       >
         {expanded ? <ExpandLess sx={{ fontSize: 16 }} /> : <ExpandMore sx={{ fontSize: 16 }} />}
         <Typography variant="caption">Related sessions</Typography>
-        <LinkIcon sx={{ fontSize: 12, ml: 0.5 }} />
+        <LinkIcon sx={{ fontSize: 13, ml: 0.5 }} />
       </Box>
       <Collapse in={expanded}>
         <Box sx={{ bgcolor: 'background.default', borderTop: '1px solid', borderColor: 'divider' }}>
@@ -220,11 +220,11 @@ function SessionCard({ session, idx, total, onOpen }) {
               label={type}
               size="small"
               variant="outlined"
-              sx={{ height: 20, fontSize: 11, borderColor: style.border, color: style.color, fontWeight: 600 }}
+              sx={{ height: 20, fontSize: 13, borderColor: style.border, color: style.color, fontWeight: 600 }}
             />
             {topics.map(topic => (
               <Chip key={topic} label={topic} size="small" variant="outlined"
-                sx={{ height: 20, fontSize: 11, color: 'text.secondary' }} />
+                sx={{ height: 20, fontSize: 13, color: 'text.secondary' }} />
             ))}
             <Typography variant="caption" color="text.disabled" sx={{ alignSelf: 'center' }}>
               {session.startedAt ? new Date(session.startedAt).toLocaleDateString() : '—'}
@@ -265,7 +265,7 @@ function SessionCard({ session, idx, total, onOpen }) {
                   size="small"
                   color={ENTITY_TYPE_COLOR[e.type] || 'default'}
                   variant="outlined"
-                  sx={{ height: 18, fontSize: 10 }}
+                  sx={{ height: 18, fontSize: 12 }}
                 />
               ))}
             </Stack>

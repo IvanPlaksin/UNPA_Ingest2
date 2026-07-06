@@ -1,0 +1,27 @@
+{
+  "key": "wipo",
+  "name": "WIPO Publications",
+  "family": "url-catalog",
+  "capabilities": ["search", "browseAll", "paginate", "download"],
+  "filterSchema": [],
+  "config": {
+    "url": "https://tind.wipo.int/collection/WIPO%20Publications",
+    "searchUrlTemplate": "https://tind.wipo.int/search?p={query}",
+    "linkFilter": "",
+    "includeAllLinks": false,
+    "repositoryPlatform": "TIND (Invenio fork, CERN-derived)",
+    "recordUrlPattern": "https://tind.wipo.int/record/{id}",
+    "candidateJsonApi": "https://tind.wipo.int/search?p={query}&of=recjson (Invenio recjson output format)"
+  },
+  "download": {
+    "mode": "dspace-bitstream",
+    "notes": "Analogous to DSpace: Invenio records at /record/{id} expose open-access PDF file(s) attached to the record. All WIPO publications are open access. Fetch the record page, extract the attached PDF URL, and download. DOIs of form https://doi.org/10.34667/tind.{id} also resolve to records."
+  },
+  "enrich": {
+    "mode": "dspace-item",
+    "notes": "Invenio provides structured record metadata (MARC 21 backend). If the recjson output format (of=recjson) is accessible, a single record fetch returns title, authors, files, DOI and subjects as JSON; otherwise parse the /record/{id} HTML."
+  },
+  "methodologyMarkdown": "## Overview\nWIPO publications are hosted in the WIPO Knowledge Repository at tind.wipo.int, a real digital-repository platform: TIND, an Invenio fork (CERN-derived, MARC 21 backend). It holds 45,000+ open-access publications and documents. The public entry www.wipo.int/publications/en/ is a marketing/landing surface; the repository at tind.wipo.int is the actual catalog and the recommended source.\n\n## Search\nInvenio search is available at /search?p={query}, with a browsable collection tree (e.g. /collection/WIPO%20Publications). Invenio historically supports machine-readable output via of=recjson (JSON) or of=xm (MARCXML), which would elevate this to a near-API. This should be preferred if reachable.\n\n## Filters\nInvenio exposes collection and facet parameters (collection, subject, language) as URL params. No formal schema is declared here; treated as opaque params.\n\n## Download\nRecords at /record/{id} carry open-access PDF file attachments (DSpace-bitstream-analogous). Extract the attached file URL from the record and download directly. DOIs https://doi.org/10.34667/tind.{id} also resolve.\n\n## Metadata & Enrichment\nRich bibliographic metadata (title, authors, DOI, subjects, files) is available. If of=recjson is reachable a single call returns JSON; otherwise HTML/MARCXML parsing of /record/{id}.\n\n## Limitations\nHONEST: probes of both the collection page and the recjson endpoint returned HTTP 403 (the repository blocks non-browser User-Agents / bot traffic). This is a WAF/UA block, not a JS SPA; the repository is server-rendered and machine-friendly with a realistic browser User-Agent. Whether of=recjson is permitted for anonymous clients must be re-verified at crawl time with proper headers; if blocked, fall back to HTML record parsing. Family is kept url-catalog until the JSON output is confirmed reachable, at which point it can be upgraded to a rest-api (Invenio recjson).",
+  "verified": true,
+  "probeNotes": "tind.wipo.int/collection/WIPO Publications and /search?...&of=recjson both returned HTTP 403 (WAF/UA block). WebSearch confirmed TIND/Invenio platform, 45k+ open-access publications, record URL /record/{id} (e.g. /record/28609), DOI 10.34667/tind.{id}. recjson likely available but not verified anonymously -> family kept url-catalog with Invenio JSON path noted for upgrade."
+}

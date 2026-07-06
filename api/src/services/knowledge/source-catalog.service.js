@@ -3,8 +3,12 @@
  * SourceCatalogService
  *
  * Catalog of external information sources for document discovery.
- * Each entry describes how to browse / search an external repository
- * and can import found files directly into the Documents pipeline.
+ * Each entry describes how to browse / search an external repository and can
+ * import found files directly into the Documents pipeline.
+ *
+ * Browsing, per-record enrichment and download resolution are delegated to a
+ * capability-based adapter (see ./source-adapters). The service keeps CRUD,
+ * the SourceDocument cache, enrichment overlay, and the import pipeline.
  *
  * Supported source types:
  *   URL_CATALOG  — HTML page with document links (link scraping)
@@ -16,10 +20,14 @@
  */
 
 const { v4: uuidv4, v5: uuidv5 } = require('uuid');
-const axios  = require('axios');
-const https  = require('https');
 const path   = require('path');
 const url    = require('url');
+
+const { axios, httpsAgent }  = require('./source-adapters/lib/http');
+const { parseConfig, serializeConfig } = require('./source-adapters/lib/parse');
+const { parseUNSymbol }      = require('./source-adapters/lib/symbol-parser');
+const { resolveAdapter }     = require('./source-adapters/registry');
+const { normalizeCapabilities, normalizeFilterSchema } = require('./source-adapters/capabilities');
 
 const LOG_PREFIX = '[SourceCatalog]';
 
@@ -28,185 +36,36 @@ const SOURCE_TYPES = ['URL_CATALOG', 'REST_API', 'RSS_FEED', 'ODS_API', 'OIOS_PO
 // Namespace for deterministic SourceDocument IDs (uuidv5)
 const SOURCE_DOC_NS = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
 
-// Reusable HTTPS agent (skips cert verification for self-signed UN certs)
-const httpsAgent = new https.Agent({ rejectUnauthorized: false });
-
 let _mg = null;
 function mg() { if (!_mg) _mg = require('../memgraph.service'); return _mg; }
 
-// ── Helpers ──────────────────────────────────────────────────
-
-function getExt(rawUrl) {
-  try {
-    const u = new url.URL(rawUrl);
-    const ext = path.extname(u.pathname).toLowerCase().replace('.', '');
-    return ext || null;
-  } catch { return null; }
-}
-
-function nested(obj, dotPath) {
-  if (!dotPath) return undefined;
-  return dotPath.split('.').reduce((acc, k) => (acc == null ? acc : acc[k]), obj);
-}
-
-function parseConfig(raw) {
-  if (!raw) return {};
-  try { return typeof raw === 'string' ? JSON.parse(raw) : raw; } catch { return {}; }
-}
-
-function serializeConfig(config) {
-  return JSON.stringify(config || {});
-}
-
-// Normalize UN document symbol: S_RES_2319(2016)-EN.pdf → S/RES/2319(2016)
-function normalizeSymbol(raw) {
-  if (!raw) return '';
-  let s = String(raw).trim();
-  s = s.replace(/\.[a-zA-Z]{2,4}$/, '');       // remove extension
-  s = s.replace(/-[A-Z]{1,3}$/, '');            // remove language suffix (-EN, -AR, -RU, etc.)
-  s = s.replace(/_\(/g, '(');                   // _( → ( (year in parens: S_RES_2235_(2015) → S_RES_2235(2015))
-  s = s.replace(/_/g, '/');                      // remaining underscores → slashes
-  s = s.replace(/\/+/g, '/');                    // collapse double slashes
-  return s;
-}
-
-// Find English PDF URL from DL files array
-function findEnglishPdf(files, recid) {
-  if (!Array.isArray(files) || !recid) return '';
-  // Prefer -EN. suffix PDF
-  const enPdf = files.find(f => {
-    const n = (f.full_name || f.name || '').toUpperCase();
-    return n.includes('-EN.') && (f.eformat === 'pdf' || n.endsWith('.PDF'));
-  });
-  // Fallback to any PDF
-  const anyPdf = enPdf || files.find(f =>
-    f.eformat === 'pdf' || (f.full_name || f.name || '').toLowerCase().endsWith('.pdf')
-  );
-  if (!anyPdf) return '';
-  const filename = anyPdf.full_name || anyPdf.name;
-  if (!filename) return '';
-  return `https://digitallibrary.un.org/record/${recid}/files/${encodeURIComponent(filename)}`;
-}
-
-// ── HTML link extractor ───────────────────────────────────────
-
-function extractLinksFromHtml(html, baseUrl, config = {}) {
-  const results = [];
-  const seen = new Set();
-  const DOC_EXTS = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'odt', 'rtf'];
-
-  const linkFilter = config.linkFilter ? config.linkFilter.toLowerCase() : null;
-
-  const aTagRe = /<a\s[^>]*?href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
-  let m;
-  while ((m = aTagRe.exec(html)) !== null) {
-    let href = m[1].trim();
-    const inner = m[2].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-
-    if (!href || href.startsWith('#') || href.startsWith('javascript')) continue;
-    if (linkFilter && !href.toLowerCase().includes(linkFilter) && !inner.toLowerCase().includes(linkFilter)) continue;
-
-    try {
-      if (!href.startsWith('http')) href = new url.URL(href, baseUrl).href;
-    } catch { continue; }
-
-    const ext = getExt(href);
-    const isDoc = DOC_EXTS.includes(ext);
-    const title = inner || path.basename(new url.URL(href).pathname) || href;
-
-    if (!isDoc && !config.includeAllLinks) continue;
-    if (seen.has(href)) continue;
-    seen.add(href);
-
-    results.push({
-      title:    title.substring(0, 200),
-      url:      href,
-      fileType: ext || 'html',
-      date:     null,
-      description: null,
-      symbol:   null,
-    });
-  }
-  return results;
-}
-
-// ── RSS/Atom parser ───────────────────────────────────────────
-
-function parseRssItems(xml, query) {
-  const items = [];
-  const itemRe = /<(?:item|entry)[\s>]([\s\S]*?)<\/(?:item|entry)>/gi;
-  const tagRe  = (name) => new RegExp(`<${name}[^>]*>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?<\\/${name}>`, 'i');
-
-  let m;
-  while ((m = itemRe.exec(xml)) !== null) {
-    const chunk = m[1];
-    const title = (tagRe('title').exec(chunk)?.[1] || '').trim();
-    const linkM = /<link[^>]+href=["'](https?:\/\/[^"']+)["']/.exec(chunk)
-               || /<link[^>]*>\s*(https?:\/\/[^\s<]+)\s*<\/link>/.exec(chunk);
-    const link = linkM ? linkM[1].trim() : '';
-    const date = (tagRe('pubDate').exec(chunk)?.[1]
-               || tagRe('published').exec(chunk)?.[1]
-               || tagRe('dc:date').exec(chunk)?.[1] || '').trim();
-    const desc = (tagRe('description').exec(chunk)?.[1]
-               || tagRe('summary').exec(chunk)?.[1] || '').replace(/<[^>]*>/g, '').trim();
-
-    if (!title || !link) continue;
-    if (query && !title.toLowerCase().includes(query.toLowerCase()) &&
-        !desc.toLowerCase().includes(query.toLowerCase())) continue;
-
-    items.push({
-      title:       title.substring(0, 200),
-      url:         link,
-      fileType:    getExt(link) || 'html',
-      date:        date || null,
-      description: desc.substring(0, 500) || null,
-      symbol:      null,
-    });
-  }
-  return items;
-}
-
-// ── OAI-PMH parser ───────────────────────────────────────────
-
-function parseOaiPmhRecords(xml, query) {
-  const results = [];
-  const recordRe = /<record[\s>]([\s\S]*?)<\/record>/gi;
-  const tag = (name, chunk) => {
-    const re = new RegExp(`<(?:[a-z]+:)?${name}[^>]*>([\\s\\S]*?)<\\/(?:[a-z]+:)?${name}>`, 'i');
-    return (re.exec(chunk)?.[1] || '').replace(/<[^>]*>/g, '').trim();
+/**
+ * Flatten a UN symbol into the SourceDocument component property set.
+ * Best-effort — returns the full key set (nulls when unparseable) so the
+ * MERGE param object stays stable. Numeric components stored as plain numbers.
+ */
+function _sourceDocSymbolComponents(symbol) {
+  const blank = {
+    organCode: null, seriesCode: null, subBody: null,
+    sessionNumber: null, documentNumber: null, documentYear: null,
+    baseSymbol: null, suffixType: null, suffixNumber: null
   };
-
-  let m;
-  while ((m = recordRe.exec(xml)) !== null) {
-    const chunk = m[1];
-    if (/<header[^>]+status="deleted"/.test(chunk)) continue;
-
-    const title = tag('title', chunk);
-    const identifiers = [];
-    const idRe = /<(?:[a-z]+:)?identifier[^>]*>([\s\S]*?)<\/(?:[a-z]+:)?identifier>/gi;
-    let im;
-    while ((im = idRe.exec(chunk)) !== null) {
-      const v = im[1].trim();
-      if (v.startsWith('http')) identifiers.push(v);
-    }
-    const docUrl = identifiers[0] || '';
-    const date   = tag('date', chunk);
-    const desc   = tag('description', chunk).substring(0, 500);
-
-    if (!title) continue;
-    if (query && !title.toLowerCase().includes(query.toLowerCase()) &&
-        !desc.toLowerCase().includes(query.toLowerCase())) continue;
-
-    results.push({
-      title:       title.substring(0, 200),
-      url:         docUrl,
-      fileType:    getExt(docUrl) || 'html',
-      date:        date || null,
-      description: desc || null,
-      symbol:      null,
-    });
-  }
-  return results;
+  try {
+    if (!symbol) return blank;
+    const p = parseUNSymbol(symbol);
+    if (!p || !p.organ) return blank;
+    return {
+      organCode:      p.organ || null,
+      seriesCode:     p.series || null,
+      subBody:        p.subBody || null,
+      sessionNumber:  p.session,
+      documentNumber: p.number,
+      documentYear:   p.year,
+      baseSymbol:     p.baseSymbol || null,
+      suffixType:     p.suffixType || null,
+      suffixNumber:   p.suffixNumber
+    };
+  } catch { return blank; }
 }
 
 // ── Main service ──────────────────────────────────────────────
@@ -215,7 +74,7 @@ class SourceCatalogService {
 
   // ─── CRUD ─────────────────────────────────────────────────────
 
-  async create({ name, description = '', type, namespace = 'DEFAULT', config = {}, tags = [], methodology = '' }) {
+  async create({ name, description = '', type, namespace = 'DEFAULT', config = {}, tags = [], methodology = '', capabilities = null, isDefault = false }) {
     if (!name) throw new Error('name is required');
     if (!SOURCE_TYPES.includes(type)) throw new Error(`Unknown type: ${type}`);
 
@@ -227,12 +86,16 @@ class SourceCatalogService {
          type: $type, namespace: $ns,
          config: $cfg, tags: $tags,
          methodology: $methodology,
+         capabilities: $capabilities,
          enabled: true, documentCount: 0,
+         isDefault: $isDefault,
          createdAt: $now, updatedAt: $now, lastBrowsedAt: null
        })`,
       { id, name, desc: description, type, ns: namespace,
         cfg: serializeConfig(config), tags: JSON.stringify(tags),
-        methodology: methodology || '', now }
+        methodology: methodology || '',
+        capabilities: capabilities ? JSON.stringify(capabilities) : '',
+        isDefault: isDefault === true, now }
     );
     console.log(`${LOG_PREFIX} Created "${name}" (${type})`);
     return this.get(id);
@@ -248,29 +111,23 @@ class SourceCatalogService {
     const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
     const rows = await mg().runQuery(
       `MATCH (s:SourceCatalog) ${where}
-       RETURN s.id as id, s.name as name, s.description as description,
-              s.type as type, s.namespace as namespace,
-              s.config as config, s.tags as tags,
-              s.methodology as methodology,
-              s.enabled as enabled, s.documentCount as documentCount,
-              s.createdAt as createdAt, s.updatedAt as updatedAt,
-              s.lastBrowsedAt as lastBrowsedAt
+       RETURN ${this._returnFields()}
        ORDER BY s.name`,
       params
     );
-    return rows.map(this._format);
+    const formatted = rows.map(r => this._format(r));
+    // Default source always first
+    return formatted.sort((a, b) => {
+      if (a.isDefault && !b.isDefault) return -1;
+      if (!a.isDefault && b.isDefault) return 1;
+      return a.name.localeCompare(b.name);
+    });
   }
 
   async get(id) {
     const rows = await mg().runQuery(
       `MATCH (s:SourceCatalog {id: $id})
-       RETURN s.id as id, s.name as name, s.description as description,
-              s.type as type, s.namespace as namespace,
-              s.config as config, s.tags as tags,
-              s.methodology as methodology,
-              s.enabled as enabled, s.documentCount as documentCount,
-              s.createdAt as createdAt, s.updatedAt as updatedAt,
-              s.lastBrowsedAt as lastBrowsedAt`,
+       RETURN ${this._returnFields()}`,
       { id }
     );
     if (!rows.length) return null;
@@ -282,14 +139,16 @@ class SourceCatalogService {
     const sets = ['s.updatedAt = $now'];
     const params = { id, now };
 
-    if (updates.name        != null) { sets.push('s.name = $name');               params.name        = updates.name; }
-    if (updates.description != null) { sets.push('s.description = $desc');        params.desc        = updates.description; }
-    if (updates.type        != null) { sets.push('s.type = $type');               params.type        = updates.type; }
-    if (updates.namespace   != null) { sets.push('s.namespace = $ns');            params.ns          = updates.namespace; }
-    if (updates.config      != null) { sets.push('s.config = $cfg');              params.cfg         = serializeConfig(updates.config); }
-    if (updates.tags        != null) { sets.push('s.tags = $tags');               params.tags        = JSON.stringify(updates.tags); }
-    if (updates.enabled     != null) { sets.push('s.enabled = $enabled');         params.enabled     = updates.enabled; }
-    if (updates.methodology != null) { sets.push('s.methodology = $methodology'); params.methodology = updates.methodology; }
+    if (updates.name         != null) { sets.push('s.name = $name');                params.name         = updates.name; }
+    if (updates.description  != null) { sets.push('s.description = $desc');         params.desc         = updates.description; }
+    if (updates.type         != null) { sets.push('s.type = $type');                params.type         = updates.type; }
+    if (updates.namespace    != null) { sets.push('s.namespace = $ns');             params.ns           = updates.namespace; }
+    if (updates.config       != null) { sets.push('s.config = $cfg');               params.cfg          = serializeConfig(updates.config); }
+    if (updates.tags         != null) { sets.push('s.tags = $tags');                params.tags         = JSON.stringify(updates.tags); }
+    if (updates.enabled      != null) { sets.push('s.enabled = $enabled');          params.enabled      = updates.enabled; }
+    if (updates.methodology  != null) { sets.push('s.methodology = $methodology');  params.methodology  = updates.methodology; }
+    if (updates.capabilities != null) { sets.push('s.capabilities = $capabilities');params.capabilities = typeof updates.capabilities === 'string' ? updates.capabilities : JSON.stringify(updates.capabilities); }
+    if (updates.isDefault    != null) { sets.push('s.isDefault = $isDefault');      params.isDefault    = updates.isDefault === true; }
 
     await mg().runQuery(
       `MATCH (s:SourceCatalog {id: $id}) SET ${sets.join(', ')}`,
@@ -298,8 +157,29 @@ class SourceCatalogService {
     return this.get(id);
   }
 
+  async setDefault(id) {
+    await mg().runQuery(
+      `MATCH (s:SourceCatalog) WHERE s.isDefault = true SET s.isDefault = false`,
+      {}
+    ).catch(() => {});
+    await mg().runQuery(
+      `MATCH (s:SourceCatalog {id: $id}) SET s.isDefault = true`,
+      { id }
+    );
+    return this.get(id);
+  }
+
+  async getDefault() {
+    const rows = await mg().runQuery(
+      `MATCH (s:SourceCatalog {isDefault: true})
+       RETURN ${this._returnFields()}
+       LIMIT 1`,
+      {}
+    );
+    return rows.length ? this._format(rows[0]) : null;
+  }
+
   async delete(id) {
-    // Also delete associated SourceDocument nodes
     await mg().runQuery(
       `MATCH (s:SourceCatalog {id: $id})-[:HAS_DOCUMENT]->(d:SourceDocument) DETACH DELETE d`,
       { id }
@@ -308,37 +188,27 @@ class SourceCatalogService {
     return { deleted: true };
   }
 
+  // ─── Capabilities ──────────────────────────────────────────────
+
+  /**
+   * Runtime capability descriptor for a source (the adapter is the source of
+   * truth; the stored `capabilities` field is a UI cache).
+   */
+  async getCapabilities(id) {
+    const source = await this.get(id);
+    if (!source) return null;
+    const adapter = resolveAdapter(source);
+    return { sourceId: id, sourceName: source.name, type: source.type, ...adapter.getCapabilities() };
+  }
+
   // ─── Browse ────────────────────────────────────────────────────
 
-  async browse(id, { query = '', page = 1, limit = 20 } = {}) {
+  async browse(id, { query = '', page = 1, limit = 20, filters = {}, sort = null } = {}) {
     const source = await this.get(id);
     if (!source) throw new Error(`Source not found: ${id}`);
 
-    const cfg  = source.config || {};
-    let result;
-
-    switch (source.type) {
-      case 'URL_CATALOG':
-        result = await this._browseUrlCatalog(cfg, query, page, limit);
-        break;
-      case 'RSS_FEED':
-        result = await this._browseRssFeed(cfg, query, page, limit);
-        break;
-      case 'REST_API':
-        result = await this._browseRestApi(cfg, query, page, limit);
-        break;
-      case 'ODS_API':
-        result = await this._browseOds(cfg, query, page, limit);
-        break;
-      case 'OIOS_PORTAL':
-        result = await this._browseOios(cfg, query, page, limit);
-        break;
-      case 'OAI_PMH':
-        result = await this._browseOaiPmh(cfg, query, page, limit);
-        break;
-      default:
-        throw new Error(`Browse not implemented for type: ${source.type}`);
-    }
+    const adapter = resolveAdapter(source);
+    const result  = await adapter.search({ query, page, limit, filters, sort });
 
     // Ensure every result item has a stable ID for frontend keying
     if (result.results) {
@@ -352,7 +222,7 @@ class SourceCatalogService {
       this._saveSourceDocuments(id, result.results).catch(() => {});
     }
 
-    // Merge enriched metadata (MARC data etc.) from previously enriched SourceDocument nodes
+    // Merge enriched metadata (MARC data etc.) from previously enriched nodes
     if (result.results?.length) {
       result.results = await this._mergeEnrichedData(id, result.results);
     }
@@ -363,315 +233,19 @@ class SourceCatalogService {
       { id, now: new Date().toISOString() }
     ).catch(() => {});
 
-    return { sourceId: id, sourceName: source.name, query, page, limit, ...result };
-  }
-
-  async _browseUrlCatalog(cfg, query, page, limit) {
-    const searchUrl = query && cfg.searchUrlTemplate
-      ? cfg.searchUrlTemplate.replace('{query}', encodeURIComponent(query))
-      : cfg.url;
-
-    if (!searchUrl) throw new Error('URL not configured');
-
-    const response = await axios.get(searchUrl, {
-      timeout: 20000, httpsAgent,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Accept-Encoding': 'gzip, deflate',
-        'Cache-Control': 'no-cache',
-      },
-      maxRedirects: 10,
-    });
-
-    const all = extractLinksFromHtml(response.data, searchUrl, cfg);
-
-    const filtered = query && !cfg.searchUrlTemplate
-      ? all.filter(r => r.title.toLowerCase().includes(query.toLowerCase()) || r.url.toLowerCase().includes(query.toLowerCase()))
-      : all;
-
-    const start = (page - 1) * limit;
     return {
-      results: filtered.slice(start, start + limit),
-      total:   filtered.length,
-      hasMore: filtered.length > start + limit,
-    };
-  }
-
-  async _browseRssFeed(cfg, query, page, limit) {
-    if (!cfg.url) throw new Error('Feed URL not configured');
-    const response = await axios.get(cfg.url, {
-      timeout: 15000, httpsAgent,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*',
-        ...(cfg.headers || {}),
-      },
-    });
-    const all = parseRssItems(response.data, query);
-    const start = (page - 1) * limit;
-    return { results: all.slice(start, start + limit), total: all.length, hasMore: all.length > start + limit };
-  }
-
-  async _browseRestApi(cfg, query, page, limit) {
-    if (!cfg.endpoint) throw new Error('API endpoint not configured');
-
-    const effectiveQuery = query || cfg.defaultQuery || '';
-
-    const params = { ...(cfg.queryParams || {}) };
-    if (cfg.searchParam && effectiveQuery) params[cfg.searchParam] = effectiveQuery;
-
-    // Pagination: support offset-1 (e.g. Invenio jrec), offset-0, or page-number styles
-    if (cfg.pageParam) {
-      if (cfg.pageParamStyle === 'offset-1') {
-        params[cfg.pageParam] = (page - 1) * limit + 1;
-      } else if (cfg.pageParamStyle === 'offset-0') {
-        params[cfg.pageParam] = (page - 1) * limit;
-      } else {
-        params[cfg.pageParam] = page;
-      }
-    }
-    if (cfg.limitParam) params[cfg.limitParam] = limit;
-
-    const headers = { ...(cfg.headers || {}) };
-    if (cfg.auth?.type === 'bearer')
-      headers['Authorization'] = `Bearer ${cfg.auth.token}`;
-    else if (cfg.auth?.type === 'apiKey')
-      headers[cfg.auth.headerName || 'X-API-Key'] = cfg.auth.key;
-
-    const axConf = {
-      method:  cfg.method || 'GET',
-      url:     cfg.endpoint,
-      headers,
-      timeout: 20000,
-      httpsAgent,
-    };
-    if (axConf.method.toUpperCase() === 'GET') axConf.params = params;
-    else axConf.data = params;
-
-    if (cfg.auth?.type === 'basic')
-      axConf.auth = { username: cfg.auth.username, password: cfg.auth.password };
-
-    let response = await axios(axConf);
-    // Invenio async "Accepted" — retry up to 5 times with 1.5s delay
-    let retries = 0;
-    while (response.status === 202 && retries < 5) {
-      await new Promise(res => setTimeout(res, 1500));
-      response = await axios(axConf);
-      retries++;
-    }
-    const data = response.data;
-
-    // Unwrap multilingual field formats: {value:"...",lang:"..."} → string
-    // unwrap: returns any string value; unwrapEn: prefers English language entry
-    const unwrap = (v, depth = 0) => {
-      if (v == null || depth > 4) return '';
-      if (typeof v === 'string') return v;
-      if (typeof v === 'number') return String(v);
-      if (Array.isArray(v)) return v.length > 0 ? unwrap(v[0], depth + 1) : '';
-      if (typeof v === 'object') {
-        for (const k of ['value', '_', 'text', 'content', 'name', 'title']) {
-          if (typeof v[k] === 'string' && v[k].length > 0) return v[k];
-        }
-        for (const k of ['value', '_', 'text', 'content']) {
-          if (v[k] != null) return unwrap(v[k], depth + 1);
-        }
-        const strVal = Object.values(v).find(x => typeof x === 'string' && x.length > 0);
-        if (strVal) return strVal;
-      }
-      return '';
-    };
-
-    const unwrapEn = (v) => {
-      if (!Array.isArray(v)) return unwrap(v);
-      // Prefer English language entry
-      const en = v.find(x => x && typeof x === 'object' &&
-        (x.lang === 'en' || x.lang === 'English' || x.language === 'en' || x.language === 'English'));
-      return unwrap(en || v[0]);
-    };
-
-    const m = cfg.responseMapping || {};
-    let raw;
-    if (!m.items && m.items !== 0) {
-      raw = Array.isArray(data) ? data : [];
-    } else {
-      raw = nested(data, m.items) || (Array.isArray(data) ? data : []);
-    }
-    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-      raw = Object.values(raw);
-    }
-    const total = Number(nested(data, m.total)) || raw.length;
-
-    // Detect if this is a UN Digital Library source (Invenio recjson format)
-    const isDlSource = cfg.endpoint?.includes('digitallibrary.un.org');
-
-    const results = raw.map(item => {
-      const rawRecid = item.recid ? String(item.recid) : '';
-      const rawUrl   = unwrap(nested(item, m.url) || item.url || item.link || rawRecid || '');
-      const finalUrl = m.urlPrefix && rawUrl ? `${m.urlPrefix}${rawUrl}` : rawUrl;
-
-      // Title: for DL sources prefer English; fallback to symbol derived from filename
-      const rawTitleField = nested(item, m.title) || item.title || item.name;
-      const title = (() => {
-        if (rawTitleField) {
-          const t = unwrapEn(rawTitleField);
-          if (t) return t.substring(0, 200);
-        }
-        if (m.titleFallback) {
-          const fb = nested(item, m.titleFallback);
-          if (fb) return unwrap(fb).substring(0, 200);
-        }
-        return '';
-      })();
-
-      // Symbol: normalize from files (prefer English filename) or explicit field
-      const rawSymbol = unwrap(nested(item, m.symbol) || item.symbol || '');
-      let sym = '';
-      if (isDlSource && Array.isArray(item.files) && item.files.length) {
-        // Find English filename for symbol derivation
-        const enFile = item.files.find(f =>
-          (f.full_name || f.name || '').toUpperCase().includes('-EN.')
-        ) || item.files[0];
-        sym = normalizeSymbol(enFile?.full_name || enFile?.name || rawSymbol);
-      } else {
-        sym = normalizeSymbol(rawSymbol);
-      }
-
-      // PDF URL: for DL sources extract from files array
-      const pdfUrl = isDlSource
-        ? findEnglishPdf(item.files, rawRecid || rawUrl)
-        : '';
-
-      // Available languages from DL files
-      const languages = (isDlSource && Array.isArray(item.files))
-        ? [...new Set(item.files.map(f => {
-            const n = f.full_name || f.name || '';
-            const lm = n.match(/-([A-Z]{1,3})\.[a-z]+$/i);
-            return lm ? lm[1].toUpperCase() : null;
-          }).filter(Boolean))]
-        : [];
-
-      // Metadata snapshot (files for DL, raw for others)
-      const metadata = isDlSource && item.files
-        ? { recid: rawRecid, files: item.files.slice(0, 10), languages }
-        : undefined;
-
-      // For DL sources: a "filename-like" title (S_RES_...-AR) is worse than the symbol
-      const looksLikeFilename = title && /^[A-Z][A-Z_\/]+[\d_]/.test(title) && !title.includes(' ');
-      const finalTitle = (looksLikeFilename && sym)
-        ? sym
-        : (title || sym || unwrap(nested(item, m.symbol) || item.symbol || '').substring(0, 200) || 'Untitled');
-
-      return {
-        id:          uuidv4(),
-        title:       finalTitle,
-        url:         finalUrl,
-        pdfUrl:      pdfUrl || undefined,
-        fileType:    pdfUrl ? 'pdf' : unwrap(nested(item, m.fileType) || getExt(rawUrl || '') || 'html'),
-        date:        unwrap(nested(item, m.date) || item.date || item.published_at || item.pubDate || ''),
-        description: unwrap(nested(item, m.description) || item.description || item.summary || '').substring(0, 500),
-        symbol:      sym,
-        languages:   languages.length ? languages : undefined,
-        metadata:    metadata,
-      };
-    });
-
-    return { results, total, hasMore: raw.length < total };
-  }
-
-  async _browseOds(cfg, query, page, limit) {
-    const q = query || cfg.defaultQuery || 'A/RES/';
-    const lang = cfg.language || 'E';
-
-    const searchUrl = `https://documents.un.org/prod/ods.nsf/xpSearchResultsM.xsp?query=${encodeURIComponent(q)}&lang=${lang}&start=${(page - 1) * limit + 1}&limit=${limit}`;
-
-    let html = '';
-    try {
-      const response = await axios.get(searchUrl, {
-        timeout: 20000, httpsAgent,
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml',
-          'Accept-Language': 'en-US,en;q=0.9',
-          'Referer': 'https://documents.un.org/',
-        },
-      });
-      html = response.data;
-    } catch {
-      const dlUrl = `https://digitallibrary.un.org/search?p=${encodeURIComponent(q)}&of=recjson&action_search=Search&rg=${limit}&jrec=${(page - 1) * limit + 1}&ln=${lang.toLowerCase()}`;
-      const dlResp = await axios.get(dlUrl, {
-        timeout: 20000, httpsAgent,
-        headers: { 'User-Agent': 'Mozilla/5.0 UNPA/1.0', 'Accept': 'application/json' },
-      }).catch(err => { throw new Error(`ODS/DL request failed: ${err.message}`); });
-      const data = dlResp.data;
-      const hits = (data?.hits?.hits) || [];
-      const results = hits.map(h => ({
-        title:    String(h?._source?.title?.[0] || h?._source?.title || 'Untitled').substring(0, 200),
-        url:      String(h?._source?.url?.[0]?.value || h?._source?.url || ''),
-        fileType: 'pdf',
-        date:     String(h?._source?.date || ''),
-        description: '',
-        symbol:   String(h?._source?.symbol?.[0] || ''),
-      })).filter(r => r.url);
-      const total = Number(data?.hits?.total) || results.length;
-      return { results: results.slice(0, limit), total, hasMore: results.length >= limit };
-    }
-
-    const links = extractLinksFromHtml(html, searchUrl, { linkFilter: '.pdf' });
-
-    const symbolHrefRe = /href=["']([^"']*\/(?:en|fr|es|ar|ru|zh)\/[A-Z][^"'\s]*\d+[^"'\s]*)["']/gi;
-    const symbolResults = [];
-    let sm;
-    const seenSymbols = new Set(links.map(l => l.url));
-    while ((sm = symbolHrefRe.exec(html)) !== null) {
-      let href = sm[1];
-      if (seenSymbols.has(href)) continue;
-      try { href = new url.URL(href, 'https://documents.un.org').href; } catch { continue; }
-      seenSymbols.add(href);
-      symbolResults.push({ title: path.basename(href), url: href, fileType: 'html', date: null, description: null, symbol: null });
-    }
-
-    const all = [...links, ...symbolResults];
-    return { results: all.slice(0, limit), total: all.length, hasMore: all.length >= limit };
-  }
-
-  async _browseOios(cfg, query, page, limit) {
-    const baseUrl = cfg.url || 'https://oios.un.org/resources/';
-    const searchUrl = query ? `${baseUrl}?s=${encodeURIComponent(query)}` : baseUrl;
-    return this._browseUrlCatalog({ ...cfg, url: searchUrl }, '', page, limit);
-  }
-
-  async _browseOaiPmh(cfg, query, page, limit) {
-    if (!cfg.endpoint) throw new Error('OAI-PMH endpoint not configured');
-    const metadataPrefix = cfg.metadataPrefix || 'oai_dc';
-    const params = { verb: 'ListRecords', metadataPrefix };
-    if (cfg.set) params.set = cfg.set;
-    if (cfg.from) params.from = cfg.from;
-
-    const response = await axios.get(cfg.endpoint, {
-      timeout: 20000, httpsAgent,
-      params,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 UNPA/1.0',
-        'Accept': 'application/xml, text/xml, */*',
-      },
-    });
-
-    const all = parseOaiPmhRecords(response.data, query);
-    const start = (page - 1) * limit;
-    return {
-      results: all.slice(start, start + limit),
-      total: all.length,
-      hasMore: all.length > start + limit,
+      sourceId: id, sourceName: source.name, query, page, limit,
+      filters, sort,
+      capabilities: adapter.getCapabilities(),
+      ...result,
     };
   }
 
   // ─── Source Document Cache ──────────────────────────────────────
 
   /**
-   * Overlay enriched metadata (MARC fields etc.) from cached SourceDocument nodes
-   * onto live browse results.  Non-enriched items are returned unchanged.
+   * Overlay enriched metadata (MARC fields etc.) from cached SourceDocument
+   * nodes onto live browse results. Non-enriched items are returned unchanged.
    */
   async _mergeEnrichedData(sourceId, items) {
     const urls = items.map(r => r.url).filter(Boolean);
@@ -720,6 +294,7 @@ class SourceCatalogService {
         const externalId = doc.url || doc.id;
         if (!externalId) continue;
         const docId = uuidv5(`${sourceId}::${externalId}`, SOURCE_DOC_NS);
+        const sc = _sourceDocSymbolComponents(doc.symbol);
         await mg().runQuery(`
           MERGE (d:SourceDocument {id: $id})
           SET d.sourceId      = $sourceId,
@@ -733,6 +308,15 @@ class SourceCatalogService {
               d.description   = $description,
               d.metadata      = $metadata,
               d.languages     = $languages,
+              d.organCode     = $organCode,
+              d.seriesCode    = $seriesCode,
+              d.subBody       = $subBody,
+              d.sessionNumber = $sessionNumber,
+              d.documentNumber = $documentNumber,
+              d.documentYear  = $documentYear,
+              d.baseSymbol    = $baseSymbol,
+              d.suffixType    = $suffixType,
+              d.suffixNumber  = $suffixNumber,
               d.updatedAt     = $now,
               d.discoveredAt  = coalesce(d.discoveredAt, $now)
           WITH d
@@ -752,6 +336,7 @@ class SourceCatalogService {
           metadata:    JSON.stringify(doc.metadata || {}),
           languages:   JSON.stringify(doc.languages || []),
           now,
+          ...sc,
         });
       } catch { /* non-critical: skip individual failures */ }
     }
@@ -826,8 +411,19 @@ class SourceCatalogService {
   // ─── Import ────────────────────────────────────────────────────
 
   async importDocument(catalogId, { url: docUrl, title, namespace = 'DEFAULT', meta = {}, pdfUrl }) {
-    // Use pdfUrl if provided (HTML record pages with embedded PDF links)
-    const downloadUrl = pdfUrl || meta?.pdfUrl || docUrl;
+    const source = await this.get(catalogId);
+
+    // Ask the source adapter to resolve the best download URL for this item.
+    let resolvedUrl = pdfUrl || meta?.pdfUrl || docUrl;
+    if (source) {
+      try {
+        const adapter = resolveAdapter(source);
+        const dl = await adapter.resolveDownload({ url: docUrl, pdfUrl, metadata: meta });
+        if (dl?.downloadUrl) resolvedUrl = dl.downloadUrl;
+      } catch { /* fall back to the naive resolution above */ }
+    }
+
+    const downloadUrl = resolvedUrl;
     if (!downloadUrl) throw new Error('url is required');
 
     console.log(`${LOG_PREFIX} Importing: ${downloadUrl}`);
@@ -862,6 +458,7 @@ class SourceCatalogService {
       namespace,
       { sourceUrl: docUrl, documentTitle: title || null, ...meta }
     );
+    console.log(`[TEST-LOG][SourceCatalog] Document node created: id=${result?.documentId} file="${filename}" ns=${namespace} size=${buffer.length}B`);
 
     // Mark SourceDocument as imported
     if (docUrl) {
@@ -870,8 +467,26 @@ class SourceCatalogService {
       await mg().runQuery(
         `MATCH (d:SourceDocument {id: $id})
          SET d.importedAt = $now, d.importedDocumentId = $documentId`,
-        { id: docId, now: new Date().toISOString(), documentId: result?.id || '' }
+        { id: docId, now: new Date().toISOString(), documentId: result?.documentId || '' }
       ).catch(() => {});
+    }
+
+    // Drain any pending REFERENCES / SUPERSEDES links that were waiting for this
+    // document to enter the system (deferred-linking loop, see 11-queue-refs.step
+    // and document.adapter _persistTemporalData).
+    if (result?.documentId) {
+      await this._drainPendingLinks(
+        result.documentId,
+        [meta?.unSymbol, meta?.symbol, title, filename],
+        title || meta?.title || ''
+      ).catch(() => {});
+
+      // Copy MARC-derived relations (series / agenda / draft-verbatim) from the
+      // harvester SourceDocument onto the working Document node.
+      if (docUrl) {
+        const sourceDocId = uuidv5(`${catalogId}::${docUrl}`, SOURCE_DOC_NS);
+        await this._copyMarcEdgesToDocument(sourceDocId, result.documentId).catch(() => {});
+      }
     }
 
     // Bump documentCount on source catalog entry
@@ -884,20 +499,247 @@ class SourceCatalogService {
     return result;
   }
 
+  /**
+   * Materialize pending document-to-document links now that `newDocId` exists.
+   * Scans documents carrying pendingReferencesJson / pendingSupersessionJson,
+   * creates the corresponding edge for any entry whose targetRef points at the
+   * new document, and rewrites the pending list without the drained entries.
+   *
+   * @param {string}   newDocId          - the freshly-imported Document.id
+   * @param {string[]} symbolCandidates  - possible symbols for the new doc
+   * @param {string}   title             - new doc title (for contains-match)
+   */
+  async _drainPendingLinks(newDocId, symbolCandidates = [], title = '') {
+    try {
+      if (!newDocId) return { references: 0, supersessions: 0 };
+      const now = new Date().toISOString();
+
+      // Normalized symbol forms for matching (parser-normalized + raw candidates).
+      const raws = symbolCandidates.filter(Boolean).map(s => String(s).trim());
+      let normSym = '';
+      for (const c of raws) {
+        const p = parseUNSymbol(c);
+        if (p && p.organ) { normSym = p.normalized; break; }
+      }
+      if (!normSym && !raws.length && !title) return { references: 0, supersessions: 0 };
+
+      const titleLower = (title || '').toLowerCase();
+      const symForms = [...new Set([normSym, ...raws].filter(Boolean).map(s => s.toLowerCase()))];
+
+      // A pending targetRef points at the new doc if it equals one of the symbol
+      // forms, or a symbol form contains it (short refs), or the title contains it.
+      const matches = (ref) => {
+        if (!ref) return false;
+        const r = String(ref).trim().toLowerCase();
+        if (!r) return false;
+        if (symForms.includes(r)) return true;
+        if (r.length >= 5 && symForms.some(s => s.includes(r))) return true;
+        if (r.length >= 8 && titleLower && titleLower.includes(r)) return true;
+        return false;
+      };
+
+      const drainList = async (prop, applyEdge) => {
+        let count = 0;
+        const rows = await mg().runQuery(
+          `MATCH (d:Document)
+           WHERE d.${prop} IS NOT NULL AND d.id <> $newId
+           RETURN d.id AS id, d.${prop} AS json`,
+          { newId: newDocId }
+        ).catch(() => []);
+        for (const row of rows) {
+          let list;
+          try { list = JSON.parse(row.json || '[]'); } catch { continue; }
+          if (!Array.isArray(list) || list.length === 0) continue;
+          const remaining = [];
+          for (const entry of list) {
+            if (!matches(entry.targetRef)) { remaining.push(entry); continue; }
+            try {
+              await applyEdge(row.id, entry, now);
+              count++;
+            } catch { remaining.push(entry); }
+          }
+          if (remaining.length !== list.length) {
+            await mg().runQuery(
+              `MATCH (d:Document {id: $id}) SET d.${prop} = $json`,
+              { id: row.id, json: remaining.length ? JSON.stringify(remaining) : null }
+            ).catch(() => {});
+          }
+        }
+        return count;
+      };
+
+      const references = await drainList('pendingReferencesJson', async (srcId, entry, ts) => {
+        await mg().runQuery(
+          `MATCH (src:Document {id: $srcId}), (tgt:Document {id: $tgtId})
+           MERGE (src)-[r:REFERENCES {relType: $relType}]->(tgt)
+           SET r.confidence = $conf, r.evidence = $evidence, r.refSymbol = $ref,
+               r.extractedAt = $ts, r.drained = true`,
+          {
+            srcId, tgtId: newDocId,
+            relType: entry.relType || 'CITES',
+            conf: entry.confidence != null ? entry.confidence : 0.8,
+            evidence: (entry.evidence || '').slice(0, 400),
+            ref: entry.targetRef, ts,
+          }
+        );
+      });
+
+      const supersessions = await drainList('pendingSupersessionJson', async (srcId, entry, ts) => {
+        const relType = entry.relType || 'SUPERSEDES';
+        await mg().runQuery(
+          `MATCH (src:Document {id: $srcId}), (tgt:Document {id: $tgtId})
+           MERGE (src)-[r:SUPERSEDES {relType: $relType}]->(tgt)
+           SET r.scope = $scope, r.confidence = $conf, r.evidence = $evidence,
+               r.extractedAt = $ts, r.drained = true`,
+          {
+            srcId, tgtId: newDocId, relType,
+            scope: entry.scope || 'full',
+            conf: entry.confidence != null ? entry.confidence : 0.7,
+            evidence: (entry.evidence || '').slice(0, 400), ts,
+          }
+        );
+        await mg().runQuery(
+          `MATCH (t:Document {id: $tgtId})
+           SET t.isSuperseded = true, t.supersededBy = $srcId, t.supersededAt = $ts`,
+          { tgtId: newDocId, srcId, ts }
+        ).catch(() => {});
+      });
+
+      // ── Symbol-derived relations (HAS_ADDENDUM/CORRECTS/REVISES/AMENDS) ──
+      // These were parked on a suffix document whose base (= new doc) was missing.
+      const ALLOWED_SYMBOL_REL = new Set(['HAS_ADDENDUM', 'CORRECTS', 'REVISES', 'AMENDS', 'REISSUES']);
+      const symbolRelations = await drainList('pendingSymbolRelationsJson', async (holderId, entry, ts) => {
+        const relType = entry.relType;
+        if (!ALLOWED_SYMBOL_REL.has(relType)) throw new Error(`disallowed relType ${relType}`);
+        // holderId is the suffix document; newDocId is its base.
+        const srcId = entry.thisIsSource ? holderId : newDocId;
+        const tgtId = entry.thisIsSource ? newDocId : holderId;
+        await mg().runQuery(
+          `MATCH (src:Document {id: $srcId}), (tgt:Document {id: $tgtId})
+           MERGE (src)-[r:${relType} {source: 'SYMBOL_DERIVED'}]->(tgt)
+           SET r.relType = $relType, r.confidence = 1.0,
+               r.suffixType = $suffixType, r.suffixNumber = $suffixNumber,
+               r.createdAt = $ts, r.drained = true`,
+          {
+            srcId, tgtId, relType,
+            suffixType: entry.suffixType || null,
+            suffixNumber: entry.suffixNumber != null ? entry.suffixNumber : null,
+            ts,
+          }
+        );
+      });
+
+      if (references || supersessions || symbolRelations) {
+        console.log(`${LOG_PREFIX} Drained pending links for ${newDocId}: ${references} REFERENCES, ${supersessions} SUPERSEDES, ${symbolRelations} SYMBOL`);
+      }
+      return { references, supersessions, symbolRelations };
+    } catch (e) {
+      console.warn(`${LOG_PREFIX} drainPendingLinks error: ${e.message}`);
+      return { references: 0, supersessions: 0 };
+    }
+  }
+
+  /**
+   * Copy MARC-derived relations from a harvester SourceDocument to its imported
+   * Document, so the working Document graph carries series / agenda membership
+   * and draft/verbatim/related links. Series and AgendaItem targets are shared
+   * nodes (re-pointed from the Document); 993 doc-to-doc links are re-created
+   * between Documents only when the other endpoint has also been imported.
+   * Idempotent (MERGE); non-fatal.
+   */
+  async _copyMarcEdgesToDocument(sourceDocId, documentId) {
+    try {
+      const now = new Date().toISOString();
+
+      // Shared-target relations: PART_OF_SERIES (989), CONSIDERED_UNDER (991).
+      const shared = [
+        { rel: 'PART_OF_SERIES',   tgt: 'DocumentSeries', source: 'MARC_989' },
+        { rel: 'CONSIDERED_UNDER', tgt: 'AgendaItem',     source: 'MARC_991' },
+      ];
+      for (const s of shared) {
+        await mg().runQuery(
+          `MATCH (sd:SourceDocument {id: $sid})-[:${s.rel}]->(tgt:${s.tgt})
+           MATCH (d:Document {id: $did})
+           MERGE (d)-[r2:${s.rel} {source: $source}]->(tgt)
+           SET r2.copiedFrom = $sid, r2.createdAt = $now`,
+          { sid: sourceDocId, did: documentId, source: s.source, now }
+        ).catch(() => {});
+      }
+
+      // 993 doc-to-doc relations: resolve the other SourceDocument to its
+      // imported Document (via importedDocumentId) and mirror the edge direction.
+      for (const rel of ['DRAFT_OF', 'HAS_VERBATIM', 'RELATED_TO']) {
+        // outgoing  (sd)-[rel]->(other)
+        await mg().runQuery(
+          `MATCH (sd:SourceDocument {id: $sid})-[r:${rel}]->(o:SourceDocument)
+           WHERE o.importedDocumentId IS NOT NULL AND o.importedDocumentId <> ''
+           MATCH (d:Document {id: $did}), (od:Document {id: o.importedDocumentId})
+           MERGE (d)-[r2:${rel} {source: 'MARC_993'}]->(od)
+           SET r2.copiedFrom = $sid, r2.marcType = r.marcType, r2.createdAt = $now`,
+          { sid: sourceDocId, did: documentId, now }
+        ).catch(() => {});
+        // incoming  (other)-[rel]->(sd)
+        await mg().runQuery(
+          `MATCH (o:SourceDocument)-[r:${rel}]->(sd:SourceDocument {id: $sid})
+           WHERE o.importedDocumentId IS NOT NULL AND o.importedDocumentId <> ''
+           MATCH (d:Document {id: $did}), (od:Document {id: o.importedDocumentId})
+           MERGE (od)-[r2:${rel} {source: 'MARC_993'}]->(d)
+           SET r2.copiedFrom = $sid, r2.marcType = r.marcType, r2.createdAt = $now`,
+          { sid: sourceDocId, did: documentId, now }
+        ).catch(() => {});
+      }
+    } catch (e) {
+      console.warn(`${LOG_PREFIX} copyMarcEdgesToDocument error: ${e.message}`);
+    }
+  }
+
   // ─── Format ────────────────────────────────────────────────────
 
+  _returnFields() {
+    return `s.id as id, s.name as name, s.description as description,
+            s.type as type, s.namespace as namespace,
+            s.config as config, s.tags as tags,
+            s.methodology as methodology, s.capabilities as capabilities,
+            s.enabled as enabled, s.documentCount as documentCount,
+            s.isDefault as isDefault,
+            s.indexStatus as indexStatus, s.indexCursor as indexCursor,
+            s.indexTotal as indexTotal, s.indexTotalMethod as indexTotalMethod,
+            s.indexTotalAt as indexTotalAt, s.lastIndexedAt as lastIndexedAt,
+            s.createdAt as createdAt, s.updatedAt as updatedAt,
+            s.lastBrowsedAt as lastBrowsedAt`;
+  }
+
   _format(r) {
+    const config = parseConfig(r.config);
+    let capabilities = null;
+    try { capabilities = r.capabilities ? JSON.parse(r.capabilities) : null; } catch { capabilities = null; }
     return {
       id:            r.id,
       name:          r.name,
       description:   r.description || '',
       type:          r.type,
       namespace:     r.namespace,
-      config:        parseConfig(r.config),
+      config:        config,
       tags:          (() => { try { return JSON.parse(r.tags || '[]'); } catch { return []; } })(),
       methodology:   r.methodology || '',
+      capabilities:  capabilities && typeof capabilities === 'object' ? {
+        capabilities: normalizeCapabilities(capabilities.capabilities),
+        filterSchema: normalizeFilterSchema(capabilities.filterSchema),
+        downloadMode: capabilities.downloadMode || null,
+        enrichMode:   capabilities.enrichMode || null,
+        family:       capabilities.family || null,
+        notes:        capabilities.notes || '',
+      } : null,
+      adapterKey:    config.adapterKey || null,
       enabled:       r.enabled !== false,
+      isDefault:     r.isDefault === true,
       documentCount: Number(r.documentCount) || 0,
+      indexStatus:   r.indexStatus || 'pending',
+      indexCursor:   Number(r.indexCursor) || 0,
+      indexTotal:    r.indexTotal != null ? Number(r.indexTotal) : null,
+      indexTotalMethod: r.indexTotalMethod || null,
+      indexTotalAt:  r.indexTotalAt || null,
+      lastIndexedAt: r.lastIndexedAt || null,
       createdAt:     r.createdAt,
       updatedAt:     r.updatedAt,
       lastBrowsedAt: r.lastBrowsedAt || null,

@@ -1,0 +1,47 @@
+{
+  "key": "undl",
+  "name": "UN Digital Library",
+  "family": "invenio",
+  "capabilities": ["search", "browseAll", "paginate", "filter", "sort", "download", "enrich"],
+  "filterSchema": [
+    { "type": "language", "param": "ln", "label": "Interface language", "options": ["en", "fr", "es", "ar", "ru", "zh"], "notes": "ln sets the UI language; language of full text is filtered by fulltext filename suffix (-EN.pdf etc.), not by a query param." },
+    { "type": "dateFrom", "param": "p", "label": "Year", "syntax": "year:2020", "notes": "Range: year:2019->2021 (Invenio span syntax)." },
+    { "type": "symbol", "param": "p", "label": "Document symbol", "syntax": "191__a:\"S/RES/2321 (2016)\"" },
+    { "type": "subject", "param": "p", "label": "UNBIS subject term", "syntax": "650__a:\"PEACEBUILDING\"" },
+    { "type": "author", "param": "p", "label": "Authoring body", "syntax": "710__a:\"UN. Secretary-General\"" },
+    { "type": "collection", "param": "c", "label": "Collection code", "notes": "Invenio collection selector; value list not verifiable through the WAF. Left unconstrained for the general UNDL source." },
+    { "type": "sort", "param": "sf", "label": "Sort field", "notes": "sf=year with so=d for descending; documented Invenio params, not live-verifiable (search endpoint WAF-gated)." }
+  ],
+  "config": {
+    "endpoint": "https://digitallibrary.un.org/search",
+    "searchParam": "p",
+    "defaultQuery": "resolution",
+    "queryParams": { "of": "recjson", "ln": "en" },
+    "pageParam": "jrec",
+    "limitParam": "rg",
+    "pageParamStyle": "offset-1",
+    "sortParams": { "field": "sf", "order": "so", "orderDesc": "d", "orderAsc": "a" },
+    "responseMapping": {
+      "recordArray": "$ (top-level JSON array)",
+      "recid": "recid",
+      "title": "title.title",
+      "symbol": "primary_report_number OR system_control_number",
+      "files": "files[] { name, url, size, type }",
+      "note": "recjson field names per Invenio 1.x; endpoint is WAF-challenged in server-to-server calls so mapping is documented, not byte-verified. MARCXML export is the reliable metadata channel — see enrich."
+    }
+  },
+  "download": {
+    "mode": "record-files",
+    "urlPattern": "https://digitallibrary.un.org/record/{recid}/files/{filename}",
+    "preferLangSuffix": "-EN.",
+    "notes": "Filenames come from MARC 856$u. Non-ASCII / parenthesised symbols are URL-encoded (space->_, ( -> %28, ) -> %29), e.g. S_RES_2321_%282016%29-EN.pdf. Request returns 302 to /nanna/record/{recid}/files/{filename}?withWatermark=0&registerDownload=1 which serves Content-Type: application/pdf. Language variants: -EN -FR -ES -AR -RU -ZH (and sometimes -DE). Verified 200/application/pdf on record 850022."
+  },
+  "enrich": {
+    "mode": "marcxml",
+    "endpoint": "https://digitallibrary.un.org/record/{recid}/export/xm?",
+    "notes": "Returns MARC21 slim XML (Content-Type text/xml, HTTP 200), WAF-safe with a browser User-Agent. Confirmed fields: 191 (a=symbol, b=series, c=session, q=normalized), 245 (title), 260/269 (date), 650 (UNBIS subjects, $2 unbist), 610/710/981 (bodies), 856 (file URLs per language), 989 (collection hierarchy), 991 (related docs), 996 (voting note, on resolution records). Trailing '?' is required to reach the export handler cleanly."
+  },
+  "methodologyMarkdown": "## Overview\nThe UN Digital Library (UNDL) is the UN Secretariat's Invenio-based catalogue of documents, voting records, speeches and publications from 1946 onward. This general source covers the whole collection; sibling ODS sources scope it to specific organ symbol prefixes.\n\n## Search\nSearch is the Invenio endpoint `https://digitallibrary.un.org/search` with the free-text/field query in `p` and `of=recjson` for JSON output. Invenio field syntax applies: `191__a:\"S/RES/2321 (2016)\"` for document symbol, `650__a:\"PEACEBUILDING\"` for subjects, `710__a:\"UN. Secretary-General\"` for body, `year:2020` (or `year:2019->2021`) for date. Boolean `AND`/`OR`/`NOT` and phrase quoting are supported.\n\n## Filters\nCollection is selected with `c=`; interface language with `ln=`; sort with `sf` (field) + `so` (a/d). Full-text language is not a query filter — it is chosen at download time via the filename suffix.\n\n## Pagination\nOffset-1 style: `jrec` is the 1-based index of the first record (1, then rg+1, ...) and `rg` is the page size. So page N of size R uses `jrec=(N-1)*R+1&rg=R`.\n\n## Download\nPDFs live at `/record/{recid}/files/{filename}`; prefer the `-EN.pdf` variant. The URL 302-redirects to a `/nanna/...` signed URL that returns `application/pdf`.\n\n## Metadata & Enrichment\nPer-record full metadata is the MARC21 XML export at `/record/{recid}/export/xm?` — the reliable, WAF-safe channel. It carries symbol (191), title (245), subjects (650), bodies (610/710/981), files (856), collection (989) and voting (996).\n\n## Limitations\nThe `/search` endpoint is behind an AWS WAF that answers server-to-server requests with HTTP 202 `x-amzn-waf-action: challenge`; a JS/browser challenge must be solved to retrieve result lists. The record `export/xm` and `files` paths are not challenged. OAI-PMH is present but exposes only a `sanctions` set, so it is not a general harvest path.",
+  "verified": true,
+  "probeNotes": "Live-probed 2026-07-03. GET /search?p=resolution&of=recjson (also of=xm) -> HTTP 202, header x-amzn-waf-action: challenge, 0-byte body (AWS WAF challenge; recjson not directly harvestable). GET /record/855111/export/xm? -> 200 text/xml, full MARC21 (record was A/71/630, SG report). GET /record/850022/export/xm? -> 200, 12KB MARC for S/RES/2321(2016): 191__a=\"S/RES/2321 (2016)\", 245 title, seven 856 file URLs (AR/ZH/EN/FR/RU/ES/DE), 996__a=\"Adopted unanimously, 7821st meeting\". HEAD /record/850022/files/S_RES_2321_%282016%29-EN.pdf -> 302 to /nanna/... -> 200 application/pdf 387677 bytes. OAI Identify 200; ListSets exposes only setSpec 'sanctions'. Search param semantics (jrec/rg/sf/so/c) are standard Invenio 1.x, documented but not byte-verified due to the WAF."
+}

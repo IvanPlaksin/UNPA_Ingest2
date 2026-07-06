@@ -12,7 +12,7 @@
  */
 
 const DOCS_COLLECTION = 'documents_entities';
-const VECTOR_SIZE = 384; // MiniLM-L6-v2 default; TEI returns whatever the model produces
+const VECTOR_SIZE = 1024; // bge-large or similar; matches actual TEI model output
 
 let _qdrant = null;
 let _tei = null;
@@ -125,14 +125,6 @@ async function embedAndIndex(ctx) {
     return 0;
   }
 
-  // Check TEI availability
-  try {
-    await tei();
-  } catch {
-    addLog(ctx, 'embed-and-index', 'TEI service not available — skipping vector indexing', 'warn');
-    return 0;
-  }
-
   // Collect (nodeId, nodeLabel, entity) tuples from persistedIds
   const nodeTuples = [];
   for (const [, info] of ctx.persistedIds) {
@@ -142,22 +134,31 @@ async function embedAndIndex(ctx) {
   // Build embedding texts
   const texts = nodeTuples.map(t => buildEmbedText(t.entity || t, t.nodeLabel));
 
+  ctx.stats.vectorsAttempted = texts.length;
   addLog(ctx, 'embed-and-index', `Embedding ${texts.length} nodes...`);
 
   let embeddings;
   try {
     embeddings = await tei().getEmbeddings(texts);
   } catch (err) {
-    addLog(ctx, 'embed-and-index', `TEI getEmbeddings failed: ${err.message}`, 'error');
-    return 0;
+    ctx.stats.vectorsFailed = texts.length;
+    throw new Error(`TEI embedding failed: ${err.message}`);
   }
 
   if (!embeddings || embeddings.length !== texts.length) {
-    addLog(ctx, 'embed-and-index', 'Embedding count mismatch — skipping', 'warn');
-    return 0;
+    throw new Error(`TEI embedding count mismatch: got ${embeddings?.length} for ${texts.length} nodes`);
   }
 
-  // Build Qdrant points
+  // Detect null vectors (TEI timeout/error per batch)
+  const nullIndices = embeddings.map((e, i) => e === null ? i : -1).filter(i => i >= 0);
+  if (nullIndices.length > 0) {
+    throw new Error(
+      `TEI returned ${nullIndices.length}/${texts.length} null vectors — likely timeout. ` +
+      `Increase TEI_TIMEOUT_MS (currently ${process.env.TEI_TIMEOUT_MS || 30000}ms).`
+    );
+  }
+
+  // Build Qdrant points (all vectors guaranteed non-null at this point)
   const points = nodeTuples.map((t, i) => ({
     id: t.nodeId,  // deterministic: same as Memgraph node ID (UUID)
     vector: embeddings[i],
@@ -176,9 +177,10 @@ async function embedAndIndex(ctx) {
       });
     }
     addLog(ctx, 'embed-and-index', `Upserted ${points.length} vectors to Qdrant`);
+    ctx.stats.vectorsFailed = ctx.stats.vectorsAttempted - points.length;
   } catch (err) {
-    addLog(ctx, 'embed-and-index', `Qdrant upsert failed: ${err.message}`, 'error');
-    return 0;
+    ctx.stats.vectorsFailed = ctx.stats.vectorsAttempted;
+    throw new Error(`Qdrant upsert failed: ${err.message}`);
   }
 
   // Patch Memgraph nodes with vectorId
@@ -235,7 +237,7 @@ function buildPayload(t, ctx) {
     confidence:        entity.confidence != null ? (typeof entity.confidence === 'number' ? entity.confidence : (entity.confidence?.low ?? null)) : null,
 
     // Embedding metadata
-    embeddingModel:    'MiniLM-L6-v2',
+    embeddingModel:    'intfloat/multilingual-e5-large',
     indexedAt:         new Date().toISOString(),
   };
 }

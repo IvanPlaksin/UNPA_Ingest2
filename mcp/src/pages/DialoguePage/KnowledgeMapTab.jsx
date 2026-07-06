@@ -1,4 +1,4 @@
-/**
+﻿/**
  * KnowledgeMapTab — 3D Vector Knowledge Field for DevDialogue Collector.
  *
  * Renders the semantic knowledge map of entities extracted from chat sessions.
@@ -134,7 +134,7 @@ function EntityDetailPanel({ entity, onClose }) {
             <Chip
               label={entity.type}
               size="small"
-              sx={{ mt: 0.5, height: 18, fontSize: 10, bgcolor: typeColor + '22', color: typeColor }}
+              sx={{ mt: 0.5, height: 18, fontSize: 13, bgcolor: typeColor + '22', color: typeColor }}
             />
           </Box>
           <IconButton size="small" onClick={onClose} sx={{ color: 'text.secondary', mt: -0.5 }}>
@@ -144,14 +144,14 @@ function EntityDetailPanel({ entity, onClose }) {
 
         <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
           <Chip label={`× ${entity.frequency ?? 1} sessions`} size="small" variant="outlined"
-            sx={{ height: 20, fontSize: 10, color: 'text.secondary' }} />
+            sx={{ height: 20, fontSize: 13, color: 'text.secondary' }} />
           {entity.cluster != null && entity.cluster >= 0 && (
             <Chip label={`Cluster ${entity.cluster}`} size="small" variant="outlined"
-              sx={{ height: 20, fontSize: 10, color: 'text.secondary' }} />
+              sx={{ height: 20, fontSize: 13, color: 'text.secondary' }} />
           )}
           {entity.confidence && (
             <Chip label={`${Math.round(entity.confidence * 100)}% conf`} size="small" variant="outlined"
-              sx={{ height: 20, fontSize: 10, color: 'text.secondary' }} />
+              sx={{ height: 20, fontSize: 13, color: 'text.secondary' }} />
           )}
         </Stack>
       </Box>
@@ -160,7 +160,7 @@ function EntityDetailPanel({ entity, onClose }) {
       {entity.contextSummary && (
         <Box sx={{ px: 2, pt: 1.5 }}>
           <Typography variant="caption" color="text.disabled" fontWeight={600}>CONTEXT</Typography>
-          <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary', fontSize: 12, lineHeight: 1.5 }}>
+          <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary', fontSize: 13, lineHeight: 1.5 }}>
             {entity.contextSummary}
           </Typography>
         </Box>
@@ -181,7 +181,7 @@ function EntityDetailPanel({ entity, onClose }) {
                 primary={s.title || s.sessionId.slice(0, 16) + '…'}
                 secondary={s.branch || ''}
                 primaryTypographyProps={{ variant: 'caption', sx: { color: 'text.primary', lineHeight: 1.3 } }}
-                secondaryTypographyProps={{ variant: 'caption', sx: { color: 'text.disabled', fontSize: 10 } }}
+                secondaryTypographyProps={{ variant: 'caption', sx: { color: 'text.disabled', fontSize: 13 } }}
               />
               <Tooltip title="Open in Claude Code">
                 <IconButton size="small" onClick={() => { window.location.href = `vscode://devdialogue.connector/open/${s.sessionId}`; }}>
@@ -199,12 +199,12 @@ function EntityDetailPanel({ entity, onClose }) {
       {/* Footer — copy entity id */}
       <Box sx={{ px: 2, py: 1, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
         <Stack direction="row" alignItems="center" spacing={0.5}>
-          <Typography variant="caption" color="text.disabled" sx={{ fontFamily: 'monospace', fontSize: 10, flex: 1 }}>
+          <Typography variant="caption" color="text.disabled" sx={{ fontFamily: 'monospace', fontSize: 13, flex: 1 }}>
             {(entity.entityId || entity.id || '').slice(0, 18)}…
           </Typography>
           <Tooltip title={copied ? 'Copied!' : 'Copy entity ID'}>
             <IconButton size="small" onClick={() => copy(entity.entityId || entity.id)}>
-              {copied ? <Check sx={{ fontSize: 12, color: 'success.main' }} /> : <ContentCopy sx={{ fontSize: 12, color: 'text.disabled' }} />}
+              {copied ? <Check sx={{ fontSize: 13, color: 'success.main' }} /> : <ContentCopy sx={{ fontSize: 13, color: 'text.disabled' }} />}
             </IconButton>
           </Tooltip>
         </Stack>
@@ -418,7 +418,7 @@ export default function KnowledgeMapTab() {
             <ToggleButton key={type} value={type} sx={{
               px: 1.5, py: 0.5, border: 'none', textTransform: 'none',
               color: selectedTypes.includes(type) ? TYPE_COLOR[type] : 'text.disabled',
-              fontSize: 11,
+              fontSize: 13,
               '&.Mui-selected': { bgcolor: 'transparent', color: TYPE_COLOR[type] },
             }}>
               {type}
@@ -571,7 +571,7 @@ export default function KnowledgeMapTab() {
           {ALL_TYPES.map(type => (
             <Stack key={type} direction="row" alignItems="center" spacing={0.75}>
               <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: TYPE_COLOR[type] }} />
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontSize: 10 }}>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>
                 {type} {stats?.byType?.[type] ? `(${stats.byType[type]})` : ''}
               </Typography>
             </Stack>

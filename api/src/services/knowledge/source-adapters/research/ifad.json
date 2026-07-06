@@ -1,0 +1,24 @@
+{
+  "key": "ifad",
+  "name": "IFAD Documents",
+  "family": "url-catalog",
+  "capabilities": ["browseAll"],
+  "filterSchema": [],
+  "config": {
+    "url": "https://www.ifad.org/en/knowledge",
+    "searchUrlTemplate": "https://www.ifad.org/en/search?q={query}",
+    "linkFilter": ".pdf",
+    "includeAllLinks": false
+  },
+  "download": {
+    "mode": "direct-pdf",
+    "notes": "IFAD publication and corporate/member PDFs are hosted on www.ifad.org and webapps.ifad.org (e.g. https://webapps.ifad.org/members/.../docs/{DOC}.pdf). When a PDF URL is known it can be downloaded directly, but the knowledge/search pages themselves are protected."
+  },
+  "enrich": {
+    "mode": "none",
+    "notes": "No record/item API discovered; metadata limited to link text and filename."
+  },
+  "methodologyMarkdown": "## Overview\nIFAD (International Fund for Agricultural Development) publishes knowledge products, corporate documents and governing-body papers. The knowledge hub is https://www.ifad.org/en/knowledge and a keyword search exists at https://www.ifad.org/en/search?q={query}.\n\n## Search\nA search URL template exists (/en/search?q={query}) but could NOT be verified as scrapable: direct HTTP GETs to www.ifad.org returned HTTP 403 Forbidden, indicating a WAF / bot-protection layer (likely Cloudflare or Akamai) that blocks non-browser clients. Whether the results list is server-rendered or JS-populated could not be confirmed on a plain GET.\n\n## Filters\nNone verified due to the 403 block on the search interface.\n\n## Download\nIndividual PDF documents (found via web search) live under www.ifad.org and webapps.ifad.org, e.g. https://webapps.ifad.org/members/repl/13/3/docs/IFAD13-3-R-3.pdf. Direct PDF download works when a specific URL is already known; some member documents route through a login (IFAD Central Login).\n\n## Metadata & Enrichment\nNo REST/JSON API surfaced. Enrichment mode is none; metadata would come from link text and filenames.\n\n## Limitations\nHONEST ASSESSMENT: the main site is behind bot protection and returns 403 to plain GETs, so this adapter is effectively a near-stub. A headless browser (with realistic headers/JS execution) is required to exercise the search page and harvest listing links. Only browseAll is claimed; search/paginate are NOT verified.",
+  "verified": true,
+  "probeNotes": "WebFetch of https://www.ifad.org/en/knowledge returned HTTP 403 Forbidden (WAF/bot protection). WebSearch confirmed the existence of the /en/search?q= interface and real PDF documents on www.ifad.org and webapps.ifad.org, but the catalog HTML itself could not be retrieved without a browser. Characterized honestly as near-stub requiring headless browsing."
+}

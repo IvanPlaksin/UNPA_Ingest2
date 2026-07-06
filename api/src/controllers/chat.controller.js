@@ -66,7 +66,7 @@ ALWAYS cite sources using [1], [2] if you use the tool results.`;
         ];
 
         // 2. Initial LLM Call (Check for Tools)
-        const firstResponse = await getLLMProvider().chat(currentMessages, { tools: AVAILABLE_TOOLS });
+        const firstResponse = await getLLMProvider().chat(currentMessages, { tools: AVAILABLE_TOOLS, caller: 'controllers' });
 
         // 3. Handle Tool Calls (Anthropic format: content blocks with type=tool_use)
         const toolUseBlocks = Array.isArray(firstResponse.content)
@@ -125,7 +125,7 @@ ALWAYS cite sources using [1], [2] if you use the tool results.`;
         }
 
         // 4. Final Streaming Response (Answer based on Tool Result)
-        const streamObj = getLLMProvider().stream(currentMessages);
+        const streamObj = getLLMProvider().stream(currentMessages, { caller: 'controllers' });
         for await (const event of streamObj) {
             if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
                 res.write(`data: ${JSON.stringify({ type: 'token', content: event.delta.text })}\n\n`);

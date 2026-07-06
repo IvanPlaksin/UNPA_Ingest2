@@ -1,0 +1,24 @@
+{
+  "key": "itlos",
+  "name": "ITLOS Cases",
+  "family": "url-catalog",
+  "capabilities": ["browseAll", "download"],
+  "filterSchema": [],
+  "config": {
+    "url": "https://www.itlos.org/en/main/cases/list-of-cases/",
+    "searchUrlTemplate": "",
+    "linkFilter": "",
+    "includeAllLinks": true
+  },
+  "download": {
+    "mode": "record-page",
+    "notes": "The list-of-cases page is server-rendered and links to per-case pages under /en/main/cases/list-of-cases/{case-slug}/ (and /case-no-{N}/). Judgment/order/advisory-opinion PDFs are NOT on the list page itself; they must be harvested from each individual case page. Two-hop: list -> case page -> PDF."
+  },
+  "enrich": {
+    "mode": "none",
+    "notes": "Case metadata (case number, parties, title) comes from list link text and the case slug; no record API."
+  },
+  "methodologyMarkdown": "## Overview\nThe International Tribunal for the Law of the Sea publishes its judgments, advisory opinions and orders. The case index at https://www.itlos.org/en/main/cases/list-of-cases/ is server-rendered HTML (traditional hierarchical URLs, not hash routes) and lists all ~36 cases.\n\n## Search\nNo search API or verified search-URL template. Discovery is by browsing the list of cases.\n\n## Filters\nNone exposed as URL parameters. The case number is embedded in slugs like /case-no-25/.\n\n## Download\nThe list page links to per-case pages using the pattern /en/main/cases/list-of-cases/{case-slug}/ (e.g. .../case-no-1/ for the M/V SAIGA case). The actual judgment/order PDFs are published on each individual case page under the 'Reports of Judgments, Advisory Opinions and Orders', so download is a record-page (two-hop) flow: list -> case page -> PDF link. includeAllLinks is used to reach the case pages, then PDFs are extracted per case.\n\n## Metadata & Enrichment\nNo item/DSpace API. Metadata (case number, parties) parsed from link text and slug. Enrichment mode is none.\n\n## Limitations\nServer-rendered, no headless browser required. But PDFs are not on the index; a crawler must visit each case page to obtain document links, so harvesting is two-hop.",
+  "verified": true,
+  "probeNotes": "WebFetch of https://www.itlos.org/en/main/cases/list-of-cases/ confirmed server-rendered HTML listing 36 cases with real links following /en/main/cases/list-of-cases/{slug}/ and /case-no-{N}/. Judgment PDFs are not on the list page (must be fetched per case). No API mentioned."
+}

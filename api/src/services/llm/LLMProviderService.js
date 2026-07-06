@@ -11,6 +11,8 @@
  *   stream(messages, options) → AsyncIterable<event>
  */
 
+const { isAllowed } = require('../llm-access-control.service');
+
 const ANTHROPIC_MODELS = {
   sonnet: process.env.ANTHROPIC_MODEL_SONNET || 'claude-sonnet-4-20250514',
   opus:   process.env.ANTHROPIC_MODEL_OPUS   || 'claude-opus-4-5',
@@ -238,8 +240,30 @@ class LLMProviderService {
   get type() { return this.provider.type; }
   get models() { return this.provider.models; }
 
-  chat(messages, options = {}) { return this.provider.chat(messages, options); }
-  stream(messages, options = {}) { return this.provider.stream(messages, options); }
+  _checkAccess(options) {
+    const providerType = this.provider.type;
+    if (!isAllowed(`provider:${providerType}`)) {
+      throw new Error(`[LLMAccessControl] Provider "${providerType}" is globally disabled`);
+    }
+    const caller = options && options.caller;
+    if (caller) {
+      const svcKey = `svc:${caller}:${providerType}`;
+      if (!isAllowed(svcKey)) {
+        throw new Error(`[LLMAccessControl] Service "${caller}" is blocked from using "${providerType}"`);
+      }
+    }
+  }
+
+  chat(messages, options = {}) {
+    this._checkAccess(options);
+    return this.provider.chat(messages, options);
+  }
+
+  stream(messages, options = {}) {
+    this._checkAccess(options);
+    return this.provider.stream(messages, options);
+  }
+
   resolveModel(alias) { return this.provider.resolveModel(alias); }
 }
 

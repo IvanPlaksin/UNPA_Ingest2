@@ -1,0 +1,45 @@
+{
+  "key": "wfp",
+  "name": "WFP Publications",
+  "family": "url-catalog",
+  "capabilities": ["linkHarvest"],
+  "filterSchema": [],
+  "config": {
+    "url": "https://www.wfp.org/publications",
+    "searchUrlTemplate": "https://www.wfp.org/publications?search={query}",
+    "linkFilter": "/publications/",
+    "includeAllLinks": false,
+    "_intendedApi": {
+      "family": "rest-api",
+      "endpoint": "https://docs.wfp.org/api/documents/",
+      "method": "GET",
+      "searchParam": "title_q",
+      "queryParams": { "order": "" },
+      "pageParam": "page",
+      "limitParam": "per_page",
+      "pageParamStyle": "one-based",
+      "responseMapping": {
+        "items": "documents",
+        "title": "title",
+        "url": "url",
+        "date": "publication_date",
+        "total": "total_count",
+        "id": "wbs_code"
+      },
+      "_note": "docs.wfp.org/api/documents/ exists and matches the expected schema (documents[], total_count, fields title/url/publication_date/wbs_code) BUT now requires authentication. Anonymous GET returns HTTP 401 {\"detail\":\"Authentication credentials were not provided.\"}. Promote to family 'rest-api' with these params once an API token/credentials are supplied via header."
+    }
+  },
+  "download": {
+    "mode": "record-page",
+    "urlPattern": "https://www.wfp.org/publications/{slug}",
+    "notes": "Publication landing pages (/publications/{slug}) link to the downloadable PDF in the page body (assets under docs.wfp.org/api/documents/.../download or wfp.org/media). No stable direct-PDF pattern anonymously; resolve via the landing page. Via the authenticated API, each document object carries a direct 'url' field."
+  },
+  "enrich": {
+    "mode": "none",
+    "endpoint": "https://docs.wfp.org/api/documents/",
+    "notes": "With API auth, per-document metadata (title, publication_date, wbs_code, url) comes directly from the documents[] objects — no separate enrich call. Anonymously, scrape the landing page meta/body. Marked 'none' because no anonymous enrichment endpoint works today."
+  },
+  "methodologyMarkdown": "## Overview\nWFP publishes reports both on the marketing site (wfp.org/publications) and through a document service at docs.wfp.org. The docs.wfp.org JSON API (/api/documents/) exists and matches the expected schema, which would be the ideal ingestion path, but it now requires authentication. Absent credentials, WFP is treated as a url-catalog over the publications listing.\n\n## Search\nThe intended API is GET https://docs.wfp.org/api/documents/ with `title_q` (title query), `order`, `page` (1-based) and `per_page`, returning `{ documents: [...], total_count }` where each document has title, url, publication_date and wbs_code. Live probing returned HTTP 401 ('Authentication credentials were not provided') on the anonymous call, so this is captured in config._intendedApi for promotion once a token is available. The HTML fallback is the /publications listing; its search query string (?search=) is Cloudflare-challenged (HTTP 202) for non-browser clients, so prefer crawling the listing and following pagination.\n\n## Filters\nThe API would support ordering via `order` and title filtering via `title_q`; date/type facets are not documented as anonymous params. No usable HTML filter params.\n\n## Download\nVia the API, each document object exposes a direct `url` to the file. Anonymously, fetch the /publications/{slug} landing page and extract the PDF link (assets under docs.wfp.org or wfp.org/media).\n\n## Metadata & Enrichment\nWith API auth, metadata is inline in documents[] (no extra call). Anonymously, scrape landing-page meta tags.\n\n## Limitations\nTwo blockers: (1) docs.wfp.org/api/documents/ requires authentication (HTTP 401) — supply a token to unlock the clean rest-api path; (2) the wfp.org HTML search is behind Cloudflare and challenges query-string requests (HTTP 202). The static /publications listing (HTTP 200) is the safe harvest surface. Recommendation: url-catalog now with linkFilter '/publications/'; promote config._intendedApi to family 'rest-api' when WFP API credentials are obtained.",
+  "verified": false,
+  "probeNotes": "GET https://docs.wfp.org/api/documents?per_page=2&page=1 -> HTTP 301 -> follows to https://docs.wfp.org/api/documents/?... -> HTTP 401 {\"detail\":\"Authentication credentials were not provided.\"}. Confirms the API exists with trailing-slash canonical URL but is now auth-gated (previously/expected anonymous). GET https://www.wfp.org/publications -> HTTP 200 (harvestable). GET https://www.wfp.org/publications?search=climate -> HTTP 202 (Cloudflare challenge on query string). verified=false: no anonymous data path; intended rest-api config preserved for when credentials are provided."
+}

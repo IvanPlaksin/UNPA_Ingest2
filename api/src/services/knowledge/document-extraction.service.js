@@ -455,6 +455,7 @@ class DocumentExtractionService {
   // ─── Internals ────────────────────────────────────────────────────────────
 
   async _readText(storagePath, originalname) {
+    if (!storagePath) throw new Error(`_readText: storagePath is null/undefined`);
     const buf = fs.readFileSync(storagePath);
     const ext = path.extname(originalname).toLowerCase();
     try {

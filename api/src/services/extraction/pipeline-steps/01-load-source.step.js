@@ -11,11 +11,6 @@ module.exports = async function loadSourceStep(ctx) {
     // adapter must set: ctx.sourceRef, ctx.text, and optionally ctx.documentType, ctx.domain, ctx.epistemicLayer
 
     ctx.stats.textChars = (ctx.text || '').length;
-
-    if (!ctx.text || ctx.text.length < 50) {
-      throw new Error(`Insufficient text content (${ctx.stats.textChars} chars)`);
-    }
-
     addLog(ctx, 'load-source', `Loaded ${ctx.stats.textChars} chars, type=${ctx.documentType || 'UNKNOWN'}`);
     completeStep(ctx, 'load-source', { chars: ctx.stats.textChars, documentType: ctx.documentType });
   } catch (err) {

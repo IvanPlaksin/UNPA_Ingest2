@@ -29,6 +29,50 @@ let _mg = null;
 function mg() { if (!_mg) _mg = require('../memgraph.service'); return _mg; }
 let _neo4j = null;
 function neo4j() { if (!_neo4j) _neo4j = require('neo4j-driver'); return _neo4j; }
+let _symbolParser = null;
+function symbolParser() { if (!_symbolParser) _symbolParser = require('./source-adapters/lib/symbol-parser'); return _symbolParser; }
+
+/**
+ * Resolve the best UN-symbol candidate for a document, trying the provenance
+ * symbol first, then a symbol-like title, then the (often symbol-named) file.
+ * Returns the parsed symbol whose organ was recognized, or null.
+ */
+function resolveParsedSymbol(candidates = []) {
+  for (const c of candidates) {
+    if (!c) continue;
+    try {
+      const p = symbolParser().parseUNSymbol(c);
+      if (p && p.organ) return p;
+    } catch { /* try next */ }
+  }
+  return null;
+}
+
+/**
+ * Flatten a parsed UN symbol into the Document-node component property set.
+ * Always returns the full key set (nulls when unparseable) so Cypher params
+ * stay stable. Integer components are wrapped as neo4j ints for Memgraph.
+ */
+function symbolComponents(parsed) {
+  const asInt = v => (v == null ? null : neo4j().int(v));
+  const blank = {
+    organCode: null, seriesCode: null, subBody: null,
+    sessionNumber: null, documentNumber: null, documentYear: null,
+    baseSymbol: null, suffixType: null, suffixNumber: null
+  };
+  if (!parsed || !parsed.organ) return blank;
+  return {
+    organCode:      parsed.organ || null,
+    seriesCode:     parsed.series || null,
+    subBody:        parsed.subBody || null,
+    sessionNumber:  asInt(parsed.session),
+    documentNumber: asInt(parsed.number),
+    documentYear:   asInt(parsed.year),
+    baseSymbol:     parsed.baseSymbol || null,
+    suffixType:     parsed.suffixType || null,
+    suffixNumber:   asInt(parsed.suffixNumber)
+  };
+}
 
 class DocumentProcessingService {
 
@@ -66,6 +110,7 @@ class DocumentProcessingService {
     const storagePath = path.join(nsDir, `${docId}_${safeFile}`);
     fs.writeFileSync(storagePath, fileBuffer);
 
+    const sc = symbolComponents(resolveParsedSymbol([provenance.unSymbol, originalname]));
     await mg().runQuery(
       `CREATE (d:Document {
          id: $id, filename: $fn, originalname: $orig,
@@ -79,6 +124,10 @@ class DocumentProcessingService {
          sourceUrl: $srcUrl, sourceRepository: $srcRepo,
          unSymbol: $sym, documentTitle: $title,
          publishedDate: $pubDate, accessedAt: $now,
+         organCode: $organCode, seriesCode: $seriesCode, subBody: $subBody,
+         sessionNumber: $sessionNumber, documentNumber: $documentNumber,
+         documentYear: $documentYear, baseSymbol: $baseSymbol,
+         suffixType: $suffixType, suffixNumber: $suffixNumber,
          uploadedAt: $now, updatedAt: $now
        }) RETURN d.id`,
       {
@@ -89,7 +138,8 @@ class DocumentProcessingService {
         srcRepo: provenance.sourceRepository || null,
         sym:     provenance.unSymbol         || null,
         title:   provenance.documentTitle    || null,
-        pubDate: provenance.publishedDate    || null
+        pubDate: provenance.publishedDate    || null,
+        ...sc
       }
     );
 
@@ -115,7 +165,11 @@ class DocumentProcessingService {
     const text = await this._readDocumentText(doc.storagePath);
     const result = await require('./document-classifier').classify(
       text,
-      { document_title: doc.originalname, filename: doc.originalname }
+      {
+        document_title: doc.documentTitle || doc.unSymbol || doc.originalname,
+        un_symbol:      doc.unSymbol || null,
+        filename:       doc.originalname,
+      }
     );
 
     const status = result.confidence >= REVIEW_CONFIDENCE_THRESHOLD ? 'CLASSIFIED' : 'NEEDS_REVIEW';
@@ -123,6 +177,11 @@ class DocumentProcessingService {
     const weight = result.normativeWeight != null ? result.normativeWeight : null;
 
     const now = new Date().toISOString();
+    // Resolve the best symbol candidate (provenance symbol → title → filename)
+    // and persist its components. Backfill unSymbol only when currently missing.
+    const parsedSymbol = resolveParsedSymbol([doc.unSymbol, doc.documentTitle, doc.originalname]);
+    const sc = symbolComponents(parsedSymbol);
+    const unSymbolBackfill = doc.unSymbol || (parsedSymbol ? parsedSymbol.normalized : null);
     await mg().runQuery(
       `MATCH (d:Document {id: $id})
        SET d.status                      = $status,
@@ -132,6 +191,16 @@ class DocumentProcessingService {
            d.classificationConfidence    = $conf,
            d.classificationSignals       = $signals,
            d.classificationAlternatives  = $alts,
+           d.unSymbol                    = coalesce(d.unSymbol, $unSymbolBackfill),
+           d.organCode                   = $organCode,
+           d.seriesCode                  = $seriesCode,
+           d.subBody                     = $subBody,
+           d.sessionNumber               = $sessionNumber,
+           d.documentNumber              = $documentNumber,
+           d.documentYear                = $documentYear,
+           d.baseSymbol                  = $baseSymbol,
+           d.suffixType                  = $suffixType,
+           d.suffixNumber                = $suffixNumber,
            d.classifiedAt                = $now,
            d.updatedAt                   = $now`,
       {
@@ -142,7 +211,9 @@ class DocumentProcessingService {
         conf:     result.confidence || 0,
         signals:  JSON.stringify(result.signals || []),
         alts:     JSON.stringify(result.alternatives || []),
-        now
+        unSymbolBackfill,
+        now,
+        ...sc
       }
     );
 
@@ -212,8 +283,8 @@ class DocumentProcessingService {
     let doc = await this._loadDoc(docId);
     if (!doc) throw new Error(`Document ${docId} not found`);
 
-    // force=true resets stuck EXTRACTING/FAILED/COMPLETED back to CLASSIFIED
-    if (options.force && ['EXTRACTING', 'FAILED', 'COMPLETED'].includes(doc.status)) {
+    // force=true resets stuck EXTRACTING/FAILED/EXTRACTION_FAILED/COMPLETED back to CLASSIFIED
+    if (options.force && ['EXTRACTING', 'FAILED', 'EXTRACTION_FAILED', 'COMPLETED'].includes(doc.status)) {
       await this._setStatus(docId, 'CLASSIFIED');
       doc = await this._loadDoc(docId);
     }
@@ -232,6 +303,55 @@ class DocumentProcessingService {
     });
 
     return { documentId: docId, status: 'EXTRACTING', jobId };
+  }
+
+  /**
+   * Re-queue all documents that need reprocessing:
+   *   - status FAILED or EXTRACTION_FAILED
+   *   - status CLASSIFIED with aiExtractedAt set (stuck: extraction ran but never completed)
+   *
+   * For stuck CLASSIFIED docs, clears aiExtractedAt so the ingestion agent stops skipping them.
+   * Uses force=true to reset status before enqueuing.
+   *
+   * @param {{ namespace?: string, model?: string }} options
+   * @returns {{ queued: Array, errors: Array, total: number }}
+   */
+  async reprocessFailedDocuments(options = {}) {
+    const nsFilter = options.namespace ? 'AND d.namespace = $ns' : '';
+    const params   = options.namespace ? { ns: options.namespace } : {};
+
+    const rows = await mg().runQuery(
+      `MATCH (d:Document)
+       WHERE (
+         d.status IN ['FAILED', 'EXTRACTION_FAILED']
+         OR (d.status IN ['CLASSIFIED', 'NEEDS_REVIEW'] AND d.aiExtractedAt IS NOT NULL)
+       ) ${nsFilter}
+       RETURN d.id AS id, d.originalname AS name, d.status AS status, d.namespace AS namespace
+       ORDER BY d.updatedAt ASC`,
+      params
+    );
+
+    const queued = [];
+    const errors = [];
+    const now    = new Date().toISOString();
+
+    for (const row of rows) {
+      try {
+        // Clear aiExtractedAt so the ingestion agent won't skip this doc in future runs
+        if (['CLASSIFIED', 'NEEDS_REVIEW'].includes(row.status)) {
+          await mg().runQuery(
+            `MATCH (d:Document {id: $id}) SET d.aiExtractedAt = null, d.updatedAt = $now`,
+            { id: row.id, now }
+          );
+        }
+        const result = await this.extractDocument(row.id, { force: true, model: options.model });
+        queued.push({ documentId: row.id, name: row.name, namespace: row.namespace, jobId: result.jobId, previousStatus: row.status });
+      } catch (err) {
+        errors.push({ documentId: row.id, name: row.name, namespace: row.namespace, error: err.message });
+      }
+    }
+
+    return { total: rows.length, queued, errors };
   }
 
   // ─── Structure Analysis ───────────────────────────────────────────────────
@@ -274,6 +394,8 @@ class DocumentProcessingService {
               d.kqsScore as kqsScore,
               d.extractedNodeIds as extractedNodeIds,
               d.fileSize as fileSize, d.uploadedAt as uploadedAt, d.updatedAt as updatedAt,
+              d.aiExtractedAt as aiExtractedAt, d.extractedAt as extractedAt,
+              d.extractionError as extractionError,
               d.sourceUrl as sourceUrl, d.sourceRepository as sourceRepository,
               d.unSymbol as unSymbol, d.documentTitle as documentTitle,
               d.publishedDate as publishedDate,
@@ -304,6 +426,8 @@ class DocumentProcessingService {
                        d.classificationOverridden as classificationOverridden,
                        d.kqsScore as kqsScore,
                        d.fileSize as fileSize, d.uploadedAt as uploadedAt, d.updatedAt as updatedAt,
+                       d.aiExtractedAt as aiExtractedAt, d.extractedAt as extractedAt,
+                       d.extractionError as extractionError,
                        d.sourceUrl as sourceUrl, d.sourceRepository as sourceRepository,
                        d.unSymbol as unSymbol, d.documentTitle as documentTitle,
                        d.publishedDate as publishedDate
@@ -387,7 +511,8 @@ class DocumentProcessingService {
       `MATCH (d:Document {id: $id})
        RETURN d.id as id, d.storagePath as storagePath, d.originalname as originalname,
               d.status as status, d.namespace as namespace,
-              d.epistemicLayer as epistemicLayer, d.documentType as documentType`,
+              d.epistemicLayer as epistemicLayer, d.documentType as documentType,
+              d.documentTitle as documentTitle, d.unSymbol as unSymbol`,
       { id: docId }
     );
     return rows[0] || null;
@@ -416,6 +541,9 @@ class DocumentProcessingService {
       fileSize:                  r.fileSize,
       uploadedAt:                r.uploadedAt,
       updatedAt:                 r.updatedAt,
+      aiExtractedAt:             r.aiExtractedAt    || null,
+      extractedAt:               r.extractedAt      || null,
+      extractionError:           r.extractionError  || null,
       sourceUrl:                 r.sourceUrl        || null,
       sourceRepository:          r.sourceRepository || null,
       unSymbol:                  r.unSymbol         || null,

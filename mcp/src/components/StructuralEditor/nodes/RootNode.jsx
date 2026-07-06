@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Handle, Position } from 'reactflow';
 
 export default function RootNode({ data, selected }) {
@@ -12,7 +12,7 @@ export default function RootNode({ data, selected }) {
       boxShadow: selected ? '0 0 20px rgba(99,102,241,.4)' : '0 0 8px rgba(99,102,241,.1)',
       transition: 'all 0.2s ease',
     }}>
-      <div style={{ fontSize: 9, textTransform: 'uppercase', fontWeight: 700, color: '#a5b4fc', letterSpacing: 1, marginBottom: 4 }}>
+      <div style={{ fontSize: 11, textTransform: 'uppercase', fontWeight: 700, color: '#a5b4fc', letterSpacing: 1, marginBottom: 4 }}>
         FORM ROOT
       </div>
       <div style={{ fontSize: 13, fontWeight: 600, color: '#e2e8f0' }}>

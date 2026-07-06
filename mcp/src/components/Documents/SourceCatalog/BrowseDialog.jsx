@@ -3,7 +3,7 @@
  * Search an external source for documents and import selected ones.
  * Features: rich row display, complete metadata panel, pagination, background enrichment.
  */
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, TextField, Typography, Stack, Chip, IconButton,
@@ -16,7 +16,7 @@ import {
   CheckCircle, AlertCircle, ChevronDown, ChevronRight,
   ExternalLink, Languages, Calendar, Hash, DatabaseZap,
   BookOpen, Tag, Building2, FileArchive, StickyNote, FolderOpen,
-  Link2, Info
+  Link2, Info, SlidersHorizontal, Ban, List
 } from 'lucide-react';
 import { browseSource, importDocument, startEnrich } from '../../../services/sourceCatalog.service';
 import EnrichProgressModal from './EnrichProgressModal';
@@ -43,6 +43,92 @@ function LangChips({ languages, compact = false }) {
                color:   l === 'EN' ? 'primary.contrastText' : 'text.primary' }} />
       ))}
     </Stack>
+  );
+}
+
+// ── Capabilities ────────────────────────────────────────────────
+
+const CAP_LABELS = {
+  search: 'Search', browseAll: 'Browse all', paginate: 'Pagination', filter: 'Filters',
+  sort: 'Sort', download: 'Download', enrich: 'Metadata', fulltext: 'Full-text',
+};
+
+function CapabilityBar({ caps }) {
+  const list = caps?.capabilities || [];
+  if (!list.length) return null;
+  return (
+    <Stack direction="row" spacing={0.5} flexWrap="wrap" alignItems="center">
+      {Object.keys(CAP_LABELS).map(c => {
+        const on = list.includes(c);
+        return (
+          <Chip key={c} label={CAP_LABELS[c]} size="small"
+            variant={on ? 'filled' : 'outlined'}
+            color={on ? 'success' : 'default'}
+            icon={on ? undefined : <Ban size={10} />}
+            sx={{ fontSize: '0.58rem', height: 18,
+                  opacity: on ? 1 : 0.4,
+                  '& .MuiChip-icon': { ml: 0.5 } }} />
+        );
+      })}
+    </Stack>
+  );
+}
+
+// ── Dynamic filter panel (driven by the source's filterSchema) ──
+
+function FilterField({ schema, value, onChange }) {
+  const { type, label, options } = schema;
+  const lbl = label || type;
+
+  if (type === 'dateFrom' || type === 'dateTo') {
+    return (
+      <TextField type="date" size="small" label={lbl} value={value || ''}
+        onChange={e => onChange(type, e.target.value)}
+        InputLabelProps={{ shrink: true }} sx={{ minWidth: 150 }} />
+    );
+  }
+  if (type === 'year' || type === 'yearFrom' || type === 'yearTo') {
+    return (
+      <TextField type="number" size="small" label={lbl} value={value || ''}
+        onChange={e => onChange(type, e.target.value)}
+        sx={{ minWidth: 110 }} inputProps={{ min: 1945, max: 2100 }} />
+    );
+  }
+  if (Array.isArray(options) && options.length) {
+    return (
+      <FormControl size="small" sx={{ minWidth: 160 }}>
+        <InputLabel>{lbl}</InputLabel>
+        <Select label={lbl} value={value || ''} onChange={e => onChange(type, e.target.value)}>
+          <MenuItem value=""><em>Any</em></MenuItem>
+          {options.map(o => <MenuItem key={o} value={o}>{o}</MenuItem>)}
+        </Select>
+      </FormControl>
+    );
+  }
+  return (
+    <TextField size="small" label={lbl} value={value || ''}
+      onChange={e => onChange(type, e.target.value)} sx={{ minWidth: 150 }} />
+  );
+}
+
+function FilterPanel({ schema, filters, onChange, onClear, open }) {
+  if (!open || !schema?.length) return null;
+  const active = Object.values(filters).filter(v => v !== '' && v != null).length;
+  return (
+    <Paper variant="outlined" sx={{ p: 1.25, bgcolor: 'action.hover', borderRadius: 1 }}>
+      <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+        <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mr: 0.5 }}>
+          <SlidersHorizontal size={14} style={{ opacity: 0.6 }} />
+          <Typography variant="caption" fontWeight={700}>Filters</Typography>
+        </Stack>
+        {schema.map(s => (
+          <FilterField key={s.type} schema={s} value={filters[s.type]} onChange={onChange} />
+        ))}
+        {active > 0 && (
+          <Button size="small" onClick={onClear} sx={{ fontSize: '0.7rem' }}>Clear ({active})</Button>
+        )}
+      </Stack>
+    </Paper>
   );
 }
 
@@ -314,6 +400,16 @@ export default function BrowseDialog({ open, source, onClose, onImported }) {
   const [pageSize,     setPageSize]     = useState(20);
   const [expandedRows, setExpandedRows] = useState(new Set());
   const [lastQuery,    setLastQuery]    = useState('');
+  const [filters,      setFilters]      = useState({});
+  const [showFilters,  setShowFilters]  = useState(false);
+
+  // Capability descriptor: from the last browse response, else from the source.
+  const caps         = results?.capabilities || source?.capabilities || {};
+  const capList      = caps.capabilities || [];
+  const filterSchema = caps.filterSchema || [];
+  const canSearch    = capList.includes('search');
+  const canFilter    = capList.includes('filter') && filterSchema.length > 0;
+  const canEnrich    = capList.includes('enrich');
 
   const [enrichJobId,  setEnrichJobId]  = useState(null);
   const [enrichItems,  setEnrichItems]  = useState([]);
@@ -325,13 +421,20 @@ export default function BrowseDialog({ open, source, onClose, onImported }) {
     if (!source) return;
     setLoading(true); setError(null); setSelected(new Set()); setStatuses({}); setExpandedRows(new Set());
     try {
-      const resp = await browseSource(source.id, { query: searchQuery.trim(), page: searchPage, limit: searchLimit });
+      // Only send filters the source can actually apply.
+      const activeFilters = Object.fromEntries(
+        Object.entries(filters).filter(([, v]) => v !== '' && v != null)
+      );
+      const resp = await browseSource(source.id, {
+        query: searchQuery.trim(), page: searchPage, limit: searchLimit,
+        ...(Object.keys(activeFilters).length ? { filters: activeFilters } : {}),
+      });
       setResults(resp.data);
     } catch (err) {
       setError(err.response?.data?.error || err.message);
     }
     setLoading(false);
-  }, [source]);
+  }, [source, filters]);
 
   const handleSearch = useCallback(async (e) => {
     e?.preventDefault();
@@ -350,6 +453,16 @@ export default function BrowseDialog({ open, source, onClose, onImported }) {
     setPage(1);
     await doSearch(lastQuery, 1, newSize);
   }, [lastQuery, doSearch]);
+
+  const handleFilterChange = (type, value) =>
+    setFilters(prev => ({ ...prev, [type]: value }));
+  const handleClearFilters = () => setFilters({});
+
+  // Reset transient state when switching sources.
+  useEffect(() => {
+    setFilters({}); setShowFilters(false); setResults(null);
+    setQuery(''); setLastQuery(''); setPage(1); setSelected(new Set());
+  }, [source?.id]);
 
   const toggleSelect = (id) =>
     setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -413,11 +526,18 @@ export default function BrowseDialog({ open, source, onClose, onImported }) {
       PaperProps={{ sx: { borderRadius: 2, height: '94vh' } }}>
 
       {/* ── Title ── */}
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}>
-        <Stack direction="row" spacing={1.5} alignItems="center">
-          <Globe size={18} />
-          <Typography variant="subtitle1" fontWeight={700}>Browse: {source?.name}</Typography>
-          <Chip label={source?.type?.replace('_', ' ')} size="small" variant="outlined" />
+      <DialogTitle sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', pb: 1 }}>
+        <Stack spacing={0.75} sx={{ minWidth: 0, flex: 1 }}>
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <Globe size={18} />
+            <Typography variant="subtitle1" fontWeight={700} noWrap>Browse: {source?.name}</Typography>
+            <Chip label={source?.type?.replace('_', ' ')} size="small" variant="outlined" />
+            {caps.family && (
+              <Chip label={caps.family} size="small" color="info" variant="outlined"
+                sx={{ fontSize: '0.6rem', height: 18 }} />
+            )}
+          </Stack>
+          <CapabilityBar caps={caps} />
         </Stack>
         <IconButton size="small" onClick={onClose}><X size={16} /></IconButton>
       </DialogTitle>
@@ -426,12 +546,25 @@ export default function BrowseDialog({ open, source, onClose, onImported }) {
 
         {/* ── Search bar ── */}
         <Stack component="form" onSubmit={handleSearch} direction="row" spacing={1} alignItems="center">
-          <TextField
-            value={query} onChange={e => setQuery(e.target.value)}
-            placeholder="Search documents… (leave empty to list all)"
-            size="small" fullWidth
-            InputProps={{ startAdornment: <Search size={16} style={{ marginRight: 6, opacity: 0.5 }} /> }}
-          />
+          <Tooltip title={canSearch ? '' : 'This source does not support keyword search — use “List all”.'}>
+            <TextField
+              value={query} onChange={e => setQuery(e.target.value)}
+              disabled={!canSearch}
+              placeholder={canSearch ? 'Search documents… (leave empty to list all)' : 'Keyword search not supported by this source'}
+              size="small" fullWidth
+              InputProps={{ startAdornment: <Search size={16} style={{ marginRight: 6, opacity: 0.5 }} /> }}
+            />
+          </Tooltip>
+          {canFilter && (
+            <Tooltip title="Filters">
+              <Button variant={showFilters ? 'contained' : 'outlined'} size="small" color="secondary"
+                onClick={() => setShowFilters(v => !v)}
+                startIcon={<SlidersHorizontal size={15} />} sx={{ flexShrink: 0 }}>
+                Filters{Object.values(filters).filter(v => v !== '' && v != null).length
+                  ? ` (${Object.values(filters).filter(v => v !== '' && v != null).length})` : ''}
+              </Button>
+            </Tooltip>
+          )}
           <FormControl size="small" sx={{ minWidth: 80 }}>
             <InputLabel>Per page</InputLabel>
             <Select value={pageSize} label="Per page" onChange={e => handlePageSizeChange(e.target.value)}>
@@ -439,10 +572,25 @@ export default function BrowseDialog({ open, source, onClose, onImported }) {
             </Select>
           </FormControl>
           <Button type="submit" variant="contained" size="small" disabled={loading}
-            startIcon={loading ? <CircularProgress size={14} /> : <Search size={15} />}>
-            {loading ? 'Searching…' : 'Search'}
+            startIcon={loading ? <CircularProgress size={14} /> : (canSearch ? <Search size={15} /> : <List size={15} />)}
+            sx={{ flexShrink: 0 }}>
+            {loading ? 'Loading…' : (canSearch ? 'Search' : 'List all')}
           </Button>
         </Stack>
+
+        {/* ── Filter panel ── */}
+        {canFilter && (
+          <Collapse in={showFilters}>
+            <FilterPanel schema={filterSchema} filters={filters}
+              onChange={handleFilterChange} onClear={handleClearFilters} open={showFilters} />
+          </Collapse>
+        )}
+
+        {caps.notes && (
+          <Alert severity="info" icon={<Info size={16} />} sx={{ py: 0, fontSize: '0.72rem' }}>
+            {caps.notes}
+          </Alert>
+        )}
 
         {error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
 
@@ -473,10 +621,12 @@ export default function BrowseDialog({ open, source, onClose, onImported }) {
                     {NAMESPACES.map(ns => <MenuItem key={ns} value={ns}>{ns}</MenuItem>)}
                   </Select>
                 </FormControl>
-                <Tooltip title="Fetch full metadata for selected documents (runs in background)">
+                <Tooltip title={canEnrich
+                  ? 'Fetch full metadata for selected documents (runs in background)'
+                  : 'This source does not support metadata enrichment'}>
                   <span>
                     <Button variant="outlined" size="small"
-                      disabled={selected.size === 0 || enriching}
+                      disabled={!canEnrich || selected.size === 0 || enriching}
                       startIcon={enriching ? <CircularProgress size={14} /> : <DatabaseZap size={14} />}
                       onClick={handleFetchMetadata} sx={{ fontSize: '0.72rem' }}>
                       {enriching ? 'Starting…' : `Fetch Metadata${selected.size > 0 ? ` (${selected.size})` : ''}`}

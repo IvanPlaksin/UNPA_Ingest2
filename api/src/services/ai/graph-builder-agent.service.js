@@ -16,7 +16,8 @@
 
 const axios = require('axios');
 const { EventEmitter } = require('events');
-const { getInstance: getLLMProvider } = require('../llm/LLMProviderService');
+const { getScopedProvider } = require('../llm-access-control.service');
+const llmProvider = getScopedProvider('graph_builder');
 const { v4: uuidv4 } = require('uuid');
 
 const { GraphState, ToolExecutor } = require('./tool-executor');
@@ -1160,7 +1161,7 @@ class GraphBuilderAgent extends EventEmitter {
       hasTools: !!resolvedTools,
     });
 
-    const llmResp = await getLLMProvider().chat(convertedMessages, {
+    const llmResp = await llmProvider.chat(convertedMessages, {
       model: modelId,
       maxTokens: modelInfo?.maxTokens || this.config.maxTokens,
       system: system || undefined,

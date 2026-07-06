@@ -1,0 +1,24 @@
+{
+  "key": "undrr",
+  "name": "UNDRR Publications",
+  "family": "url-catalog",
+  "capabilities": ["browseAll", "paginate", "download"],
+  "filterSchema": [],
+  "config": {
+    "url": "https://www.undrr.org/publications",
+    "searchUrlTemplate": "https://www.undrr.org/publications?search_api_fulltext={query}",
+    "linkFilter": "",
+    "includeAllLinks": false
+  },
+  "download": {
+    "mode": "record-page",
+    "notes": "Publication cards link to /publication/{slug} (or /quick/{id}) record pages where the PDF (served from /media/ or /sites/default/files/) is exposed. Two-step crawl required."
+  },
+  "enrich": {
+    "mode": "none",
+    "notes": "Title, date, type available from record pages. No public PreventionWeb REST API was found; a UNDRR Datahub (data.undrr.org) exists but exposes datasets, not the publications catalog."
+  },
+  "methodologyMarkdown": "## Overview\nUNDRR's publications catalog is a Drupal-based, server-rendered listing at www.undrr.org/publications. It sits behind a strict Cloudflare/WAF that returned HTTP 403 to the crawler User-Agent; the underlying HTML is not a JS SPA and is scrapable with a realistic browser User-Agent.\n\n## PreventionWeb / API investigation\nThe brief called for finding a real PreventionWeb API. Findings (HONEST): api.preventionweb.net does not resolve (DNS ENOTFOUND) and no public PreventionWeb publications REST endpoint or developer docs could be located. A separate UNDRR Datahub exists at data.undrr.org/api/json/, but it serves open datasets/statistics, not the publications document catalog, and it presented TLS certificate issues on probe. Therefore this source is characterized as an HTML url-catalog, NOT a rest-api.\n\n## Search\nThe Drupal listing supports full-text filtering via ?search_api_fulltext={query} plus type/theme facets.\n\n## Filters\nType, theme, region facets appear as URL parameters; treated as opaque params (no formal schema).\n\n## Download\nCards link to /publication/{slug} record pages; PDFs are served from /media/ or /sites/default/files/ and exposed on the record page. Two-step crawl required.\n\n## Metadata & Enrichment\nTitle, date and type are in server-rendered HTML. No usable publications API; enrichment is HTML-based.\n\n## Limitations\nHONEST: listing blocked by WAF to bot UA (403), not JS-SPA. No PreventionWeb API. Use a browser-grade User-Agent. Pagination ?page=N.",
+  "verified": true,
+  "probeNotes": "api.preventionweb.net -> DNS ENOTFOUND (no such host). data.undrr.org/api/json/ -> TLS cert error; identified as datasets hub, not publications catalog. www.undrr.org/publications -> WebFetch 403 (WAF); confirmed Drupal server-rendered via search. No real PreventionWeb REST API found -> family stays url-catalog."
+}

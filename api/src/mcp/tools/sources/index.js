@@ -39,7 +39,7 @@ class SourceCatalogListTool extends BaseTool {
           },
           type: {
             type: 'string',
-            enum: ['URL_CATALOG', 'REST_API', 'RSS_FEED', 'ODS_API', 'OIOS_PORTAL'],
+            enum: ['URL_CATALOG', 'REST_API', 'RSS_FEED', 'ODS_API', 'OIOS_PORTAL', 'OAI_PMH'],
             description: 'Filter by source type',
           },
         },
@@ -109,7 +109,7 @@ class SourceCatalogCreateTool extends BaseTool {
           description: { type: 'string', description: 'Brief description of the source' },
           type: {
             type: 'string',
-            enum: ['URL_CATALOG', 'REST_API', 'RSS_FEED', 'ODS_API', 'OIOS_PORTAL'],
+            enum: ['URL_CATALOG', 'REST_API', 'RSS_FEED', 'ODS_API', 'OIOS_PORTAL', 'OAI_PMH'],
             description: 'Source type determining browsing strategy',
           },
           namespace: {
@@ -248,6 +248,14 @@ class SourceCatalogBrowseTool extends BaseTool {
           query:     { type: 'string', description: 'Search query / keyword', default: '' },
           page:      { type: 'integer', description: 'Page number (1-based)', default: 1 },
           limit:     { type: 'integer', description: 'Max results per page (1-100)', default: 25 },
+          filters:   {
+            type: 'object',
+            description: 'Structured filters keyed by filter type (dateFrom, dateTo, language, docType, symbol, author, collection, topic, year). Only filters the source declares (see source_catalog.capabilities) are applied.',
+          },
+          sort:      {
+            type: 'object',
+            description: 'Optional sort { field, dir: "asc"|"desc" } — honoured only by sources that declare the "sort" capability.',
+          },
         },
       },
       safetyLevel: 'AUTO',
@@ -262,7 +270,44 @@ class SourceCatalogBrowseTool extends BaseTool {
       query: args.query || '',
       page:  Math.max(1, args.page || 1),
       limit: Math.min(100, args.limit || 25),
+      filters: (args.filters && typeof args.filters === 'object') ? args.filters : {},
+      sort: args.sort || null,
     });
+    return this.success(result);
+  }
+}
+
+// ── Capabilities ─────────────────────────────────────────────────────────────
+
+class SourceCatalogCapabilitiesTool extends BaseTool {
+  getDefinition() {
+    return {
+      id: 'source_catalog.capabilities',
+      name: 'Get Source Capabilities',
+      version: '1.0.0',
+      level: 1,
+      category: 'source_catalog',
+      description: [
+        'Return the capability descriptor for a source: which of search, browseAll, paginate,',
+        'filter, sort, download, enrich, fulltext it supports, plus its filter schema, download',
+        'mode and enrich mode. Use this before browse to know which filters/features apply.',
+      ].join(' '),
+      inputSchema: {
+        type: 'object',
+        required: ['source_id'],
+        properties: {
+          source_id: { type: 'string', description: 'Source catalog entry ID' },
+        },
+      },
+      safetyLevel: 'AUTO',
+      sideEffects: ['READ'],
+    };
+  }
+
+  async execute(args) {
+    this.validateArgs(args, ['source_id']);
+    const result = await getSvc().getCapabilities(args.source_id);
+    if (!result) return this.error('NOT_FOUND', `Source ${args.source_id} not found`);
     return this.success(result);
   }
 }
@@ -376,6 +421,7 @@ function createSourceCatalogTools() {
     new SourceCatalogUpdateTool(),
     new SourceCatalogDeleteTool(),
     new SourceCatalogBrowseTool(),
+    new SourceCatalogCapabilitiesTool(),
     new SourceCatalogImportTool(),
     new SourceCatalogSeedTool(),
   ];
@@ -388,6 +434,7 @@ module.exports = {
   SourceCatalogUpdateTool,
   SourceCatalogDeleteTool,
   SourceCatalogBrowseTool,
+  SourceCatalogCapabilitiesTool,
   SourceCatalogImportTool,
   SourceCatalogSeedTool,
   createSourceCatalogTools,

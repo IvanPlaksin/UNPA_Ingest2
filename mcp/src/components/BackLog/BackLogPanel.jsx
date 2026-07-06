@@ -1,4 +1,4 @@
-/**
+﻿/**
  * BackLog Panel — Kanban-style board for AI-generated code modification tasks
  * Uses MUI components throughout.
  */
@@ -98,13 +98,13 @@ function BackLogCard({ item, onDoubleClick, onClick, selected }) {
             label={item.backlogId}
             size="small"
             variant="outlined"
-            sx={{ fontSize: 10, height: 20 }}
+            sx={{ fontSize: 12, height: 20 }}
           />
           <Chip
             label={PRIORITY_LABELS[item.priority] || item.priority}
             size="small"
             sx={{
-              fontSize: 10,
+              fontSize: 12,
               height: 20,
               bgcolor: (PRIORITY_COLORS[item.priority] || '#555') + '22',
               color: PRIORITY_COLORS[item.priority] || '#555',
@@ -114,7 +114,7 @@ function BackLogCard({ item, onDoubleClick, onClick, selected }) {
           <Chip
             label={item.taskType}
             size="small"
-            sx={{ fontSize: 10, height: 20 }}
+            sx={{ fontSize: 12, height: 20 }}
           />
           {item.assignedTo && (
             <Chip
@@ -122,7 +122,7 @@ function BackLogCard({ item, onDoubleClick, onClick, selected }) {
               size="small"
               color="success"
               variant="outlined"
-              sx={{ fontSize: 10, height: 20 }}
+              sx={{ fontSize: 12, height: 20 }}
             />
           )}
         </Stack>
@@ -560,7 +560,7 @@ export default function BackLogPanel() {
                 >
                   {status.replace(/_/g, ' ')}
                 </Typography>
-                <Chip label={columnItems.length} size="small" sx={{ height: 20, fontSize: 11 }} />
+                <Chip label={columnItems.length} size="small" sx={{ height: 20, fontSize: 13 }} />
               </Stack>
 
               <Box sx={{ flex: 1, overflow: 'auto' }}>

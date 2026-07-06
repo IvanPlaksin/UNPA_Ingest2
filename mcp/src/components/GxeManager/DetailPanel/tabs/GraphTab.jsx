@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
 import MiniGraphView from '../../../GXE/MiniGraphView';
 import { getGraphById, listGraphs } from '../../../../services/graphCatalog.service';
@@ -101,7 +101,7 @@ const GraphTab = ({ execution }) => {
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {graph.description && (
-        <div style={{ padding: '8px 16px', fontSize: 12, color: '#a1a1aa', borderBottom: '1px solid #27272a' }}>
+        <div style={{ padding: '8px 16px', fontSize: 13, color: '#a1a1aa', borderBottom: '1px solid #27272a' }}>
           {graph.description}
         </div>
       )}

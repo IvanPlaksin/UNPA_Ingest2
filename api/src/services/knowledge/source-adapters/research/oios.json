@@ -1,0 +1,24 @@
+{
+  "key": "oios",
+  "name": "OIOS Evaluation & Inspection Reports",
+  "family": "url-catalog",
+  "capabilities": ["search", "browseAll", "download"],
+  "filterSchema": [],
+  "config": {
+    "url": "https://oios.un.org/resources/",
+    "searchUrlTemplate": "https://oios.un.org/en/search?s={query}",
+    "linkFilter": ".pdf",
+    "includeAllLinks": false
+  },
+  "download": {
+    "mode": "direct-pdf",
+    "notes": "OIOS is a server-rendered Drupal site and states 'All documents on this site are in the pdf format', stored under /sites/default/files/Reports/ (e.g. iad_audit_manual_062023.pdf). Category pages (/en/audit-reports, /en/inspection-evaluation-reports, /en/annual-reports) group reports and link to PDFs. Download directly."
+  },
+  "enrich": {
+    "mode": "none",
+    "notes": "Report title/date derivable from link text and filename; no record/JSON API."
+  },
+  "methodologyMarkdown": "## Overview\nThe UN Office of Internal Oversight Services (OIOS) publishes internal audit, inspection and evaluation reports plus annual reports at https://oios.un.org/resources/. The site is a server-rendered Drupal application, and OIOS explicitly states all site documents are PDFs.\n\n## Search\nA search interface exists (links to /en/search and /en/search_page; a ?s={query} style parameter is referenced). The exact parameter syntax was not fully confirmed from the excerpt, so the search-URL template is a best-effort. Category-based browsing is reliably available.\n\n## Filters\nReports are organized into categories rather than URL-parameter filters: Reports to governing bodies, Annual reports, Evaluation reports, Internal audit reports (e.g. /en/audit-reports, /en/inspection-evaluation-reports).\n\n## Download\nDirect PDF. Documents live under /sites/default/files/Reports/ (example: iad_audit_manual_062023.pdf). No authentication required.\n\n## Metadata & Enrichment\nNo REST API (no /wp-json - it is Drupal, not WordPress). Metadata parsed from link text and filename. Enrichment mode is none.\n\n## Limitations\nServer-rendered, so no headless browser is needed for browsing category pages. The search parameter syntax (?s=) is inferred and should be verified against a live query before relying on keyword search; browse + direct download are the solid capabilities.",
+  "verified": true,
+  "probeNotes": "WebFetch of https://oios.un.org/resources/ confirmed a server-rendered Drupal site stating all documents are PDFs under /sites/default/files/Reports/, with category links (/en/audit-reports, /en/inspection-evaluation-reports) and a search interface (/en/search, /en/search_page). Exact ?s= syntax not fully shown. No wp-json/REST API."
+}

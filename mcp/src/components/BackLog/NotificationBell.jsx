@@ -1,4 +1,4 @@
-/**
+﻿/**
  * NotificationBell — Bell icon with badge + dropdown popover
  * Shows latest 10 notifications with category, severity, and time ago.
  * Subscribes to SSE stream for real-time updates.
@@ -198,7 +198,7 @@ export default function NotificationBell() {
               label={`${unreadCount} unread`}
               size="small"
               color="error"
-              sx={{ fontSize: 10, height: 20 }}
+              sx={{ fontSize: 12, height: 20 }}
             />
           )}
         </Box>
@@ -239,7 +239,7 @@ export default function NotificationBell() {
                       size="small"
                       color={CATEGORY_COLORS[notif.category] || 'default'}
                       variant="outlined"
-                      sx={{ fontSize: 9, height: 18, textTransform: 'uppercase' }}
+                      sx={{ fontSize: 11, height: 18, textTransform: 'uppercase' }}
                     />
                   )}
                   {notif.severity && (
@@ -280,7 +280,7 @@ export default function NotificationBell() {
                 onClick={handleMarkAllRead}
                 disabled={markingRead || unreadCount === 0}
                 startIcon={markingRead ? <CircularProgress size={14} /> : <DoneAll />}
-                sx={{ fontSize: 11, textTransform: 'none' }}
+                sx={{ fontSize: 13, textTransform: 'none' }}
               >
                 Mark All Read
               </Button>

@@ -1,0 +1,27 @@
+{
+  "key": "unicef",
+  "name": "UNICEF Reports & Publications",
+  "family": "url-catalog",
+  "capabilities": ["linkHarvest"],
+  "filterSchema": [],
+  "config": {
+    "url": "https://www.unicef.org/reports",
+    "searchUrlTemplate": "https://www.unicef.org/search?query={query}",
+    "linkFilter": "/reports/",
+    "includeAllLinks": false,
+    "_note": "unicef.org exposes no open document API. The static listing page /reports returns HTTP 200 with harvestable report links (href=\"/reports/{slug}\"). Dynamic search (/search?query=) and query-string variants are behind Cloudflare bot protection and return HTTP 403 / 202 challenge to non-browser clients. data.unicef.org/resources/ (statistics/data resources) is a separate HTML listing that also returns 200 and can be harvested as a secondary catalog."
+  },
+  "download": {
+    "mode": "record-page",
+    "urlPattern": "https://www.unicef.org/reports/{slug}",
+    "notes": "Each report landing page (/reports/{slug}) links to one or more downloadable files (PDF) rendered in the page body. No deterministic direct-PDF URL; resolve by fetching the report page and extracting the file link(s). Report assets are typically served from unicef.org/media/*/file."
+  },
+  "enrich": {
+    "mode": "none",
+    "endpoint": null,
+    "notes": "No JSON metadata API. Title, publication date and description must be scraped from the report landing page HTML (og: meta tags and page body)."
+  },
+  "methodologyMarkdown": "## Overview\nUNICEF's main site (unicef.org) is a content-managed marketing/publications site with no open document API. Publications are surfaced as HTML 'report' landing pages. The best available integration is a url-catalog crawl of the /reports listing plus, optionally, the data.unicef.org/resources listing for statistical publications.\n\n## Search\nThe static /reports index page returns HTTP 200 and contains harvestable report links of the form /reports/{slug} (e.g. /reports/state-of-worlds-children, /reports/unicef-annual-report). The site-wide search (/search?query={term}) would be ideal but is Cloudflare-protected and returns HTTP 403 to programmatic clients, so it is recorded as searchUrlTemplate for reference but should not be relied on for automated fetching. Prefer crawling the listing page and following pagination where present.\n\n## Filters\nNo machine-usable filter parameters (type/date/language) are exposed. Any filtering must be applied client-side after harvesting titles/dates from the report pages.\n\n## Download\nEach /reports/{slug} landing page contains the downloadable PDF link(s) in its body (assets under unicef.org/media/.../file). Fetch the landing page and extract the file href; there is no predictable direct-PDF pattern.\n\n## Metadata & Enrichment\nNo API. Extract title, publication date and summary from the landing page's Open Graph / meta tags and body text.\n\n## Limitations\nCloudflare bot protection: dynamic/search URLs and query-string requests return HTTP 403/202 challenges; a browser-like User-Agent is required and even then search is unreliable. Static listing pages (/reports, data.unicef.org/resources) are accessible and are the recommended harvest surface. Recommendation: use url-catalog with linkFilter '/reports/' against the /reports listing as the primary source; treat site search as best-effort only.",
+  "verified": true,
+  "probeNotes": "GET https://www.unicef.org/reports -> HTTP 200 (Content-Type text/html; Cloudflare __cf_bm cookie set); grep extracted real links: /reports/state-of-worlds-children, /reports/unicef-annual-report. GET https://www.unicef.org/search?query=climate -> HTTP 403 (Cloudflare). GET https://www.unicef.org/reports?search=... query variants -> challenged. GET https://data.unicef.org/resources/ -> HTTP 200 (secondary catalog). Confirmed: no open API; static /reports listing is harvestable (verified=true for the url-catalog approach), dynamic search blocked."
+}

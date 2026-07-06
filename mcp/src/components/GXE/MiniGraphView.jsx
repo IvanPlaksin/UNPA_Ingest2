@@ -1,4 +1,4 @@
-/**
+﻿/**
  * MiniGraphView
  *
  * ReactFlow viewer for graph previews matching GXE editor styling.
@@ -86,7 +86,7 @@ function GxeNode({ data, selected }) {
         {typeBadge && (
           <div style={{ marginBottom: 4 }}>
             <span style={{
-              fontSize: 9,
+              fontSize: 11,
               fontWeight: 700,
               textTransform: 'uppercase',
               letterSpacing: '0.5px',
@@ -104,7 +104,7 @@ function GxeNode({ data, selected }) {
         <div style={{
           fontWeight: 500,
           color: '#fff',
-          fontSize: 12,
+          fontSize: 13,
           whiteSpace: 'nowrap',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
@@ -114,7 +114,7 @@ function GxeNode({ data, selected }) {
 
         {/* Extra info */}
         {data.extraInfo && (
-          <div style={{ fontSize: 9, color: c.text, opacity: 0.8, marginTop: 3 }}>
+          <div style={{ fontSize: 11, color: c.text, opacity: 0.8, marginTop: 3 }}>
             {data.extraInfo}
           </div>
         )}
@@ -169,7 +169,7 @@ export default function MiniGraphView({ nodes, edges, graphType }) {
         },
         labelStyle: {
           fill: '#94a3b8',
-          fontSize: 10,
+          fontSize: 12,
           fontWeight: 500,
         },
         labelBgStyle: {

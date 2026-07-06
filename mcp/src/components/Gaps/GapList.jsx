@@ -1,4 +1,4 @@
-/**
+﻿/**
  * GapList — Paginated, filterable gap table with bulk operations
  *
  * Features:
@@ -275,7 +275,7 @@ export default function GapList({ namespace, initialFilters = {}, onSelectGap, s
                                 </TableCell>
                                 <TableCell sx={{ py: 0.75 }}>
                                     <Chip label={row.status || '?'} size="small"
-                                        sx={{ fontSize: 10, height: 18,
+                                        sx={{ fontSize: 12, height: 18,
                                               color: STATUS_COLORS[row.status] || '#94a3b8',
                                               bgcolor: (STATUS_COLORS[row.status] || '#94a3b8') + '18' }} />
                                 </TableCell>

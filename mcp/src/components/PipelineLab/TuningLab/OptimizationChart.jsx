@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @fileoverview Optimization History Chart
  * @module components/PipelineLab/TuningLab/OptimizationChart
  */
@@ -89,13 +89,13 @@ export default function OptimizationChart({ history }) {
             <XAxis
               dataKey="iteration"
               stroke="#9CA3AF"
-              tick={{ fill: '#9CA3AF', fontSize: 12 }}
+              tick={{ fill: '#9CA3AF', fontSize: 13 }}
               tickLine={{ stroke: '#4B5563' }}
             />
             <YAxis
               stroke="#9CA3AF"
               domain={[0, 100]}
-              tick={{ fill: '#9CA3AF', fontSize: 12 }}
+              tick={{ fill: '#9CA3AF', fontSize: 13 }}
               tickLine={{ stroke: '#4B5563' }}
               tickFormatter={(value) => `${value}%`}
             />

@@ -135,14 +135,16 @@ class TeiService {
      * @returns {Promise<boolean>}
      */
     async isHealthy() {
-        try {
-            const response = await axios.get(`${this.url}/health`, {
-                timeout: 5000
-            });
-            return response.status === 200;
-        } catch {
-            return false;
+        for (let attempt = 1; attempt <= 2; attempt++) {
+            try {
+                const response = await axios.get(`${this.url}/health`, { timeout: 10000 });
+                if (response.status === 200) return true;
+            } catch {
+                if (attempt === 2) return false;
+                await sleep(1000);
+            }
         }
+        return false;
     }
 
     /**

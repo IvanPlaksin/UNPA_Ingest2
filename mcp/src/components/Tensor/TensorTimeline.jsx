@@ -1,4 +1,4 @@
-/**
+﻿/**
  * TensorTimeline - Gantt-style visualization of tensor execution chains
  * Shows temporal sequence of tensor operations with causal relationships
  */
@@ -348,7 +348,7 @@ const TensorTimeline = ({ tensors = [], timeWindow = 60000, height = 300 }) => {
                           top: '50%',
                           transform: 'translateY(-50%)',
                           color: 'white',
-                          fontSize: 9,
+                          fontSize: 11,
                           fontWeight: 'bold',
                           textShadow: '0 1px 2px rgba(0,0,0,0.5)'
                         }}

@@ -1,0 +1,44 @@
+{
+  "key": "ohchr-uhri",
+  "name": "OHCHR Universal Human Rights Index (UHRI)",
+  "family": "rest-api",
+  "capabilities": [
+    "browseAll",
+    "download",
+    "enrich"
+  ],
+  "filterSchema": [],
+  "config": {
+    "method": "GET",
+    "endpoint": "https://uhri.ohchr.org/api/uhri/export-results/export-full-en.json",
+    "searchParam": null,
+    "queryParams": {},
+    "responseMapping": {
+      "items": "",
+      "title": "title",
+      "url": "",
+      "date": "date",
+      "symbol": "symbol",
+      "description": "text"
+    },
+    "_api": {
+      "baseUrl": "https://uhri.ohchr.org",
+      "exportJsonUrl": "https://uhri.ohchr.org/api/uhri/export-results/export-full-en.json",
+      "exportXlsxUrl": "https://uhri.ohchr.org/api/uhri/export-results/export-full-en.xlsx",
+      "apiPrefix": "/api/uhri/",
+      "documentPageTemplate": "https://uhri.ohchr.org/en/document/{uuid}",
+      "notes": "OHCHR offers free public REST API access to the Universal Human Rights Index. Confirmed working public export endpoint returns the full dataset as JSON (>10 MB) and XLSX. Full filtered-query endpoint parameters are provided on request to uhrisupport@ohchr.org; the export endpoints are directly usable without contact."
+    }
+  },
+  "download": {
+    "mode": "record-page",
+    "notes": "Individual recommendations/observations resolve to /en/document/{uuid} human-readable pages. Bulk data (all recommendations from Treaty Bodies, Special Procedures and the UPR) is available directly via the JSON/XLSX export endpoints."
+  },
+  "enrich": {
+    "mode": "dspace-item",
+    "notes": "The JSON export provides structured records (country-specific observations and recommendations) per document/UUID, enabling record-level enrichment without HTML scraping. Updated daily."
+  },
+  "methodologyMarkdown": "## Overview\nThe OHCHR Universal Human Rights Index (https://uhri.ohchr.org/en/search) is a JavaScript SPA front-end, but it is backed by a REAL public REST API. OHCHR advertises 'free public access ... through a REST API with various filtering possibilities' on its /en/our-data-api page and exposes bulk export endpoints.\n\n## Search\nThe SPA search UI is JS-rendered (a plain GET of the search route returns no document content), so scraping the HTML is not viable. Instead use the backend REST API under /api/uhri/. Confirmed public export endpoints: /api/uhri/export-results/export-full-en.json (full dataset, JSON) and .../export-full-en.xlsx. Detailed filtered-query endpoint parameters are obtainable from uhrisupport@ohchr.org.\n\n## Filters\nThe API is documented as supporting 'various filtering possibilities' (country, body/mechanism - Treaty Bodies, Special Procedures, UPR - subject/theme). Exact query parameters are provided by OHCHR on request; not enumerated here because they were not publicly documented on the page.\n\n## Download\nBulk: direct JSON/XLSX export (verified - the JSON endpoint returned a payload exceeding 10 MB, i.e. real data). Per-document: human-readable pages at /en/document/{uuid}.\n\n## Metadata & Enrichment\nRich structured records (country, mechanism, recommendation text, references) come straight from the JSON export, enabling dspace-item-style record enrichment without HTML parsing. Data is refreshed daily.\n\n## Limitations\nThe interactive search UI is JS-only and would need a headless browser; however the REST/export API makes that unnecessary for ingestion. The fully-documented filtered endpoints require a support-email request, so programmatic fine-grained filtering may need that documentation first.",
+  "verified": true,
+  "probeNotes": "WebFetch of the /en/search route returned a 404/SPA shell (JS-rendered, no doc links). WebSearch + WebFetch of https://uhri.ohchr.org/en/our-data-api confirmed a public REST API with export endpoints /api/uhri/export-results/export-full-en.json and .xlsx. Fetching the JSON endpoint returned data exceeding the 10 MB fetch limit, confirming it serves the real full dataset. Set family=rest-api."
+}

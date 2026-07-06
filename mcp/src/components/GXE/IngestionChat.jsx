@@ -1,4 +1,4 @@
-/**
+﻿/**
  * IngestionChat
  *
  * AI chat for interacting with the extraction orchestrator.
@@ -216,7 +216,7 @@ function MessageBubble({ message }) {
         }}>
           {message.content}
         </Typography>
-        <Typography sx={{ color: '#6e7681', fontSize: 10, mt: 0.5, textAlign: isUser ? 'right' : 'left' }}>
+        <Typography sx={{ color: '#6e7681', fontSize: 12, mt: 0.5, textAlign: isUser ? 'right' : 'left' }}>
           {formatTime(message.timestamp)}
         </Typography>
       </Box>

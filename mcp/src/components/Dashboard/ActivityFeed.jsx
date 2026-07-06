@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ActivityFeed — vertical timeline of recent knowledge events
  *
  * Event types with icons:
@@ -91,16 +91,16 @@ export default function ActivityFeed({ activities = [], loading = false, onActiv
 
                         {/* Content */}
                         <Box sx={{ flex: 1, pb: isLast ? 0 : 1.5 }}>
-                            <Typography variant="body2" sx={{ fontSize: 12, lineHeight: 1.4 }}>
+                            <Typography variant="body2" sx={{ fontSize: 13, lineHeight: 1.4 }}>
                                 {a.description}
                             </Typography>
                             <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mt: 0.25 }}>
-                                <Typography variant="caption" color="text.disabled" sx={{ fontSize: 10 }}>
+                                <Typography variant="caption" color="text.disabled" sx={{ fontSize: 12 }}>
                                     {fmtTs(a.timestamp)}
                                 </Typography>
                                 {a.namespace && (
                                     <Chip label={a.namespace} size="small"
-                                        sx={{ height: 14, fontSize: 9,
+                                        sx={{ height: 14, fontSize: 11,
                                               '& .MuiChip-label': { px: 0.75 } }} />
                                 )}
                             </Stack>

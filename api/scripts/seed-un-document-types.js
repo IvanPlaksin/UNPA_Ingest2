@@ -28,6 +28,37 @@ function mg() { if (!_mg) _mg = require('../src/services/memgraph.service'); ret
 const UN_DOC_TYPES = [
   // ── L0 Constitutional ──────────────────────────────────────────────────────
   {
+    id: 'SC_RES',
+    name: 'Security Council Resolution',
+    description: 'Security Council resolutions — legally binding decisions under UN Charter Chapter VI/VII/VIII',
+    epistemicLayer: 'L0',
+    normativeWeight: 0.98,
+    classifierRules: {
+      threshold: 0.55,
+      rules: [
+        { signal: 'header_match', pattern: 'S/RES/\\d+\\s*\\(\\d{4}\\)', weight: 0.40 },
+        { signal: 'title_match', keywords: ['s/res/', 'security council resolution', 'sc resolution'], weight: 0.20 },
+        { signal: 'keyword_match', keywords: ['security council', 'the security council', 'resolution adopted by the security council', 'acting under chapter vii', 'acting under the charter'], weight: 0.25 },
+        { signal: 'section_match', sections: ['THE SECURITY COUNCIL', 'ACTING UNDER CHAPTER VII', 'DECIDES', 'DEMANDS', 'URGES', 'CALLS UPON', 'REAFFIRMING'], weight: 0.15 }
+      ]
+    }
+  },
+  {
+    id: 'SC_PRST',
+    name: 'Security Council Presidential Statement',
+    description: 'Security Council Presidential Statements (S/PRST) — consensus statements by SC presidency',
+    epistemicLayer: 'L1',
+    normativeWeight: 0.65,
+    classifierRules: {
+      threshold: 0.60,
+      rules: [
+        { signal: 'header_match', pattern: 'S/PRST/\\d{4}/\\d+', weight: 0.45 },
+        { signal: 'keyword_match', keywords: ['presidential statement', 'president of the security council', 'S/PRST/', 'statement by the president'], weight: 0.35 },
+        { signal: 'section_match', sections: ['THE SECURITY COUNCIL', 'THE PRESIDENT'], weight: 0.20 }
+      ]
+    }
+  },
+  {
     id: 'UN_CHARTER',
     name: 'UN Charter',
     description: 'Charter of the United Nations — foundational constitutional document',

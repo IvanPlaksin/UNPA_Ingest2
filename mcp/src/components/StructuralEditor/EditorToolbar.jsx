@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import useStructuralEditorStore from '../../stores/structuralEditorStore';
 import { listStructuralGraphs } from '../../services/api';
 
@@ -44,7 +44,7 @@ export default function EditorToolbar() {
   };
 
   const btnStyle = (active) => ({
-    padding: '4px 10px', fontSize: 10, fontWeight: 500, border: 'none', borderRadius: 4,
+    padding: '4px 10px', fontSize: 12, fontWeight: 500, border: 'none', borderRadius: 4,
     cursor: 'pointer', transition: 'background 0.15s',
     background: active ? '#30363d' : 'transparent', color: active ? '#e2e8f0' : '#8b949e',
   });
@@ -65,15 +65,15 @@ export default function EditorToolbar() {
       <div style={{ width: 1, height: 20, background: '#30363d', margin: '0 4px' }} />
 
       {/* Graph name */}
-      <span style={{ fontSize: 12, fontWeight: 600, color: '#e2e8f0', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <span style={{ fontSize: 13, fontWeight: 600, color: '#e2e8f0', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {graphName || 'No form loaded'}
       </span>
       {namespace && (
-        <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 3, background: '#21262d', color: '#8b949e', fontWeight: 600 }}>
+        <span style={{ fontSize: 11, padding: '1px 6px', borderRadius: 3, background: '#21262d', color: '#8b949e', fontWeight: 600 }}>
           {namespace}
         </span>
       )}
-      {isDirty && <span style={{ fontSize: 10, color: '#d29922', fontWeight: 600 }}>Unsaved</span>}
+      {isDirty && <span style={{ fontSize: 12, color: '#d29922', fontWeight: 600 }}>Unsaved</span>}
 
       <div style={{ flex: 1 }} />
 
@@ -107,7 +107,7 @@ export default function EditorToolbar() {
               Open STRUCTURAL Graph
             </div>
             {graphs.length === 0 && (
-              <div style={{ color: '#484f58', fontSize: 11, padding: 20, textAlign: 'center' }}>No graphs found</div>
+              <div style={{ color: '#484f58', fontSize: 13, padding: 20, textAlign: 'center' }}>No graphs found</div>
             )}
             {graphs.map(g => (
               <div key={g.graphId}
@@ -120,8 +120,8 @@ export default function EditorToolbar() {
                 onMouseEnter={e => e.currentTarget.style.borderColor = '#30363d'}
                 onMouseLeave={e => e.currentTarget.style.borderColor = 'transparent'}
               >
-                <div style={{ fontSize: 12, fontWeight: 500, color: '#e2e8f0' }}>{g.name}</div>
-                <div style={{ fontSize: 10, color: '#8b949e', marginTop: 2 }}>
+                <div style={{ fontSize: 13, fontWeight: 500, color: '#e2e8f0' }}>{g.name}</div>
+                <div style={{ fontSize: 12, color: '#8b949e', marginTop: 2 }}>
                   {g.namespace} &middot; {g.nodeCount} fields
                   {g.constraintRuleCount && ` &middot; ${g.constraintRuleCount} rules`}
                 </div>
@@ -150,7 +150,7 @@ export default function EditorToolbar() {
               onKeyDown={e => e.key === 'Enter' && createNew()}
               placeholder="Form name..."
               style={{
-                width: '100%', padding: '8px 12px', fontSize: 12,
+                width: '100%', padding: '8px 12px', fontSize: 13,
                 background: '#0d1117', border: '1px solid #30363d', borderRadius: 6, color: '#e2e8f0', outline: 'none',
                 marginBottom: 12,
               }}

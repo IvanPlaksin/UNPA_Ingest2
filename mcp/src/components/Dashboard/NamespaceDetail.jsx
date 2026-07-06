@@ -1,4 +1,4 @@
-/**
+﻿/**
  * NamespaceDetail — detailed view for a selected namespace
  *
  * Tabs:
@@ -39,7 +39,7 @@ function LayerBar({ label, count, max }) {
     const pct = max > 0 ? Math.round(count / max * 100) : 0;
     return (
         <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.75 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ minWidth: 130, fontSize: 11 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ minWidth: 130, fontSize: 13 }}>
                 {label}
             </Typography>
             <Box sx={{ flex: 1 }}>
@@ -56,7 +56,7 @@ function DistBar({ label, count, total, color }) {
     const pct = total > 0 ? Math.round(count / total * 100) : 0;
     return (
         <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.75 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ minWidth: 100, fontSize: 11 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ minWidth: 100, fontSize: 13 }}>
                 {label}
             </Typography>
             <Box sx={{ flex: 1 }}>
@@ -116,13 +116,13 @@ export default function NamespaceDetail({ namespace, onClose, onNavigate }) {
                         <Chip
                             label={`${detail.healthScore} — ${detail.healthLevel}`}
                             size="small"
-                            sx={{ bgcolor: color + '22', color, fontWeight: 700, fontSize: 11 }}
+                            sx={{ bgcolor: color + '22', color, fontWeight: 700, fontSize: 13 }}
                         />
                     )}
                 </Stack>
                 <Stack direction="row" spacing={0.5}>
                     <Button size="small" variant="outlined" startIcon={<Download size={12} />}
-                        onClick={handleExport} sx={{ fontSize: 11 }}>
+                        onClick={handleExport} sx={{ fontSize: 13 }}>
                         Export
                     </Button>
                     {onClose && (
@@ -137,10 +137,10 @@ export default function NamespaceDetail({ namespace, onClose, onNavigate }) {
 
             <Tabs value={tab} onChange={(_, v) => setTab(v)}
                 sx={{ borderBottom: 1, borderColor: 'divider', mb: 0, flexShrink: 0 }}>
-                <Tab label="Overview"  sx={{ minHeight: 36, py: 0.5, fontSize: 12 }} />
-                <Tab label="Processes" sx={{ minHeight: 36, py: 0.5, fontSize: 12 }} />
-                <Tab label="Documents" sx={{ minHeight: 36, py: 0.5, fontSize: 12 }} />
-                <Tab label="Activity"  sx={{ minHeight: 36, py: 0.5, fontSize: 12 }} />
+                <Tab label="Overview"  sx={{ minHeight: 36, py: 0.5, fontSize: 13 }} />
+                <Tab label="Processes" sx={{ minHeight: 36, py: 0.5, fontSize: 13 }} />
+                <Tab label="Documents" sx={{ minHeight: 36, py: 0.5, fontSize: 13 }} />
+                <Tab label="Activity"  sx={{ minHeight: 36, py: 0.5, fontSize: 13 }} />
             </Tabs>
 
             {/* ── Overview ── */}
@@ -221,7 +221,7 @@ export default function NamespaceDetail({ namespace, onClose, onNavigate }) {
                                 <Typography variant="caption" fontWeight={700}>Gaps Summary</Typography>
                                 <Button size="small" variant="text" endIcon={<ExternalLink size={10} />}
                                     onClick={() => onNavigate?.('gaps', { namespace })}
-                                    sx={{ fontSize: 10 }}>
+                                    sx={{ fontSize: 12 }}>
                                     Gap Manager
                                 </Button>
                             </Stack>
@@ -230,14 +230,14 @@ export default function NamespaceDetail({ namespace, onClose, onNavigate }) {
                                     icon={<AlertTriangle size={10} />}
                                     sx={{ bgcolor: detail.gapSummary.open > 0 ? '#f59e0b22' : undefined,
                                           color: detail.gapSummary.open > 0 ? '#f59e0b' : undefined,
-                                          fontSize: 11 }} />
+                                          fontSize: 13 }} />
                                 {detail.gapSummary.stale > 0 && (
                                     <Chip label={`${detail.gapSummary.stale} stale`} size="small"
-                                        sx={{ bgcolor: '#ef444422', color: '#ef4444', fontSize: 11 }} />
+                                        sx={{ bgcolor: '#ef444422', color: '#ef4444', fontSize: 13 }} />
                                 )}
                                 {detail.gapSummary.bySeverity.high > 0 && (
                                     <Chip label={`${detail.gapSummary.bySeverity.high} HIGH`} size="small"
-                                        sx={{ bgcolor: '#ef444422', color: '#ef4444', fontSize: 11 }} />
+                                        sx={{ bgcolor: '#ef444422', color: '#ef4444', fontSize: 13 }} />
                                 )}
                             </Stack>
                         </Box>
@@ -257,7 +257,7 @@ export default function NamespaceDetail({ namespace, onClose, onNavigate }) {
                             </Typography>
                             <Button size="small" variant="text" endIcon={<ExternalLink size={10} />}
                                 onClick={() => onNavigate?.('knowledge-triangle', { namespace })}
-                                sx={{ fontSize: 10 }}>
+                                sx={{ fontSize: 12 }}>
                                 Triangle Explorer
                             </Button>
                         </Stack>
@@ -283,11 +283,11 @@ export default function NamespaceDetail({ namespace, onClose, onNavigate }) {
                                     </Box>
                                     <Stack direction="row" spacing={0.5} alignItems="center">
                                         <Chip label={`KQS ${p.kqs}`} size="small"
-                                            sx={{ height: 18, fontSize: 9 }} />
+                                            sx={{ height: 18, fontSize: 11 }} />
                                         {p.openGaps > 0 && (
                                             <Chip label={`${p.openGaps} gap${p.openGaps !== 1 ? 's' : ''}`}
                                                 size="small"
-                                                sx={{ height: 18, fontSize: 9, bgcolor: '#f59e0b22', color: '#f59e0b' }} />
+                                                sx={{ height: 18, fontSize: 11, bgcolor: '#f59e0b22', color: '#f59e0b' }} />
                                         )}
                                     </Stack>
                                 </Stack>
@@ -309,17 +309,17 @@ export default function NamespaceDetail({ namespace, onClose, onNavigate }) {
                             </Typography>
                             <Button size="small" variant="text" endIcon={<ExternalLink size={10} />}
                                 onClick={() => onNavigate?.('documents', { namespace })}
-                                sx={{ fontSize: 10 }}>
+                                sx={{ fontSize: 12 }}>
                                 Document Processing
                             </Button>
                         </Stack>
                         {Object.entries(detail.documentsByLayer).map(([layer, count]) => (
                             <Stack key={layer} direction="row" alignItems="center"
                                 justifyContent="space-between" sx={{ py: 0.5, borderBottom: 1, borderColor: 'divider' }}>
-                                <Typography variant="body2" sx={{ fontSize: 12 }}>
+                                <Typography variant="body2" sx={{ fontSize: 13 }}>
                                     {LAYER_LABELS[layer] || layer}
                                 </Typography>
-                                <Chip label={count} size="small" sx={{ height: 18, fontSize: 10 }} />
+                                <Chip label={count} size="small" sx={{ height: 18, fontSize: 12 }} />
                             </Stack>
                         ))}
                     </Box>

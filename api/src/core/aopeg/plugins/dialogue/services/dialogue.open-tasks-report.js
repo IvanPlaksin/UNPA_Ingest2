@@ -60,7 +60,7 @@ async function _callLLM(llmService, formattedText, model) {
   try {
     const result = await llmService.chat(
       [{ role: 'user', content: PROMPT(formattedText) }],
-      { model, maxTokens: 6000 }
+      { model, maxTokens: 6000, caller: 'aopeg_dialogue' }
     );
     const rawContent = result.content;
     raw = (Array.isArray(rawContent)

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * BottomPanel - Collapsible/resizable bottom panel with tabs
  *
  * Tab 1: Execution Results (ResultPanel)
@@ -34,7 +34,7 @@ const EVENT_TYPES = {
   gnn: { label: 'GNN Processing', color: '#ec4899', Icon: Database },
   fallback: { label: 'Fallback', color: '#f97316', Icon: Settings },
   error: { label: 'Error', color: '#ef4444', Icon: AlertCircle },
-  info: { label: 'Info', color: '#6b7280', Icon: Terminal },
+  info: { label: 'Info', color: '#94a3b8', Icon: Terminal },
   complete: { label: 'Complete', color: '#22c55e', Icon: CheckCircle },
   // Knowledge graph extraction event types
   parsing: { label: 'Parsing', color: '#14b8a6', Icon: FileCode },

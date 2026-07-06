@@ -1,4 +1,4 @@
-/**
+﻿/**
  * DocumentPicker — modal for linking a document to a triangle vertex
  *
  * Fetches available documents filtered by layer constraints:
@@ -190,7 +190,7 @@ export default function DocumentPicker({ open, processId, vertexType = 'normativ
                                                 </Typography>
                                                 {doc.layer && (
                                                     <Chip label={doc.layer} size="small"
-                                                        sx={{ height: 16, fontSize: 10,
+                                                        sx={{ height: 16, fontSize: 12,
                                                               bgcolor: (LAYER_COLORS[doc.layer] || '#64748b') + '22',
                                                               color:   LAYER_COLORS[doc.layer] || '#64748b' }} />
                                                 )}

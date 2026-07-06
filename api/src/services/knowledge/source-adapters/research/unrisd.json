@@ -1,0 +1,17 @@
+{
+  "key": "unrisd",
+  "name": "UNRISD Publications",
+  "family": "rss-feed",
+  "capabilities": ["browseAll"],
+  "filterSchema": [
+    { "type": "dateFrom", "param": "_clientDateFrom", "label": "From date", "clientSide": true },
+    { "type": "dateTo", "param": "_clientDateTo", "label": "To date", "clientSide": true },
+    { "type": "keyword", "param": "_clientKeyword", "label": "Keyword (title/description)", "clientSide": true }
+  ],
+  "config": { "url": "https://www.unrisd.org/feed" },
+  "download": { "mode": "record-page", "notes": "unverified — no working feed found; if a feed existed the document would be the publication landing page, potentially with a linked PDF, but this could not be confirmed." },
+  "enrich": { "mode": "none", "notes": "no per-item metadata API" },
+  "methodologyMarkdown": "## Overview\nUNRISD Publications is intended to expose the research output (working papers, occasional papers, flagship reports) of the UN Research Institute for Social Development. The configured URL https://www.unrisd.org/feed does NOT currently serve an RSS/Atom feed.\n\n## Search\nClient-side keyword filtering over RSS item title/description; no server query API. This is the intended model, but cannot be exercised because no feed content is returned.\n\n## Filters\nIntended client-side only: publication date range and keyword. Category filtering would depend on per-item `<category>` tags, which cannot be confirmed as the feed is unavailable.\n\n## Download\nIf a feed existed, the item link would point to a UNRISD publication landing page, which for research output often links a PDF. This could not be verified.\n\n## Metadata & Enrichment\nNot supported.\n\n## Limitations\nThe endpoint returns an HTML single-page-application shell (Content-Type text/html), not XML. The site is a Vue SPA: every probed path (/feed, /rss, /feed.xml, /rss.xml, /en/rss, /publications/feed, /feed/rss) returns HTTP 200 with the same JS app shell and no feed. No working RSS/Atom feed URL was found; this source is currently non-functional and requires a corrected feed URL or an alternate ingestion strategy (e.g. HTML scraping of the publications listing).",
+  "verified": false,
+  "probeNotes": "NOT a feed. https://www.unrisd.org/feed returns HTTP 200 but Content-Type text/html — a Vue SPA shell (~997 bytes, <div id=\"app\"></div>), not RSS/Atom. WebFetch received empty/JS-only body. Probed 6 alternative paths (/rss, /feed.xml, /rss.xml, /en/rss, /publications/feed, /feed/rss) — all return the same SPA shell. No working feed located. capabilities reduced to browseAll only; verified=false."
+}

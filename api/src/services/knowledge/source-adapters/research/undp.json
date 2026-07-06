@@ -1,0 +1,24 @@
+{
+  "key": "undp",
+  "name": "UNDP Publications",
+  "family": "url-catalog",
+  "capabilities": ["browseAll", "paginate", "download"],
+  "filterSchema": [],
+  "config": {
+    "url": "https://climatepromise.undp.org/research-and-reports",
+    "searchUrlTemplate": "",
+    "linkFilter": "",
+    "includeAllLinks": false
+  },
+  "download": {
+    "mode": "record-page",
+    "notes": "Report cards link to /research-and-reports/{slug} record pages where the PDF is exposed. Two-step crawl (listing -> record -> PDF) required. Listing yields ~12 report links per page over ~20 pages."
+  },
+  "enrich": {
+    "mode": "none",
+    "notes": "Title, date and description available from listing/record pages; no repository API."
+  },
+  "methodologyMarkdown": "## Overview\nTwo candidate UNDP catalogs were compared. www.undp.org/publications sits behind a strict Cloudflare/WAF that returns HTTP 403 to non-browser User-Agents, making it unreliable for automated scraping without a full browser. climatepromise.undp.org/research-and-reports is fully server-rendered and returns clean HTML to a plain fetch, yielding ~12 scrapable report links per page across ~20 pages.\n\n## Recommendation\nRECOMMEND climatepromise.undp.org/research-and-reports as the default source: it produced consistently scrapable document links with no WAF block, whereas the main undp.org/publications endpoint was blocked. The main site remains usable only if a browser-grade User-Agent/cookie handling is added.\n\n## Search\nNeither candidate exposed a reliable dedicated search endpoint for automated use; discovery is via browsing + facets. Search capability is therefore not claimed.\n\n## Filters\nThe Climate Promise listing exposes country / region / area-of-work facets and pagination (?page=N) as URL parameters. Treated as opaque params; no formal schema.\n\n## Download\nCards link to /research-and-reports/{slug} record pages. PDFs are exposed on the record page, not the listing, so a two-step crawl is required.\n\n## Metadata & Enrichment\nTitle, date and short description are in server-rendered HTML. No JSON/REST API; enrichment is HTML-based.\n\n## Limitations\nHONEST: main undp.org/publications returned 403 (WAF), not a JS-SPA issue. Chosen Climate Promise sub-site is topically scoped to climate/NDC work, so it is narrower than the org-wide catalog. Pagination ?page=N.",
+  "verified": true,
+  "probeNotes": "www.undp.org/publications -> HTTP 403 (Cloudflare/WAF). climatepromise.undp.org/research-and-reports -> server-rendered HTML, ~12 links/page, ~20 pages, record URL /research-and-reports/{slug}, ?page=N pagination confirmed. Recommended Climate Promise for higher scrapable-link yield without WAF block."
+}

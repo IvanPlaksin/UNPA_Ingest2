@@ -1,4 +1,4 @@
-/**
+﻿/**
  * AnomaliesTab
  *
  * Shows extraction anomalies with option to create iNeed tasks.
@@ -110,7 +110,7 @@ export default function AnomaliesTab({ anomalies, sessionId, onTaskCreated }) {
           <Typography variant="subtitle1" sx={{ color: '#e6edf3' }}>
             {anomalies.length} Anomalies Detected
           </Typography>
-          <Typography sx={{ color: '#8b949e', fontSize: 12 }}>
+          <Typography sx={{ color: '#8b949e', fontSize: 13 }}>
             {criticalCount} critical, {actionableCount} actionable
           </Typography>
         </Box>
@@ -158,10 +158,10 @@ export default function AnomaliesTab({ anomalies, sessionId, onTaskCreated }) {
                 <Box sx={{ flex: 1 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Typography sx={{ color: colors.text, fontWeight: 500 }}>{(anomaly.type || '').replace(/_/g, ' ')}</Typography>
-                    <Chip label={anomaly.severity} size="small" sx={{ height: 18, fontSize: 10, bgcolor: colors.border, color: 'white' }} />
-                    {hasTask && <Chip icon={<CheckCircle2 size={12} />} label="Task Created" size="small" sx={{ height: 18, fontSize: 10, bgcolor: '#238636', color: 'white', '& .MuiChip-icon': { color: 'white' } }} />}
+                    <Chip label={anomaly.severity} size="small" sx={{ height: 18, fontSize: 12, bgcolor: colors.border, color: 'white' }} />
+                    {hasTask && <Chip icon={<CheckCircle2 size={12} />} label="Task Created" size="small" sx={{ height: 18, fontSize: 12, bgcolor: '#238636', color: 'white', '& .MuiChip-icon': { color: 'white' } }} />}
                   </Box>
-                  <Typography sx={{ color: '#8b949e', fontSize: 12 }}>
+                  <Typography sx={{ color: '#8b949e', fontSize: 13 }}>
                     {anomaly.description?.substring(0, 100) || anomaly.table || 'No details'}
                   </Typography>
                 </Box>
@@ -183,13 +183,13 @@ export default function AnomaliesTab({ anomalies, sessionId, onTaskCreated }) {
                 <Box sx={{ p: 2, pt: 0, borderTop: `1px solid ${colors.border}`, bgcolor: 'rgba(0,0,0,0.2)' }}>
                   {anomaly.affectedTables && (
                     <Box sx={{ mb: 1.5 }}>
-                      <Typography sx={{ color: '#8b949e', fontSize: 11, mb: 0.5 }}>Affected Tables</Typography>
+                      <Typography sx={{ color: '#8b949e', fontSize: 13, mb: 0.5 }}>Affected Tables</Typography>
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                         {anomaly.affectedTables.map(t => <Chip key={t} label={t} size="small" sx={{ bgcolor: '#21262d', color: '#e6edf3', height: 20 }} />)}
                       </Box>
                     </Box>
                   )}
-                  {anomaly.count != null && <Typography sx={{ color: '#8b949e', fontSize: 12 }}>Records affected: {anomaly.count}</Typography>}
+                  {anomaly.count != null && <Typography sx={{ color: '#8b949e', fontSize: 13 }}>Records affected: {anomaly.count}</Typography>}
                   {results[anomaly.id]?.error && <Alert severity="error" sx={{ mt: 1, py: 0.5 }}>{results[anomaly.id].error}</Alert>}
                   {results[anomaly.id]?.success && <Alert severity="success" sx={{ mt: 1, py: 0.5 }}>Task created successfully</Alert>}
                 </Box>

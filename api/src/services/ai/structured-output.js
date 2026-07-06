@@ -18,7 +18,8 @@
 'use strict';
 
 const axios = require('axios');
-const { getInstance: getLLMProvider } = require('../llm/LLMProviderService');
+const { getScopedProvider } = require('../llm-access-control.service');
+const llmProvider = getScopedProvider('structured_output');
 const {
     AI_PROVIDERS,
     AI_MODELS,
@@ -153,7 +154,7 @@ class StructuredOutputService {
         };
 
         try {
-            const llmResp = await getLLMProvider().chat(
+            const llmResp = await llmProvider.chat(
                 [{ role: 'user', content: prompt }],
                 {
                     model: modelId,
@@ -420,7 +421,7 @@ class StructuredOutputService {
     async _callClaudeRaw(prompt, options = {}) {
         const modelId = options.modelId || 'claude-sonnet-4-5-20250929';
 
-        const llmResp = await getLLMProvider().chat(
+        const llmResp = await llmProvider.chat(
             [{ role: 'user', content: prompt }],
             {
                 model: modelId,

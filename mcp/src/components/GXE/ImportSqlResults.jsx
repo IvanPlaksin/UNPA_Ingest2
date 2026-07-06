@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ImportSqlResults
  *
  * Container for displaying agentic import results.
@@ -107,7 +107,7 @@ export default function ImportSqlResults({ onClose, onOpenInGXE, onRestartPhase 
             />
           )}
           {sessionId && (
-            <Typography sx={{ color: '#6e7681', fontSize: 11 }}>
+            <Typography sx={{ color: '#6e7681', fontSize: 13 }}>
               Session: {sessionId.slice(0, 8)}
             </Typography>
           )}
@@ -141,7 +141,7 @@ export default function ImportSqlResults({ onClose, onOpenInGXE, onRestartPhase 
                     label={anomalies.length}
                     size="small"
                     sx={{
-                      height: 18, minWidth: 18, fontSize: 10,
+                      height: 18, minWidth: 18, fontSize: 12,
                       bgcolor: anomalies.some(a => a.severity === 'high') ? '#da3633' : '#9e6a03',
                       color: 'white',
                     }}
@@ -239,7 +239,7 @@ function SummaryTab({ summary, qualityScore, catalogEntries = [], catalogDuplica
               border: '1px solid #30363d',
             }}
           >
-            <Typography sx={{ color: '#8b949e', fontSize: 12 }}>
+            <Typography sx={{ color: '#8b949e', fontSize: 13 }}>
               {metric.label}
             </Typography>
             <Typography variant="h4" sx={{ color: '#e6edf3', mt: 0.5 }}>
@@ -286,7 +286,7 @@ function SummaryTab({ summary, qualityScore, catalogEntries = [], catalogDuplica
             ))}
           </Box>
           {catalogDuplicates.length > 0 && (
-            <Typography sx={{ color: '#8b949e', fontSize: 11, mt: 1 }}>
+            <Typography sx={{ color: '#8b949e', fontSize: 13, mt: 1 }}>
               {catalogDuplicates.length} graph(s) already existed in catalog
             </Typography>
           )}

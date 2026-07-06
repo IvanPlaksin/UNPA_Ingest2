@@ -1,4 +1,4 @@
-/**
+﻿/**
  * SubtasksTab — Task hierarchy (children + completion status)
  */
 import React, { useState, useEffect } from 'react';
@@ -76,8 +76,8 @@ export default function SubtasksTab({ backlogId }) {
         }}>
           <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
-              <Chip label={child.backlogId} size="small" variant="outlined" sx={{ fontSize: 10, height: 20 }} />
-              <Chip label={child.status} size="small" color={STATUS_COLORS[child.status] || 'default'} sx={{ fontSize: 10, height: 20 }} />
+              <Chip label={child.backlogId} size="small" variant="outlined" sx={{ fontSize: 12, height: 20 }} />
+              <Chip label={child.status} size="small" color={STATUS_COLORS[child.status] || 'default'} sx={{ fontSize: 12, height: 20 }} />
               {child._order && (
                 <Typography variant="caption" color="text.disabled">#{child._order}</Typography>
               )}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Paper, Alert, Chip, Divider, CircularProgress,
   ToggleButtonGroup, ToggleButton,
@@ -93,8 +93,8 @@ export default function StructuralFormDemoPage() {
                       primary={g.name}
                       secondary={
                         <Box component="span" sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 0.5 }}>
-                          <Chip label={g.namespace} size="small" variant="outlined" sx={{ height: 18, fontSize: 10 }} />
-                          <Chip label={`${g.nodeCount} fields`} size="small" variant="outlined" sx={{ height: 18, fontSize: 10 }} />
+                          <Chip label={g.namespace} size="small" variant="outlined" sx={{ height: 18, fontSize: 12 }} />
+                          <Chip label={`${g.nodeCount} fields`} size="small" variant="outlined" sx={{ height: 18, fontSize: 12 }} />
                           {g.constraint && (
                             <Chip
                               icon={<Rule sx={{ fontSize: '12px !important' }} />}
@@ -102,7 +102,7 @@ export default function StructuralFormDemoPage() {
                               size="small"
                               color="secondary"
                               variant="outlined"
-                              sx={{ height: 18, fontSize: 10 }}
+                              sx={{ height: 18, fontSize: 12 }}
                             />
                           )}
                         </Box>
@@ -122,9 +122,9 @@ export default function StructuralFormDemoPage() {
                   onChange={(_, v) => { if (v) { setLocale(v); setSubmittedData(null); } }}
                   size="small"
                 >
-                  <ToggleButton value="en" sx={{ px: 1, py: 0.25, fontSize: 11 }}>EN</ToggleButton>
-                  <ToggleButton value="fr" sx={{ px: 1, py: 0.25, fontSize: 11 }}>FR</ToggleButton>
-                  <ToggleButton value="ru" sx={{ px: 1, py: 0.25, fontSize: 11 }}>RU</ToggleButton>
+                  <ToggleButton value="en" sx={{ px: 1, py: 0.25, fontSize: 13 }}>EN</ToggleButton>
+                  <ToggleButton value="fr" sx={{ px: 1, py: 0.25, fontSize: 13 }}>FR</ToggleButton>
+                  <ToggleButton value="ru" sx={{ px: 1, py: 0.25, fontSize: 13 }}>RU</ToggleButton>
                 </ToggleButtonGroup>
               </Box>
             </Paper>
@@ -166,7 +166,7 @@ export default function StructuralFormDemoPage() {
                       sx={{ mt: 2 }}
                     >
                       <Typography variant="subtitle2" gutterBottom>Submitted data:</Typography>
-                      <Box component="pre" sx={{ fontSize: 11, maxHeight: 250, overflow: 'auto', m: 0, whiteSpace: 'pre-wrap' }}>
+                      <Box component="pre" sx={{ fontSize: 13, maxHeight: 250, overflow: 'auto', m: 0, whiteSpace: 'pre-wrap' }}>
                         {JSON.stringify(submittedData, null, 2)}
                       </Box>
                     </Alert>

@@ -860,7 +860,26 @@ const RELATIONSHIP_TYPES = {
   APPROVED_BY: { category: 'Communication', description: 'Approved by person' },
   MEMBER_OF: { category: 'Communication', description: 'Team membership' },
   REPORTS_TO: { category: 'Communication', description: 'Reporting structure' },
-  COLLABORATES_WITH: { category: 'Communication', description: 'Collaboration relation' }
+  COLLABORATES_WITH: { category: 'Communication', description: 'Collaboration relation' },
+
+  // UN Document Relations — typed links between UN documents (Document↔Document).
+  // Some ride on a shared edge label with the semantic in the `relType` property
+  // (e.g. SUPERSEDES {relType:'AMENDS'}); listed here so the ontology validator
+  // recognizes them.
+  CITES: { category: 'UN Document', description: 'Document cites/references another document' },
+  SUPERSEDES: { category: 'UN Document', description: 'Document supersedes an earlier one' },
+  AMENDS: { category: 'UN Document', description: 'Document amends another' },
+  REVOKES: { category: 'UN Document', description: 'Document revokes another' },
+  RENEWS: { category: 'UN Document', description: 'Document renews/extends a mandate' },
+  SUPPLEMENTS: { category: 'UN Document', description: 'Document supplements another' },
+  CORRECTS: { category: 'UN Document', description: 'Corrigendum corrects its base document' },
+  REVISES: { category: 'UN Document', description: 'Revision revises its base document' },
+  HAS_ADDENDUM: { category: 'UN Document', description: 'Base document has an addendum' },
+  DRAFT_OF: { category: 'UN Document', description: 'Draft of a final document' },
+  PART_OF_SERIES: { category: 'UN Document', description: 'Document is part of a document series' },
+  CONSIDERED_UNDER: { category: 'UN Document', description: 'Document considered under an agenda item' },
+  TRANSMITS: { category: 'UN Document', description: 'Cover note transmits another document' },
+  RESPONDS_TO: { category: 'UN Document', description: 'Document responds to another' }
 };
 
 /**

@@ -104,7 +104,7 @@ async function main() {
       const prompt = buildPrompt(service);
       const response = await llmService.chat(
         [{ role: 'user', content: prompt }],
-        { model: 'claude-sonnet-4-20250514', temperature: 0.8, maxTokens: 2048 }
+        { model: 'claude-sonnet-4-20250514', temperature: 0.8, maxTokens: 2048, caller: 'flowdesk' }
       );
 
       const rc1 = response.content;
@@ -114,7 +114,7 @@ async function main() {
         console.log(`    WARN: Only ${utterances?.length || 0} utterances, retrying...`);
         const response2 = await llmService.chat(
           [{ role: 'user', content: prompt }],
-          { model: 'claude-sonnet-4-20250514', temperature: 0.9, maxTokens: 2048 }
+          { model: 'claude-sonnet-4-20250514', temperature: 0.9, maxTokens: 2048, caller: 'flowdesk' }
         );
         const rc2 = response2.content;
         const text2 = Array.isArray(rc2) ? rc2.filter(b => b.type === 'text').map(b => b.text).join('') : (rc2 || '');

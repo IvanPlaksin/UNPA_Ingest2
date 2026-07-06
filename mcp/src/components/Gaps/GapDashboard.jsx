@@ -1,4 +1,4 @@
-/**
+﻿/**
  * GapDashboard — Gap summary statistics
  *
  * Displays key metrics and distributions:
@@ -76,7 +76,7 @@ function TypeBar({ type, count, total }) {
                     variant="determinate" value={pct}
                     sx={{ height: 6, borderRadius: 3,
                           bgcolor: '#f1f5f9',
-                          '& .MuiLinearProgress-bar': { bgcolor: '#475569' } }}
+                          '& .MuiLinearProgress-bar': { bgcolor: '#94a3b8' } }}
                 />
             </Box>
             <Typography variant="caption" color="text.secondary" sx={{ minWidth: 24, textAlign: 'right' }}>
@@ -170,7 +170,7 @@ export default function GapDashboard({ namespace, onFilterChange }) {
                     ].map(s => (
                         <Stack key={s.label} direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
                             <Chip label={s.label} size="small"
-                                sx={{ height: 18, fontSize: 10, minWidth: 54,
+                                sx={{ height: 18, fontSize: 12, minWidth: 54,
                                       bgcolor: s.color + '22', color: s.color }} />
                             <Typography variant="body2" fontWeight={700} color={s.color}>{s.count}</Typography>
                         </Stack>

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+﻿import React, { useMemo } from 'react';
 import ReactFlow, { ReactFlowProvider, Background, Controls, MiniMap } from 'reactflow';
 import 'reactflow/dist/style.css';
 import useStructuralEditorStore from '../../../stores/structuralEditorStore';
@@ -30,11 +30,11 @@ function ConstraintNode({ data }) {
       <div style={{ fontSize: 8, fontWeight: 700, color, textTransform: 'uppercase', letterSpacing: 0.5 }}>
         {data.ruleType}
       </div>
-      <div style={{ fontSize: 10, color: '#e2e8f0', marginTop: 2 }}>
+      <div style={{ fontSize: 12, color: '#e2e8f0', marginTop: 2 }}>
         {data.targetField || data.targetFields?.join(', ') || '(aggregate)'}
       </div>
       {data.value !== undefined && (
-        <div style={{ fontSize: 9, color: '#8b949e', marginTop: 2 }}>= {String(data.value)}</div>
+        <div style={{ fontSize: 11, color: '#8b949e', marginTop: 2 }}>= {String(data.value)}</div>
       )}
     </div>
   );
@@ -72,7 +72,7 @@ export default function GraphView() {
       <div style={{ flex: 1, position: 'relative', borderRight: '1px solid #30363d' }}>
         <div style={{
           position: 'absolute', top: 8, left: 12, zIndex: 10,
-          fontSize: 9, fontWeight: 700, color: '#3b82f6', textTransform: 'uppercase',
+          fontSize: 11, fontWeight: 700, color: '#3b82f6', textTransform: 'uppercase',
           background: '#0d1117cc', padding: '3px 8px', borderRadius: 4, letterSpacing: 1,
         }}>
           STRUCTURAL
@@ -100,7 +100,7 @@ export default function GraphView() {
       <div style={{ flex: 1, position: 'relative' }}>
         <div style={{
           position: 'absolute', top: 8, left: 12, zIndex: 10,
-          fontSize: 9, fontWeight: 700, color: '#ef4444', textTransform: 'uppercase',
+          fontSize: 11, fontWeight: 700, color: '#ef4444', textTransform: 'uppercase',
           background: '#0d1117cc', padding: '3px 8px', borderRadius: 4, letterSpacing: 1,
         }}>
           CONSTRAINT ({constraintRules.length} rules)
@@ -126,7 +126,7 @@ export default function GraphView() {
         ) : (
           <div style={{
             height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: '#0a0a1a', color: '#484f58', fontSize: 11,
+            background: '#0a0a1a', color: '#484f58', fontSize: 13,
           }}>
             No CONSTRAINT rules defined
           </div>

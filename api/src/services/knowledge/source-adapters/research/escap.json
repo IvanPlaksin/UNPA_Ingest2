@@ -1,0 +1,48 @@
+{
+  "key": "escap",
+  "name": "ESCAP Publications",
+  "family": "dspace",
+  "capabilities": ["search", "pagination", "sort", "dateFilter", "typeFilter", "languageFilter", "countryFilter", "facets", "itemMetadata", "bitstreamDownload"],
+  "filterSchema": [
+    { "type": "dateFrom", "param": "f.dateIssued.min", "label": "Issued year from (DSpace date facet range)" },
+    { "type": "dateTo", "param": "f.dateIssued.max", "label": "Issued year to" },
+    { "type": "docType", "param": "f.type", "label": "Document type (facet value, e.g. 'Report','Text'; append ',equals')" },
+    { "type": "language", "param": "f.language", "label": "Language (facet value; append ',equals')" }
+  ],
+  "config": {
+    "endpoint": "https://repository.unescap.org/server/api/discover/search/objects",
+    "method": "GET",
+    "searchParam": "query",
+    "queryParams": {
+      "sort": "dc.date.issued,DESC",
+      "_note_filters": "DSpace filter syntax: append &f.<facet>=<value>,equals. Verified facet names: dateIssued, type, language, country, unbist, unsdg, author, series."
+    },
+    "pageParam": "page",
+    "limitParam": "size",
+    "pageParamStyle": "zero-based",
+    "responseMapping": {
+      "items": "_embedded.searchResult._embedded.objects[]._embedded.indexableObject",
+      "title": "metadata['dc.title'][0].value",
+      "url": "metadata['dc.identifier.uri'][0].value",
+      "date": "metadata['dc.date.issued'][0].value",
+      "total": "_embedded.searchResult.page.totalElements",
+      "description": "metadata['dc.description.abstract'][0].value",
+      "id": "uuid",
+      "type": "metadata['dc.type'][0].value",
+      "language": "metadata['dc.language.iso'][0].value"
+    }
+  },
+  "download": {
+    "mode": "dspace-bitstream",
+    "urlPattern": "https://repository.unescap.org/server/api/core/bitstreams/{bitstreamUuid}/content",
+    "notes": "Standard DSpace 7 pattern: GET /server/api/core/items/{uuid}/bundles -> bundle 'ORIGINAL' -> bitstreams -> /server/api/core/bitstreams/{bitstreamUuid}/content. Facets include has_content_in_original_bundle to pre-filter items that have a downloadable file. Item handle URIs use hdl.handle.net (e.g. https://hdl.handle.net/20.500.12870/{id})."
+  },
+  "enrich": {
+    "mode": "dspace-item",
+    "endpoint": "https://repository.unescap.org/server/api/core/items/{uuid}",
+    "notes": "Search indexableObject already includes dc.* plus escap.* fields (bibLevel, publisherPlace, etc.) and dc.subject.unbist / UN SDG tags. GET items/{uuid} for canonical metadata if abstract missing from the search hit."
+  },
+  "methodologyMarkdown": "## Overview\nESCAP's institutional repository (repository.unescap.org) is a DSpace 7 instance exposing the standard HAL/REST discovery API. It holds ~9,300+ items and is the preferred structured ingestion path over the unescap.org/publications HTML pages.\n\n## Search\nGET /server/api/discover/search/objects with the term in `query`. Items are at `_embedded.searchResult._embedded.objects[]._embedded.indexableObject`, each with `uuid`, `name`, and a Dublin-Core `metadata` map. `sort=dc.date.issued,DESC` is verified. Total is `_embedded.searchResult.page.totalElements` (9,335 for a broad query).\n\n## Filters\nThe discovery facets endpoint (/server/api/discover/facets) confirms these live facet names: dateIssued, country, unbist, unsdg, type, author, pow, aow, series, contactUnit, has_content_in_original_bundle, language, subject_AAT, type_AAT, format_medium. Apply with `&f.<facet>=<value>,equals`. Verified example: `f.type=Report,equals` narrowed to 2,608 hits and the response echoed the applied filter. Date range: `f.dateIssued.min` / `f.dateIssued.max`.\n\n## Download\nPDFs are in the ORIGINAL bundle. Resolve GET /server/api/core/items/{uuid}/bundles -> ORIGINAL -> bitstreams -> /server/api/core/bitstreams/{bitstreamUuid}/content. Pre-filter downloadable items with `f.has_content_in_original_bundle=true,equals`.\n\n## Metadata & Enrichment\nSearch hits carry dc.* plus ESCAP-specific escap.* fields, UN BIS subjects (dc.subject.unbist) and SDG tags. Note dc.language.iso here uses ISO-3 codes ('eng'), unlike FAO. Handle URIs point to hdl.handle.net/20.500.12870/*. GET /server/api/core/items/{uuid} for full record.\n\n## Limitations\nUnauthenticated access worked with a plain browser User-Agent (no Referer needed, unlike FAO). Pagination is zero-based `page`/`size`; DSpace typically caps size at 100.",
+  "verified": true,
+  "probeNotes": "GET /server/api/discover/search/objects?query=asia&size=1&sort=dc.date.issued,DESC -> HTTP 200. page.totalElements=9335, totalPages=9335. Verified metadata: dc.title='Advancing Gender Equality, Disability, and Social Inclusion', dc.date.issued='2026-07-01', dc.identifier.uri='https://hdl.handle.net/20.500.12870/10044', dc.type='Text', dc.language.iso='eng'. facets endpoint returned dateIssued,country,unbist,unsdg,type,author,pow,aow,series,contactUnit,has_content_in_original_bundle,language,subject_AAT,type_AAT,format_medium. Filter f.type=Report,equals -> 2608 hits, appliedFilters echoed. Worked with basic browser UA (no Referer required)."
+}

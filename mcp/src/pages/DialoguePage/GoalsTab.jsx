@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+﻿import React, { useState, useMemo, useCallback } from 'react';
 import {
   Box, Typography, Stack, Chip, Paper, InputBase, IconButton,
   Select, MenuItem, FormControl, Pagination, Collapse,
@@ -42,14 +42,14 @@ function GoalsAnalysisProgress({ sessionId }) {
       <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 0.75 }}>
         <AutoFixHigh sx={{ fontSize: 13, color: 'primary.main' }} />
         <Typography variant="caption" fontWeight={600} color="primary.main">Claude Code analysis</Typography>
-        {status === 'done' && <Chip label="Done" size="small" color="success" sx={{ height: 16, fontSize: 10 }} />}
-        {status === 'error' && <Chip label="Error" size="small" color="error" sx={{ height: 16, fontSize: 10 }} />}
+        {status === 'done' && <Chip label="Done" size="small" color="success" sx={{ height: 16, fontSize: 12 }} />}
+        {status === 'error' && <Chip label="Error" size="small" color="error" sx={{ height: 16, fontSize: 12 }} />}
       </Stack>
       <Stack spacing={0.5}>
         {steps.map((s, i) => (
           <Stack key={i} direction="row" spacing={0.75} alignItems="center">
             {s.status === 'done'
-              ? <CheckCircle sx={{ fontSize: 12, color: 'success.main', flexShrink: 0 }} />
+              ? <CheckCircle sx={{ fontSize: 13, color: 'success.main', flexShrink: 0 }} />
               : s.status === 'error'
                 ? <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: 'error.main', flexShrink: 0 }} />
                 : <CircularProgress size={10} sx={{ flexShrink: 0 }} />
@@ -131,7 +131,7 @@ function GoalRow({ goal, highlight }) {
       </Box>
       {goal.category && (
         <Chip label={goal.category} size="small" variant="outlined"
-          sx={{ height: 16, fontSize: 10, flexShrink: 0 }} />
+          sx={{ height: 16, fontSize: 12, flexShrink: 0 }} />
       )}
     </Stack>
   );
@@ -211,7 +211,7 @@ function GoalsPanel({ session, highlight }) {
                     label={progress.replace('_', ' ')}
                     size="small"
                     color={PROGRESS_COLOR[progress] || 'default'}
-                    sx={{ height: 16, fontSize: 10 }}
+                    sx={{ height: 16, fontSize: 12 }}
                   />
                 )}
               </>
@@ -247,7 +247,7 @@ function GoalsPanel({ session, highlight }) {
         <Paper variant="outlined" sx={{ mt: 0.5, p: 1.5, bgcolor: 'background.default' }}>
           {!hasGoals ? (
             <Typography variant="caption" color="text.disabled">
-              Run goals analysis first (click the <TrackChanges sx={{ fontSize: 12, verticalAlign: 'middle' }} /> button above)
+              Run goals analysis first (click the <TrackChanges sx={{ fontSize: 13, verticalAlign: 'middle' }} /> button above)
             </Typography>
           ) : (
             <>

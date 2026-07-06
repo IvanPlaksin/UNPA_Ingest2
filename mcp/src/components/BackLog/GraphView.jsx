@@ -1,4 +1,4 @@
-/**
+﻿/**
  * GraphView — ReactFlow visualization of task relationships
  * Shows: HAS_SUBTASK (parent→child), DEPENDS_ON edges
  */
@@ -99,7 +99,7 @@ export default function GraphView({ tasks, onTaskClick }) {
           style: { stroke: '#4caf50', strokeWidth: 2 },
           markerEnd: { type: MarkerType.ArrowClosed, color: '#4caf50' },
           label: 'subtask',
-          labelStyle: { fontSize: 10 }
+          labelStyle: { fontSize: 12 }
         });
       }
       // DEPENDS_ON
@@ -116,7 +116,7 @@ export default function GraphView({ tasks, onTaskClick }) {
               style: { stroke: blocked ? '#f44336' : '#ff9800', strokeWidth: 2, strokeDasharray: '5,5' },
               markerEnd: { type: MarkerType.ArrowClosed, color: blocked ? '#f44336' : '#ff9800' },
               label: 'depends',
-              labelStyle: { fontSize: 10 }
+              labelStyle: { fontSize: 12 }
             });
           }
         });

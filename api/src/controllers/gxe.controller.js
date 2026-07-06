@@ -867,7 +867,7 @@ Respond with ONLY the JSON graph structure. No explanations, no markdown, just v
 
       let data;
       try {
-        const llmResp = await getLLMProvider().chat(messages, chatOptions);
+        const llmResp = await getLLMProvider().chat(messages, { ...chatOptions, caller: 'controllers' });
         data = llmResp;
       } catch (err) {
         // If fast mode hits rate limit, retry without fast mode
@@ -875,7 +875,7 @@ Respond with ONLY the JSON graph structure. No explanations, no markdown, just v
           console.warn('[GXE] Fast mode rate limited, retrying without fast mode...');
           logRequestStats({ model: modelId, max_tokens: maxTokens, temperature, messages }, `DAG Generation (turn ${turn}, no fast)`);
           try {
-            const retryResp = await getLLMProvider().chat(messages, { ...chatOptions, speed: undefined, betaHeader: undefined });
+            const retryResp = await getLLMProvider().chat(messages, { ...chatOptions, speed: undefined, betaHeader: undefined, caller: 'controllers' });
             data = retryResp;
           } catch (retryErr) {
             const retryMsg = `LLM error (after fast fallback): ${retryErr.message}`;
@@ -1757,7 +1757,7 @@ ${systemPrompt.substring(0, 8000)}
 
     const llmResp = await getLLMProvider().chat(
       [{ role: 'user', content: userContent }],
-      { model: modelId, maxTokens: 2048, temperature: 0.3, system: analysisSystemPrompt }
+      { model: modelId, maxTokens: 2048, temperature: 0.3, system: analysisSystemPrompt, caller: 'controllers' }
     );
 
     const rawText = llmResp.content?.find(b => b.type === 'text')?.text || '';
@@ -4571,7 +4571,7 @@ Evaluate completeness and identify gaps.`;
 
       const aiResp = await getLLMProvider().chat(
         [{ role: 'user', content: userMessage }],
-        { model: 'haiku', maxTokens: 2048, system: analysisPrompt }
+        { model: 'haiku', maxTokens: 2048, system: analysisPrompt, caller: 'controllers' }
       );
       const aiText = aiResp.content?.[0]?.text || '';
 

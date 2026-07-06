@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Box, Typography, Paper, ToggleButtonGroup, ToggleButton, Divider, Chip } from '@mui/material';
 import { UnpaChat } from '../components/UnpaChat';
 
@@ -36,7 +36,7 @@ export default function UnpaChatDemoPage() {
           <Typography variant="caption" color="text.secondary" sx={{ mr: 1 }}>User:</Typography>
           <ToggleButtonGroup value={userId} exclusive onChange={handleUserChange} size="small">
             {DEMO_USERS.map(u => (
-              <ToggleButton key={u.id} value={u.id} sx={{ px: 1.5, py: 0.5, fontSize: 11 }}>
+              <ToggleButton key={u.id} value={u.id} sx={{ px: 1.5, py: 0.5, fontSize: 13 }}>
                 {u.name}
               </ToggleButton>
             ))}
@@ -45,8 +45,8 @@ export default function UnpaChatDemoPage() {
         <Box>
           <Typography variant="caption" color="text.secondary" sx={{ mr: 1 }}>Theme:</Typography>
           <ToggleButtonGroup value={theme} exclusive onChange={(_, v) => { if (v) setTheme(v); }} size="small">
-            <ToggleButton value="dark" sx={{ px: 1.5, py: 0.5, fontSize: 11 }}>Dark</ToggleButton>
-            <ToggleButton value="light" sx={{ px: 1.5, py: 0.5, fontSize: 11 }}>Light</ToggleButton>
+            <ToggleButton value="dark" sx={{ px: 1.5, py: 0.5, fontSize: 13 }}>Dark</ToggleButton>
+            <ToggleButton value="light" sx={{ px: 1.5, py: 0.5, fontSize: 13 }}>Light</ToggleButton>
           </ToggleButtonGroup>
         </Box>
         <Chip

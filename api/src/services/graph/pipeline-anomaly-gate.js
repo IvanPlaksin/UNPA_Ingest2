@@ -7,7 +7,8 @@
 
 'use strict';
 
-const { getInstance: getLLMProvider } = require('../llm/LLMProviderService');
+const { getScopedProvider } = require('../llm-access-control.service');
+const llmProvider = getScopedProvider('graph_services');
 
 // ═══════════════════════════════════════════════════════════════════════════
 // DAG GENERATION PIPELINE THRESHOLDS
@@ -257,7 +258,7 @@ Diagnose what went wrong and suggest a fix.`;
     console.log(`[AnomalyGate Stats]   Model: ${model}, System: ${sysT} tokens, Message: ${msgT} tokens, TOTAL: ≈${sysT + msgT} input tokens`);
 
     const llmResp = await Promise.race([
-      getLLMProvider().chat([{ role: 'user', content: userMessage }], {
+      llmProvider.chat([{ role: 'user', content: userMessage }], {
         model,
         maxTokens: 1024,
         system: systemPrompt,

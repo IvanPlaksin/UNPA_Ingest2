@@ -110,7 +110,7 @@ Provide helpful, concise responses. If the user asks about specific entities, ru
       chatMessages.push({ role: 'user', content: message });
     }
 
-    const result = await llm.chat(chatMessages);
+    const result = await llm.chat(chatMessages, { caller: 'controllers' });
 
     const rawContent = result?.content;
     const responseText = Array.isArray(rawContent)

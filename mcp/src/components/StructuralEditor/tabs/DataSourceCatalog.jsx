@@ -1,4 +1,4 @@
-/**
+﻿/**
  * DataSourceCatalog — tab in the Structural Editor
  *
  * Left panel:  list of DataSources with search / type filter
@@ -22,17 +22,17 @@ const S = {
   page: { display: 'flex', height: '100%', background: '#0d1117', color: '#e2e8f0' },
   sidebar: { width: 280, borderRight: '1px solid #30363d', display: 'flex', flexDirection: 'column' },
   main: { flex: 1, overflow: 'auto', padding: 16 },
-  input: { width: '100%', padding: '6px 8px', borderRadius: 4, background: '#161b22', border: '1px solid #30363d', color: '#e2e8f0', fontSize: 12, boxSizing: 'border-box', outline: 'none' },
-  select: { width: '100%', padding: '6px 8px', borderRadius: 4, background: '#161b22', border: '1px solid #30363d', color: '#e2e8f0', fontSize: 12 },
-  textarea: { width: '100%', padding: '6px 8px', borderRadius: 4, background: '#161b22', border: '1px solid #30363d', color: '#e2e8f0', fontSize: 11, fontFamily: 'monospace', minHeight: 80, boxSizing: 'border-box', outline: 'none', resize: 'vertical' },
-  label: { fontSize: 10, color: '#8b949e', marginBottom: 3, display: 'block' },
+  input: { width: '100%', padding: '6px 8px', borderRadius: 4, background: '#161b22', border: '1px solid #30363d', color: '#e2e8f0', fontSize: 13, boxSizing: 'border-box', outline: 'none' },
+  select: { width: '100%', padding: '6px 8px', borderRadius: 4, background: '#161b22', border: '1px solid #30363d', color: '#e2e8f0', fontSize: 13 },
+  textarea: { width: '100%', padding: '6px 8px', borderRadius: 4, background: '#161b22', border: '1px solid #30363d', color: '#e2e8f0', fontSize: 13, fontFamily: 'monospace', minHeight: 80, boxSizing: 'border-box', outline: 'none', resize: 'vertical' },
+  label: { fontSize: 13, color: '#8b949e', marginBottom: 3, display: 'block' },
   row: { display: 'flex', gap: 8, marginBottom: 10 },
   section: { marginBottom: 16 },
-  sectionTitle: { fontSize: 10, fontWeight: 700, color: '#58a6ff', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
-  btn: (bg = '#238636', fg = '#fff') => ({ padding: '6px 14px', borderRadius: 6, border: 'none', background: bg, color: fg, fontSize: 12, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5 }),
-  btnSm: (bg = '#21262d', fg = '#c9d1d9') => ({ padding: '4px 10px', borderRadius: 4, border: '1px solid #30363d', background: bg, color: fg, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }),
-  alert: (ok) => ({ padding: '8px 10px', borderRadius: 4, fontSize: 11, marginTop: 8, background: ok ? '#10b98115' : '#ef444415', border: `1px solid ${ok ? '#10b98150' : '#ef444450'}`, color: ok ? '#86efac' : '#fca5a5' }),
-  chip: (color) => ({ fontSize: 9, padding: '2px 6px', borderRadius: 4, background: `${color}25`, color, fontWeight: 600 }),
+  sectionTitle: { fontSize: 13, fontWeight: 700, color: '#58a6ff', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
+  btn: (bg = '#238636', fg = '#fff') => ({ padding: '6px 14px', borderRadius: 6, border: 'none', background: bg, color: fg, fontSize: 13, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5 }),
+  btnSm: (bg = '#21262d', fg = '#c9d1d9') => ({ padding: '4px 10px', borderRadius: 4, border: '1px solid #30363d', background: bg, color: fg, fontSize: 13, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }),
+  alert: (ok) => ({ padding: '8px 10px', borderRadius: 4, fontSize: 13, marginTop: 8, background: ok ? '#10b98115' : '#ef444415', border: `1px solid ${ok ? '#10b98150' : '#ef444450'}`, color: ok ? '#86efac' : '#fca5a5' }),
+  chip: (color) => ({ fontSize: 13, padding: '2px 6px', borderRadius: 4, background: `${color}25`, color, fontWeight: 600 }),
 };
 
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
@@ -58,7 +58,7 @@ export default function DataSourceCatalog() {
       <div style={S.sidebar}>
         <div style={{ padding: 10, borderBottom: '1px solid #30363d' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <span style={{ fontSize: 12, fontWeight: 600 }}>DataSources</span>
+            <span style={{ fontSize: 13, fontWeight: 600 }}>DataSources</span>
             <NewDataSourceDropdown onCreate={(type) => store.startCreate(type)} />
           </div>
           <input
@@ -75,7 +75,7 @@ export default function DataSourceCatalog() {
 
         <div style={{ flex: 1, overflow: 'auto' }}>
           {loading && dataSources.length === 0 && <div style={{ padding: 16, textAlign: 'center', color: '#8b949e' }}>Loading...</div>}
-          {!loading && filtered.length === 0 && <div style={{ padding: 16, textAlign: 'center', color: '#8b949e', fontSize: 12 }}>No DataSources found</div>}
+          {!loading && filtered.length === 0 && <div style={{ padding: 16, textAlign: 'center', color: '#8b949e', fontSize: 13 }}>No DataSources found</div>}
           {filtered.map(ds => {
             const id = ds.graphId || ds.id;
             const active = selectedId === id;
@@ -91,18 +91,18 @@ export default function DataSourceCatalog() {
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span>{ICONS[ds.sourceType] || ''}</span>
-                  <span style={{ fontSize: 12, fontWeight: 500, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ds.name || id}</span>
+                  <span style={{ fontSize: 13, fontWeight: 500, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ds.name || id}</span>
                   <span style={S.chip(color)}>{ds.sourceType || ds.type}</span>
                 </div>
                 {ds.config?.description && (
-                  <div style={{ fontSize: 10, color: '#8b949e', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ds.config.description}</div>
+                  <div style={{ fontSize: 13, color: '#8b949e', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ds.config.description}</div>
                 )}
               </div>
             );
           })}
         </div>
 
-        <div style={{ padding: 8, borderTop: '1px solid #30363d', fontSize: 10, color: '#484f58', textAlign: 'center' }}>
+        <div style={{ padding: 8, borderTop: '1px solid #30363d', fontSize: 13, color: '#484f58', textAlign: 'center' }}>
           {dataSources.length} DataSource{dataSources.length !== 1 ? 's' : ''}
         </div>
       </div>
@@ -157,7 +157,7 @@ function NewDataSourceDropdown({ onCreate }) {
               onClick={() => { onCreate(type); setOpen(false); }}
               style={{
                 padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
-                fontSize: 12, color: '#e2e8f0', borderBottom: '1px solid #21262d',
+                fontSize: 13, color: '#e2e8f0', borderBottom: '1px solid #21262d',
               }}
               onMouseEnter={e => e.currentTarget.style.background = '#21262d'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
@@ -217,8 +217,8 @@ function DataSourceDetail({ ds }) {
             <h3 style={{ margin: 0, fontSize: 16 }}>{ds.name || id}</h3>
             <span style={S.chip(color)}>{ds.sourceType}</span>
           </div>
-          {ds.config?.description && <p style={{ fontSize: 12, color: '#8b949e', margin: '4px 0 0' }}>{ds.config.description}</p>}
-          <div style={{ fontSize: 10, color: '#484f58', marginTop: 4 }}>ID: {id}</div>
+          {ds.config?.description && <p style={{ fontSize: 13, color: '#8b949e', margin: '4px 0 0' }}>{ds.config.description}</p>}
+          <div style={{ fontSize: 13, color: '#484f58', marginTop: 4 }}>ID: {id}</div>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
           <button style={S.btnSm()} onClick={handleTest} disabled={testing}>{testing ? '...' : 'Test'}</button>
@@ -254,7 +254,7 @@ function DataSourceDetail({ ds }) {
             <>
               <div style={{ fontWeight: 600 }}>Loaded {testResult.data.items?.length || 0} items (total: {testResult.data.total ?? '?'})</div>
               {(testResult.data.items || []).slice(0, 5).map((item, i) => (
-                <div key={i} style={{ marginTop: 2, fontSize: 10 }}>{'\u2022'} {item.label || item.name} ({item.value || item.id})</div>
+                <div key={i} style={{ marginTop: 2, fontSize: 13 }}>{'\u2022'} {item.label || item.name} ({item.value || item.id})</div>
               ))}
             </>
           ) : <div>Error: {testResult.error}</div>}
@@ -279,7 +279,7 @@ function InfoField({ label, value }) {
   return (
     <div style={{ flex: 1 }}>
       <span style={S.label}>{label}</span>
-      <div style={{ fontSize: 12, color: '#c9d1d9' }}>{value || '-'}</div>
+      <div style={{ fontSize: 13, color: '#c9d1d9' }}>{value || '-'}</div>
     </div>
   );
 }
@@ -336,7 +336,7 @@ function CompositeConfigView({ cfg }) {
       <div style={S.sectionTitle}>Composite Configuration</div>
       <InfoField label="Merge Strategy" value={cfg.mergeStrategy} />
       {(cfg.sources || []).map((s, i) => (
-        <div key={i} style={{ fontSize: 11, color: '#c9d1d9', marginTop: 4 }}>{'\u2022'} {s.dataSourceId} ({s.role}{s.joinField ? `, join: ${s.joinField}` : ''})</div>
+        <div key={i} style={{ fontSize: 13, color: '#c9d1d9', marginTop: 4 }}>{'\u2022'} {s.dataSourceId} ({s.role}{s.joinField ? `, join: ${s.joinField}` : ''})</div>
       ))}
     </div>
   );
@@ -660,7 +660,7 @@ function CompositeEditor({ draft, set }) {
       <span style={S.label}>Sources</span>
       {(c.sources || []).map((s, i) => (
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-          <span style={{ fontSize: 11, flex: 1 }}>{s.dataSourceId}</span>
+          <span style={{ fontSize: 13, flex: 1 }}>{s.dataSourceId}</span>
           <span style={S.chip(COLORS.KB)}>{s.role}</span>
           <button style={{ ...S.btnSm('#da3633', '#fff'), padding: '2px 6px' }} onClick={() => removeSource(i)}>x</button>
         </div>
@@ -823,11 +823,11 @@ function SqlConnectionEditor({ connectionId, onSelect }) {
             border: current ? '1px solid #30363d' : '1px solid #f59e0b50',
           }}
         >
-          <span style={{ fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {current && <span style={{ color: '#6ee7b7', marginRight: 4 }}>{'\u25CF'}</span>}
             {currentLabel}
           </span>
-          <span style={{ fontSize: 9, color: '#8b949e' }}>{expanded ? '\u25B2' : '\u25BC'}</span>
+          <span style={{ fontSize: 13, color: '#8b949e' }}>{expanded ? '\u25B2' : '\u25BC'}</span>
         </div>
       </div>
 
@@ -841,14 +841,14 @@ function SqlConnectionEditor({ connectionId, onSelect }) {
           {(mode === 'pick') && (
             <div style={{ padding: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontSize: 10, fontWeight: 600, color: '#58a6ff' }}>Available Connections</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#58a6ff' }}>Available Connections</span>
                 <button style={S.btnSm('#238636', '#fff')} onClick={handleNew}>+ New</button>
               </div>
 
-              {loadingConn && <div style={{ fontSize: 10, color: '#8b949e', padding: 4 }}>Loading...</div>}
+              {loadingConn && <div style={{ fontSize: 13, color: '#8b949e', padding: 4 }}>Loading...</div>}
 
               {connections.length === 0 && !loadingConn && (
-                <div style={{ fontSize: 11, color: '#8b949e', padding: 8, textAlign: 'center' }}>
+                <div style={{ fontSize: 13, color: '#8b949e', padding: 8, textAlign: 'center' }}>
                   No SQL connections found. Create one with "+ New".
                 </div>
               )}
@@ -867,10 +867,10 @@ function SqlConnectionEditor({ connectionId, onSelect }) {
                     }}
                   >
                     <div style={{ flex: 1 }} onClick={() => handleSelect(conn.connectionName)}>
-                      <div style={{ fontSize: 11, fontWeight: 500, color: isActive ? '#58a6ff' : '#e2e8f0' }}>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: isActive ? '#58a6ff' : '#e2e8f0' }}>
                         {conn.connectionName}
                       </div>
-                      <div style={{ fontSize: 9, color: '#8b949e' }}>
+                      <div style={{ fontSize: 13, color: '#8b949e' }}>
                         {p.server || '?'}:{p.port || '?'} / {p.database || '?'}
                         {conn.hasCredentials && <span style={{ color: '#6ee7b7', marginLeft: 6 }}>{'\uD83D\uDD12'} credentials</span>}
                         {!conn.hasCredentials && <span style={{ color: '#f59e0b', marginLeft: 6 }}>{'\u26A0'} no credentials</span>}
@@ -889,7 +889,7 @@ function SqlConnectionEditor({ connectionId, onSelect }) {
           {(mode === 'new' || mode === 'edit') && (
             <div style={{ padding: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontSize: 10, fontWeight: 600, color: '#58a6ff' }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#58a6ff' }}>
                   {mode === 'new' ? 'New Connection' : `Edit: ${form.connectionName}`}
                 </span>
                 <button style={S.btnSm('#21262d', '#8b949e')} onClick={() => setMode('pick')}>Back</button>
@@ -930,11 +930,11 @@ function SqlConnectionEditor({ connectionId, onSelect }) {
               </div>
 
               <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 8 }}>
-                <label style={{ fontSize: 10, color: '#8b949e', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <label style={{ fontSize: 13, color: '#8b949e', display: 'flex', alignItems: 'center', gap: 4 }}>
                   <input type="checkbox" checked={form.trustServerCertificate} onChange={e => updateForm('trustServerCertificate', e.target.checked)} />
                   Trust Certificate
                 </label>
-                <label style={{ fontSize: 10, color: '#8b949e', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <label style={{ fontSize: 13, color: '#8b949e', display: 'flex', alignItems: 'center', gap: 4 }}>
                   <input type="checkbox" checked={form.encrypt} onChange={e => updateForm('encrypt', e.target.checked)} />
                   Encrypt
                 </label>
@@ -1145,12 +1145,12 @@ function SqlAiAssistant({ connectionId, formFields, onApply, onConnectionSave })
       {/* Header */}
       <div style={{
         padding: '6px 10px', background: '#8b5cf615', borderBottom: '1px solid #8b5cf630',
-        fontSize: 11, fontWeight: 600, color: '#a78bfa', display: 'flex', alignItems: 'center', gap: 6,
+        fontSize: 13, fontWeight: 600, color: '#a78bfa', display: 'flex', alignItems: 'center', gap: 6,
       }}>
         <span>{'\u2728'}</span> AI SQL Assistant
-        {connected && !schemaLoading && schema && <span style={{ fontSize: 10, color: '#6ee7b7' }}>{'\u2713'} {schema.tables?.length || 0} tables</span>}
-        {schemaLoading && <span style={{ fontSize: 10, color: '#8b949e' }}>Loading schema...</span>}
-        {!connected && <span style={{ fontSize: 10, color: '#f59e0b' }}>Connect to SQL Server first</span>}
+        {connected && !schemaLoading && schema && <span style={{ fontSize: 13, color: '#6ee7b7' }}>{'\u2713'} {schema.tables?.length || 0} tables</span>}
+        {schemaLoading && <span style={{ fontSize: 13, color: '#8b949e' }}>Loading schema...</span>}
+        {!connected && <span style={{ fontSize: 13, color: '#f59e0b' }}>Connect to SQL Server first</span>}
       </div>
 
       {/* Connection form (before connected) */}
@@ -1171,11 +1171,11 @@ function SqlAiAssistant({ connectionId, formFields, onApply, onConnectionSave })
             <div style={{ flex: 1 }}><span style={S.label}>Password</span><input style={S.input} type="password" value={connForm.password} onChange={e => updateConn('password', e.target.value)} /></div>
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 8 }}>
-            <label style={{ fontSize: 10, color: '#8b949e', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <label style={{ fontSize: 13, color: '#8b949e', display: 'flex', alignItems: 'center', gap: 4 }}>
               <input type="checkbox" checked={connForm.trustServerCertificate} onChange={e => updateConn('trustServerCertificate', e.target.checked)} />
               Trust Certificate
             </label>
-            <label style={{ fontSize: 10, color: '#8b949e', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <label style={{ fontSize: 13, color: '#8b949e', display: 'flex', alignItems: 'center', gap: 4 }}>
               <input type="checkbox" checked={connForm.encrypt} onChange={e => updateConn('encrypt', e.target.checked)} />
               Encrypt
             </label>
@@ -1193,8 +1193,8 @@ function SqlAiAssistant({ connectionId, formFields, onApply, onConnectionSave })
           if (msg.role === 'system' && msg.content === 'apply_queries') {
             return (
               <div key={i} style={{ padding: 6, margin: '4px 0', background: '#10b98120', borderRadius: 4, border: '1px solid #10b98140' }}>
-                <div style={{ fontSize: 10, fontWeight: 600, color: '#6ee7b7', marginBottom: 4 }}>Generated queries ready to apply:</div>
-                {msg.data.query && <div style={{ fontSize: 9, color: '#8b949e' }}>Query: <code>{msg.data.query.slice(0, 80)}...</code></div>}
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#6ee7b7', marginBottom: 4 }}>Generated queries ready to apply:</div>
+                {msg.data.query && <div style={{ fontSize: 13, color: '#8b949e' }}>Query: <code>{msg.data.query.slice(0, 80)}...</code></div>}
                 <button
                   style={{ ...S.btnSm('#10b981', '#fff'), marginTop: 6 }}
                   onClick={() => onApply(msg.data)}
@@ -1206,7 +1206,7 @@ function SqlAiAssistant({ connectionId, formFields, onApply, onConnectionSave })
           }
           return (
             <div key={i} style={{
-              padding: '6px 8px', margin: '3px 0', borderRadius: 4, fontSize: 11, lineHeight: 1.5,
+              padding: '6px 8px', margin: '3px 0', borderRadius: 4, fontSize: 13, lineHeight: 1.5,
               background: msg.role === 'user' ? '#1c1c3a' : 'transparent',
               color: msg.role === 'user' ? '#c4b5fd' : '#c9d1d9',
               borderLeft: msg.role === 'user' ? '2px solid #8b5cf6' : '2px solid #30363d',
@@ -1216,7 +1216,7 @@ function SqlAiAssistant({ connectionId, formFields, onApply, onConnectionSave })
             </div>
           );
         })}
-        {loading && <div style={{ fontSize: 11, color: '#8b949e', padding: 6 }}>Thinking...</div>}
+        {loading && <div style={{ fontSize: 13, color: '#8b949e', padding: 6 }}>Thinking...</div>}
       </div>
 
       {/* Input */}
@@ -1291,7 +1291,7 @@ function SwaggerImporter({ onApply }) {
     }}>
       <div style={{
         padding: '6px 10px', background: '#10b98115', borderBottom: '1px solid #10b98130',
-        fontSize: 11, fontWeight: 600, color: '#6ee7b7', display: 'flex', alignItems: 'center', gap: 6,
+        fontSize: 13, fontWeight: 600, color: '#6ee7b7', display: 'flex', alignItems: 'center', gap: 6,
       }}>
         <span>{'\u{1F4CB}'}</span> OpenAPI / Swagger Import
       </div>
@@ -1352,21 +1352,21 @@ function SwaggerImporter({ onApply }) {
                   onClick={() => applyEndpoint(ep)}
                   style={{
                     padding: '6px 8px', margin: '3px 0', borderRadius: 4, cursor: 'pointer',
-                    background: '#161b22', border: '1px solid #30363d', fontSize: 11,
+                    background: '#161b22', border: '1px solid #30363d', fontSize: 13,
                     display: 'flex', alignItems: 'center', gap: 6,
                   }}
                   onMouseEnter={e => e.currentTarget.style.borderColor = '#10b981'}
                   onMouseLeave={e => e.currentTarget.style.borderColor = '#30363d'}
                 >
                   <span style={{
-                    fontSize: 9, padding: '1px 5px', borderRadius: 3, fontWeight: 700,
+                    fontSize: 13, padding: '1px 5px', borderRadius: 3, fontWeight: 700,
                     background: METHOD_COLORS[ep.method] || '#64748b',
                     color: '#fff',
                   }}>
                     {ep.method.toUpperCase()}
                   </span>
                   <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ep.url}</span>
-                  {ep.summary && <span style={{ fontSize: 9, color: '#8b949e' }}>{ep.summary}</span>}
+                  {ep.summary && <span style={{ fontSize: 13, color: '#8b949e' }}>{ep.summary}</span>}
                 </div>
               ))}
             </div>
@@ -1502,7 +1502,7 @@ function DsAiChat({ type, context, onApply, formFields }) {
 
   return (
     <div style={{ border: `1px solid ${color}50`, borderRadius: 6, marginBottom: 12, background: '#13111c', overflow: 'hidden' }}>
-      <div style={{ padding: '6px 10px', background: `${color}15`, borderBottom: `1px solid ${color}30`, fontSize: 11, fontWeight: 600, color, display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ padding: '6px 10px', background: `${color}15`, borderBottom: `1px solid ${color}30`, fontSize: 13, fontWeight: 600, color, display: 'flex', alignItems: 'center', gap: 6 }}>
         <span>{'\u2728'}</span> {type} AI Assistant
       </div>
       <div style={{ maxHeight: 240, overflow: 'auto', padding: 8 }}>
@@ -1510,9 +1510,9 @@ function DsAiChat({ type, context, onApply, formFields }) {
           if (msg.role === 'system' && msg.content === 'fields_updated') {
             return (
               <div key={i} style={{ padding: 6, margin: '4px 0', background: '#10b98120', borderRadius: 4, border: '1px solid #10b98140' }}>
-                <div style={{ fontSize: 10, fontWeight: 600, color: '#6ee7b7' }}>{'\u2705'} Form fields updated:</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#6ee7b7' }}>{'\u2705'} Form fields updated:</div>
                 {Object.entries(msg.data).map(([k, v]) => (
-                  <div key={k} style={{ fontSize: 9, color: '#8b949e', marginTop: 1 }}>{k}: {String(v).slice(0, 80)}</div>
+                  <div key={k} style={{ fontSize: 13, color: '#8b949e', marginTop: 1 }}>{k}: {String(v).slice(0, 80)}</div>
                 ))}
               </div>
             );
@@ -1520,8 +1520,8 @@ function DsAiChat({ type, context, onApply, formFields }) {
           if (msg.role === 'system' && msg.content === 'apply') {
             return (
               <div key={i} style={{ padding: 6, margin: '4px 0', background: '#10b98120', borderRadius: 4, border: '1px solid #10b98140' }}>
-                <div style={{ fontSize: 10, fontWeight: 600, color: '#6ee7b7', marginBottom: 4 }}>Configuration ready:</div>
-                <pre style={{ fontSize: 9, color: '#8b949e', margin: 0, maxHeight: 60, overflow: 'auto', whiteSpace: 'pre-wrap' }}>{JSON.stringify(msg.data, null, 2).slice(0, 300)}</pre>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#6ee7b7', marginBottom: 4 }}>Configuration ready:</div>
+                <pre style={{ fontSize: 13, color: '#8b949e', margin: 0, maxHeight: 60, overflow: 'auto', whiteSpace: 'pre-wrap' }}>{JSON.stringify(msg.data, null, 2).slice(0, 300)}</pre>
                 <button style={{ ...S.btnSm('#10b981', '#fff'), marginTop: 6 }} onClick={() => onApply(msg.data)}>
                   Apply to DataSource
                 </button>
@@ -1530,7 +1530,7 @@ function DsAiChat({ type, context, onApply, formFields }) {
           }
           return (
             <div key={i} style={{
-              padding: '6px 8px', margin: '3px 0', borderRadius: 4, fontSize: 11, lineHeight: 1.5,
+              padding: '6px 8px', margin: '3px 0', borderRadius: 4, fontSize: 13, lineHeight: 1.5,
               background: msg.role === 'user' ? '#1c1c3a' : 'transparent',
               color: msg.role === 'user' ? '#c4b5fd' : '#c9d1d9',
               borderLeft: msg.role === 'user' ? `2px solid ${color}` : '2px solid #30363d',
@@ -1538,7 +1538,7 @@ function DsAiChat({ type, context, onApply, formFields }) {
             }}>{msg.content}</div>
           );
         })}
-        {loading && <div style={{ fontSize: 11, color: '#8b949e', padding: 6 }}>Thinking...</div>}
+        {loading && <div style={{ fontSize: 13, color: '#8b949e', padding: 6 }}>Thinking...</div>}
       </div>
       <div style={{ display: 'flex', gap: 4, padding: 6, borderTop: '1px solid #30363d' }}>
         <input style={{ ...S.input, flex: 1 }} placeholder={DS_TYPE_HINTS[type]?.slice(0, 50) + '...'} value={input}
@@ -1628,10 +1628,10 @@ function KbCatalogBrowser({ onSelectLabel }) {
       {/* Header */}
       <div style={{
         padding: '6px 10px', background: '#8b5cf615', borderBottom: '1px solid #8b5cf630',
-        fontSize: 11, fontWeight: 600, color: '#a78bfa', display: 'flex', alignItems: 'center', gap: 6,
+        fontSize: 13, fontWeight: 600, color: '#a78bfa', display: 'flex', alignItems: 'center', gap: 6,
       }}>
         <span>{'\u{1F50D}'}</span> Knowledge Base Catalog
-        {stats && <span style={{ fontSize: 10, color: '#6ee7b7' }}>
+        {stats && <span style={{ fontSize: 13, color: '#6ee7b7' }}>
           {stats.totalNodes ?? '?'} nodes, {Object.keys(stats.nodesByType || {}).length} types
         </span>}
       </div>
@@ -1646,13 +1646,13 @@ function KbCatalogBrowser({ onSelectLabel }) {
             onChange={e => setSearch(e.target.value)}
           />
           <div style={{ flex: 1, overflow: 'auto' }}>
-            {loading && <div style={{ padding: 8, fontSize: 10, color: '#8b949e' }}>Loading...</div>}
+            {loading && <div style={{ padding: 8, fontSize: 13, color: '#8b949e' }}>Loading...</div>}
             {filtered.map(l => (
               <div
                 key={l.name}
                 onClick={() => loadPreview(l.name)}
                 style={{
-                  padding: '5px 8px', cursor: 'pointer', fontSize: 11,
+                  padding: '5px 8px', cursor: 'pointer', fontSize: 13,
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                   background: selectedLabel === l.name ? '#1c1c3a' : 'transparent',
                   borderLeft: selectedLabel === l.name ? '2px solid #8b5cf6' : '2px solid transparent',
@@ -1661,11 +1661,11 @@ function KbCatalogBrowser({ onSelectLabel }) {
                 onMouseLeave={e => { if (selectedLabel !== l.name) e.currentTarget.style.background = 'transparent'; }}
               >
                 <span style={{ color: '#c9d1d9' }}>{l.name}</span>
-                <span style={{ fontSize: 9, color: l.count > 0 ? '#6ee7b7' : '#484f58' }}>{l.count}</span>
+                <span style={{ fontSize: 13, color: l.count > 0 ? '#6ee7b7' : '#484f58' }}>{l.count}</span>
               </div>
             ))}
             {!loading && filtered.length === 0 && (
-              <div style={{ padding: 8, fontSize: 10, color: '#484f58' }}>No labels found</div>
+              <div style={{ padding: 8, fontSize: 13, color: '#484f58' }}>No labels found</div>
             )}
           </div>
         </div>
@@ -1673,21 +1673,21 @@ function KbCatalogBrowser({ onSelectLabel }) {
         {/* Right: Preview */}
         <div style={{ flex: 1, overflow: 'auto', padding: 8 }}>
           {!selectedLabel && (
-            <div style={{ color: '#484f58', fontSize: 11, padding: 16, textAlign: 'center' }}>
+            <div style={{ color: '#484f58', fontSize: 13, padding: 16, textAlign: 'center' }}>
               Select a label to preview data and generate queries
             </div>
           )}
 
           {previewLoading && (
-            <div style={{ color: '#8b949e', fontSize: 11, padding: 16, textAlign: 'center' }}>Loading preview...</div>
+            <div style={{ color: '#8b949e', fontSize: 13, padding: 16, textAlign: 'center' }}>Loading preview...</div>
           )}
 
           {selectedLabel && !previewLoading && preview && (
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <div>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: '#c9d1d9' }}>{selectedLabel}</span>
-                  <span style={{ fontSize: 10, color: '#8b949e', marginLeft: 8 }}>{nodeProps.length} properties</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#c9d1d9' }}>{selectedLabel}</span>
+                  <span style={{ fontSize: 13, color: '#8b949e', marginLeft: 8 }}>{nodeProps.length} properties</span>
                 </div>
                 <button
                   style={S.btnSm('#10b981', '#fff')}
@@ -1703,7 +1703,7 @@ function KbCatalogBrowser({ onSelectLabel }) {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                   {nodeProps.map(p => (
                     <span key={p} style={{
-                      fontSize: 9, padding: '2px 6px', borderRadius: 3,
+                      fontSize: 13, padding: '2px 6px', borderRadius: 3,
                       background: '#21262d', border: '1px solid #30363d', color: '#c9d1d9',
                     }}>{p}</span>
                   ))}
@@ -1713,7 +1713,7 @@ function KbCatalogBrowser({ onSelectLabel }) {
               {/* Data preview table */}
               {preview.length > 0 ? (
                 <div style={{ overflow: 'auto', maxHeight: 180 }}>
-                  <table style={{ width: '100%', fontSize: 10, borderCollapse: 'collapse' }}>
+                  <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
                     <thead>
                       <tr>
                         {nodeProps.slice(0, 6).map(p => (
@@ -1741,7 +1741,7 @@ function KbCatalogBrowser({ onSelectLabel }) {
                   </table>
                 </div>
               ) : (
-                <div style={{ fontSize: 10, color: '#484f58' }}>No data for this label</div>
+                <div style={{ fontSize: 13, color: '#484f58' }}>No data for this label</div>
               )}
             </div>
           )}

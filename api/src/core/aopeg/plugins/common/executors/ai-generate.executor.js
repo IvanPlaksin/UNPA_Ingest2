@@ -56,7 +56,7 @@ class AiGenerateExecutor extends BaseExecutor {
         { role: 'user', content: userPrompt },
       ];
 
-      const opts = {};
+      const opts = { caller: 'aopeg_executors' };
       if (model) opts.model = model;
 
       const result = await llmProvider.chat(messages, opts);

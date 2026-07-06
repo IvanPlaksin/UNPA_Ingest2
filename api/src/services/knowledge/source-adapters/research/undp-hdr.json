@@ -1,0 +1,24 @@
+{
+  "key": "undp-hdr",
+  "name": "UNDP Human Development Reports",
+  "family": "url-catalog",
+  "capabilities": ["browseAll", "paginate", "download"],
+  "filterSchema": [],
+  "config": {
+    "url": "https://hdr.undp.org/reports-and-publications",
+    "searchUrlTemplate": "",
+    "linkFilter": "",
+    "includeAllLinks": false
+  },
+  "download": {
+    "mode": "record-page",
+    "notes": "Report cards link to content pages at /content/{report-slug}. The full report PDF is exposed on that content page (download center), not in the listing. Two-step crawl (listing -> content page -> PDF) required."
+  },
+  "enrich": {
+    "mode": "none",
+    "notes": "Report title, year and subtitle available from listing/content pages; no repository API."
+  },
+  "methodologyMarkdown": "## Overview\nThe UNDP Human Development Reports site is a Drupal-based, server-rendered catalog of the flagship HDR series plus the Multidimensional Poverty Index and related reports. Listing cards, filter options and pagination are present in the HTML.\n\n## Search\nNo dedicated full-text search endpoint was identified for this sub-site; discovery is via browsing and type/year facets. Accordingly, the search capability is not claimed.\n\n## Filters\nThe listing exposes a type facet via URL parameters (field_type_target_id[..]) and pagination (?page=N). These are treated as opaque URL params; no formal filter schema is published.\n\n## Download\nReport cards link to content pages at /content/{report-slug} (e.g. /content/human-development-report-2025). Only cover image, short description and a Read-more link appear in the listing; the actual multi-language report PDFs live on the content/download pages. A two-step crawl is required to reach PDFs.\n\n## Metadata & Enrichment\nTitle, year and subtitle are in server-rendered HTML. No JSON/REST API, so enrichment is HTML-based.\n\n## Limitations\nRelatively small, curated catalog (flagship reports rather than a large document pool). No search endpoint. PDFs require resolving each content page. Behind a CDN; use a realistic User-Agent.",
+  "verified": true,
+  "probeNotes": "WebFetch of /reports-and-publications succeeded: server-rendered HTML, content URL pattern /content/{slug}, type facet field_type_target_id[..] and ?page=N pagination confirmed. Report body/PDF not in listing (record-page download). No search endpoint found -> search capability omitted."
+}

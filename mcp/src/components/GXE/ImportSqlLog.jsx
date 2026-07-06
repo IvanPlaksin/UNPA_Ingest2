@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+﻿import React, { useRef, useEffect } from 'react';
 
 const LEVEL_COLORS = {
   info: '#8b949e',
@@ -41,7 +41,7 @@ export default function ImportSqlLog({ logs = [], maxHeight = 300 }) {
         maxHeight,
         overflowY: 'auto',
         fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
-        fontSize: 12,
+        fontSize: 13,
         lineHeight: 1.6,
       }}
     >

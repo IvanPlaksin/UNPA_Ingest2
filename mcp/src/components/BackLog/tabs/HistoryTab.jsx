@@ -1,4 +1,4 @@
-/**
+﻿/**
  * HistoryTab — Combined timeline: status transitions + agent action logs.
  * Shows chronological audit trail of all activity on a task.
  */
@@ -40,7 +40,7 @@ function TimelineEntry({ event, isLast }) {
       {/* Content */}
       <Box sx={{ flex: 1, pb: 1 }}>
         <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.25 }}>
-          <Chip label={chipLabel} size="small" color={chipColor} sx={{ fontSize: 10, height: 20 }} />
+          <Chip label={chipLabel} size="small" color={chipColor} sx={{ fontSize: 12, height: 20 }} />
           {isAction && <SmartToy sx={{ fontSize: 14, color: 'text.disabled' }} />}
           <Typography variant="caption" color="text.disabled">
             {new Date(event.at).toLocaleString()}

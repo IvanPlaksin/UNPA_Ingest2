@@ -1,4 +1,4 @@
-/**
+﻿/**
  * CyclesTab — Shows execution cycles (iterations) with plan, memory, review for each.
  */
 import React, { useState, useEffect, useCallback } from 'react';
@@ -122,18 +122,18 @@ export default function CyclesTab({ backlogId, onRefresh }) {
             <Stack direction="row" spacing={1} alignItems="center" sx={{ width: '100%' }}>
               <Chip label={`Iteration ${cycle.iteration}`} size="small" variant="outlined" />
               <Chip label={cycle.mode} size="small"
-                sx={{ bgcolor: cycle.mode === 'AUTONOMOUS' ? '#ed6c0222' : '#1976d222', fontSize: 10 }} />
+                sx={{ bgcolor: cycle.mode === 'AUTONOMOUS' ? '#ed6c0222' : '#1976d222', fontSize: 12 }} />
               <Chip label={cycle.phase} size="small"
-                sx={{ bgcolor: (PHASE_COLORS[cycle.phase] || '#555') + '22', color: PHASE_COLORS[cycle.phase], fontWeight: 700, fontSize: 10 }} />
+                sx={{ bgcolor: (PHASE_COLORS[cycle.phase] || '#555') + '22', color: PHASE_COLORS[cycle.phase], fontWeight: 700, fontSize: 12 }} />
               <Box sx={{ flex: 1 }} />
-              {cycle.memoryCount > 0 && <Chip label={`${cycle.memoryCount} notes`} size="small" variant="outlined" sx={{ fontSize: 10 }} />}
-              {cycle.planStatus && <Chip label={`Plan: ${cycle.planStatus}`} size="small" variant="outlined" sx={{ fontSize: 10 }} />}
+              {cycle.memoryCount > 0 && <Chip label={`${cycle.memoryCount} notes`} size="small" variant="outlined" sx={{ fontSize: 12 }} />}
+              {cycle.planStatus && <Chip label={`Plan: ${cycle.planStatus}`} size="small" variant="outlined" sx={{ fontSize: 12 }} />}
               {cycle.reviewVerdict && <Chip
                 label={cycle.reviewVerdict}
                 size="small"
-                icon={cycle.reviewVerdict === 'APPROVED' ? <ThumbUp sx={{ fontSize: 12 }} /> : <ThumbDown sx={{ fontSize: 12 }} />}
+                icon={cycle.reviewVerdict === 'APPROVED' ? <ThumbUp sx={{ fontSize: 13 }} /> : <ThumbDown sx={{ fontSize: 13 }} />}
                 color={cycle.reviewVerdict === 'APPROVED' ? 'success' : 'error'}
-                sx={{ fontSize: 10 }}
+                sx={{ fontSize: 12 }}
               />}
             </Stack>
           </AccordionSummary>
@@ -225,7 +225,7 @@ function CycleDetail({ detail, cycle, onApprovePlan, onReturn, onTransition, onT
                   primaryTypographyProps={{ variant: 'body2' }}
                   secondaryTypographyProps={{ variant: 'caption' }}
                 />
-                <Chip label={entry.entryType} size="small" sx={{ fontSize: 9, height: 18, ml: 1 }} />
+                <Chip label={entry.entryType} size="small" sx={{ fontSize: 11, height: 18, ml: 1 }} />
               </ListItem>
             ))}
           </List>

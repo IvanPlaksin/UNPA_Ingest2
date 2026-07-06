@@ -30,7 +30,7 @@ function levelAccent(level) {
   return LEVEL_ACCENT[level] || LEVEL_ACCENT[0];
 }
 
-export default function ClusterNode({ data, selected }) {
+function ClusterNode({ data, selected }) {
   const expandCluster = useEntityStore(s => s.expandCluster);
 
   const c = CLUSTER_PALETTE[(data.dominantType || '').toUpperCase()] || CLUSTER_PALETTE.default;
@@ -121,3 +121,5 @@ export default function ClusterNode({ data, selected }) {
     </div>
   );
 }
+
+export default React.memo(ClusterNode);

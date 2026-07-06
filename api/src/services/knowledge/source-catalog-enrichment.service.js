@@ -16,10 +16,19 @@ const axios        = require('axios');
 const https        = require('https');
 const { v4: uuidv4, v5: uuidv5 } = require('uuid');
 
+const { parseUNSymbol } = require('./source-adapters/lib/symbol-parser');
+
 const LOG_PREFIX = '[SourceEnrich]';
 
 const SOURCE_DOC_NS = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
 const httpsAgent    = new https.Agent({ rejectUnauthorized: false });
+
+// MARC 993 relation type → edge label + direction relative to the enriched doc.
+const MARC993_MAP = {
+  draft:    { label: 'DRAFT_OF',     dir: 'target->current' }, // draft DRAFT_OF final(current)
+  verbatim: { label: 'HAS_VERBATIM', dir: 'current->target' }, // current HAS_VERBATIM record
+  related:  { label: 'RELATED_TO',   dir: 'current->target' },
+};
 
 // In-memory job registry — keyed by jobId
 const _jobs = new Map();
@@ -38,6 +47,14 @@ function sourceSvc() {
   if (!_sourceSvc) _sourceSvc = require('./source-catalog.service').sourceCatalogService;
   return _sourceSvc;
 }
+
+let _resolveAdapter = null;
+function resolveAdapter(source) {
+  if (!_resolveAdapter) _resolveAdapter = require('./source-adapters/registry').resolveAdapter;
+  return _resolveAdapter(source);
+}
+
+const { CapabilityNotSupportedError } = require('./source-adapters/capabilities');
 
 const progressEmitter = new EventEmitter();
 progressEmitter.setMaxListeners(100);
@@ -378,6 +395,21 @@ class SourceCatalogEnrichmentService {
   }
 
   async _enrichOne(source, item) {
+    // Prefer the source adapter's enrich() (once the source has been seeded with
+    // an adapterKey pointing at an enrich-capable adapter). Falls back to the
+    // legacy UN Digital Library MARCXML path for un-seeded sources.
+    try {
+      const adapter = resolveAdapter(source);
+      if (adapter.supports && adapter.supports('enrich')) {
+        const result = await adapter.enrich(item);
+        if (result) return result;
+      }
+    } catch (err) {
+      if (!(err instanceof CapabilityNotSupportedError)) {
+        console.warn(`${LOG_PREFIX} adapter enrich failed, falling back: ${err.message}`);
+      }
+    }
+
     const recid = item.metadata?.recid || item.externalId;
     const isDlSource = source.config?.endpoint?.includes('digitallibrary.un.org')
                     || (source.type === 'REST_API' && source.config?.endpoint?.includes('digitallibrary'));
@@ -423,11 +455,152 @@ class SourceCatalogEnrichmentService {
        SET ${sets.join(', ')}`,
       params
     ).catch(err => console.warn(`${LOG_PREFIX} save enriched failed: ${err.message}`));
+
+    // Promote latent MARC relations (993/989/991) into graph edges.
+    if (enriched.marcData) {
+      await this._materializeMarcRelations(docId, enriched.marcData).catch(() => {});
+    }
+  }
+
+  /**
+   * Materialize MARC relations for an enriched SourceDocument into graph edges:
+   *   993 relatedDocs → DRAFT_OF / HAS_VERBATIM / RELATED_TO (SourceDocument↔SourceDocument)
+   *   989 hierarchy   → (:DocumentSeries) + PART_OF_SERIES
+   *   991 agendaItems → (:AgendaItem) + CONSIDERED_UNDER
+   * 993 targets not yet harvested are parked as pendingMarcRelationsJson and
+   * drained when the target document is later enriched. All non-fatal.
+   */
+  async _materializeMarcRelations(docId, marcData) {
+    if (!marcData) return { edges: 0, series: 0, agenda: 0, drained: 0 };
+    const now = new Date().toISOString();
+    const currentSymbol = marcData.symbol || '';
+    const parsed  = currentSymbol ? parseUNSymbol(currentSymbol) : null;
+    const organ   = parsed?.organ || null;
+    const session = parsed && parsed.session != null ? parsed.session : null;
+
+    let edges = 0, series = 0, agenda = 0, drained = 0;
+    const pending = [];
+
+    // ── 993 relatedDocs → typed edges (or pending) ──
+    for (const rel of (marcData.relatedDocs || [])) {
+      if (!rel || !rel.symbol) continue;
+      const info = MARC993_MAP[rel.type] || MARC993_MAP.related;
+      const rows = await mg().runQuery(
+        `MATCH (t:SourceDocument)
+         WHERE (t.symbol = $sym OR toLower(t.symbol) = toLower($sym)) AND t.id <> $docId
+         RETURN t.id AS id LIMIT 1`,
+        { sym: rel.symbol, docId }
+      ).catch(() => []);
+      const tid = rows[0]?.id || null;
+      if (!tid) {
+        pending.push({ relType: info.label, targetSymbol: rel.symbol, marcType: rel.type, detectedAt: now });
+        continue;
+      }
+      const [sId, tId] = info.dir === 'target->current' ? [tid, docId] : [docId, tid];
+      const ok = await mg().runQuery(
+        `MATCH (s:SourceDocument {id: $sId}), (t:SourceDocument {id: $tId})
+         MERGE (s)-[r:${info.label} {source: 'MARC_993'}]->(t)
+         SET r.marcType = $mt, r.confidence = 1.0, r.createdAt = $now`,
+        { sId, tId, mt: rel.type, now }
+      ).then(() => true).catch(() => false);
+      if (ok) edges++;
+    }
+
+    // ── 989 hierarchy → DocumentSeries + PART_OF_SERIES ──
+    for (const name of (marcData.hierarchy || [])) {
+      if (!name || typeof name !== 'string') continue;
+      const sid = uuidv5(`series::${name.toLowerCase()}`, SOURCE_DOC_NS);
+      const ok = await mg().runQuery(
+        `MERGE (ser:DocumentSeries {id: $sid})
+           ON CREATE SET ser.name = $name, ser.organ = $organ, ser.createdAt = $now
+         WITH ser MATCH (d:SourceDocument {id: $docId})
+         MERGE (d)-[r:PART_OF_SERIES {source: 'MARC_989'}]->(ser) SET r.createdAt = $now`,
+        { sid, name, organ, docId, now }
+      ).then(() => true).catch(() => false);
+      if (ok) series++;
+    }
+
+    // ── 991 agendaItems → AgendaItem + CONSIDERED_UNDER ──
+    for (const a of (marcData.agendaItems || [])) {
+      const key = a.symbol || a.situation || a.item;
+      if (!key) continue;
+      const aid = uuidv5(`agenda::${organ || ''}::${session || ''}::${String(key).toLowerCase()}`, SOURCE_DOC_NS);
+      const ok = await mg().runQuery(
+        `MERGE (ag:AgendaItem {id: $aid})
+           ON CREATE SET ag.title = $title, ag.itemNumber = $item, ag.symbol = $sym,
+                         ag.organ = $organ, ag.session = $session, ag.createdAt = $now
+         WITH ag MATCH (d:SourceDocument {id: $docId})
+         MERGE (d)-[r:CONSIDERED_UNDER {source: 'MARC_991'}]->(ag) SET r.createdAt = $now`,
+        { aid, title: a.situation || a.item || a.symbol, item: a.item || '', sym: a.symbol || '',
+          organ, session, docId, now }
+      ).then(() => true).catch(() => false);
+      if (ok) agenda++;
+    }
+
+    // ── Park unresolved 993 targets ──
+    if (pending.length > 0) {
+      await mg().runQuery(
+        `MATCH (d:SourceDocument {id: $docId}) SET d.pendingMarcRelationsJson = $json`,
+        { docId, json: JSON.stringify(pending) }
+      ).catch(() => {});
+    }
+
+    // ── Drain: other docs whose pending 993 targets this document's symbol ──
+    if (currentSymbol) {
+      const holders = await mg().runQuery(
+        `MATCH (h:SourceDocument)
+         WHERE h.pendingMarcRelationsJson IS NOT NULL AND h.id <> $docId
+         RETURN h.id AS id, h.pendingMarcRelationsJson AS json LIMIT 500`,
+        { docId }
+      ).catch(() => []);
+      for (const h of holders) {
+        let list;
+        try { list = JSON.parse(h.json || '[]'); } catch { continue; }
+        if (!Array.isArray(list) || list.length === 0) continue;
+        const remain = [];
+        for (const e of list) {
+          const isMatch = (e.targetSymbol || '').toLowerCase() === currentSymbol.toLowerCase();
+          const label = e.relType;
+          if (!isMatch || !['DRAFT_OF', 'HAS_VERBATIM', 'RELATED_TO'].includes(label)) { remain.push(e); continue; }
+          // Recreate with the same orientation the holder would have produced.
+          const [sId, tId] = label === 'DRAFT_OF' ? [docId, h.id] : [h.id, docId];
+          const ok = await mg().runQuery(
+            `MATCH (s:SourceDocument {id: $sId}), (t:SourceDocument {id: $tId})
+             MERGE (s)-[r:${label} {source: 'MARC_993'}]->(t)
+             SET r.marcType = $mt, r.confidence = 1.0, r.createdAt = $now, r.drained = true`,
+            { sId, tId, mt: e.marcType || label, now }
+          ).then(() => true).catch(() => false);
+          if (ok) drained++; else remain.push(e);
+        }
+        if (remain.length !== list.length) {
+          await mg().runQuery(
+            `MATCH (d:SourceDocument {id: $id}) SET d.pendingMarcRelationsJson = $json`,
+            { id: h.id, json: remain.length ? JSON.stringify(remain) : null }
+          ).catch(() => {});
+        }
+      }
+    }
+
+    if (edges || series || agenda || drained) {
+      console.log(`${LOG_PREFIX} MARC relations for ${currentSymbol || docId}: ${edges} rel, ${series} series, ${agenda} agenda, ${drained} drained`);
+    }
+    return { edges, series, agenda, drained };
   }
 
   /** Public wrapper — allows external callers (e.g. document refetch endpoint) to use the UNDL MARC fetcher. */
   async fetchMarcRecord(recid) {
     return _fetchUNDLRecord(recid);
+  }
+
+  /**
+   * Public wrapper used by the DocumentIndexService: enrich a single item and
+   * persist the enriched metadata onto its SourceDocument node. Returns the
+   * enriched object (or null if the source/adapter cannot enrich it).
+   */
+  async enrichAndSave(source, item) {
+    const enriched = await this._enrichOne(source, item);
+    if (enriched) await this._saveEnriched(source.id, item, enriched);
+    return enriched;
   }
 }
 

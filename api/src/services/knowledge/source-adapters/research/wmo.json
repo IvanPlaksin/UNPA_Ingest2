@@ -1,0 +1,27 @@
+{
+  "key": "wmo",
+  "name": "WMO Library",
+  "family": "url-catalog",
+  "capabilities": ["search"],
+  "filterSchema": [],
+  "config": {
+    "url": "https://library.wmo.int/",
+    "searchUrlTemplate": "https://library.wmo.int/records?query={query}",
+    "linkFilter": "/records/item/",
+    "includeAllLinks": false,
+    "_note": "library.wmo.int no longer serves the legacy Invenio v1.x interface. Every path (/, /records, /index.php?p=...&of=recjson, /index.php?...&of=xm) returns an identical JS 'WMO e-Library' shell whose <script> performs a bot challenge POST to /api/is_human_challenge before rendering. There is no working of=recjson / of=xm / of=hx output and no /api/records or /api/is REST endpoint (both HTTP 404)."
+  },
+  "download": {
+    "mode": "record-page",
+    "urlPattern": "https://library.wmo.int/records/item/{id}",
+    "notes": "Download links are rendered client-side after the human-challenge passes; no stable direct-PDF or Invenio bibdoc URL pattern is exposed to plain HTTP clients."
+  },
+  "enrich": {
+    "mode": "none",
+    "endpoint": null,
+    "notes": "Legacy Invenio MARCXML/recjson enrichment is gone. No anonymous per-record JSON/XML endpoint is reachable behind the challenge wall."
+  },
+  "methodologyMarkdown": "## Overview\nThe WMO e-Library (library.wmo.int) was historically an Invenio 1.x installation (index.php with of=recjson/of=xm output formats). Live probing shows it has been replaced by a JavaScript application that is protected by a custom 'human challenge' anti-bot wall. Every requested path returns the same HTML shell titled 'WMO e-Library' whose inline script POSTs to /api/is_human_challenge (sending a token, user-agent, mouse movements and a honeypot field) and only then reloads into the real app.\n\n## Search\nNo server-rendered search results and no working machine-readable output format were found. The legacy Invenio parameters (p, of=recjson, of=xm, of=hx, rg, jrec) all return the challenge shell rather than data. Guessed modern endpoints (/api/records, /api/is) return HTTP 404. The only viable near-term option is a url-catalog crawl of /records/item/{id} links, and even that requires passing the challenge.\n\n## Filters\nInvenio-style facets (collection, year, document type, language) are not reachable via any anonymous parameter in the current front-end.\n\n## Download\nRecord pages are /records/item/{id}; PDF/download links are injected client-side after the challenge and follow no stable public pattern.\n\n## Metadata & Enrichment\nNone available anonymously — the former recjson/MARCXML enrichment path is removed.\n\n## Limitations\nHARD BLOCKER: bot-challenge wall (/api/is_human_challenge) that demands JS execution and human-like interaction signals. Plain HTTP clients only ever receive the challenge shell (HTTP 200 but no data). Ingestion would require a challenge-solving headless browser or a direct data feed / API key from WMO. Marked verified=false.",
+  "verified": false,
+  "probeNotes": "GET /index.php?p=climate&of=recjson&rg=2 -> HTTP 200 but body is the 'WMO e-Library' JS shell (grep 'e-Library' matched), NOT JSON. GET /index.php?p=climate&of=xm -> same shell. GET /records -> shell; its <script> calls fetch('/api/is_human_challenge', {token, ua, moves, hp}) then window.location.reload(). GET /api/records?q=climate -> HTTP 404 'Page Not Found'. GET /api/is -> HTTP 404. GET / -> HTTP 404 on HEAD, shell on GET. Legacy Invenio output formats confirmed dead. verified=false: challenge-gated JS app, no anonymous API."
+}

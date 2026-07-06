@@ -26,13 +26,15 @@ import {
     Dialog, DialogTitle, DialogContent, IconButton,
     Tabs, Tab
 } from '@mui/material';
-import { FileText, CheckCircle, AlertCircle, Clock, XCircle, X, Globe } from 'lucide-react';
+import { FileText, CheckCircle, AlertCircle, Clock, XCircle, X, Globe, Search as SearchIcon, LayoutDashboard } from 'lucide-react';
 
 import DocumentUpload from '../components/Documents/DocumentUpload';
 import DocumentList from '../components/Documents/DocumentList';
 import ExtractionProgress from '../components/Documents/ExtractionProgress';
 import ExtractionResults from '../components/Documents/ExtractionResults';
 import SourceCatalogTab from '../components/Documents/SourceCatalog/SourceCatalogTab';
+import DocumentIndexTab from '../components/Documents/DocumentIndex/DocumentIndexTab';
+import SourcesDashboard from '../components/Documents/DocumentIndex/SourcesDashboard';
 import DocumentCardDialog from '../components/Documents/DocumentCardDialog';
 import {
     listDocuments, getDocumentStats,
@@ -42,11 +44,12 @@ import {
 const NAMESPACES = ['', 'DEFAULT', 'INEED', 'KM', 'HR', 'FINANCE', 'PROCUREMENT', 'LEGAL', 'IT', 'AUDIT'];
 
 const STATS_CONFIG = [
-    { key: 'CLASSIFIED',   label: 'Classified',    color: 'success', Icon: CheckCircle },
-    { key: 'NEEDS_REVIEW', label: 'Needs Review',  color: 'warning', Icon: AlertCircle },
-    { key: 'EXTRACTING',   label: 'Extracting',    color: 'info',    Icon: Clock },
-    { key: 'COMPLETED',    label: 'Completed',      color: 'success', Icon: CheckCircle },
-    { key: 'FAILED',       label: 'Failed',         color: 'error',   Icon: XCircle },
+    { key: 'CLASSIFIED',        label: 'Classified',    color: 'success', Icon: CheckCircle },
+    { key: 'NEEDS_REVIEW',      label: 'Needs Review',  color: 'warning', Icon: AlertCircle },
+    { key: 'EXTRACTING',        label: 'Extracting',    color: 'info',    Icon: Clock },
+    { key: 'COMPLETED',         label: 'Completed',     color: 'success', Icon: CheckCircle },
+    { key: 'FAILED',            label: 'Failed',        color: 'error',   Icon: XCircle },
+    { key: 'EXTRACTION_FAILED', label: 'Extr. Failed',  color: 'error',   Icon: XCircle },
 ];
 
 // Extraction dialog state: { open, documentId, documentName, mode: 'progress'|'results' }
@@ -59,10 +62,17 @@ export default function DocumentProcessingPage() {
 
     const { sourceId, documentId } = useParams();
 
-    const activeTab = (location.pathname.startsWith('/documents/sources')) ? 1 : 0;
+    const activeTab = location.pathname.startsWith('/documents/sources') ? 1
+                    : location.pathname.startsWith('/documents/search') ? 2
+                    : location.pathname.startsWith('/documents/dashboard') ? 3
+                    : 0;
 
     function handleTabChange(_, v) {
-        navigate(v === 1 ? '/documents/sources' : '/documents', { replace: true });
+        const path = v === 1 ? '/documents/sources'
+                   : v === 2 ? '/documents/search'
+                   : v === 3 ? '/documents/dashboard'
+                   : '/documents';
+        navigate(path, { replace: true });
     }
     const [namespace,        setNamespace]        = useState(searchParams.get('namespace') || '');
     const [documents,        setDocuments]        = useState([]);
@@ -106,7 +116,13 @@ export default function DocumentProcessingPage() {
 
     useEffect(() => { loadData(); }, [loadData]);
 
-    // Poll while any document is in a transient state
+    // Background poll — catches documents created after initial page load (source catalog, pipeline)
+    useEffect(() => {
+        const timer = setInterval(loadData, 10000);
+        return () => clearInterval(timer);
+    }, [loadData]);
+
+    // Fast poll while any document is in a transient state
     useEffect(() => {
         const transient = documents.filter(d => ['UPLOADED', 'CLASSIFYING', 'EXTRACTING'].includes(d.status));
         if (!transient.length) return;
@@ -263,6 +279,10 @@ export default function DocumentProcessingPage() {
                     sx={{ minHeight: 36, fontSize: '0.8rem', textTransform: 'none', py: 0 }} />
                 <Tab label="Source Catalog" icon={<Globe size={14} />} iconPosition="start"
                     sx={{ minHeight: 36, fontSize: '0.8rem', textTransform: 'none', py: 0 }} />
+                <Tab label="Search All Sources" icon={<SearchIcon size={14} />} iconPosition="start"
+                    sx={{ minHeight: 36, fontSize: '0.8rem', textTransform: 'none', py: 0 }} />
+                <Tab label="Dashboard" icon={<LayoutDashboard size={14} />} iconPosition="start"
+                    sx={{ minHeight: 36, fontSize: '0.8rem', textTransform: 'none', py: 0 }} />
             </Tabs>
 
             {/* ── Notification ── */}
@@ -341,6 +361,28 @@ export default function DocumentProcessingPage() {
                             navigate('/documents', { replace: true });
                             loadData();
                         }}
+                    />
+                </Box>
+            )}
+
+            {/* ── Tab: Search All Sources (local index) ── */}
+            {activeTab === 2 && (
+                <Box sx={{ flex: 1, overflow: 'hidden' }}>
+                    <DocumentIndexTab
+                        onDocumentImported={() => {
+                            notify('success', 'Document imported into Documents');
+                            loadData();
+                        }}
+                    />
+                </Box>
+            )}
+
+            {/* ── Tab: Sources Dashboard (indexing progress) ── */}
+            {activeTab === 3 && (
+                <Box sx={{ flex: 1, overflow: 'hidden' }}>
+                    <SourcesDashboard
+                        onOpenSearch={() => navigate('/documents/search', { replace: true })}
+                        onBrowseSource={(id) => navigate(`/documents/sources/${id}`, { replace: true })}
                     />
                 </Box>
             )}

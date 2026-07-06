@@ -1,0 +1,24 @@
+{
+  "key": "unctad",
+  "name": "UNCTAD Publications",
+  "family": "url-catalog",
+  "capabilities": ["search", "browseAll", "paginate", "download"],
+  "filterSchema": [],
+  "config": {
+    "url": "https://unctad.org/publications",
+    "searchUrlTemplate": "https://unctad.org/search?keyword={query}&type=publication",
+    "linkFilter": "",
+    "includeAllLinks": false
+  },
+  "download": {
+    "mode": "record-page",
+    "notes": "Publication cards link to record pages under /publication/{slug}. The official PDF is served from https://unctad.org/system/files/official-document/{code}_en.pdf and is linked on the record page. Two-step crawl (listing/search -> record -> PDF) required."
+  },
+  "enrich": {
+    "mode": "none",
+    "notes": "Title, date and document symbol available from record pages; no structured repository API."
+  },
+  "methodologyMarkdown": "## Overview\nUNCTAD (UN Trade and Development) runs a Drupal-based publications catalog. Content is server-rendered, but the site sits behind a strict CDN/WAF (Cloudflare) that returns HTTP 403 to non-browser User-Agents. Automated clients must present a realistic browser User-Agent and honor cookies to retrieve pages.\n\n## Search\nA dedicated search endpoint exists: /search?keyword={query}&type=publication, which restricts results to publications. The browse listing lives at /publications.\n\n## Filters\nThe search endpoint accepts a type=publication filter; additional facets appear as URL parameters on the listing. No formal filter schema is published, so these are treated as opaque URL params.\n\n## Download\nOfficial PDFs follow a highly regular pattern: https://unctad.org/system/files/official-document/{symbol}_en.pdf (e.g. wir2024_en.pdf, tdr2024_en.pdf). These links are exposed on each publication record page, enabling reliable direct download once the record is fetched.\n\n## Metadata & Enrichment\nRecord pages carry title, date, document symbol and abstract in server-rendered HTML. No JSON/REST API is available, so enrichment is HTML-based.\n\n## Limitations\nHONEST: WebFetch returned 403 (WAF blocking the crawler User-Agent), not because the page is a JS SPA. The HTML is server-rendered and scrapable with a proper browser User-Agent. Without one, no links are retrievable. Pagination uses ?page=N.",
+  "verified": true,
+  "probeNotes": "WebFetch of /publications returned HTTP 403 (Cloudflare/WAF blocking bot UA). Search corroborated via WebSearch: server-rendered Drupal, PDF pattern /system/files/official-document/{symbol}_en.pdf confirmed across many docs (wir2024, tdr2024, tdstat48). Search endpoint /search?keyword=&type=publication documented on site."
+}

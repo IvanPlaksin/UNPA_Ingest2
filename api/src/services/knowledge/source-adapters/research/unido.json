@@ -1,0 +1,24 @@
+{
+  "key": "unido",
+  "name": "UNIDO Publications",
+  "family": "url-catalog",
+  "capabilities": ["browseAll", "paginate", "download"],
+  "filterSchema": [],
+  "config": {
+    "url": "https://www.unido.org/publications",
+    "searchUrlTemplate": "",
+    "linkFilter": "",
+    "includeAllLinks": false
+  },
+  "download": {
+    "mode": "record-page",
+    "notes": "Publication cards link to record pages where the PDF is exposed. Two-step crawl (listing -> record -> PDF) required."
+  },
+  "enrich": {
+    "mode": "none",
+    "notes": "Title and date available from listing/record pages; no verified structured API."
+  },
+  "methodologyMarkdown": "## Overview\nUNIDO's publications catalog lives at www.unido.org/publications (Drupal), with a companion /publications/catalogue covering ~27,000 documents on a newer search platform. A separate data platform, open.unido.org, was evaluated but it is the COMPASS open-data / projects portal (project and statistical data), not a document repository, so www.unido.org/publications is preferred as the document source per the brief.\n\n## Source selection\nRECOMMEND www.unido.org/publications (and /publications/catalogue) over open.unido.org: the former is the actual publications repository with document records and PDFs, whereas open.unido.org exposes project/open-data rather than downloadable publications.\n\n## Search\nThe /publications/catalogue platform offers contextual search over ~27k documents; a stable query-parameter template for automated search was not verified, so the search capability is not claimed. Browse + facets are available on /publications.\n\n## Filters\nFacets (publication type via /publications-type) appear as URL paths/params; treated as opaque params (no formal schema).\n\n## Download\nCards link to record pages that expose the PDF; a two-step crawl is required.\n\n## Metadata & Enrichment\nTitle and date are in the HTML. No verified JSON/REST API; enrichment is HTML-based.\n\n## Limitations\nHONEST: www.unido.org/publications returned HTTP 403 to the crawler User-Agent (Cloudflare/WAF), not because it is a JS SPA. It is server-rendered and scrapable with a realistic browser User-Agent. The newer catalogue's search API/params were not verified, so search is not claimed. open.unido.org is out of scope (open-data, not publications).",
+  "verified": true,
+  "probeNotes": "www.unido.org/publications -> WebFetch 403 (WAF). WebSearch confirmed it is the Drupal publications repository (also /publications/catalogue ~27k docs, /publications-type facets, /latest-publications). open.unido.org identified as COMPASS open-data/projects portal, not a document repo -> recommended www.unido.org/publications. Search params unverified -> capability omitted."
+}

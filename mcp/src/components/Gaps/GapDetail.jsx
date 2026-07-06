@@ -1,4 +1,4 @@
-/**
+﻿/**
  * GapDetail — Extended gap detail with tabs
  *
  * Tabs:
@@ -75,7 +75,7 @@ export default function GapDetail({ gap, onClose, onUpdate, onViewTriangle }) {
             <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
                 <Stack direction="row" spacing={1} alignItems="center">
                     <Chip label={gap.severity || '?'} size="small"
-                        sx={{ height: 20, fontSize: 11,
+                        sx={{ height: 20, fontSize: 13,
                               bgcolor: (SEVERITY_COLORS[gap.severity] || '#94a3b8') + '22',
                               color: SEVERITY_COLORS[gap.severity] || '#94a3b8' }} />
                     <Typography variant="subtitle2" fontWeight={700} noWrap sx={{ maxWidth: 280 }}>
@@ -89,7 +89,7 @@ export default function GapDetail({ gap, onClose, onUpdate, onViewTriangle }) {
                             variant="outlined"
                             startIcon={<GitBranch size={12} />}
                             onClick={() => onViewTriangle(gap.affectedProcess)}
-                            sx={{ fontSize: 11 }}
+                            sx={{ fontSize: 13 }}
                         >
                             Triangle
                         </Button>
@@ -112,8 +112,8 @@ export default function GapDetail({ gap, onClose, onUpdate, onViewTriangle }) {
             )}
 
             <Tabs value={tab} onChange={handleTabChange} sx={{ borderBottom: 1, borderColor: 'divider', mb: 0 }}>
-                <Tab label="Details"    sx={{ minHeight: 36, py: 0.5, fontSize: 12 }} />
-                <Tab label="Escalation" sx={{ minHeight: 36, py: 0.5, fontSize: 12,
+                <Tab label="Details"    sx={{ minHeight: 36, py: 0.5, fontSize: 13 }} />
+                <Tab label="Escalation" sx={{ minHeight: 36, py: 0.5, fontSize: 13,
                     color: gap.isStale ? 'warning.main' : undefined }} />
             </Tabs>
 

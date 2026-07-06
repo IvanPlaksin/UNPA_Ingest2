@@ -13,7 +13,8 @@
 const memgraphService = require('../memgraph.service');
 
 const VALIDATION_MODEL = 'haiku';
-const { getInstance: getLLMProvider } = require('../llm/LLMProviderService');
+const { getScopedProvider } = require('../llm-access-control.service');
+const llmProvider = getScopedProvider('graph_services');
 const VALIDATION_TIMEOUT_MS = 30_000;
 
 const SYSTEM_PROMPT = `You are a graph quality auditor validating a SubGraph consolidation operation in a knowledge graph system.
@@ -177,7 +178,7 @@ Evaluate this subgraph consolidation across all quality dimensions.`;
       console.log(`[SubgraphValidator] Calling Claude: model=${VALIDATION_MODEL}, ~${sysT + msgT} input tokens`);
 
       const llmResp = await Promise.race([
-        getLLMProvider().chat([{ role: 'user', content: userMessage }], {
+        llmProvider.chat([{ role: 'user', content: userMessage }], {
           model: VALIDATION_MODEL,
           maxTokens: 1024,
           system: SYSTEM_PROMPT,

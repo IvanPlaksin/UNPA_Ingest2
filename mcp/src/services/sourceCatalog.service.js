@@ -10,6 +10,7 @@ export const updateSource = (id, data)    => axios.put(`${BASE}/${id}`, data).th
 export const deleteSource = (id)          => axios.delete(`${BASE}/${id}`).then(r => r.data);
 
 export const browseSource         = (id, body)    => axios.post(`${BASE}/${id}/browse`, body).then(r => r.data);
+export const getSourceCapabilities = (id)          => axios.get(`${BASE}/${id}/capabilities`).then(r => r.data);
 export const importDocument       = (id, body)    => axios.post(`${BASE}/${id}/import`, body).then(r => r.data);
 export const getSourceDocuments   = (id, params)  => axios.get(`${BASE}/${id}/documents`, { params }).then(r => r.data);
 export const updateSourceMethodology = (id, text) => axios.put(`${BASE}/${id}`, { methodology: text }).then(r => r.data);

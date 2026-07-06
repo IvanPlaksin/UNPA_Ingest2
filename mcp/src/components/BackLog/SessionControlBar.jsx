@@ -1,4 +1,4 @@
-/**
+﻿/**
  * SessionControlBar — Top control bar for BackLog page
  * Shows session control (max parallel slider, running/queued count, stop all)
  * and houses the NotificationBell on the right side.
@@ -200,7 +200,7 @@ export default function SessionControlBar({ selectedItem, onAnalyze }) {
               onClick={handleStartSelected}
               disabled={!selectedItem?.backlogId || enqueuing}
               startIcon={enqueuing ? <CircularProgress size={14} /> : <RocketLaunch />}
-              sx={{ fontSize: 11, textTransform: 'none', minWidth: 'auto' }}
+              sx={{ fontSize: 13, textTransform: 'none', minWidth: 'auto' }}
             >
               Start Selected
             </Button>
@@ -217,7 +217,7 @@ export default function SessionControlBar({ selectedItem, onAnalyze }) {
               onClick={handlePauseAll}
               disabled={pausingAll || sessionStatus.running === 0}
               startIcon={pausingAll ? <CircularProgress size={14} /> : <Pause />}
-              sx={{ fontSize: 11, textTransform: 'none', minWidth: 'auto' }}
+              sx={{ fontSize: 13, textTransform: 'none', minWidth: 'auto' }}
             >
               Pause All
             </Button>
@@ -234,7 +234,7 @@ export default function SessionControlBar({ selectedItem, onAnalyze }) {
               onClick={handleStopAll}
               disabled={stopping || !hasActiveSessions}
               startIcon={stopping ? <CircularProgress size={14} /> : <StopCircle />}
-              sx={{ fontSize: 11, textTransform: 'none', minWidth: 'auto' }}
+              sx={{ fontSize: 13, textTransform: 'none', minWidth: 'auto' }}
             >
               Stop All
             </Button>
@@ -278,7 +278,7 @@ export default function SessionControlBar({ selectedItem, onAnalyze }) {
             size="small"
             color={sessionStatus.running > 0 ? 'success' : 'default'}
             variant="outlined"
-            sx={{ fontSize: 11 }}
+            sx={{ fontSize: 13 }}
           />
         </Tooltip>
         <Tooltip title="Queued sessions waiting to start">
@@ -287,7 +287,7 @@ export default function SessionControlBar({ selectedItem, onAnalyze }) {
             size="small"
             color={sessionStatus.queued > 0 ? 'warning' : 'default'}
             variant="outlined"
-            sx={{ fontSize: 11 }}
+            sx={{ fontSize: 13 }}
           />
         </Tooltip>
 
@@ -302,7 +302,7 @@ export default function SessionControlBar({ selectedItem, onAnalyze }) {
                 label={session.label || session.backlogId || session.id.slice(0, 8)}
                 color={session.status === 'PAUSED' ? 'warning' : 'success'}
                 variant="filled"
-                sx={{ fontSize: 10, maxWidth: 160 }}
+                sx={{ fontSize: 12, maxWidth: 160 }}
                 onDelete={() => handleStopSession(session.id)}
                 deleteIcon={
                   stoppingId === session.id
@@ -350,7 +350,7 @@ export default function SessionControlBar({ selectedItem, onAnalyze }) {
             variant="outlined"
             color="secondary"
             onClick={() => onAnalyze(selectedItem)}
-            sx={{ fontSize: 11, textTransform: 'none' }}
+            sx={{ fontSize: 13, textTransform: 'none' }}
           >
             Analyze Efficiency
           </Button>

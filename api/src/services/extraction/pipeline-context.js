@@ -11,15 +11,19 @@ const { v4: uuidv4 } = require('uuid');
 
 const PIPELINE_STEPS = [
   { name: 'load-source',        label: 'Load Source',           required: true  },
+  { name: 'ocr-scan',           label: 'OCR Scan',              required: false },
   { name: 'chunk-text',         label: 'Chunk Text',            required: true  },
   { name: 'extract-entities',   label: 'Extract Entities',      required: true  },
   { name: 'extract-relations',  label: 'Extract Relations',     required: false },
   { name: 'extract-specialized',label: 'Extract Specialized',   required: false },
+  { name: 'extract-temporal',   label: 'Extract Temporal',      required: false },
   { name: 'deduplicate',        label: 'Deduplicate',           required: true  },
   { name: 'persist-graph',      label: 'Persist Graph',         required: true  },
   { name: 'embed-and-index',    label: 'Embed & Index (Qdrant)',required: true  },
   { name: 'post-process',       label: 'Post-Process',          required: false },
   { name: 'store-result',       label: 'Store Result',          required: true  },
+  { name: 'queue-refs',         label: 'Queue References',      required: false },
+  { name: 'link-symbol-relations', label: 'Link Symbol Relations', required: false },
 ];
 
 /**
@@ -87,6 +91,10 @@ function createContext(mode, sourceId, adapter, options = {}, overrides = {}) {
     postProcessResults: {},
     resultId: null,
 
+    // Populated by extract-temporal step
+    temporalData:      { documentDates: [], mandatePeriod: null },
+    supersessionLinks: [],
+
     stats: {
       textChars: 0,
       chunksCount: 0,
@@ -94,7 +102,10 @@ function createContext(mode, sourceId, adapter, options = {}, overrides = {}) {
       relationsFound: 0,
       specializedByType: {},
       deduplicated: 0,
+      vectorsAttempted: 0,
       vectorsIndexed: 0,
+      vectorsFailed: 0,
+      graphNodesCreated: 0,
       durationMs: 0,
       errors: [],
     },

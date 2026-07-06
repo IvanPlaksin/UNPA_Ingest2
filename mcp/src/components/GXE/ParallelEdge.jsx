@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ParallelEdge — Custom ReactFlow edge that separates overlapping parallel edges.
  *
  * Three rendering modes:
@@ -62,7 +62,7 @@ const ParallelEdge = ({
                 style={{
                   position: 'absolute',
                   transform: `translate(-50%, -50%) translate(${mid.x}px,${mid.y}px)`,
-                  fontSize: 10,
+                  fontSize: 12,
                   pointerEvents: 'all',
                 }}
                 className="bg-[#161b22] px-1 rounded text-gray-400 border border-[#30363d]"
@@ -101,7 +101,7 @@ const ParallelEdge = ({
                 style={{
                   position: 'absolute',
                   transform: `translate(-50%, -50%) translate(${mid.x}px,${mid.y}px)`,
-                  fontSize: 10,
+                  fontSize: 12,
                   pointerEvents: 'all',
                 }}
                 className="bg-[#161b22] px-1 rounded text-gray-400 border border-[#30363d]"
@@ -170,7 +170,7 @@ const ParallelEdge = ({
             style={{
               position: 'absolute',
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
-              fontSize: 10,
+              fontSize: 12,
               pointerEvents: 'all',
             }}
             className="bg-[#161b22] px-1 rounded text-gray-400 border border-[#30363d]"

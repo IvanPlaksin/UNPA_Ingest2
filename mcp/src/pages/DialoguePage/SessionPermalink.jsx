@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box, Typography, Chip, Button, Stack, Divider,
@@ -151,7 +151,7 @@ export default function SessionPermalink() {
                     label={`${Math.round(d.confidence * 100)}% confidence`}
                     size="small"
                     color={d.confidence > 0.7 ? 'success' : 'default'}
-                    sx={{ mt: 0.75, height: 18, fontSize: 10 }}
+                    sx={{ mt: 0.75, height: 18, fontSize: 12 }}
                   />
                 )}
               </Box>

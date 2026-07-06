@@ -86,7 +86,7 @@ async function completeProgress(ctx, result = {}) {
  */
 async function failProgress(ctx, error) {
   const msg = error instanceof Error ? error.message : String(error);
-  await updateProgress(ctx, { status: 'failed', error: msg });
+  await updateProgress(ctx, { status: 'failed', error: msg, log: ctx.log });
 }
 
 /**

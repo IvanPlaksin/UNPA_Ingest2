@@ -1,0 +1,24 @@
+{
+  "key": "ipcc",
+  "name": "IPCC Reports",
+  "family": "url-catalog",
+  "capabilities": ["browseAll", "download"],
+  "filterSchema": [],
+  "config": {
+    "url": "https://www.ipcc.ch/reports/",
+    "searchUrlTemplate": "",
+    "linkFilter": ".pdf",
+    "includeAllLinks": false
+  },
+  "download": {
+    "mode": "record-page",
+    "notes": "The /reports/ index links to per-report landing pages (e.g. /report/sixth-assessment-report-working-group-i/), each of which links to a downloads page (/report/ar6/{wg}/downloads/) exposing direct PDFs such as /report/ar6/syr/downloads/report/IPCC_AR6_SYR_FullVolume.pdf and /report/ar6/wg3/downloads/report/IPCC_AR6_WGIII_SummaryForPolicymakers.pdf. Two-hop: index -> report landing -> downloads -> PDF."
+  },
+  "enrich": {
+    "mode": "none",
+    "notes": "No item/record API; assessment cycle, working group and document type are derivable from the URL path and PDF filename."
+  },
+  "methodologyMarkdown": "## Overview\nThe IPCC reports index at https://www.ipcc.ch/reports/ lists all assessment cycles (AR7, AR6, AR5 ... AR1), the Synthesis Reports and Special Reports. The site is server-rendered WordPress HTML (not a SPA); plain GETs return real navigation links.\n\n## Search\nNo public search API and no reliable search-URL template for report harvesting. Discovery is by browsing the reports index and following per-report landing pages.\n\n## Filters\nThe index page offers on-page filtering by cycle in the browser, but no URL-parameter filter was verified. Cycle (ar6), working group (wg1/wg2/wg3/syr) and document type are encoded in the download URL path.\n\n## Download\nTwo-hop navigation: the index links to landing pages like /report/sixth-assessment-report-working-group-i/, which link to a downloads page (/report/ar6/wg1/downloads/) that exposes direct PDFs. Confirmed direct-PDF examples: /report/ar6/syr/downloads/report/IPCC_AR6_SYR_FullVolume.pdf and /report/ar6/wg3/downloads/report/IPCC_AR6_WGIII_SummaryForPolicymakers.pdf. Filenames follow IPCC_AR6_{WG}_{Section}.pdf.\n\n## Metadata & Enrichment\nNo DSpace/record API. Metadata (cycle, working group, section) is parsed from the URL path and PDF filename. Enrichment mode is none.\n\n## Limitations\nServer-rendered, so no headless browser is needed. However harvesting requires following report landing pages to their /downloads/ subpages rather than reading PDFs off a single flat index; a crawler must walk that two/three-hop structure.",
+  "verified": true,
+  "probeNotes": "WebFetch of https://www.ipcc.ch/reports/ confirmed server-rendered HTML listing AR7/AR6/AR5... with landing-page links (e.g. /report/sixth-assessment-report-working-group-i/) but no direct PDFs on the index. WebSearch confirmed the /report/ar6/{wg}/downloads/report/*.pdf direct-PDF pattern. No API."
+}

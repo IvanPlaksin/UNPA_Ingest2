@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   Box, Card, CardContent, Typography, Chip, IconButton, Collapse
 } from '@mui/material';
@@ -25,8 +25,8 @@ function IssueRow({ issue }) {
           </IconButton>
           <Icon size={18} color={iconColor} />
           <Typography variant="body2" sx={{ flex: 1 }}>{issue.message}</Typography>
-          <Chip label={issue.type.replace(/_/g, ' ')} size="small" variant="outlined" sx={{ fontSize: 10 }} />
-          <Chip label={issue.severity} size="small" color={color} sx={{ fontSize: 10 }} />
+          <Chip label={issue.type.replace(/_/g, ' ')} size="small" variant="outlined" sx={{ fontSize: 12 }} />
+          <Chip label={issue.severity} size="small" color={color} sx={{ fontSize: 12 }} />
         </Box>
         <Collapse in={open}>
           <Box sx={{ mt: 1.5, pl: 5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>

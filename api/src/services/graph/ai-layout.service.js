@@ -14,7 +14,8 @@
  * Settings persisted in Memgraph as :Settings {type: 'ai-layout-config'}
  */
 
-const { getInstance: getLLMProvider } = require('../llm/LLMProviderService');
+const { getScopedProvider } = require('../llm-access-control.service');
+const llmProvider = getScopedProvider('graph_services');
 
 const AVAILABLE_MODELS = {
   'claude-sonnet': 'claude-sonnet-4-20250514',
@@ -717,7 +718,7 @@ async function computeLayout(request, configOverrides = {}) {
   console.log(`[AILayout] Computing layout for ${request.nodes.length} nodes, ${request.edges.length} edges via ${config.selectedModel}`);
   const startTime = Date.now();
 
-  const llmResp = await getLLMProvider().chat(
+  const llmResp = await llmProvider.chat(
     [
       { role: 'user', content: userPrompt },
       { role: 'assistant', content: '{"nodePositions":{' },
@@ -925,7 +926,7 @@ async function computeHexLayout(request, configOverrides = {}) {
   console.log(`[AILayout-Hex] Computing hex layout for ${request.nodes.length} nodes via ${config.selectedModel}`);
   const startTime = Date.now();
 
-  const llmResp = await getLLMProvider().chat(
+  const llmResp = await llmProvider.chat(
     [
       { role: 'user', content: userPrompt },
       { role: 'assistant', content: '{"nodePositions":{' },

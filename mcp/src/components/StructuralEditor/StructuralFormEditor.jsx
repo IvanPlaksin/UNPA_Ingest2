@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+﻿import React, { useEffect, useState, useCallback } from 'react';
 import { ReactFlowProvider } from 'reactflow';
 import useStructuralEditorStore from '../../stores/structuralEditorStore';
 import EditorToolbar from './EditorToolbar';
@@ -67,7 +67,7 @@ export default function StructuralFormEditor({ initialGraphId }) {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               style={{
-                padding: '5px 14px', fontSize: 11, fontWeight: 500, border: 'none',
+                padding: '5px 14px', fontSize: 13, fontWeight: 500, border: 'none',
                 borderRadius: '6px 6px 0 0', cursor: 'pointer',
                 transition: 'all 0.15s',
                 background: activeTab === tab.id ? '#0d1117' : 'transparent',
@@ -88,7 +88,7 @@ export default function StructuralFormEditor({ initialGraphId }) {
               onClick={toggleTheme}
               title={previewTheme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
               style={{
-                marginRight: 8, padding: '4px 12px', fontSize: 11, fontWeight: 600,
+                marginRight: 8, padding: '4px 12px', fontSize: 13, fontWeight: 600,
                 border: previewTheme === 'light' ? '1px solid #d0d7de' : '1px solid #484f58',
                 borderRadius: 6, cursor: 'pointer',
                 background: previewTheme === 'light' ? '#ffffff' : '#30363d',
@@ -111,7 +111,7 @@ export default function StructuralFormEditor({ initialGraphId }) {
         )}
 
         {error && (
-          <div style={{ padding: 12, background: '#da363320', border: '1px solid #da3633', borderRadius: 6, margin: 8, fontSize: 11, color: '#f85149' }}>
+          <div style={{ padding: 12, background: '#da363320', border: '1px solid #da3633', borderRadius: 6, margin: 8, fontSize: 13, color: '#f85149' }}>
             {error}
           </div>
         )}

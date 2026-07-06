@@ -101,12 +101,21 @@ const triangleRoutes          = require('./src/routes/triangle.route');
 const documentProcessingRoutes  = require('./src/routes/document-processing.route');
 const batchExtractionRoutes      = require('./src/routes/batch-extraction.route');
 const sourceCatalogRoutes        = require('./src/routes/source-catalog.route');
+const documentIndexRoutes        = require('./src/routes/document-index.route');
 const entityStoreRoutes          = require('./src/routes/entity-store.route');
+const dateTypeRegistryRoutes     = require('./src/routes/date-type-registry.route');
+const esSyncRoutes               = require('./src/routes/es-sync.route');
+const entityDedupRoutes          = require('./src/routes/entity-dedup.route');
+const esIngestionAgentRoutes     = require('./src/routes/es-ingestion-agent.route');
+const vectorsRoutes              = require('./src/routes/vectors.route');
+const knowledgeMapRoutes         = require('./src/routes/knowledge-map.route');
 const triangleExplorerRoutes    = require('./src/routes/triangle-explorer.route');
 const gapManagerRoutes          = require('./src/routes/gap-manager.route');
 const knowledgeHealthRoutes     = require('./src/routes/knowledge-health.route');
 const { initFormRoutes } = require('./src/routes/structural-form.route');
 const { initStructuralRoutes } = require('./src/routes/structural.route');
+const llmAccessControlRoutes = require('./src/routes/llm-access-control.route');
+const investigationRoutes = require('./src/routes/investigation.route');
 
 // ═══════════════════════════════════════════════════════════════════
 // App Setup
@@ -232,10 +241,25 @@ app.use('/api/v1/triangle',  triangleRoutes);
 app.use('/api/v1/documents', documentProcessingRoutes);
 app.use('/api/v1/extraction/batch', batchExtractionRoutes);
 app.use('/api/v1/source-catalog', sourceCatalogRoutes);
-app.use('/api/v1/entity-store', entityStoreRoutes);
+app.use('/api/v1/document-index', documentIndexRoutes);
+app.use('/api/v1/entity-store',         entityStoreRoutes);
+app.use('/api/v1/date-types',           dateTypeRegistryRoutes);
+app.use('/api/v1/es-sync',              esSyncRoutes);
+app.use('/api/v1/entity-dedup',         entityDedupRoutes);
+app.use('/api/v1/es-ingestion-agent',   esIngestionAgentRoutes);
+app.use('/api/v1/vectors',        vectorsRoutes);
+app.use('/api/v1/knowledge-map',  knowledgeMapRoutes);
+const pipelineManagerRoutes = require('./src/routes/pipeline-manager.route');
+app.use('/api/v1/pipeline', pipelineManagerRoutes);
+const pipelineStatsRoutes = require('./src/routes/pipeline-stats.route');
+app.use('/api/v1/pipeline-stats', pipelineStatsRoutes);
+const extractionMethodRoutes = require('./src/routes/extraction.route');
+app.use('/api/extraction', extractionMethodRoutes);
 app.use('/api/v1/explorer',          triangleExplorerRoutes);
 app.use('/api/v1/gaps',             gapManagerRoutes);
 app.use('/api/v1/knowledge-health', knowledgeHealthRoutes);
+app.use('/api/v1/llm-access', llmAccessControlRoutes);
+app.use('/api/v1/investigation', investigationRoutes);
 const _mg = require('./src/services/memgraph.service');
 app.use('/api/v1/forms', initFormRoutes(_mg));
 const { getFormService } = require('./src/routes/structural-form.route');
@@ -309,6 +333,7 @@ async function startServer() {
       () => getTensorService()?.stopCleanup?.(),
       () => getQueryCache()?.shutdown?.(),
       () => dialogueWatcher?.stop?.(),
+      () => { try { require('./src/services/indexing/document-index.service').getDocumentIndexService().stop(); } catch {} },
     ]);
 
     server.listen(port, envConfig.server.host, () => {

@@ -47,6 +47,7 @@ class DialogueAISearchService {
           maxTokens: 512,
           temperature: 0.1,
           system: SEARCH_METHODOLOGY_PROMPT,
+          caller: 'aopeg_dialogue',
         }
       );
       const rawContent = Array.isArray(response.content)

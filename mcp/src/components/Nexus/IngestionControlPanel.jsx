@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+﻿import React, { useEffect } from 'react';
 import ReactFlow, {
     Background,
     Controls,
@@ -159,7 +159,7 @@ const IngestionControlPanel = ({ nexusModel, onIngest, isProcessing, ingestionRe
                         label: edge.label,
                         animated: true,
                         style: { stroke: '#7c3aed', strokeDasharray: '5,5' },
-                        labelStyle: { fill: '#7c3aed', fontSize: 10 }
+                        labelStyle: { fill: '#7c3aed', fontSize: 12 }
                     });
                 });
             }

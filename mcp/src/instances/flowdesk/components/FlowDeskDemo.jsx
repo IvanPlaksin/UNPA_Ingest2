@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+﻿import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import FormRenderer from '../../../components/Forms/FormRenderer';
 import { waitingNodeToFormDefinition, extractFormResponse, isStructuralNode } from './waitingNodeToForm.js';
 import {
@@ -60,11 +60,11 @@ function FlowDeskFormWidget({ waitingNode, choices, sessionState, loading, onSub
   if (choices && choices.length > 0 && choices.length <= 6 && !choices.some(c => c.disabled)) {
     return (
       <div style={{ marginTop: 8 }}>
-        <div style={{ fontSize: 11, color: '#6366f1', fontWeight: 600, marginBottom: 6 }}>
+        <div style={{ fontSize: 13, color: '#6366f1', fontWeight: 600, marginBottom: 6 }}>
           {waitingNode.label}
         </div>
         {waitingNode.prompt && waitingNode.prompt !== waitingNode.label && (
-          <div style={{ fontSize: 12, color: '#999', marginBottom: 8 }}>{waitingNode.prompt}</div>
+          <div style={{ fontSize: 13, color: '#999', marginBottom: 8 }}>{waitingNode.prompt}</div>
         )}
         <div className="fd-choices">
           {choices.map((choice, ci) => (
@@ -85,7 +85,7 @@ function FlowDeskFormWidget({ waitingNode, choices, sessionState, loading, onSub
 
   // Full form for text input, search, STRUCTURAL, or complex forms
   const formStyle = { marginTop: 8, padding: '10px 14px', background: 'rgba(99,102,241,0.06)', borderRadius: 10, border: '1px solid rgba(99,102,241,0.15)' };
-  const formSx = { '& .MuiTypography-h6': { fontSize: 13, fontWeight: 600, color: '#6366f1' }, '& .MuiTypography-body2': { fontSize: 11 }, '& .MuiButton-contained': { fontSize: 11, py: 0.5, px: 2 } };
+  const formSx = { '& .MuiTypography-h6': { fontSize: 13, fontWeight: 600, color: '#6366f1' }, '& .MuiTypography-body2': { fontSize: 13 }, '& .MuiButton-contained': { fontSize: 13, py: 0.5, px: 2 } };
 
   return (
     <div style={formStyle}>
@@ -123,29 +123,29 @@ function ExecutionLogEntry({ entry, index }) {
         onClick={() => setExpanded(!expanded)}
       >
         {statusIcon}
-        <span style={{ fontWeight: 600, fontSize: 11, flex: 1 }}>{entry.label || entry.node}</span>
-        <span style={{ fontSize: 9, color: kindColor, background: kindColor + '22', padding: '1px 6px', borderRadius: 3, fontWeight: 600 }}>
+        <span style={{ fontWeight: 600, fontSize: 13, flex: 1 }}>{entry.label || entry.node}</span>
+        <span style={{ fontSize: 11, color: kindColor, background: kindColor + '22', padding: '1px 6px', borderRadius: 3, fontWeight: 600 }}>
           {entry.kind}
         </span>
         {entry.tool && (
-          <span style={{ fontSize: 9, color: '#888', fontFamily: 'monospace' }}>{entry.tool}</span>
+          <span style={{ fontSize: 11, color: '#888', fontFamily: 'monospace' }}>{entry.tool}</span>
         )}
         {entry.elapsed_ms != null && (
-          <span style={{ fontSize: 9, color: '#666' }}>{entry.elapsed_ms}ms</span>
+          <span style={{ fontSize: 11, color: '#666' }}>{entry.elapsed_ms}ms</span>
         )}
         {entry.condition && (
-          <span style={{ fontSize: 9, color: entry.condition === 'true' ? '#22c55e' : '#ef4444', fontWeight: 700 }}>
+          <span style={{ fontSize: 11, color: entry.condition === 'true' ? '#22c55e' : '#ef4444', fontWeight: 700 }}>
             {entry.condition}
           </span>
         )}
         {entry.waitForInput && (
-          <span style={{ fontSize: 9, color: '#f59e0b', background: '#f59e0b22', padding: '1px 4px', borderRadius: 3 }}>WAIT</span>
+          <span style={{ fontSize: 11, color: '#f59e0b', background: '#f59e0b22', padding: '1px 4px', borderRadius: 3 }}>WAIT</span>
         )}
         <ChevronDown size={12} style={{ color: '#666', transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
       </div>
 
       {expanded && (
-        <div style={{ padding: '6px 8px 8px 24px', fontSize: 10, color: '#aaa', borderLeft: `2px solid ${kindColor}33`, marginLeft: 6, marginBottom: 4 }}>
+        <div style={{ padding: '6px 8px 8px 24px', fontSize: 12, color: '#aaa', borderLeft: `2px solid ${kindColor}33`, marginLeft: 6, marginBottom: 4 }}>
           <div style={{ marginBottom: 4 }}>
             <span style={{ color: '#666', fontWeight: 600 }}>Node:</span> {entry.node} | <span style={{ color: '#666', fontWeight: 600 }}>Tool:</span> {entry.tool || 'none'}
           </div>
@@ -153,7 +153,7 @@ function ExecutionLogEntry({ entry, index }) {
           {entry.inputState && Object.keys(entry.inputState).length > 0 && (
             <div style={{ marginBottom: 4 }}>
               <div style={{ color: '#3b82f6', fontWeight: 600, marginBottom: 2 }}>Input State:</div>
-              <pre style={{ margin: 0, fontSize: 9, color: '#999', background: '#0d1117', padding: 4, borderRadius: 3, overflow: 'auto', maxHeight: 120, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+              <pre style={{ margin: 0, fontSize: 11, color: '#999', background: '#0d1117', padding: 4, borderRadius: 3, overflow: 'auto', maxHeight: 120, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
                 {JSON.stringify(entry.inputState, null, 2)}
               </pre>
             </div>
@@ -162,7 +162,7 @@ function ExecutionLogEntry({ entry, index }) {
           {entry.output && (
             <div style={{ marginBottom: 4 }}>
               <div style={{ color: '#22c55e', fontWeight: 600, marginBottom: 2 }}>Output:</div>
-              <pre style={{ margin: 0, fontSize: 9, color: '#999', background: '#0d1117', padding: 4, borderRadius: 3, overflow: 'auto', maxHeight: 120, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+              <pre style={{ margin: 0, fontSize: 11, color: '#999', background: '#0d1117', padding: 4, borderRadius: 3, overflow: 'auto', maxHeight: 120, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
                 {JSON.stringify(entry.output, null, 2)}
               </pre>
             </div>
@@ -171,7 +171,7 @@ function ExecutionLogEntry({ entry, index }) {
           {entry.error && (
             <div style={{ color: '#ef4444' }}>
               <span style={{ fontWeight: 600 }}>Error:</span> {entry.error}
-              {entry.errorDetails && <div style={{ fontSize: 9 }}>{entry.errorDetails}</div>}
+              {entry.errorDetails && <div style={{ fontSize: 11 }}>{entry.errorDetails}</div>}
             </div>
           )}
         </div>
@@ -188,7 +188,7 @@ function GraphIdRow({ id }) {
   return (
     <div className="fd-routing-row" style={{ alignItems: 'center' }}>
       <span className="fd-routing-label">Graph ID</span>
-      <span className="fd-routing-value" style={{ fontSize: 9, fontFamily: 'monospace', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }} title={id}>{id}</span>
+      <span className="fd-routing-value" style={{ fontSize: 11, fontFamily: 'monospace', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }} title={id}>{id}</span>
       <button onClick={handleCopy} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, marginLeft: 4, color: copied ? '#22c55e' : '#888' }} title="Copy ID">
         {copied ? <Check size={12} /> : <Copy size={12} />}
       </button>
@@ -592,7 +592,7 @@ export default function FlowDeskDemo() {
                   onChange={e => setGraphSearch(e.target.value)}
                   placeholder="Search graphs..."
                   autoFocus
-                  style={{ width: '100%', padding: '4px 8px', background: '#0d1117', border: '1px solid #30363d', borderRadius: 4, color: '#fff', fontSize: 12, outline: 'none' }}
+                  style={{ width: '100%', padding: '4px 8px', background: '#0d1117', border: '1px solid #30363d', borderRadius: 4, color: '#fff', fontSize: 13, outline: 'none' }}
                 />
               </div>
               <div style={{ overflow: 'auto', maxHeight: 260 }}>
@@ -608,15 +608,15 @@ export default function FlowDeskDemo() {
                       className={`fd-user-option ${g.id === selectedGraphId ? 'active' : ''}`}
                       onClick={() => { setSelectedGraphId(g.id); setGraphDropdownOpen(false); setGraphSearch(''); }}
                     >
-                      <span className="fd-user-option-name" style={{ fontSize: 11 }}>{g.name || g.id}</span>
-                      <span className="fd-user-option-label" style={{ fontSize: 9 }}>
+                      <span className="fd-user-option-name" style={{ fontSize: 13 }}>{g.name || g.id}</span>
+                      <span className="fd-user-option-label" style={{ fontSize: 11 }}>
                         {g.namespace} · {g.nodeCount || g.nodes?.length || '?'}N · v{g.currentVersion || 1}
                       </span>
                     </button>
                   ))
                 }
                 {catalogGraphs.length === 0 && (
-                  <div style={{ padding: 12, textAlign: 'center', color: '#666', fontSize: 11 }}>No graphs found</div>
+                  <div style={{ padding: 12, textAlign: 'center', color: '#666', fontSize: 13 }}>No graphs found</div>
                 )}
               </div>
             </div>
@@ -801,7 +801,7 @@ export default function FlowDeskDemo() {
                   <div className="fd-routing fade-in">
                     <div className="fd-routing-row">
                       <span className="fd-routing-label">Name</span>
-                      <span className="fd-routing-value" style={{ fontSize: 11 }}>{graphInfo.name || '-'}</span>
+                      <span className="fd-routing-value" style={{ fontSize: 13 }}>{graphInfo.name || '-'}</span>
                     </div>
                     <GraphIdRow id={GRAPH_ID} />
                     <div className="fd-routing-row">
@@ -827,13 +827,13 @@ export default function FlowDeskDemo() {
                     {graphInfo.createdAt && (
                       <div className="fd-routing-row">
                         <span className="fd-routing-label">Created</span>
-                        <span className="fd-routing-value" style={{ fontSize: 10 }}>{new Date(graphInfo.createdAt).toLocaleDateString()}</span>
+                        <span className="fd-routing-value" style={{ fontSize: 12 }}>{new Date(graphInfo.createdAt).toLocaleDateString()}</span>
                       </div>
                     )}
                     {graphInfo.updatedAt && (
                       <div className="fd-routing-row">
                         <span className="fd-routing-label">Updated</span>
-                        <span className="fd-routing-value" style={{ fontSize: 10 }}>{new Date(graphInfo.updatedAt).toLocaleDateString()}</span>
+                        <span className="fd-routing-value" style={{ fontSize: 12 }}>{new Date(graphInfo.updatedAt).toLocaleDateString()}</span>
                       </div>
                     )}
                   </div>

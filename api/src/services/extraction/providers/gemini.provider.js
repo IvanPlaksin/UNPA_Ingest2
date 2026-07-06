@@ -9,12 +9,17 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 const TIMEOUT = 60000;
+const { isAllowed } = require('../../llm-access-control.service');
 
 /**
  * Check if Gemini is available
  * @returns {Promise<boolean>}
  */
 async function isAvailable() {
+  if (!isAllowed('extraction:gemini')) {
+    console.log('[Gemini] Disabled by LLM Access Control');
+    return false;
+  }
   const available = !!GEMINI_API_KEY;
   if (available) {
     console.log(`[Gemini] Available with model: ${GEMINI_MODEL}`);

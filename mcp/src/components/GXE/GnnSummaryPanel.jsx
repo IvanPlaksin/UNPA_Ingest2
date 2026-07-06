@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Sparkles, GitBranch, Tags, Users, Eye, EyeOff, RotateCcw, X } from 'lucide-react';
 import useImportSqlStore from '../../stores/importSqlStore';
 
@@ -15,7 +15,7 @@ const pillStyle = (color, active) => ({
   gap: 5,
   padding: '3px 10px',
   borderRadius: 12,
-  fontSize: 11,
+  fontSize: 13,
   fontWeight: 500,
   background: active ? color + '25' : 'transparent',
   color: active ? color : '#8b949e',
@@ -55,9 +55,9 @@ const GnnSummaryPanel = ({ visible, onToggleOverlay, overlayVisible, onRerun }) 
     }}>
       {/* Icon */}
       <Sparkles size={14} style={{ color: '#d2a8ff', flexShrink: 0 }} />
-      <span style={{ color: '#e6edf3', fontSize: 12, fontWeight: 600, marginRight: 4 }}>GNN</span>
+      <span style={{ color: '#e6edf3', fontSize: 13, fontWeight: 600, marginRight: 4 }}>GNN</span>
       {(gnnResults.predictions?.fallback || gnnResults.classifications?.fallback || gnnResults.communities?.fallback) && (
-        <span style={{ color: '#d29922', fontSize: 10, fontWeight: 500, padding: '1px 5px', borderRadius: 4, border: '1px solid #d2992240', background: '#d2992210' }}>heuristic</span>
+        <span style={{ color: '#d29922', fontSize: 12, fontWeight: 500, padding: '1px 5px', borderRadius: 4, border: '1px solid #d2992240', background: '#d2992210' }}>heuristic</span>
       )}
 
       {/* Stat pills */}
@@ -140,7 +140,7 @@ const GnnSummaryPanel = ({ visible, onToggleOverlay, overlayVisible, onRerun }) 
           maxHeight: 280,
           overflowY: 'auto',
           width: 360,
-          fontSize: 12,
+          fontSize: 13,
           color: '#e6edf3',
           boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
         }}>
@@ -152,7 +152,7 @@ const GnnSummaryPanel = ({ visible, onToggleOverlay, overlayVisible, onRerun }) 
               {(gnnResults.predictions?.predictions || []).slice(0, 20).map((p, i) => (
                 <div key={i} style={{ display: 'flex', gap: 8, padding: '3px 0', borderBottom: '1px solid #21262d' }}>
                   <span style={{ color: '#8b949e' }}>{p.source}</span>
-                  <span style={{ color: '#6b7280' }}>→</span>
+                  <span style={{ color: '#94a3b8' }}>→</span>
                   <span style={{ color: '#8b949e' }}>{p.target}</span>
                   <span style={{ marginLeft: 'auto', color: '#58a6ff', fontWeight: 600 }}>
                     {Math.round((p.probability || p.score || 0) * 100)}%
@@ -173,7 +173,7 @@ const GnnSummaryPanel = ({ visible, onToggleOverlay, overlayVisible, onRerun }) 
                   <span style={{ marginLeft: 'auto', color: '#3fb950', fontWeight: 600 }}>
                     {info?.category || info?.label || '—'}
                   </span>
-                  <span style={{ color: '#6b7280' }}>
+                  <span style={{ color: '#94a3b8' }}>
                     {info?.confidence ? `${Math.round(info.confidence * 100)}%` : ''}
                   </span>
                 </div>
@@ -190,11 +190,11 @@ const GnnSummaryPanel = ({ visible, onToggleOverlay, overlayVisible, onRerun }) 
                 <div key={i} style={{ padding: '4px 0', borderBottom: '1px solid #21262d' }}>
                   <div style={{ fontWeight: 500, color: '#d2a8ff' }}>
                     {c.label || `Community ${c.communityId ?? i + 1}`}
-                    <span style={{ color: '#6b7280', fontWeight: 400, marginLeft: 6 }}>
+                    <span style={{ color: '#94a3b8', fontWeight: 400, marginLeft: 6 }}>
                       ({c.nodeCount || c.nodes?.length || c.nodeIds?.length || 0} nodes)
                     </span>
                   </div>
-                  <div style={{ color: '#8b949e', fontSize: 11, marginTop: 2 }}>
+                  <div style={{ color: '#8b949e', fontSize: 13, marginTop: 2 }}>
                     {(c.nodeDetails || c.nodeIds || c.nodes || []).slice(0, 5).map(n => (typeof n === 'string' ? n : n.name || n.id)).join(', ')}
                     {(c.nodeCount || 0) > 5 ? ', ...' : ''}
                   </div>

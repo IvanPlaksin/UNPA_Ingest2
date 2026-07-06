@@ -246,7 +246,7 @@ async function chat(req, res) {
         }
       } else {
         // ── Fallback: basic streaming without tools ──
-        const streamObj = llmProvider.stream(llmMessages, { maxTokens: MAX_TOKENS });
+        const streamObj = llmProvider.stream(llmMessages, { maxTokens: MAX_TOKENS, caller: 'controllers' });
         for await (const event of streamObj) {
           if (aborted) break;
           if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {

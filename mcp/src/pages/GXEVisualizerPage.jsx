@@ -1,4 +1,4 @@
-/**
+﻿/**
  * GXE Visualizer Page
  *
  * Features:
@@ -2438,7 +2438,7 @@ const GraphView = ({
             data: { ...ed.data, edgePathType: DEFAULT_EDGE_TYPE },
             animated: true,
             style: ed.style || { stroke: '#8b5cf6', strokeWidth: 2 },
-            labelStyle: ed.labelStyle || { fill: '#d8b4fe', fontSize: 10 },
+            labelStyle: ed.labelStyle || { fill: '#d8b4fe', fontSize: 12 },
             markerEnd: ed.markerEnd || { type: MarkerType.ArrowClosed, color: '#8b5cf6' }
           }));
 
@@ -2778,7 +2778,7 @@ const GraphView = ({
       const styled = (g.edges || []).map(ed => ({
         ...ed, animated: false,
         style: { stroke: '#6b7280', strokeWidth: 2 },
-        markerEnd: { type: MarkerType.ArrowClosed, color: '#6b7280' }
+        markerEnd: { type: MarkerType.ArrowClosed, color: '#94a3b8' }
       }));
       setNodes(g.nodes || []);
       setEdges(styled);
@@ -3969,7 +3969,7 @@ const GraphView = ({
             background: panelMode === 'classic' ? '#6366f1' : 'transparent',
             color: panelMode === 'classic' ? 'white' : '#94a3b8',
             cursor: 'pointer',
-            fontSize: 12,
+            fontSize: 13,
             fontWeight: 600,
           }}
         >
@@ -3984,7 +3984,7 @@ const GraphView = ({
             background: panelMode === 'nexus' ? '#6366f1' : 'transparent',
             color: panelMode === 'nexus' ? 'white' : '#94a3b8',
             cursor: 'pointer',
-            fontSize: 12,
+            fontSize: 13,
             fontWeight: 600,
           }}
         >
@@ -4316,7 +4316,7 @@ const GraphView = ({
             <ReactFlow
               nodes={nodesWithPorts} edges={edgesWithPorts}
               onNodesChange={handleNodesChange} onEdgesChange={onEdgesChange}
-              onConnect={params => setEdges(eds => addEdge({ ...params, type: 'parallel', data: { edgePathType: edgeType }, animated: false, style: { stroke: '#6b7280', strokeWidth: 2 }, markerEnd: { type: MarkerType.ArrowClosed, color: '#6b7280' } }, eds))}
+              onConnect={params => setEdges(eds => addEdge({ ...params, type: 'parallel', data: { edgePathType: edgeType }, animated: false, style: { stroke: '#6b7280', strokeWidth: 2 }, markerEnd: { type: MarkerType.ArrowClosed, color: '#94a3b8' } }, eds))}
               onNodeClick={(_, n) => { setSelectedNode(n); setSelectedEdge(null); }}
               onEdgeClick={(_, e) => { setSelectedEdge(e); setSelectedNode(null); }}
               onPaneClick={() => { setSelectedNode(null); setSelectedEdge(null); setSelectedNodeIds([]); }}
@@ -4832,7 +4832,7 @@ const GXEVisualizerPage = () => {
             data: { ...ed.data, edgePathType: DEFAULT_EDGE_TYPE },
             animated: false,
             style: { stroke: '#6b7280', strokeWidth: 2 },
-            markerEnd: { type: MarkerType.ArrowClosed, color: '#6b7280' }
+            markerEnd: { type: MarkerType.ArrowClosed, color: '#94a3b8' }
           }));
           // Auto-layout as top-down DAG when positions are missing
           if (!hasValidPositions(preparedNodes)) {
@@ -4943,7 +4943,7 @@ const GXEVisualizerPage = () => {
       data: { ...ed.data, edgePathType: DEFAULT_EDGE_TYPE },
       animated: false,
       style: { stroke: '#6b7280', strokeWidth: 2 },
-      markerEnd: { type: MarkerType.ArrowClosed, color: '#6b7280' }
+      markerEnd: { type: MarkerType.ArrowClosed, color: '#94a3b8' }
     }));
 
     // Auto-layout as top-down DAG when positions are missing

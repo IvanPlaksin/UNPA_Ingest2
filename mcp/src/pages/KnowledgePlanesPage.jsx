@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+﻿import React, { useState, useCallback } from 'react';
 import { Box, IconButton, Tooltip } from '@mui/material';
 import { FolderOpen as FolderOpenIcon } from '@mui/icons-material';
 import KnowledgePlanes from '../components/KnowledgePlanes';
@@ -88,7 +88,7 @@ const KnowledgePlanesPage = () => {
                         border: '1px solid rgba(5, 217, 232, 0.3)',
                         borderRadius: 2
                     }}>
-                        <Box sx={{ color: '#05d9e8', fontSize: 12 }}>
+                        <Box sx={{ color: '#05d9e8', fontSize: 13 }}>
                             <strong>{loadedGraphInfo.name}</strong>
                             <Box component="span" sx={{ mx: 1, color: '#666' }}>|</Box>
                             {loadedGraphInfo.nodesCount} nodes

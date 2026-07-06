@@ -1,4 +1,4 @@
-/**
+﻿/**
  * DataSourcePropertySection
  *
  * Configures DataSource binding for a field in the Structural Editor.
@@ -115,33 +115,33 @@ export default function DataSourcePropertySection({ node, otherFields = [] }) {
     },
     headerLeft: { display: 'flex', alignItems: 'center', gap: 6 },
     headerIcon: { fontSize: 14, color: '#8b5cf6' },
-    headerLabel: { fontSize: 11, fontWeight: 600 },
+    headerLabel: { fontSize: 13, fontWeight: 600 },
     badge: {
-      fontSize: 9, padding: '1px 5px', borderRadius: 3,
+      fontSize: 11, padding: '1px 5px', borderRadius: 3,
       background: ds.operation === 'search' ? '#6366f130' : '#8b5cf630',
       color: ds.operation === 'search' ? '#818cf8' : '#a78bfa',
     },
     body: { padding: '4px 0 8px' },
     select: {
       width: '100%', padding: '5px 8px', borderRadius: 4,
-      background: '#0d1117', border: '1px solid #30363d', color: '#e2e8f0', fontSize: 11,
+      background: '#0d1117', border: '1px solid #30363d', color: '#e2e8f0', fontSize: 13,
       marginBottom: 8,
     },
     input: {
       width: '100%', padding: '5px 8px', borderRadius: 4,
-      background: '#0d1117', border: '1px solid #30363d', color: '#e2e8f0', fontSize: 11,
+      background: '#0d1117', border: '1px solid #30363d', color: '#e2e8f0', fontSize: 13,
       marginBottom: 8, boxSizing: 'border-box',
     },
     row: { display: 'flex', gap: 6, marginBottom: 8 },
-    label: { fontSize: 9, color: '#8b949e', marginBottom: 3, display: 'block' },
+    label: { fontSize: 11, color: '#8b949e', marginBottom: 3, display: 'block' },
     divider: { borderTop: '1px solid #30363d', margin: '8px 0' },
     btn: (color = '#30363d') => ({
       padding: '4px 10px', borderRadius: 4, border: `1px solid ${color}`,
-      background: 'transparent', color: '#c9d1d9', fontSize: 10, cursor: 'pointer',
+      background: 'transparent', color: '#c9d1d9', fontSize: 12, cursor: 'pointer',
       display: 'inline-flex', alignItems: 'center', gap: 4,
     }),
     alert: (ok) => ({
-      marginTop: 8, padding: '6px 8px', borderRadius: 4, fontSize: 10,
+      marginTop: 8, padding: '6px 8px', borderRadius: 4, fontSize: 12,
       background: ok ? '#10b98120' : '#ef444420',
       border: `1px solid ${ok ? '#10b98160' : '#ef444460'}`,
       color: ok ? '#6ee7b7' : '#fca5a5',
@@ -156,7 +156,7 @@ export default function DataSourcePropertySection({ node, otherFields = [] }) {
           <span style={S.headerLabel}>DataSource</span>
           {hasDS && <span style={S.badge}>{ds.operation === 'search' ? 'Search' : 'Select'}</span>}
         </div>
-        <span style={{ fontSize: 10, color: '#8b949e' }}>{expanded ? '\u25B2' : '\u25BC'}</span>
+        <span style={{ fontSize: 12, color: '#8b949e' }}>{expanded ? '\u25B2' : '\u25BC'}</span>
       </div>
 
       {expanded && (

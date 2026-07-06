@@ -1,6 +1,7 @@
 const axios = require('axios');
 const { getApiKey, hasValidApiKey } = require('../config/ai-models.config');
 const { getInstance: getLLMProvider } = require('./llm/LLMProviderService');
+const { isAllowed } = require('./llm-access-control.service');
 
 // ── Provider selection ──
 // Priority: LLM_PROVIDER env → gemini (if key set) → anthropic (if key set) → ollama
@@ -267,6 +268,13 @@ class LlmService {
     }
 
     async _chatGemini(messages, tools, parentTensorId, options = {}) {
+        if (!isAllowed('llmservice:gemini')) {
+            throw new Error('[LLMAccessControl] LlmService → Gemini is disabled');
+        }
+        const caller = options.caller;
+        if (caller && !isAllowed(`svc:${caller}:gemini`)) {
+            throw new Error(`[LLMAccessControl] Service "${caller}" is blocked from using Gemini`);
+        }
         const modelName = options.model || GEMINI_MODEL;
         const tensorService = getTensorServiceLazy();
         const tensor = tensorService?.start('ai.llm.chat', {
@@ -326,6 +334,13 @@ class LlmService {
     }
 
     async _streamGemini(messages, onChunk, parentTensorId, options = {}) {
+        if (!isAllowed('llmservice:gemini')) {
+            throw new Error('[LLMAccessControl] LlmService → Gemini streaming is disabled');
+        }
+        const caller = options.caller;
+        if (caller && !isAllowed(`svc:${caller}:gemini`)) {
+            throw new Error(`[LLMAccessControl] Service "${caller}" is blocked from Gemini streaming`);
+        }
         const modelName = options.model || GEMINI_MODEL;
         const tensorService = getTensorServiceLazy();
         const tensor = tensorService?.start('ai.llm.streamChat', {
@@ -382,6 +397,13 @@ class LlmService {
     // ═════════════════════════════════════════════════════════════════════════
 
     async _chatOllama(messages, tools, parentTensorId, options = {}) {
+        if (!isAllowed('llmservice:ollama')) {
+            throw new Error('[LLMAccessControl] LlmService → Ollama is disabled');
+        }
+        const caller = options.caller;
+        if (caller && !isAllowed(`svc:${caller}:ollama`)) {
+            throw new Error(`[LLMAccessControl] Service "${caller}" is blocked from using Ollama`);
+        }
         const model = options.model || OLLAMA_MODEL;
         const tensorService = getTensorServiceLazy();
         const tensor = tensorService?.start('ai.llm.chat', {
@@ -448,6 +470,9 @@ class LlmService {
     }
 
     async _streamAnthropic(messages, onChunk, parentTensorId, options = {}) {
+        if (!isAllowed('direct:llmservice_stream')) {
+            throw new Error('[LLMAccessControl] LlmService Anthropic streaming is disabled');
+        }
         const model = options.model || ANTHROPIC_MODEL;
         const apiKey = getApiKey('anthropic');
         if (!apiKey) {
@@ -540,6 +565,13 @@ class LlmService {
     }
 
     async _streamOllama(messages, onChunk, parentTensorId, options = {}) {
+        if (!isAllowed('llmservice:ollama')) {
+            throw new Error('[LLMAccessControl] LlmService → Ollama streaming is disabled');
+        }
+        const caller = options.caller;
+        if (caller && !isAllowed(`svc:${caller}:ollama`)) {
+            throw new Error(`[LLMAccessControl] Service "${caller}" is blocked from Ollama streaming`);
+        }
         const model = options.model || OLLAMA_MODEL;
         const tensorService = getTensorServiceLazy();
         const tensor = tensorService?.start('ai.llm.streamChat', {

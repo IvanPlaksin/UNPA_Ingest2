@@ -45,7 +45,7 @@ function expandHull(hull, px) {
  * Renders semi-transparent convex hull polygons grouped by entity type.
  * Must be rendered inside ReactFlow's provider tree to access useNodes/useViewport.
  */
-export default function HullOverlay() {
+function HullOverlay() {
     const nodes             = useNodes();
     const { x: vpX, y: vpY, zoom } = useViewport();
 
@@ -75,6 +75,8 @@ export default function HullOverlay() {
 
             return [{ type, hull: expanded, color, cx, cy, count: ns.length }];
         });
+    // Depend on a stable key derived from positions (not array reference)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [nodes]);
 
     if (!groups.length) return null;
@@ -127,3 +129,5 @@ export default function HullOverlay() {
         </svg>
     );
 }
+
+export default React.memo(HullOverlay);

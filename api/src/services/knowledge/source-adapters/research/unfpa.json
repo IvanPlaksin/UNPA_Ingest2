@@ -1,0 +1,24 @@
+{
+  "key": "unfpa",
+  "name": "UNFPA Publications",
+  "family": "url-catalog",
+  "capabilities": ["search", "browseAll", "paginate", "download"],
+  "filterSchema": [],
+  "config": {
+    "url": "https://www.unfpa.org/publications",
+    "searchUrlTemplate": "https://www.unfpa.org/publications?search={query}",
+    "linkFilter": "",
+    "includeAllLinks": false
+  },
+  "download": {
+    "mode": "direct-pdf",
+    "notes": "The listing itself exposes direct PDF download links under /sites/default/files/pub-pdf/{file}.pdf alongside each publication card, so PDFs can often be captured straight from the listing. Record pages at /publications/{slug} also carry the PDF."
+  },
+  "enrich": {
+    "mode": "none",
+    "notes": "Title, date, description and per-language variants are in the server-rendered listing; no repository API."
+  },
+  "methodologyMarkdown": "## Overview\nUNFPA's publications catalog is a Drupal-based, fully server-rendered listing (~694 results). Cards, cover images, descriptions, language variants, pagination and direct PDF links are all embedded in the initial HTML, making it one of the more scrapable UN catalogs.\n\n## Search\nThe listing supports a full-text query parameter (?search={query}). Browse via pagination.\n\n## Filters\nFacets appear as URL parameters on the listing; treated as opaque params (no formal schema).\n\n## Download\nStrong download story: each card exposes a direct PDF under /sites/default/files/pub-pdf/{file}.pdf (e.g. unfpa-ar2025-EN-v260608.pdf). PDFs can frequently be captured directly from the listing without visiting the record page, though record pages at /publications/{slug} also carry them and any multi-language variants.\n\n## Metadata & Enrichment\nTitle, publication date, short description and available languages are in server-rendered HTML. No JSON/REST API; enrichment is HTML-based.\n\n## Limitations\nNo public API. Pagination uses ?page=N (~57 pages at ~12/page). Behind a CDN; send a realistic User-Agent. Some publications have multiple language PDFs; pick the desired language variant.",
+  "verified": true,
+  "probeNotes": "WebFetch of /publications succeeded: server-rendered HTML, 694 results, direct PDF pattern /sites/default/files/pub-pdf/*.pdf confirmed in listing, record URL /publications/{slug}, pagination to page 57. ?search={query} full-text supported. No repository API."
+}

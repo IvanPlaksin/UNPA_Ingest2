@@ -1,0 +1,24 @@
+{
+  "key": "un-treaties",
+  "name": "UN Treaty Collection",
+  "family": "url-catalog",
+  "capabilities": ["browseAll", "download"],
+  "filterSchema": [],
+  "config": {
+    "url": "https://treaties.un.org/Pages/LatestTreaties.aspx?clang=_en",
+    "searchUrlTemplate": "",
+    "linkFilter": ".pdf",
+    "includeAllLinks": false
+  },
+  "download": {
+    "mode": "record-page",
+    "notes": "Legacy ASP.NET WebForms site. Listing pages (LatestTreaties.aspx, LatestVolumes.aspx, MSDatabase.aspx, CumulativeIndexes.aspx, AdvanceSearch.aspx?tab=UNTS) render server-side HTML tables. UNTS volume PDFs and certified-copy/depositary-notification PDFs are served under /doc/Publication/ (e.g. /doc/Publication/UNTS/Volume%203230/v3230.pdf, /doc/Publication/CN/2026/CN.254.2026-Eng.pdf). Volume PDFs are directly downloadable; individual treaty records are reached via post-back."
+  },
+  "enrich": {
+    "mode": "none",
+    "notes": "Treaty metadata sits in server-rendered tables and record pages; no JSON API was found."
+  },
+  "methodologyMarkdown": "## Overview\nThe UN Treaty Collection (https://treaties.un.org) hosts the United Nations Treaty Series (UNTS), certified copies, depositary notifications and monthly statements. It is a legacy ASP.NET WebForms application (.aspx pages, __doPostBack, ctl00$ContentPlaceHolder naming), not a modern SPA.\n\n## Search\nAn advanced search exists at Pages/AdvanceSearch.aspx?tab=UNTS&clang=_en, but querying it relies on WebForms post-back state (__VIEWSTATE) rather than clean GET parameters, so it is not straightforwardly scrapable via a URL template. More scrapable entry points are the server-rendered listing pages: LatestTreaties.aspx, LatestVolumes.aspx, MSDatabase.aspx and CumulativeIndexes.aspx.\n\n## Filters\nNo clean URL-parameter filters; filtering is via the post-back advanced search form. Volume numbers are encoded in the PDF paths.\n\n## Download\nUNTS volume PDFs and notification PDFs are directly downloadable under /doc/Publication/ (e.g. /doc/Publication/UNTS/Volume%203230/v3230.pdf, /doc/Publication/CTC/Ch_X_22.pdf, /doc/Publication/CN/2026/CN.254.2026-Eng.pdf). Individual treaty detail pages are reached via post-back from listings (record-page flow).\n\n## Metadata & Enrichment\nNo REST/JSON layer detected. Metadata is in server-rendered tables and record pages. Enrichment mode is none.\n\n## Limitations\nThe listing/volume pages are server-rendered and their PDFs are directly harvestable. However, keyword/advanced search and per-treaty detail navigation depend on ASP.NET post-back state, so a stateless scraper cannot query them via a simple URL; that path needs __VIEWSTATE replay or a headless browser.",
+  "verified": true,
+  "probeNotes": "WebFetch of https://treaties.un.org confirmed a legacy ASP.NET WebForms app (.aspx, __doPostBack, ctl00$ContentPlaceHolder). Found server-rendered listing entry points (LatestTreaties.aspx, LatestVolumes.aspx, MSDatabase.aspx, CumulativeIndexes.aspx, AdvanceSearch.aspx?tab=UNTS) and direct PDF paths under /doc/Publication/ (UNTS volumes, CTC certified copies, CN depositary notifications). No JSON/REST API."
+}

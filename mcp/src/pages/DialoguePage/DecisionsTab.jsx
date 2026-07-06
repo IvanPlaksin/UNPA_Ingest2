@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Paper, Chip, Drawer, Typography, FormControl, InputLabel, Select,
@@ -388,7 +388,7 @@ export default function DecisionsTab() {
                             <Chip key={e.name}
                               label={`${e.name} ${Math.round(e.confidence * 100)}%`}
                               size="small" color={ENTITY_TYPE_COLOR[e.type] || 'default'}
-                              variant="outlined" sx={{ height: 16, fontSize: 9 }} />
+                              variant="outlined" sx={{ height: 16, fontSize: 11 }} />
                           ))}
                         </Stack>
                       ) : null;

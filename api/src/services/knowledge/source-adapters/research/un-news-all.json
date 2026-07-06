@@ -1,0 +1,17 @@
+{
+  "key": "un-news-all",
+  "name": "UN News — All Topics",
+  "family": "rss-feed",
+  "capabilities": ["search", "browseAll", "paginate"],
+  "filterSchema": [
+    { "type": "dateFrom", "param": "_clientDateFrom", "label": "From date", "clientSide": true },
+    { "type": "dateTo", "param": "_clientDateTo", "label": "To date", "clientSide": true },
+    { "type": "keyword", "param": "_clientKeyword", "label": "Keyword (title/description)", "clientSide": true }
+  ],
+  "config": { "url": "https://news.un.org/feed/subscribe/en/news/all/rss.xml" },
+  "download": { "mode": "record-page", "notes": "item link is an HTML article page on news.un.org; no direct PDF. enclosure is a JPEG lead image, not a document." },
+  "enrich": { "mode": "none", "notes": "no per-item metadata API" },
+  "methodologyMarkdown": "## Overview\nUN News — All Topics is the aggregate RSS 2.0 feed of the United Nations news service (news.un.org), covering every topic the service publishes. It is the broadest entry point of the UN News family and mixes stories from climate, human rights, peace, humanitarian, SDGs and UN-affairs desks.\n\n## Search\nClient-side keyword filtering over RSS item title/description; no server query API. There is no server-side search endpoint — the feed URL is fixed, so any keyword matching must be performed in-memory as a substring scan across each item's title and description.\n\n## Filters\nOnly client-side filters are possible: publication date range (from pubDate) and keyword. Items carry no `<category>`/`dc:subject` tags, so no topical filter is available on this aggregate feed; use the topic-specific UN News feeds instead for coarse subject scoping.\n\n## Download\nThe retrievable document is the item `<link>` HTML article page. Each item also has an `<enclosure>` pointing to a JPEG lead image, not a PDF; no direct document downloads are offered.\n\n## Metadata & Enrichment\nNot supported.\n\n## Limitations\nFeed returns only the most recent ~30 items; no historical pagination beyond the feed window and no archive parameter.",
+  "verified": true,
+  "probeNotes": "Reachable, valid RSS 2.0. Observed 30 items. Fields per item: title, link, description, guid, pubDate, enclosure (JPEG), source. No <category>/dc:subject tags. No PDF links."
+}

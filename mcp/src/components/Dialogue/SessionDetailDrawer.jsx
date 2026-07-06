@@ -1,4 +1,4 @@
-/**
+﻿/**
  * SessionDetailDrawer — detailed view of a DialogueSession
  *
  * Tabs:
@@ -166,7 +166,7 @@ function SessionTagsPanel({ sessionId }) {
             size="small"
             onDelete={() => applyTags({ tags: [tag], remove: true })}
             disabled={saving}
-            sx={{ height: 22, fontSize: 11 }}
+            sx={{ height: 22, fontSize: 13 }}
           />
         ))}
         <Paper
@@ -179,7 +179,7 @@ function SessionTagsPanel({ sessionId }) {
             value={input}
             onChange={e => setInput(e.target.value)}
             placeholder="add tag…"
-            sx={{ fontSize: 11, width: input ? 'auto' : 55, minWidth: 48 }}
+            sx={{ fontSize: 13, width: input ? 'auto' : 55, minWidth: 48 }}
             disabled={saving}
           />
           {input.trim() && (
@@ -232,7 +232,7 @@ function SessionNavigatorPanel({ sessionId }) {
             size="small"
             color={vsRunning ? 'success' : 'default'}
             variant="outlined"
-            sx={{ height: 18, fontSize: 10 }}
+            sx={{ height: 18, fontSize: 13 }}
           />
         )}
       </Stack>
@@ -242,7 +242,7 @@ function SessionNavigatorPanel({ sessionId }) {
             <Typography variant="caption" color="text.disabled" sx={{ minWidth: 88, flexShrink: 0 }}>{label}</Typography>
             <Typography
               variant="caption"
-              sx={{ flex: 1, fontFamily: 'monospace', fontSize: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'text.secondary' }}
+              sx={{ flex: 1, fontFamily: 'monospace', fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'text.secondary' }}
             >
               {display}
             </Typography>
@@ -294,8 +294,8 @@ function ReanalyzeProgress({ sessionId, onDone }) {
       <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
         <AutoFixHigh sx={{ fontSize: 14, color: 'primary.main' }} />
         <Typography variant="caption" fontWeight={600} color="primary.main">AI Re-analysis</Typography>
-        {status === 'done' && <Chip label="Complete" size="small" color="success" sx={{ height: 18, fontSize: 10 }} />}
-        {status === 'error' && <Chip label="Error" size="small" color="error" sx={{ height: 18, fontSize: 10 }} />}
+        {status === 'done' && <Chip label="Complete" size="small" color="success" sx={{ height: 18, fontSize: 13 }} />}
+        {status === 'error' && <Chip label="Error" size="small" color="error" sx={{ height: 18, fontSize: 13 }} />}
       </Stack>
       <Stack spacing={0.75}>
         {steps.map((s) => {
@@ -492,7 +492,7 @@ function MessageBubble({ message, platform, searchQuery }) {
               label={t.name}
               size="small"
               variant="outlined"
-              sx={{ height: 20, fontSize: 10, color: 'text.secondary', borderColor: 'divider' }}
+              sx={{ height: 20, fontSize: 13, color: 'text.secondary', borderColor: 'divider' }}
             />
           ))}
           {message.toolUseCount > (message.toolUse?.length || 0) && (
@@ -500,7 +500,7 @@ function MessageBubble({ message, platform, searchQuery }) {
               label={`+${message.toolUseCount - (message.toolUse?.length || 0)}`}
               size="small"
               variant="outlined"
-              sx={{ height: 20, fontSize: 10, color: 'text.disabled' }}
+              sx={{ height: 20, fontSize: 13, color: 'text.disabled' }}
             />
           )}
           <Typography variant="caption" color="text.disabled">
@@ -556,11 +556,11 @@ function MessageBubble({ message, platform, searchQuery }) {
           </Typography>
           {isLinked && (
             <Chip label="claude.ai" size="small" variant="outlined"
-              sx={{ height: 16, fontSize: 10, color: '#9c4dcc', borderColor: '#9c4dcc' }} />
+              sx={{ height: 16, fontSize: 13, color: '#9c4dcc', borderColor: '#9c4dcc' }} />
           )}
           {message.toolUseCount > 0 && (
             <Chip label={`${message.toolUseCount} tools`} size="small" variant="outlined"
-              sx={{ height: 16, fontSize: 10 }} />
+              sx={{ height: 16, fontSize: 13 }} />
           )}
         </Stack>
       </Box>
@@ -607,7 +607,7 @@ function GoalsSection({ session, sessionId, refetch }) {
             label={goalsProgress.replace('_', ' ')}
             size="small"
             color={PROGRESS_COLOR[goalsProgress] || 'default'}
-            sx={{ height: 18, fontSize: 10 }}
+            sx={{ height: 18, fontSize: 13 }}
           />
         )}
         <Tooltip title={loading && lastSessionId === sessionId ? 'Analyzing…' : error && lastSessionId === sessionId ? `Error: ${error}` : 'Analyze goals'}>
@@ -636,7 +636,7 @@ function GoalsSection({ session, sessionId, refetch }) {
 
       {!hasGoals && (
         <Typography variant="caption" color="text.disabled">
-          No goals extracted yet — click <TrackChanges sx={{ fontSize: 12, verticalAlign: 'middle' }} /> to analyze
+          No goals extracted yet — click <TrackChanges sx={{ fontSize: 13, verticalAlign: 'middle' }} /> to analyze
         </Typography>
       )}
 
@@ -667,13 +667,13 @@ function GoalsSection({ session, sessionId, refetch }) {
                     label={goal.category || 'task'}
                     size="small"
                     variant="outlined"
-                    sx={{ height: 16, fontSize: 10 }}
+                    sx={{ height: 16, fontSize: 13 }}
                   />
                   <Chip
                     label={cfg.label}
                     size="small"
                     color={cfg.muiColor}
-                    sx={{ height: 16, fontSize: 10 }}
+                    sx={{ height: 16, fontSize: 13 }}
                   />
                 </Stack>
                 {goal.description && (
@@ -698,7 +698,7 @@ function GoalsSection({ session, sessionId, refetch }) {
           <Typography variant="caption" color="text.secondary" fontWeight={600}>PENDING ACTIONS</Typography>
           {pendingActions.map((action, i) => (
             <Stack key={i} direction="row" spacing={0.5} alignItems="flex-start" sx={{ mt: 0.4 }}>
-              <RadioButtonUnchecked sx={{ fontSize: 12, color: 'text.disabled', mt: 0.25, flexShrink: 0 }} />
+              <RadioButtonUnchecked sx={{ fontSize: 13, color: 'text.disabled', mt: 0.25, flexShrink: 0 }} />
               <Typography variant="caption" color="text.secondary">{action}</Typography>
             </Stack>
           ))}
@@ -775,7 +775,7 @@ function OverviewTab({ ctx, refetch }) {
                 size="small"
                 color={ENTITY_TYPE_COLOR[e.type] || 'default'}
                 variant="outlined"
-                sx={{ height: 20, fontSize: 11 }}
+                sx={{ height: 20, fontSize: 13 }}
               />
             ))}
           </Stack>
@@ -815,7 +815,7 @@ function OverviewTab({ ctx, refetch }) {
                 size="small"
                 color={has ? 'success' : 'default'}
                 variant={has ? 'filled' : 'outlined'}
-                sx={{ height: 18, fontSize: 10 }}
+                sx={{ height: 18, fontSize: 13 }}
               />
             ))}
           </Stack>
@@ -931,7 +931,7 @@ function LinkedConversationBlock({ conversation, searchQuery }) {
         <Chip
           label={isFull ? `${msgs.length} msgs (full)` : `${msgs.length} msgs`}
           size="small"
-          sx={{ height: 18, fontSize: 10, bgcolor: isFull ? '#e8f5e9' : undefined, color: isFull ? '#2e7d32' : undefined }}
+          sx={{ height: 18, fontSize: 13, bgcolor: isFull ? '#e8f5e9' : undefined, color: isFull ? '#2e7d32' : undefined }}
         />
         <Tooltip title="Open in Claude.ai">
           <IconButton size="small" component="a" href={webUrl} target="_blank" rel="noopener noreferrer" sx={{ p: 0.3 }}>
@@ -1094,7 +1094,7 @@ function ThreadTab({ ctx, messages, messagesLoading }) {
                     variant="outlined"
                     clickable
                     onClick={() => { window.location.href = p.vsCodeUrl; }}
-                    sx={{ height: 22, fontSize: 10, borderColor: color, color }}
+                    sx={{ height: 22, fontSize: 13, borderColor: color, color }}
                   />
                 );
               }
@@ -1111,7 +1111,7 @@ function ThreadTab({ ctx, messages, messagesLoading }) {
                     href={p.webUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    sx={{ height: 22, fontSize: 10, borderColor: color, color, textDecoration: 'none' }}
+                    sx={{ height: 22, fontSize: 13, borderColor: color, color, textDecoration: 'none' }}
                   />
                 );
               }
@@ -1122,7 +1122,7 @@ function ThreadTab({ ctx, messages, messagesLoading }) {
                   icon={<IconComp sx={{ fontSize: '12px !important' }} />}
                   label={p.label}
                   variant="outlined"
-                  sx={{ height: 22, fontSize: 10 }}
+                  sx={{ height: 22, fontSize: 13 }}
                 />
               );
             })}
@@ -1195,7 +1195,7 @@ function ThreadTab({ ctx, messages, messagesLoading }) {
               variant={showLinked ? 'filled' : 'outlined'}
               color={showLinked ? 'secondary' : 'default'}
               onClick={() => setShowLinked(v => !v)}
-              sx={{ height: 22, fontSize: 10, cursor: 'pointer', borderColor: '#9c4dcc', color: showLinked ? undefined : '#9c4dcc' }}
+              sx={{ height: 22, fontSize: 13, cursor: 'pointer', borderColor: '#9c4dcc', color: showLinked ? undefined : '#9c4dcc' }}
             />
           )}
 
@@ -1314,10 +1314,10 @@ function SessionMiniCard({ session }) {
       </Typography>
       <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }} flexWrap="wrap" gap={0.5}>
         <Chip label={type} size="small" variant="outlined"
-          sx={{ height: 18, fontSize: 10, borderColor: style.border, color: style.color, fontWeight: 600 }} />
+          sx={{ height: 18, fontSize: 13, borderColor: style.border, color: style.color, fontWeight: 600 }} />
         {topics.map(t => (
           <Chip key={t} label={t} size="small" variant="outlined"
-            sx={{ height: 18, fontSize: 10, color: 'text.secondary' }} />
+            sx={{ height: 18, fontSize: 13, color: 'text.secondary' }} />
         ))}
       </Stack>
     </Box>

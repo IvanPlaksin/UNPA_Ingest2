@@ -8,12 +8,17 @@
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3';
 const TIMEOUT = 300000; // 5 minutes — llama3 8B can be slow on CPU
+const { isAllowed } = require('../../llm-access-control.service');
 
 /**
  * Check if Ollama is available
  * @returns {Promise<boolean>}
  */
 async function isAvailable() {
+  if (!isAllowed('extraction:ollama')) {
+    console.log('[Ollama] Disabled by LLM Access Control');
+    return false;
+  }
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);

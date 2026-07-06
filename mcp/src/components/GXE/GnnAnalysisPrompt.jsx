@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Sparkles, GitBranch, Tags, Users, X, Loader2, Info } from 'lucide-react';
 import useImportSqlStore from '../../stores/importSqlStore';
 import gnnService from '../../services/gnn.service';
@@ -163,7 +163,7 @@ const GnnAnalysisPrompt = () => {
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8,
             padding: '8px 12px', borderRadius: 6, background: '#d2a8ff10',
-            marginBottom: 12, fontSize: 12, color: '#d2a8ff',
+            marginBottom: 12, fontSize: 13, color: '#d2a8ff',
             border: '1px solid #d2a8ff30',
           }}>
             <Info size={14} style={{ flexShrink: 0 }} />
@@ -193,7 +193,7 @@ const GnnAnalysisPrompt = () => {
               <Icon size={16} style={{ color, marginTop: 1, flexShrink: 0 }} />
               <div>
                 <div style={{ fontSize: 13, fontWeight: 500 }}>{label}</div>
-                <div style={{ fontSize: 11, color: '#8b949e', marginTop: 2 }}>{desc}</div>
+                <div style={{ fontSize: 13, color: '#8b949e', marginTop: 2 }}>{desc}</div>
               </div>
             </div>
           ))}
@@ -204,7 +204,7 @@ const GnnAnalysisPrompt = () => {
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8,
             padding: '8px 12px', borderRadius: 6, background: '#0d1117',
-            marginBottom: 16, fontSize: 12, color: '#58a6ff',
+            marginBottom: 16, fontSize: 13, color: '#58a6ff',
           }}>
             <Loader2 size={14} className="animate-spin" />
             <span>{gnnProgress.phase || 'Processing...'}</span>
@@ -221,7 +221,7 @@ const GnnAnalysisPrompt = () => {
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8,
             padding: '8px 12px', borderRadius: 6, background: '#f8514920',
-            marginBottom: 16, fontSize: 12, color: '#f85149',
+            marginBottom: 16, fontSize: 13, color: '#f85149',
             border: '1px solid #f8514940',
           }}>
             <span>{gnnError}</span>

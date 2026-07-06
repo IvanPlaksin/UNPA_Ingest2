@@ -11,6 +11,7 @@ module.exports = async function persistGraphStep(ctx) {
     await ctx.adapter.persistGraph(ctx);
 
     const nodeCount = ctx.persistedIds.size;
+    ctx.stats.graphNodesCreated = nodeCount;
     addLog(ctx, 'persist-graph', `Persisted ${nodeCount} nodes to Memgraph`);
     completeStep(ctx, 'persist-graph', { nodesCreated: nodeCount });
   } catch (err) {

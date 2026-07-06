@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { DiffEditor } from '@monaco-editor/react';
 import { FileText, FileDiff } from 'lucide-react';
 import { Box, Paper, Typography, Button, Stack, Tooltip } from '@mui/material';
@@ -125,7 +125,7 @@ const TfvcDiffViewer = ({ original, modified, path }) => {
                         minimap: { enabled: false },
                         scrollBeyondLastLine: false,
                         automaticLayout: true,
-                        fontSize: 12,
+                        fontSize: 13,
                         renderSideBySide: true,
                         keepCurrentOriginalModel: false,
                         hideUnchangedRegions: {

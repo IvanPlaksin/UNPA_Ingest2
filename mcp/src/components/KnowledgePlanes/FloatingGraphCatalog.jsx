@@ -11,9 +11,43 @@ import {
     Folder, X, AlertTriangle, GripVertical,
     Maximize2, Minimize2, Move, Database,
     Atom, Wrench, Briefcase, Layers, FileCode,
-    PanelLeftClose
+    PanelLeftClose, Archive,
 } from 'lucide-react';
 import { listGraphs, getGraphById } from '../../services/graphCatalog.service';
+import { getEntityGraph, listNamespaces } from '../../services/entityStore.service';
+
+// ── Entity Store → Singularity format conversion ─────────────────────────────
+
+const ES_COLORS = {
+    ACTOR: '#3b82f6', ORGANIZATION: '#3b82f6', CONCEPT: '#06b6d4',
+    DOCUMENT: '#8b5cf6', DOCUMENTREF: '#8b5cf6', EVENT: '#eab308',
+    PROCESS: '#eab308', PERSON: '#22c55e', TECHNOLOGY: '#a855f7',
+    POLICY: '#ef4444', SYSTEM: '#0891b2', WORK_ITEM: '#6b7280',
+};
+
+function convertEntityStoreToSingularity(graphData, namespace) {
+    const nodes = (graphData.entities || []).map(e => ({
+        id: e.id,
+        name: e.name,
+        type: (e.type || 'concept').toLowerCase(),
+        val: (e.mentionCount > 0 ? 10 : 6),
+        color: ES_COLORS[(e.type || '').toUpperCase()] || '#6b7280',
+        level: 0,
+        loaded: true,
+        hasSubGraph: false,
+        data: e,
+    }));
+    const links = (graphData.relationships || [])
+        .filter(r => r.sourceId && r.targetId)
+        .map(r => ({ source: r.sourceId, target: r.targetId, type: r.relType || 'RELATED_TO' }));
+    return {
+        __alreadyConverted: true,
+        __sourceName: `Entity Store${namespace ? ` · ${namespace}` : ' · All'}`,
+        __sourceType: 'Entity Store',
+        nodes,
+        links,
+    };
+}
 
 // Storage key for localStorage
 const STORAGE_KEY = 'knowledge-planes-catalog-panel-state';
@@ -102,13 +136,22 @@ const FloatingGraphCatalog = ({
     const [isDragging, setIsDragging] = useState(false);
     const [isResizing, setIsResizing] = useState(false);
 
-    // Data state
+    // Source tab: 'catalog' | 'entity-store'
+    const [source, setSource] = useState('catalog');
+
+    // Graph Catalog state
     const [graphs, setGraphs] = useState([]);
     const [selectedGraphId, setSelectedGraphId] = useState(null);
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(false);
     const [loadingGraph, setLoadingGraph] = useState(false);
     const [connectionWarning, setConnectionWarning] = useState(null);
+
+    // Entity Store state
+    const [namespaces, setNamespaces] = useState([]);
+    const [selectedNamespace, setSelectedNamespace] = useState('');
+    const [loadingES, setLoadingES] = useState(false);
+    const [esError, setEsError] = useState(null);
 
     const panelRef = useRef(null);
     const dragStart = useRef({ x: 0, y: 0 });
@@ -162,6 +205,37 @@ const FloatingGraphCatalog = ({
     const handleGraphSelect = useCallback((graph) => {
         setSelectedGraphId(graph.id);
     }, []);
+
+    // ── Entity Store handlers ─────────────────────────────────────────────────
+
+    const loadNamespacesList = useCallback(async () => {
+        try {
+            const result = await listNamespaces();
+            setNamespaces((result || []).map(n => n.namespace || n).filter(Boolean));
+        } catch (err) {
+            console.error('Failed to load namespaces:', err);
+        }
+    }, []);
+
+    const handleLoadEntityStore = useCallback(async () => {
+        setLoadingES(true);
+        setEsError(null);
+        try {
+            const graphData = await getEntityGraph(selectedNamespace || null);
+            const converted = convertEntityStoreToSingularity(graphData, selectedNamespace || null);
+            if (!converted.nodes.length) {
+                setEsError('No entities found for this namespace.');
+                return;
+            }
+            onSelectGraph?.(converted);
+        } catch (err) {
+            setEsError(err.message || 'Failed to load entity graph.');
+        } finally {
+            setLoadingES(false);
+        }
+    }, [selectedNamespace, onSelectGraph]);
+
+    // ── Graph Catalog: double-click handler ───────────────────────────────────
 
     // Handle double-click - load full graph and pass to parent
     const handleGraphDoubleClick = useCallback(async (graph) => {
@@ -306,6 +380,81 @@ const FloatingGraphCatalog = ({
 
             {!isMinimized && (
                 <>
+                    {/* Source tabs */}
+                    <div className="flex border-b border-[#30363d] text-xs">
+                        <button
+                            className={`flex-1 py-2 font-medium transition-colors ${
+                                source === 'catalog'
+                                    ? 'text-cyan-400 border-b-2 border-cyan-400 -mb-px bg-[#0d1117]/40'
+                                    : 'text-gray-500 hover:text-gray-300'
+                            }`}
+                            onClick={() => setSource('catalog')}
+                        >
+                            Graph Catalog
+                        </button>
+                        <button
+                            className={`flex-1 py-2 font-medium transition-colors ${
+                                source === 'entity-store'
+                                    ? 'text-purple-400 border-b-2 border-purple-400 -mb-px bg-[#0d1117]/40'
+                                    : 'text-gray-500 hover:text-gray-300'
+                            }`}
+                            onClick={() => {
+                                setSource('entity-store');
+                                loadNamespacesList();
+                            }}
+                        >
+                            Entity Store
+                        </button>
+                    </div>
+
+                    {/* ── Entity Store panel ── */}
+                    {source === 'entity-store' && (
+                        <div className="flex flex-col gap-3 p-3 flex-1 overflow-auto">
+                            <p className="text-xs text-gray-500">
+                                Load entity relationships from the Entity Store into 3D visualization.
+                            </p>
+
+                            <div>
+                                <label className="text-xs text-gray-400 block mb-1">Namespace</label>
+                                <select
+                                    value={selectedNamespace}
+                                    onChange={e => setSelectedNamespace(e.target.value)}
+                                    className="w-full bg-[#0d1117] border border-[#30363d] text-sm text-gray-200 rounded px-2 py-1.5 focus:outline-none focus:border-purple-500/50"
+                                >
+                                    <option value="">All namespaces</option>
+                                    {namespaces.map(ns => (
+                                        <option key={ns} value={ns}>{ns}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <button
+                                onClick={handleLoadEntityStore}
+                                disabled={loadingES}
+                                className="flex items-center justify-center gap-2 py-2 bg-purple-600/20 border border-purple-500/40 hover:bg-purple-600/30 hover:border-purple-400/60 text-purple-300 rounded text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {loadingES
+                                    ? <RefreshCw className="w-4 h-4 animate-spin" />
+                                    : <Archive className="w-4 h-4" />
+                                }
+                                {loadingES ? 'Loading…' : 'Load Entity Graph'}
+                            </button>
+
+                            {esError && (
+                                <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded px-2 py-1.5">
+                                    {esError}
+                                </p>
+                            )}
+
+                            <p className="text-xs text-gray-600 italic mt-auto">
+                                Loads entity nodes and their relationships into the Singularity 3D view.
+                            </p>
+                        </div>
+                    )}
+
+                    {/* ── Graph Catalog panel ── */}
+                    {source === 'catalog' && <>
+
                     {/* Search bar */}
                     <div className="px-3 py-2 border-b border-[#30363d]">
                         <div className="flex items-center gap-2 px-2 py-1.5 bg-[#0d1117] border border-[#30363d] rounded-lg">
@@ -387,6 +536,8 @@ const FloatingGraphCatalog = ({
                             </div>
                         )}
                     </div>
+
+                    </>} {/* end source === 'catalog' */}
 
                     {/* Resize handle */}
                     <div

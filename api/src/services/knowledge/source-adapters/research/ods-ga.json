@@ -1,0 +1,45 @@
+{
+  "key": "ods-ga",
+  "name": "UN ODS — General Assembly",
+  "family": "invenio",
+  "capabilities": ["search", "browseAll", "paginate", "filter", "sort", "download", "enrich"],
+  "filterSchema": [
+    { "type": "symbol", "param": "p", "label": "Document symbol", "syntax": "191__a:\"A/*\"", "preset": "191__b:\"A/\"", "notes": "GA scope: symbols beginning A/ (A/RES/..., A/71/..., A/C.1/...). Series subfield 191$b = 'A/'." },
+    { "type": "language", "param": "ln", "label": "Interface language", "options": ["en", "fr", "es", "ar", "ru", "zh"] },
+    { "type": "dateFrom", "param": "p", "label": "Year", "syntax": "year:2020" },
+    { "type": "author", "param": "p", "label": "Authoring body", "syntax": "710__a:\"UN. General Assembly\"" },
+    { "type": "subject", "param": "p", "label": "UNBIS subject term", "syntax": "650__a:\"...\"" }
+  ],
+  "config": {
+    "endpoint": "https://digitallibrary.un.org/search",
+    "searchParam": "p",
+    "defaultQuery": "191__b:\"A/\"",
+    "queryParams": { "of": "recjson", "ln": "en" },
+    "pageParam": "jrec",
+    "limitParam": "rg",
+    "pageParamStyle": "offset-1",
+    "sortParams": { "field": "sf", "order": "so", "orderDesc": "d", "orderAsc": "a" },
+    "responseMapping": {
+      "recordArray": "$ (top-level JSON array)",
+      "recid": "recid",
+      "title": "title.title",
+      "symbol": "primary_report_number",
+      "files": "files[] { name, url }",
+      "note": "recjson mapping documented per Invenio 1.x; the /search endpoint is WAF-gated so use MARCXML export for authoritative per-record metadata."
+    }
+  },
+  "download": {
+    "mode": "record-files",
+    "urlPattern": "https://digitallibrary.un.org/record/{recid}/files/{filename}",
+    "preferLangSuffix": "-EN.",
+    "notes": "GA filenames encode the A/ symbol, e.g. A_71_630-EN.pdf (record 855111, verified). URL 302-redirects to /nanna/... signed URL serving application/pdf. Language variants -EN/-FR/-ES/-AR/-RU/-ZH from MARC 856$u."
+  },
+  "enrich": {
+    "mode": "marcxml",
+    "endpoint": "https://digitallibrary.un.org/record/{recid}/export/xm?",
+    "notes": "MARC21 XML, WAF-safe (200 text/xml). For GA records the 981$a body reads 'General Assembly' with 981$b sub-body (e.g. 'General Assembly Plenary'); 191$b='A/'. Verified on record 855111 (A/71/630)."
+  },
+  "methodologyMarkdown": "## Overview\nThis source scopes the UN Digital Library (Invenio) to General Assembly documents — every symbol beginning `A/`: resolutions (`A/RES/...`), Plenary and Main Committee documents (`A/71/...`, `A/C.1/...`, `A/C.5/...`) and Secretary-General reports submitted to the GA. It reuses the shared UNDL Invenio mechanism, constrained to the GA series.\n\n## Search\nEndpoint `https://digitallibrary.un.org/search`, query in `p`, `of=recjson`. Constrain to GA with the series subfield `191__b:\"A/\"` (default query) or an exact symbol `191__a:\"A/71/630\"`. Combine with `year:2020`, subjects (`650__a`) or body (`710__a:\"UN. General Assembly\"`) using Boolean `AND`.\n\n## Filters\nSymbol scope is the GA prefix (pre-set). Interface language `ln`; sort via `sf`/`so`. Collection selector `c=` also exists but the GA scope is best expressed through the 191 series field.\n\n## Pagination\nOffset-1: `jrec` = 1-based first-record index, `rg` = page size; page N = `jrec=(N-1)*rg+1`.\n\n## Download\nPDFs at `/record/{recid}/files/{filename}`, preferring the `-EN.pdf` variant (e.g. `A_71_630-EN.pdf`). 302 → `/nanna/...` → `application/pdf`.\n\n## Metadata & Enrichment\nPer-record MARC21 XML at `/record/{recid}/export/xm?` (WAF-safe): symbol 191, title 245, subjects 650, GA body 981/710, files 856, related docs 991.\n\n## Limitations\nScope is GA symbols only — no Security Council (`S/`) or ECOSOC (`E/`) documents. The `/search` list endpoint is AWS-WAF-challenged for server-to-server calls (HTTP 202); the `export/xm` and `files` record paths are not, so enrichment and download are reliable while result-listing needs a challenge solver.",
+  "verified": true,
+  "probeNotes": "Live-probed 2026-07-03. /search (of=recjson|xm) -> HTTP 202 x-amzn-waf-action: challenge (WAF). Verified GA record 855111 via /record/855111/export/xm? -> 200 MARC21: 191__a='A/71/630', 191__b='A/', 245 title 'Budget performance ... report of the Secretary-General', 981__a='General Assembly' / 981__b='General Assembly Plenary', 856 file URLs A_71_630-{AR,EN,ES,FR,RU,ZH}.pdf. HEAD on the -EN.pdf pattern returns 302->200 application/pdf (verified on the S/RES sibling; same /record/{id}/files mechanism). 191__b='A/' is the confirmed GA series discriminator."
+}

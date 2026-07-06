@@ -93,7 +93,7 @@ class AiAgentExecutor extends BaseExecutor {
       const tools = await this._discoverTools(toolSources, customTools, context);
 
       // Call LLM
-      const opts = {};
+      const opts = { caller: 'aopeg_executors' };
       if (model) opts.model = model;
       if (maxTokens) opts.maxTokens = maxTokens;
       if (temperature !== undefined) opts.temperature = temperature;

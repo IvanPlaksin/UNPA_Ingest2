@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+﻿import React, { useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import SingularityGraph from '../components/Singularity/SingularityGraph';
 import FloatingGraphCatalog from '../components/KnowledgePlanes/FloatingGraphCatalog';
@@ -18,18 +18,20 @@ const SingularityPage = () => {
     const [externalGraphData, setExternalGraphData] = useState(null);
     const [loadedGraphInfo, setLoadedGraphInfo] = useState(null);
 
-    // Handle graph selection from catalog
+    // Handle graph selection from catalog or entity store
     const handleSelectGraph = useCallback((graphData) => {
-        console.log('Selected graph from catalog:', graphData);
+        console.log('Selected graph:', graphData);
 
-        // Convert graph data to Singularity format
-        const convertedData = convertToSingularityFormat(graphData);
+        // Entity Store data arrives pre-converted (tagged with __alreadyConverted)
+        const convertedData = graphData.__alreadyConverted
+            ? graphData
+            : convertToSingularityFormat(graphData);
 
         if (convertedData && convertedData.nodes.length > 0) {
             setExternalGraphData(convertedData);
             setLoadedGraphInfo({
-                name: graphData.name || graphData.sourceGraph?.name,
-                type: graphData.type || graphData.sourceGraph?.type,
+                name: graphData.__sourceName || graphData.name || graphData.sourceGraph?.name,
+                type: graphData.__sourceType || graphData.type || graphData.sourceGraph?.type,
                 nodesCount: convertedData.nodes.length,
                 linksCount: convertedData.links.length
             });
@@ -80,7 +82,7 @@ const SingularityPage = () => {
                         border: '1px solid rgba(5, 217, 232, 0.3)',
                         borderRadius: 8,
                         color: '#05d9e8',
-                        fontSize: 12,
+                        fontSize: 13,
                         fontFamily: 'monospace'
                     }}>
                         <strong>{loadedGraphInfo.name}</strong>

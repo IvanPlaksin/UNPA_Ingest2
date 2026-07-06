@@ -1,4 +1,4 @@
-/**
+﻿/**
  * HexNode.tsx — Hexagonal ReactFlow node with PortHub strips
  *
  * Ports live on narrow rectangular strips (PortHub) at the top (incoming)
@@ -163,7 +163,7 @@ const PortHubTooltip: React.FC<{
         borderRadius: 6,
         padding: '6px 8px',
         zIndex: 100,
-        fontSize: 10,
+        fontSize: 12,
         color: '#1e293b',
         boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
         pointerEvents: 'all',
@@ -172,7 +172,7 @@ const PortHubTooltip: React.FC<{
     >
       <div style={{ fontWeight: 700, marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span>{isTarget ? 'Incoming' : 'Outgoing'} Ports ({edges.length})</span>
-        <span onClick={onClose} style={{ cursor: 'pointer', fontSize: 12, opacity: 0.6 }}>x</span>
+        <span onClick={onClose} style={{ cursor: 'pointer', fontSize: 13, opacity: 0.6 }}>x</span>
       </div>
       {edges.length === 0 && <div style={{ opacity: 0.5 }}>No connections</div>}
       {edges.map((edge, i) => (

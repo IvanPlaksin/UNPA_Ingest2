@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+﻿import React, { useMemo, useState, useCallback } from 'react';
 import {
   CheckCircle2, XCircle, Clock, Loader2, Hourglass,
   SkipForward, Ban, CircleDot, FileInput, X
@@ -21,7 +21,7 @@ const STATUS_ICON = {
   WAITING:       { Icon: Hourglass,    color: '#a78bfa' },
   SKIPPED:       { Icon: SkipForward,  color: '#71717a' },
   CANCELLED:     { Icon: Ban,          color: '#71717a' },
-  PENDING:       { Icon: Clock,        color: '#334155' },
+  PENDING:       { Icon: Clock,        color: '#64748b' },
 };
 
 /**

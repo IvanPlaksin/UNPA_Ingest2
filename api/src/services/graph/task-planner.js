@@ -198,7 +198,7 @@ class TaskPlanner {
             const response = await llmService.generateStructured(
                 prompt,
                 PLAN_SCHEMA,
-                { provider: this.options.llmProvider, temperature: 0.1 }
+                { provider: this.options.llmProvider, temperature: 0.1, caller: 'graph_services' }
             );
 
             if (response.success && response.data) {

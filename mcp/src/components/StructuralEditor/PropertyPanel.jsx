@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+﻿import React, { useState, useMemo, useCallback } from 'react';
 import useStructuralEditorStore from '../../stores/structuralEditorStore';
 import FormRenderer from '../Forms/FormRenderer';
 import DataSourcePropertySection from './DataSourcePropertySection';
@@ -14,7 +14,7 @@ const PANEL_WIDTHS = { collapsed: 36, normal: 280, wide: 480 };
 function Input({ label, value, onChange, type = 'text', ...rest }) {
   return (
     <div style={{ marginBottom: 8 }}>
-      <label style={{ display: 'block', fontSize: 9, fontWeight: 600, color: '#8b949e', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 3 }}>
+      <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#8b949e', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 3 }}>
         {label}
       </label>
       <input
@@ -22,7 +22,7 @@ function Input({ label, value, onChange, type = 'text', ...rest }) {
         value={value || ''}
         onChange={e => onChange(e.target.value)}
         style={{
-          width: '100%', padding: '5px 8px', fontSize: 11,
+          width: '100%', padding: '5px 8px', fontSize: 13,
           background: '#0d1117', border: '1px solid #30363d', borderRadius: 4, color: '#e2e8f0', outline: 'none',
         }}
         onFocus={e => e.target.style.borderColor = '#58a6ff'}
@@ -36,14 +36,14 @@ function Input({ label, value, onChange, type = 'text', ...rest }) {
 function Select({ label, value, onChange, options }) {
   return (
     <div style={{ marginBottom: 8 }}>
-      <label style={{ display: 'block', fontSize: 9, fontWeight: 600, color: '#8b949e', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 3 }}>
+      <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#8b949e', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 3 }}>
         {label}
       </label>
       <select
         value={value || ''}
         onChange={e => onChange(e.target.value)}
         style={{
-          width: '100%', padding: '5px 8px', fontSize: 11,
+          width: '100%', padding: '5px 8px', fontSize: 13,
           background: '#0d1117', border: '1px solid #30363d', borderRadius: 4, color: '#e2e8f0', outline: 'none',
         }}
       >
@@ -72,7 +72,7 @@ function Toggle({ label, value, onChange }) {
           left: value ? 16 : 2, transition: 'left 0.2s',
         }} />
       </div>
-      <span style={{ fontSize: 10, color: '#8b949e' }}>{label}</span>
+      <span style={{ fontSize: 13, color: '#8b949e' }}>{label}</span>
     </div>
   );
 }
@@ -89,12 +89,12 @@ function EnumEditor({ values = [], onChange }) {
 
   return (
     <div style={{ marginBottom: 8 }}>
-      <label style={{ display: 'block', fontSize: 9, fontWeight: 600, color: '#8b949e', textTransform: 'uppercase', marginBottom: 3 }}>Enum Values</label>
+      <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#8b949e', textTransform: 'uppercase', marginBottom: 3 }}>Enum Values</label>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 6 }}>
         {values.map((v, i) => (
           <span key={i} style={{
             display: 'flex', alignItems: 'center', gap: 4,
-            padding: '2px 8px', borderRadius: 4, fontSize: 10,
+            padding: '2px 8px', borderRadius: 4, fontSize: 13,
             background: '#10b98120', border: '1px solid #10b98160', color: '#86efac',
           }}>
             {v}
@@ -107,9 +107,9 @@ function EnumEditor({ values = [], onChange }) {
           value={newVal} onChange={e => setNewVal(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && add()}
           placeholder="Add option..."
-          style={{ flex: 1, padding: '3px 6px', fontSize: 10, background: '#0d1117', border: '1px solid #30363d', borderRadius: 4, color: '#e2e8f0', outline: 'none' }}
+          style={{ flex: 1, padding: '3px 6px', fontSize: 13, background: '#0d1117', border: '1px solid #30363d', borderRadius: 4, color: '#e2e8f0', outline: 'none' }}
         />
-        <button onClick={add} style={{ padding: '3px 8px', fontSize: 10, background: '#238636', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}>+</button>
+        <button onClick={add} style={{ padding: '3px 8px', fontSize: 13, background: '#238636', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}>+</button>
       </div>
     </div>
   );
@@ -123,19 +123,19 @@ function I18nEditor({ label, value = {}, onChange }) {
 
   return (
     <div style={{ marginBottom: 8 }}>
-      <label style={{ display: 'block', fontSize: 9, fontWeight: 600, color: '#8b949e', textTransform: 'uppercase', marginBottom: 3 }}>{label}</label>
+      <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#8b949e', textTransform: 'uppercase', marginBottom: 3 }}>{label}</label>
       {usedLangs.map(lang => (
         <div key={lang} style={{ display: 'flex', gap: 4, marginBottom: 3, alignItems: 'center' }}>
-          <span style={{ width: 22, fontSize: 9, fontWeight: 600, color: '#58a6ff', textAlign: 'center' }}>{lang}</span>
+          <span style={{ width: 22, fontSize: 13, fontWeight: 600, color: '#58a6ff', textAlign: 'center' }}>{lang}</span>
           <input
             value={value[lang] || ''} onChange={e => onChange({ ...value, [lang]: e.target.value })}
-            style={{ flex: 1, padding: '3px 6px', fontSize: 10, background: '#0d1117', border: '1px solid #30363d', borderRadius: 4, color: '#e2e8f0', outline: 'none' }}
+            style={{ flex: 1, padding: '3px 6px', fontSize: 13, background: '#0d1117', border: '1px solid #30363d', borderRadius: 4, color: '#e2e8f0', outline: 'none' }}
           />
         </div>
       ))}
       {usedLangs.length === 0 && (
         <input placeholder="English label..." onChange={e => onChange({ en: e.target.value })}
-          style={{ width: '100%', padding: '3px 6px', fontSize: 10, background: '#0d1117', border: '1px solid #30363d', borderRadius: 4, color: '#e2e8f0', outline: 'none' }}
+          style={{ width: '100%', padding: '3px 6px', fontSize: 13, background: '#0d1117', border: '1px solid #30363d', borderRadius: 4, color: '#e2e8f0', outline: 'none' }}
         />
       )}
       {availLangs.length > 0 && (
@@ -144,13 +144,13 @@ function I18nEditor({ label, value = {}, onChange }) {
             <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
               {availLangs.map(l => (
                 <button key={l} onClick={() => { onChange({ ...value, [l]: '' }); setShowAdd(false); }}
-                  style={{ padding: '1px 6px', fontSize: 9, background: '#21262d', color: '#8b949e', border: '1px solid #30363d', borderRadius: 3, cursor: 'pointer' }}>
+                  style={{ padding: '1px 6px', fontSize: 13, background: '#21262d', color: '#8b949e', border: '1px solid #30363d', borderRadius: 3, cursor: 'pointer' }}>
                   +{l}
                 </button>
               ))}
             </div>
           ) : (
-            <button onClick={() => setShowAdd(true)} style={{ fontSize: 9, color: '#58a6ff', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>+ Add language</button>
+            <button onClick={() => setShowAdd(true)} style={{ fontSize: 13, color: '#58a6ff', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>+ Add language</button>
           )}
         </div>
       )}
@@ -181,7 +181,7 @@ function FieldPropertiesTab({ node, updateNode, removeNode }) {
       {!isRoot && (
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
           <button onClick={() => removeNode(node.id)}
-            style={{ fontSize: 9, color: '#f85149', background: 'none', border: 'none', cursor: 'pointer' }}>
+            style={{ fontSize: 13, color: '#f85149', background: 'none', border: 'none', cursor: 'pointer' }}>
             Delete Field
           </button>
         </div>
@@ -205,7 +205,7 @@ function FieldPropertiesTab({ node, updateNode, removeNode }) {
           <Toggle label="Required" value={d.required} onChange={v => update('required', v)} />
 
           <div style={{ marginTop: 12, padding: '8px 0', borderTop: '1px solid #30363d' }}>
-            <span style={{ fontSize: 9, fontWeight: 600, color: '#484f58', textTransform: 'uppercase' }}>UI Hints</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#484f58', textTransform: 'uppercase' }}>UI Hints</span>
           </div>
 
           <Select label="Widget" value={d.uiHints?.widget || ''} onChange={v => update('uiHints', { ...d.uiHints, widget: v || null })}
@@ -269,7 +269,7 @@ function MiniPreviewTab({ theme }) {
 
   if (!hasFields) {
     return (
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#484f58', fontSize: 11, padding: 16 }}>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#484f58', fontSize: 13, padding: 16 }}>
         Add fields to see preview
       </div>
     );
@@ -384,7 +384,7 @@ export default function PropertyPanel({ theme = 'dark' }) {
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             style={{
-              flex: 1, padding: '6px 8px', fontSize: 10, fontWeight: 600, border: 'none',
+              flex: 1, padding: '6px 8px', fontSize: 13, fontWeight: 600, border: 'none',
               cursor: 'pointer', transition: 'all 0.15s',
               background: activeTab === tab.id ? '#0d1117' : 'transparent',
               color: activeTab === tab.id ? '#e2e8f0' : '#8b949e',
@@ -405,7 +405,7 @@ export default function PropertyPanel({ theme = 'dark' }) {
         node ? (
           <FieldPropertiesTab node={node} updateNode={updateNode} removeNode={removeNode} />
         ) : (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#484f58', fontSize: 11 }}>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#484f58', fontSize: 13 }}>
             Select a field to edit
           </div>
         )

@@ -1,0 +1,26 @@
+{
+  "key": "un-sc-docs",
+  "name": "UN Security Council Documents",
+  "family": "url-catalog",
+  "capabilities": ["browseAll", "download"],
+  "filterSchema": [
+    { "type": "year", "param": "_year", "label": "Year", "notes": "Selects the per-year resolutions page: /securitycouncil/en/content/resolutions-adopted-security-council-{year}" }
+  ],
+  "config": {
+    "url": "https://main.un.org/securitycouncil/en/content/resolutions-adopted-security-council-2024",
+    "searchUrlTemplate": "https://main.un.org/securitycouncil/en/content/resolutions-adopted-security-council-{_year}",
+    "linkFilter": "",
+    "includeAllLinks": true
+  },
+  "download": {
+    "mode": "record-page",
+    "notes": "Per-year pages list each resolution (S/RES/{N} (YYYY)) linking out to the UN document system rather than to a local PDF. Resolution records resolve via docs.un.org (e.g. https://docs.un.org/en/s/res/2755(2024)) and digitallibrary.un.org (e.g. https://digitallibrary.un.org/record/{id}?v=pdf), which then serve the multilingual PDFs (EN/ES/FR/AR/RU/CH)."
+  },
+  "enrich": {
+    "mode": "none",
+    "notes": "Resolution symbol and year come from the link text / S/RES/{N}(YYYY) pattern; the digital library record page carries fuller metadata but no simple JSON API was confirmed."
+  },
+  "methodologyMarkdown": "## Overview\nThe UN Security Council resolutions are organized by adoption year on main.un.org. Each year has its own page under the pattern /securitycouncil/en/content/resolutions-adopted-security-council-{year}. The site is server-rendered Drupal.\n\n## Search\nNo per-page keyword search API. Navigation is by YEAR: substitute {_year} into the URL template to reach that year's resolution list. This is the primary filter and the reason for the year filterSchema entry.\n\n## Filters\nYear filter (param _year) is encoded directly in the URL. Each year page lists resolutions S/RES/{N} (YYYY) in descending order.\n\n## Download\nRecord-page flow. Per-year pages do not host local PDFs; they link resolutions out to the UN document system: docs.un.org (e.g. https://docs.un.org/en/s/res/2755(2024)) and digitallibrary.un.org (record pages like https://digitallibrary.un.org/record/4051310?v=pdf) which serve multilingual PDFs. includeAllLinks harvests those outbound record links, then the PDF is fetched from the record page.\n\n## Metadata & Enrichment\nResolution symbol and year parse from S/RES/{N}(YYYY). The digital library record page offers richer metadata (title, subject) but no clean JSON API was verified. Enrichment mode is none.\n\n## Limitations\nThe main.un.org host sits behind bot protection (plain WebFetch GETs returned 403), so a realistic User-Agent or headless browser may be needed to fetch the year pages, even though the content is server-rendered. The per-year URL pattern and outbound docs.un.org / digitallibrary.un.org PDF links were confirmed via web search.",
+  "verified": true,
+  "probeNotes": "WebFetch of the 2024 page redirected www.un.org -> main.un.org and then returned HTTP 403 (Cloudflare/bot protection). WebSearch confirmed the per-year URL pattern (.../resolutions-adopted-security-council-{year}), that pages list S/RES/{N}(YYYY) resolutions, and that resolutions link out to docs.un.org (docs.un.org/en/s/res/2755(2024)) and digitallibrary.un.org record pages serving multilingual PDFs. Added year filter param _year as specified."
+}

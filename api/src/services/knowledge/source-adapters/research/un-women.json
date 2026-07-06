@@ -1,0 +1,24 @@
+{
+  "key": "un-women",
+  "name": "UN Women Publications",
+  "family": "url-catalog",
+  "capabilities": ["search", "browseAll", "paginate", "download"],
+  "filterSchema": [],
+  "config": {
+    "url": "https://www.unwomen.org/en/digital-library/publications",
+    "searchUrlTemplate": "https://www.unwomen.org/en/search-results?querytext={query}",
+    "linkFilter": "",
+    "includeAllLinks": false
+  },
+  "download": {
+    "mode": "record-page",
+    "notes": "Publication cards link to record pages at /en/digital-library/publications/{year}/{month}/{slug}. The PDF download link (often /sites/default/files/...) is exposed on the record page, so a two-step fetch (list -> record -> PDF) is required."
+  },
+  "enrich": {
+    "mode": "none",
+    "notes": "Metadata (title, date, resource type, topics, region) is available in the server-rendered listing and on record pages; no structured API for enrichment."
+  },
+  "methodologyMarkdown": "## Overview\nUN Women's Digital Library is a Drupal-based catalog of ~968 publications, fully server-rendered. The listing page embeds publication cards, extensive facets (26 resource types, 90+ topics, regions, countries, publishers, series) and pagination directly in the HTML, so it is reliably scrapable without a JavaScript engine.\n\n## Search\nFull-text search is handled by a separate site-wide endpoint: /en/search-results?querytext={query}. Results are server-rendered but mix publications with other content types, so post-filtering by URL path (/digital-library/publications/) is recommended.\n\n## Filters\nFacets appear in the HTML as query-parameter links (resource type, topic, region, country, publisher, series). These can be composed onto the listing URL for filtered browsing, but no formal filter schema/API is published, so they are treated as opaque URL params rather than declared filters.\n\n## Download\nCards link to record pages using /en/digital-library/publications/{year}/{month}/{slug}. Each record page exposes the actual PDF (typically under /sites/default/files/). A two-step crawl (listing -> record -> PDF) is required; PDFs are not linked directly from the listing.\n\n## Metadata & Enrichment\nTitle, publication date, resource type and topic tags are present in both the listing and record pages. There is no JSON/REST API, so enrichment is limited to HTML parsing.\n\n## Limitations\nNo public API. Pagination uses ?page=N (0-indexed). The site sits behind a CDN; automated clients should send a realistic User-Agent to avoid WAF challenges. Search results require type-filtering.",
+  "verified": true,
+  "probeNotes": "WebFetch of listing page succeeded: server-rendered HTML, 968 publications, 20/page, pagination ?page=0.., record URL pattern /en/digital-library/publications/{year}/{month}/{slug} confirmed. No repository API found."
+}

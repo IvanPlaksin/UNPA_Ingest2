@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ExtractionResults
  *
  * Displays the completed extraction result for a document.
@@ -500,7 +500,7 @@ function RelationTable({ documentId }) {
                             </TableCell>
                             <TableCell>
                                 <Chip label={row.relation || row.type || '—'} size="small"
-                                    color="primary" variant="outlined" sx={{ fontSize: 10 }} />
+                                    color="primary" variant="outlined" sx={{ fontSize: 12 }} />
                             </TableCell>
                             <TableCell>
                                 <Typography variant="body2" noWrap sx={{ maxWidth: 160 }}>
@@ -570,7 +570,7 @@ function TriangleTab({ documentId, tri }) {
                                     <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: def.color }} />
                                     <Typography variant="body2" fontWeight={700} color={def.color}>{def.label}</Typography>
                                     <Chip label={`Layers: ${def.layers}`} size="small" variant="outlined"
-                                        sx={{ fontSize: 10, height: 18, borderColor: def.color + '66', color: def.color }} />
+                                        sx={{ fontSize: 12, height: 18, borderColor: def.color + '66', color: def.color }} />
                                 </Stack>
                                 <Stack direction="row" spacing={1} alignItems="center">
                                     <Typography variant="h6" fontWeight={700} color={def.color}>{count}</Typography>

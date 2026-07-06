@@ -1,0 +1,45 @@
+{
+  "key": "ods-sc",
+  "name": "UN ODS — Security Council",
+  "family": "invenio",
+  "capabilities": ["search", "browseAll", "paginate", "filter", "sort", "download", "enrich"],
+  "filterSchema": [
+    { "type": "symbol", "param": "p", "label": "Document symbol", "syntax": "191__a:\"S/RES/2321 (2016)\"", "preset": "191__b:\"S/\"", "notes": "SC scope: symbols beginning S/ (S/RES/..., S/PRST/..., S/2016/...). Series subfield 191$b = 'S/'." },
+    { "type": "language", "param": "ln", "label": "Interface language", "options": ["en", "fr", "es", "ar", "ru", "zh"] },
+    { "type": "dateFrom", "param": "p", "label": "Year", "syntax": "year:2016" },
+    { "type": "author", "param": "p", "label": "Authoring body", "syntax": "710__a:\"UN. Security Council\"" }
+  ],
+  "config": {
+    "endpoint": "https://digitallibrary.un.org/search",
+    "searchParam": "p",
+    "defaultQuery": "191__b:\"S/\" AND 191__a:\"S/RES\"",
+    "queryParams": { "of": "recjson", "ln": "en" },
+    "pageParam": "jrec",
+    "limitParam": "rg",
+    "pageParamStyle": "offset-1",
+    "sortParams": { "field": "sf", "order": "so", "orderDesc": "d", "orderAsc": "a" },
+    "responseMapping": {
+      "recordArray": "$ (top-level JSON array)",
+      "recid": "recid",
+      "title": "title.title",
+      "symbol": "primary_report_number",
+      "files": "files[] { name, url }",
+      "voting": "not in recjson by default — read MARC 996 via export/xm",
+      "note": "recjson mapping documented per Invenio 1.x; /search is WAF-gated. MARCXML export is the authoritative metadata channel and is the only confirmed source of the 996 voting note."
+    }
+  },
+  "download": {
+    "mode": "record-files",
+    "urlPattern": "https://digitallibrary.un.org/record/{recid}/files/{filename}",
+    "preferLangSuffix": "-EN.",
+    "notes": "SC resolution filenames encode the parenthesised symbol and are URL-encoded: space->_, (->%28, )->%29. Verified: /record/850022/files/S_RES_2321_%282016%29-EN.pdf -> 302 /nanna/... -> 200 application/pdf, 387677 bytes. Language variants -EN/-FR/-ES/-AR/-RU/-ZH/-DE."
+  },
+  "enrich": {
+    "mode": "marcxml",
+    "endpoint": "https://digitallibrary.un.org/record/{recid}/export/xm?",
+    "notes": "MARC21 XML, WAF-safe. Security-Council-specific: 981$a='Security Council', 989 hierarchy 'Documents and Publications / Resolutions and Decisions', and crucially 996$a carries the voting/adoption note (e.g. 'Adopted unanimously, 7821st meeting'). 191$a includes the year in parentheses, e.g. 'S/RES/2321 (2016)'. Verified on record 850022."
+  },
+  "methodologyMarkdown": "## Overview\nThis source scopes the UN Digital Library (Invenio) to Security Council documents — symbols beginning `S/`: resolutions (`S/RES/...`), presidential statements (`S/PRST/...`), letters and reports (`S/2016/...`), and meeting records (`S/PV.`). It is the only sibling source that exposes Council voting/adoption data (MARC 996).\n\n## Search\nEndpoint `https://digitallibrary.un.org/search`, `p` for the query, `of=recjson`. Scope to the Council with `191__b:\"S/\"`; narrow to resolutions with `191__a:\"S/RES\"` or fetch an exact resolution with `191__a:\"S/RES/2321 (2016)\"` (note the space and year-in-parentheses in the symbol). Combine with `year:2016` and Boolean operators.\n\n## Filters\nSymbol scope is the Council prefix (pre-set). `ln` sets interface language; `sf`/`so` sort. Full-text language is selected at download by filename suffix.\n\n## Pagination\nOffset-1: `jrec` = 1-based first-record index, `rg` = page size; page N = `jrec=(N-1)*rg+1`.\n\n## Download\nPDFs at `/record/{recid}/files/{filename}`, prefer `-EN.pdf`. Resolution filenames are URL-encoded, e.g. `S_RES_2321_%282016%29-EN.pdf`. 302 → `/nanna/...` → `application/pdf` (verified).\n\n## Metadata & Enrichment\nMARC21 XML at `/record/{recid}/export/xm?` (WAF-safe) is authoritative and uniquely carries the **voting record in field 996** (adoption result and meeting number), alongside 191 symbol, 245 title, 650 subjects, 981 'Security Council' body and 856 file links.\n\n## Limitations\nScope is `S/` symbols only — no GA/ECOSOC documents. Voting field 996 is present on resolution records but not on every S/ document type. The `/search` list endpoint is AWS-WAF-challenged (HTTP 202) for server-to-server calls; `export/xm` and `files` are not, so per-record enrichment and download are reliable while result-listing needs a challenge solver.",
+  "verified": true,
+  "probeNotes": "Live-probed 2026-07-03. Confirmed S/RES/2321(2016) = recid 850022. /record/850022/export/xm? -> 200 text/xml 12290 bytes: 191__a='S/RES/2321 (2016)', 191__b='S/', 245 'Resolution 2321 (2016) / adopted by the Security Council at its 7821st meeting, on 30 November 2016', 996__a='Adopted unanimously, 7821st meeting', 981__a='Security Council', 989 'Documents and Publications / Resolutions and Decisions', seven 856 file URLs (AR/ZH/EN/FR/RU/ES/DE). HEAD /record/850022/files/S_RES_2321_%282016%29-EN.pdf -> 302->200 application/pdf 387677 bytes. /search of=recjson -> HTTP 202 WAF challenge. 996 voting field is the SC-distinctive enrichment field."
+}

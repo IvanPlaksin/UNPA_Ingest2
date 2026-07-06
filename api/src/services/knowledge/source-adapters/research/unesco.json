@@ -1,0 +1,66 @@
+{
+  "key": "unesco",
+  "name": "UNESCO UNESDOC",
+  "family": "opendatasoft",
+  "capabilities": ["search", "browseAll", "paginate", "filter", "sort", "download", "enrich"],
+  "filterSchema": [
+    {
+      "type": "language",
+      "param": "refine=language",
+      "label": "Language",
+      "options": ["eng", "fre", "spa", "rus", "ara", "chi", "por", "mul", "ita", "ger", "jpn", "kor"]
+    },
+    {
+      "type": "docType",
+      "param": "refine=type",
+      "label": "Document type",
+      "options": [
+        "programme and meeting document",
+        "conference_material",
+        "article",
+        "book part",
+        "book",
+        "periodical issue",
+        "mission_reports",
+        "guides_manuals_and_handbooks",
+        "interviews",
+        "legal_materials",
+        "brochures",
+        "yearbooks",
+        "directories"
+      ]
+    },
+    { "type": "yearFrom", "param": "where", "label": "Year (use where: year>=YYYY)" }
+  ],
+  "config": {
+    "endpoint": "https://data.unesco.org/api/explore/v2.1/catalog/datasets/doc001/records",
+    "method": "GET",
+    "searchParam": "q",
+    "queryParams": {},
+    "pageParam": "offset",
+    "limitParam": "limit",
+    "pageParamStyle": "offset-0",
+    "responseMapping": {
+      "items": "results",
+      "title": "title",
+      "url": "url",
+      "date": "year",
+      "total": "total_count",
+      "symbol": "document_code",
+      "description": "description"
+    }
+  },
+  "download": {
+    "mode": "record-page",
+    "urlPattern": "{url}",
+    "notes": "Each record has a `url` field pointing to the unesdoc.unesco.org record/PDF, plus `cover_url` (thumbnail). `document_code` is the UNESDOC identifier (e.g. it maps to unesdoc.unesco.org/ark:/... ). Direct PDF is reached via the record page on unesdoc.unesco.org; the `url` field is the reliable download entry point. Note: fields are plain (not dc_-prefixed) despite the OpenDataSoft doc naming."
+  },
+  "enrich": {
+    "mode": "opendatasoft-record",
+    "endpoint": "https://data.unesco.org/api/explore/v2.1/catalog/datasets/doc001/records/{uuid}",
+    "notes": "Fetch a single record by its uuid for the full field set (creator, subject, description, coverage, conference, relation, rights). All fields are usually already present in the list response, so enrichment is rarely required."
+  },
+  "methodologyMarkdown": "## Overview\nUNESCO UNESDOC is exposed through an OpenDataSoft Explore API v2.1 dataset `doc001` (~285k records). Base: `https://data.unesco.org/api/explore/v2.1/catalog/datasets/doc001/records`. No auth. Response JSON top-level keys: `total_count` and `results` (array).\n\n## Search\nFree-text search via `q`. Structured filtering via ODSQL `where` (e.g. `where=year>=2015 AND language='eng'`). Field names are PLAIN, not Dublin-Core-prefixed: `title`, `uuid`, `url`, `year`, `language`, `type`, `document_type`, `document_code`, `subject`, `creator`, `description`, `coverage`, `conference`, `relation`, `rights`, `cover_url`, `format`, `ref_code`.\n\n## Filters\nFacet filtering uses `refine=<field>:<value>`, e.g. `refine=language:eng`, `refine=type:book`. Sorting via `order_by` (e.g. `order_by=year desc`). Verified facet fields via `/facets`: **language** (eng 114650, fre 88594, spa 55329, rus, ara, chi, por, mul, ita, ger, jpn, kor) and **type** (programme and meeting document 195901, conference_material 154751, article, book part, book, periodical issue, mission_reports, guides_manuals_and_handbooks, ...) and **year**. Combine free text + refine + where.\n\n## Download\nEach record's `url` is the unesdoc.unesco.org entry point (record page leading to the PDF); `document_code` is the UNESDOC id; `cover_url` is a thumbnail. Use `url` as the canonical download link.\n\n## Metadata & Enrichment\nList records are already rich. For a single record fetch `/records/{uuid}`. OpenDataSoft also supports `/facets` (facet enumeration) and `/exports` for bulk export.\n\n## Limitations\nDefault `limit` max is 100 per call; deep pagination via `offset` is capped by ODS (typically offset+limit <= 10000) — use `where`/`order_by` windowing for full harvest. Facet field name casing in schema doc (`dc_*`) does not match the live plain field names.",
+  "verified": true,
+  "probeNotes": "GET .../datasets/doc001/records?limit=2 -> total_count 285433, results[]; fields uuid,url,ref_code,year,format,language,title,type,relation,conference,document_code,document_type,coverage,description,subject,creator,rights,cover_url (NOT dc_-prefixed). GET .../facets?facet=language&facet=type&facet=year -> language(eng 114650, fre 88594, spa 55329, rus 25584, ara 21511, chi 15431, por 2652, mul 2126, ita, ger, jpn, kor), type(programme and meeting document 195901, conference_material 154751, article 52624, book part, book, periodical issue, mission_reports, ...). Standard OpenDataSoft Explore v2.1 supports q, where, refine, order_by, limit, offset, and /records/{uuid} detail."
+}

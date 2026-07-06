@@ -1,4 +1,4 @@
-/**
+﻿/**
  * KnowledgeHealthPage  /knowledge-health
  *
  * Executive dashboard for Knowledge Graph health across namespaces.
@@ -106,7 +106,7 @@ export default function KnowledgeHealthPage() {
                         <Chip
                             label={`${system.healthLevel} — ${system.healthScore}%`}
                             size="small"
-                            sx={{ fontSize: 11, fontWeight: 600 }}
+                            sx={{ fontSize: 13, fontWeight: 600 }}
                         />
                     )}
                 </Stack>

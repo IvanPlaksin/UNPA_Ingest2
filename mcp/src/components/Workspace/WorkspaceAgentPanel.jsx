@@ -1,4 +1,4 @@
-/**
+﻿/**
  * WorkspaceAgentPanel (WS2-008)
  *
  * Persistent chat panel for the workspace agent + actions timeline.
@@ -84,7 +84,7 @@ const Message = ({ msg }) => {
               <Chip
                 key={i}
                 size="small"
-                icon={<ToolIcon sx={{ fontSize: 12 }} />}
+                icon={<ToolIcon sx={{ fontSize: 13 }} />}
                 label={tc.name}
                 sx={{ height: 18, fontSize: '0.6rem' }}
               />

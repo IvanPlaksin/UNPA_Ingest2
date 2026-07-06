@@ -26,17 +26,18 @@ import {
     XCircle, Eye, Play, RotateCcw, FileText, ExternalLink, Zap, Info
 } from 'lucide-react';
 
-const STATUSES = ['', 'UPLOADED', 'CLASSIFYING', 'CLASSIFIED', 'NEEDS_REVIEW', 'EXTRACTING', 'COMPLETED', 'FAILED'];
+const STATUSES = ['', 'UPLOADED', 'CLASSIFYING', 'CLASSIFIED', 'NEEDS_REVIEW', 'EXTRACTING', 'COMPLETED', 'FAILED', 'EXTRACTION_FAILED'];
 const LAYERS   = ['', 'L0', 'L1', 'L2', 'L3', 'L4', 'L5'];
 
 const STATUS_CONFIG = {
-    UPLOADED:    { color: 'default',  Icon: Clock,        label: 'Uploaded' },
-    CLASSIFYING: { color: 'info',     Icon: Clock,        label: 'Classifying…' },
-    CLASSIFIED:  { color: 'success',  Icon: CheckCircle,  label: 'Classified' },
-    NEEDS_REVIEW:{ color: 'warning',  Icon: AlertCircle,  label: 'Needs Review' },
-    EXTRACTING:  { color: 'info',     Icon: Clock,        label: 'Extracting…' },
-    COMPLETED:   { color: 'success',  Icon: CheckCircle,  label: 'Completed' },
-    FAILED:      { color: 'error',    Icon: XCircle,      label: 'Failed' },
+    UPLOADED:          { color: 'default',  Icon: Clock,        label: 'Uploaded' },
+    CLASSIFYING:       { color: 'info',     Icon: Clock,        label: 'Classifying…' },
+    CLASSIFIED:        { color: 'success',  Icon: CheckCircle,  label: 'Classified' },
+    NEEDS_REVIEW:      { color: 'warning',  Icon: AlertCircle,  label: 'Needs Review' },
+    EXTRACTING:        { color: 'info',     Icon: Clock,        label: 'Extracting…' },
+    COMPLETED:         { color: 'success',  Icon: CheckCircle,  label: 'Completed' },
+    FAILED:            { color: 'error',    Icon: XCircle,      label: 'Failed' },
+    EXTRACTION_FAILED: { color: 'error',    Icon: XCircle,      label: 'Extr. Failed' },
 };
 
 function StatusChip({ status }) {
@@ -204,10 +205,11 @@ export default function DocumentList({ documents = [], loading, onReview, onExtr
                             <TableCell><SortLabel col="documentType">Type</SortLabel></TableCell>
                             <TableCell><SortLabel col="epistemicLayer">Layer</SortLabel></TableCell>
                             <TableCell>Confidence</TableCell>
+                            <TableCell><SortLabel col="kqsScore">KQS</SortLabel></TableCell>
                             <TableCell><SortLabel col="status">Status</SortLabel></TableCell>
                             <TableCell>Source</TableCell>
                             <TableCell><SortLabel col="fileSize">Size</SortLabel></TableCell>
-                            <TableCell><SortLabel col="uploadedAt">Uploaded</SortLabel></TableCell>
+                            <TableCell><SortLabel col="uploadedAt">Dates</SortLabel></TableCell>
                             <TableCell align="right">Actions</TableCell>
                         </TableRow>
                     </TableHead>
@@ -215,7 +217,7 @@ export default function DocumentList({ documents = [], loading, onReview, onExtr
                         {loading && !documents.length && (
                             Array.from({ length: 5 }).map((_, i) => (
                                 <TableRow key={i}>
-                                    {Array.from({ length: 11 }).map((__, j) => (
+                                    {Array.from({ length: 12 }).map((__, j) => (
                                         <TableCell key={j}><Skeleton /></TableCell>
                                     ))}
                                 </TableRow>
@@ -223,14 +225,14 @@ export default function DocumentList({ documents = [], loading, onReview, onExtr
                         )}
                         {!loading && !paginated.length && (
                             <TableRow>
-                                <TableCell colSpan={11} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                                <TableCell colSpan={12} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                                     No documents found
                                 </TableCell>
                             </TableRow>
                         )}
                         {paginated.map(doc => {
                             const canExtract   = ['CLASSIFIED', 'NEEDS_REVIEW'].includes(doc.status);
-                            const canForce     = ['FAILED', 'COMPLETED'].includes(doc.status);
+                            const canForce     = ['FAILED', 'COMPLETED', 'EXTRACTION_FAILED'].includes(doc.status);
                             const isExtracting = doc.status === 'EXTRACTING';
                             const isProcessing = ['CLASSIFYING', 'EXTRACTING'].includes(doc.status);
                             return (
@@ -268,17 +270,35 @@ export default function DocumentList({ documents = [], loading, onReview, onExtr
                                     <TableCell sx={{ minWidth: 90 }}>
                                         <ConfidenceBar value={doc.classificationConfidence} />
                                     </TableCell>
-                                    <TableCell><StatusChip status={doc.status} /></TableCell>
+                                    <TableCell sx={{ minWidth: 60 }}>
+                                        {doc.kqsScore != null
+                                            ? <Chip label={`${Math.round(doc.kqsScore * 100)}%`} size="small"
+                                                sx={{ bgcolor: doc.kqsScore >= 0.7 ? '#15803d' : doc.kqsScore >= 0.4 ? '#b45309' : '#991b1b',
+                                                      color: '#fff', fontWeight: 700, fontSize: '0.65rem', height: 18 }} />
+                                            : <Typography variant="caption" color="text.disabled">—</Typography>
+                                        }
+                                    </TableCell>
+                                    <TableCell>
+                                        {doc.extractionError
+                                            ? <Tooltip title={doc.extractionError}><span><StatusChip status={doc.status} /></span></Tooltip>
+                                            : <StatusChip status={doc.status} />
+                                        }
+                                    </TableCell>
                                     <TableCell>
                                         <SourceBadge repo={doc.sourceRepository} url={doc.sourceUrl} />
                                     </TableCell>
                                     <TableCell>
                                         <Typography variant="caption">{formatBytes(doc.fileSize)}</Typography>
                                     </TableCell>
-                                    <TableCell>
-                                        <Typography variant="caption">
+                                    <TableCell sx={{ minWidth: 100 }}>
+                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                                             {doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString() : '—'}
                                         </Typography>
+                                        {doc.aiExtractedAt && (
+                                            <Typography variant="caption" sx={{ color: '#4ade80', display: 'block' }}>
+                                                ↳ {new Date(doc.aiExtractedAt).toLocaleDateString()}
+                                            </Typography>
+                                        )}
                                     </TableCell>
                                     <TableCell align="right">
                                         <Stack direction="row" spacing={0.5} justifyContent="flex-end">

@@ -46,7 +46,7 @@ async function extractGoalsWithLLM(llmService, text, model) {
   try {
     const result = await llmService.chat(
       [{ role: 'user', content: GOALS_PROMPT(text) }],
-      { model, maxTokens: 3000 }
+      { model, maxTokens: 3000, caller: 'aopeg_dialogue' }
     );
     const rawContent = result.content;
     raw = (Array.isArray(rawContent)

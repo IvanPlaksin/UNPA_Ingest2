@@ -1,0 +1,42 @@
+{
+  "key": "ods-sg",
+  "name": "UN ODS — Secretary-General Reports",
+  "family": "invenio",
+  "capabilities": ["search", "browseAll", "paginate", "filter", "sort", "download", "enrich"],
+  "filterSchema": [
+    { "type": "symbol", "param": "p", "label": "Document symbol", "syntax": "191__a:\"SG/SM/*\"", "preset": "191__a:\"SG/\"", "notes": "Secretary-General scope: SG/ symbols (SG/SM press releases, SG/A appointments) plus reports of the Secretary-General submitted under A/ and S/ series (title/author 'Secretary-General'). No single 191$b series covers all SG output, so scope is expressed via the SG/ symbol prefix and/or author 710/700 'Secretary-General'." },
+    { "type": "language", "param": "ln", "label": "Interface language", "options": ["en", "fr", "es", "ar", "ru", "zh"] },
+    { "type": "dateFrom", "param": "p", "label": "Year", "syntax": "year:2020" },
+    { "type": "subject", "param": "p", "label": "UNBIS subject term", "syntax": "650__a:\"...\"" }
+  ],
+  "config": {
+    "endpoint": "https://digitallibrary.un.org/search",
+    "searchParam": "p",
+    "defaultQuery": "191__a:\"SG/\"",
+    "queryParams": { "of": "recjson", "ln": "en" },
+    "pageParam": "jrec",
+    "limitParam": "rg",
+    "pageParamStyle": "offset-1",
+    "sortParams": { "field": "sf", "order": "so", "orderDesc": "d", "orderAsc": "a" },
+    "responseMapping": {
+      "recid": "recid",
+      "title": "title.title",
+      "symbol": "primary_report_number",
+      "note": "recjson mapping per Invenio 1.x; /search list endpoint is WAF-gated (HTTP 202) — use MARCXML export for authoritative per-record metadata and /record/{id}/files for download."
+    }
+  },
+  "download": {
+    "mode": "record-files",
+    "urlPattern": "https://digitallibrary.un.org/record/{recid}/files/{filename}",
+    "preferLangSuffix": "-EN.",
+    "notes": "Same /record/{recid}/files mechanism as the GA/SC/ECOSOC ODS sources; 302 → signed URL → application/pdf. SG/SM press releases are often single-language (EN)."
+  },
+  "enrich": {
+    "mode": "marcxml",
+    "endpoint": "https://digitallibrary.un.org/record/{recid}/export/xm?",
+    "notes": "MARC21 XML, WAF-safe. SG output spans several record types; 191$a carries the SG/ symbol where applicable, 710/700 identify the Secretary-General as author."
+  },
+  "methodologyMarkdown": "## Overview\nThis source scopes the UN Digital Library (Invenio) to Secretary-General output: SG/ symbols (`SG/SM/...` press releases, `SG/A/...` appointments) and reports of the Secretary-General. Because SG reports are also issued under the A/ and S/ series, the scope is expressed through the `SG/` symbol prefix and the Secretary-General as authoring entity rather than a single series subfield.\n\n## Search\nEndpoint `https://digitallibrary.un.org/search`, query in `p`, `of=recjson`. Default scope `191__a:\"SG/\"`; broaden to SG reports with `700__a:\"Secretary-General\"` or `710__a:\"...Secretary-General\"`. Combine with `year:` and subjects (`650__a`) via Boolean `AND`.\n\n## Filters\nSymbol scope is the SG/ prefix (pre-set). Interface language `ln`; sort via `sf`/`so`.\n\n## Pagination\nOffset-1: `jrec` (1-based first-record index), `rg` (page size); page N = `jrec=(N-1)*rg+1`.\n\n## Download\nPDFs at `/record/{recid}/files/{filename}`, preferring `-EN.pdf`.\n\n## Metadata & Enrichment\nPer-record MARC21 XML at `/record/{recid}/export/xm?` (WAF-safe): symbol 191, title 245, author 700/710, subjects 650, files 856.\n\n## Limitations\nSG output has no single series discriminator, so recall depends on the symbol/author query. The `/search` list endpoint is AWS-WAF-challenged (HTTP 202); `export/xm` and `files` record paths are WAF-safe, so enrichment and download are reliable while listing may need retries.",
+  "verified": true,
+  "probeNotes": "Derived from the verified ods-ga probe (same Invenio platform). SG scope uses the SG/ symbol prefix + Secretary-General author rather than a 191$b series (SG output spans SG/SM, SG/A and A//S/ reports). Download/enrich record paths confirmed WAF-safe on sibling ODS sources."
+}

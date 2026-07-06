@@ -78,7 +78,7 @@ async function extractEntities(text, options = {}) {
       // Call LLM via chat interface
       const response = await llm().chat(
         [{ role: 'user', content: prompt }],
-        { maxTokens: CONFIG.maxTokens, temperature: CONFIG.temperature }
+        { maxTokens: CONFIG.maxTokens, temperature: CONFIG.temperature, caller: 'workspace_agent' }
       );
 
       const rawRC = response?.content;

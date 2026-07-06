@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ProcessLog
  *
  * Visualizes the 9-phase extraction pipeline as an expandable timeline.
@@ -121,21 +121,21 @@ function PhaseItem({ phase, index, isExpanded, onToggle, onRestart, isLast }) {
               <Chip
                 label={formatDuration(phase.durationMs)}
                 size="small"
-                sx={{ bgcolor: '#21262d', color: '#8b949e', height: 20, fontSize: 11 }}
+                sx={{ bgcolor: '#21262d', color: '#8b949e', height: 20, fontSize: 13 }}
               />
             )}
             {phase.itemsProcessed > 0 && (
               <Chip
                 label={`${phase.itemsProcessed} items`}
                 size="small"
-                sx={{ bgcolor: '#21262d', color: '#8b949e', height: 20, fontSize: 11 }}
+                sx={{ bgcolor: '#21262d', color: '#8b949e', height: 20, fontSize: 13 }}
               />
             )}
             {phase.tokensUsed > 0 && (
               <Chip
                 label={`${phase.tokensUsed} tokens`}
                 size="small"
-                sx={{ bgcolor: '#21262d', color: '#8b949e', height: 20, fontSize: 11 }}
+                sx={{ bgcolor: '#21262d', color: '#8b949e', height: 20, fontSize: 13 }}
               />
             )}
           </Box>
@@ -178,21 +178,21 @@ function PhaseItem({ phase, index, isExpanded, onToggle, onRestart, isLast }) {
                       bgcolor: step.stepType === 'llm_call' ? '#1f6feb' : '#30363d',
                       color: 'white',
                       height: 18,
-                      fontSize: 10,
+                      fontSize: 12,
                     }}
                   />
-                  <Typography sx={{ color: '#8b949e', fontSize: 12, flex: 1 }}>
+                  <Typography sx={{ color: '#8b949e', fontSize: 13, flex: 1 }}>
                     {step.toolName || step.outputSummary?.substring(0, 50) || '...'}
                   </Typography>
                   {step.durationMs > 0 && (
-                    <Typography sx={{ color: '#6e7681', fontSize: 11 }}>
+                    <Typography sx={{ color: '#6e7681', fontSize: 13 }}>
                       {step.durationMs}ms
                     </Typography>
                   )}
                 </Box>
               ))}
               {phase.steps.length > 5 && (
-                <Typography sx={{ color: '#6e7681', fontSize: 11, mt: 1 }}>
+                <Typography sx={{ color: '#6e7681', fontSize: 13, mt: 1 }}>
                   +{phase.steps.length - 5} more steps
                 </Typography>
               )}
@@ -227,7 +227,7 @@ function PhaseItem({ phase, index, isExpanded, onToggle, onRestart, isLast }) {
               border: '1px solid #da3633',
               mb: 2,
             }}>
-              <Typography sx={{ color: '#f85149', fontSize: 12 }}>
+              <Typography sx={{ color: '#f85149', fontSize: 13 }}>
                 {phase.errorMessage}
               </Typography>
             </Box>

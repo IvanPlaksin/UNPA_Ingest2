@@ -9,12 +9,17 @@ const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-4-20250514';
 const TIMEOUT = 60000;
 const { getInstance: getLLMProvider } = require('../../llm/LLMProviderService');
+const { isAllowed } = require('../../llm-access-control.service');
 
 /**
  * Check if Claude is available
  * @returns {Promise<boolean>}
  */
 async function isAvailable() {
+  if (!isAllowed('extraction:claude')) {
+    console.log('[Claude] Disabled by LLM Access Control');
+    return false;
+  }
   const available = !!ANTHROPIC_API_KEY;
   if (available) {
     console.log(`[Claude] Available with model: ${CLAUDE_MODEL}`);

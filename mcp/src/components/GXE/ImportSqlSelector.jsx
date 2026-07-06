@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useRef, useState } from 'react';
+﻿import React, { useEffect, useCallback, useRef, useState } from 'react';
 import {
   Database, Plus, Pencil, Trash2, PlugZap, Loader2,
   ChevronDown, ChevronUp, Play, X, CheckCircle, AlertCircle, Container,
@@ -42,7 +42,7 @@ const btnStyle = (color = '#30363d', textColor = '#e6edf3') => ({
   border: `1px solid ${color}`,
   background: 'transparent',
   color: textColor,
-  fontSize: 12,
+  fontSize: 13,
   cursor: 'pointer',
   transition: 'all 0.15s',
 });
@@ -54,7 +54,7 @@ const btnPrimary = (color = '#58a6ff') => ({
 
 const labelStyle = {
   color: '#8b949e',
-  fontSize: 11,
+  fontSize: 13,
   fontWeight: 500,
   marginBottom: 4,
   display: 'block',
@@ -584,7 +584,7 @@ export default function ImportSqlSelector() {
                   {store.isNewConnection && (
                     <button
                       onClick={() => store.applyPreset(DOCKER_EXPRESS_PRESET)}
-                      style={{ ...btnStyle('#8957e5', '#8957e5'), padding: '2px 8px', fontSize: 11 }}
+                      style={{ ...btnStyle('#8957e5', '#8957e5'), padding: '2px 8px', fontSize: 13 }}
                       title="Fill with Docker SQL Express defaults (localhost:1433, sa)"
                     >
                       <Container size={12} /> Docker Express
@@ -609,7 +609,7 @@ export default function ImportSqlSelector() {
                   }}
                 />
                 {store.connectionForm._nameConflict && (
-                  <span style={{ color: '#f85149', fontSize: 11, marginTop: 2, display: 'block' }}>
+                  <span style={{ color: '#f85149', fontSize: 13, marginTop: 2, display: 'block' }}>
                     A connection with this name already exists
                   </span>
                 )}
@@ -619,7 +619,7 @@ export default function ImportSqlSelector() {
               <div style={{ marginBottom: 8 }}>
                 <label style={labelStyle}>Protocol</label>
                 <div style={{ display: 'flex', gap: 12 }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#e6edf3', fontSize: 12, cursor: 'pointer' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#e6edf3', fontSize: 13, cursor: 'pointer' }}>
                     <input
                       type="radio"
                       name="protocol"
@@ -629,7 +629,7 @@ export default function ImportSqlSelector() {
                     />
                     TCP/IP
                   </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#e6edf3', fontSize: 12, cursor: 'pointer' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#e6edf3', fontSize: 13, cursor: 'pointer' }}>
                     <input
                       type="radio"
                       name="protocol"
@@ -707,13 +707,13 @@ export default function ImportSqlSelector() {
                 </div>
               </div>
               {store.connectionForm._hasCredentials && !store.connectionForm.user && !store.connectionForm.password && (
-                <div style={{ color: '#238636', fontSize: 11, marginBottom: 8 }}>
+                <div style={{ color: '#238636', fontSize: 13, marginBottom: 8 }}>
                   ✓ Credentials saved. Leave blank to keep existing, or enter new values to update.
                 </div>
               )}
 
               <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#8b949e', fontSize: 12, cursor: 'pointer' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#8b949e', fontSize: 13, cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={store.connectionForm.encryption}
@@ -721,7 +721,7 @@ export default function ImportSqlSelector() {
                   />
                   Encrypt
                 </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#8b949e', fontSize: 12, cursor: 'pointer' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#8b949e', fontSize: 13, cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={store.connectionForm.trustServerCertificate}
@@ -741,12 +741,12 @@ export default function ImportSqlSelector() {
                 </button>
 
                 {store.testConnectionStatus === 'success' && (
-                  <span style={{ color: '#3fb950', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ color: '#3fb950', fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
                     <CheckCircle size={13} /> Connected
                   </span>
                 )}
                 {store.testConnectionStatus === 'error' && (
-                  <span style={{ color: '#f85149', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ color: '#f85149', fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
                     <AlertCircle size={13} /> {store.testConnectionError || 'Failed'}
                   </span>
                 )}
@@ -764,7 +764,7 @@ export default function ImportSqlSelector() {
             border: `1px solid ${useAgentMode ? '#8957e5' : '#30363d'}`,
             borderRadius: 6,
           }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#e6edf3', fontSize: 12, cursor: 'pointer', flex: 1 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#e6edf3', fontSize: 13, cursor: 'pointer', flex: 1 }}>
               <input
                 type="checkbox"
                 checked={useAgentMode}
@@ -775,7 +775,7 @@ export default function ImportSqlSelector() {
               Agent Mode (9-phase spiral extraction)
             </label>
             {store.agentCurrentPhase && isImporting && (
-              <span style={{ color: '#8957e5', fontSize: 11 }}>
+              <span style={{ color: '#8957e5', fontSize: 13 }}>
                 {store.agentCurrentPhase}
               </span>
             )}
@@ -785,8 +785,8 @@ export default function ImportSqlSelector() {
           {isImporting && store.progress.total > 0 && (
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ color: '#8b949e', fontSize: 11 }}>{store.progress.label}</span>
-                <span style={{ color: '#58a6ff', fontSize: 11 }}>
+                <span style={{ color: '#8b949e', fontSize: 13 }}>{store.progress.label}</span>
+                <span style={{ color: '#58a6ff', fontSize: 13 }}>
                   {store.progress.current}/{store.progress.total}
                 </span>
               </div>

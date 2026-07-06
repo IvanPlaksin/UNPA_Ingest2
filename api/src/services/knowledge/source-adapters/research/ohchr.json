@@ -1,0 +1,24 @@
+{
+  "key": "ohchr",
+  "name": "OHCHR Human Rights Documents",
+  "family": "url-catalog",
+  "capabilities": ["browseAll"],
+  "filterSchema": [],
+  "config": {
+    "url": "https://ap.ohchr.org/documents/mainec.aspx",
+    "searchUrlTemplate": "https://ap.ohchr.org/documents/mainec.aspx?syb={query}",
+    "linkFilter": ".pdf",
+    "includeAllLinks": false
+  },
+  "download": {
+    "mode": "record-page",
+    "notes": "Legacy ASP.NET WebForms document database. The landing page (mainec.aspx) renders only an empty search form (Body/Session/Type dropdowns plus Country/Subject/Mandate/Symbol refine filters). Results are produced by form submission (ASP.NET __doPostBack / __VIEWSTATE), not by a simple GET, so PDF links are not present on the initial page load."
+  },
+  "enrich": {
+    "mode": "none",
+    "notes": "No JSON/record API; document metadata only appears in the post-back results grid."
+  },
+  "methodologyMarkdown": "## Overview\nOHCHR's legacy document database at https://ap.ohchr.org/documents/mainec.aspx is a server-rendered ASP.NET WebForms application. It exposes a categorized search interface over human-rights body documents (Concluding Observations, reports, etc.).\n\n## Search\nThe landing page renders ONLY a search form: Body, Session and Type dropdowns plus refine filters for Country, Subject, Mandate and Symbol Number, with All-Words/Any toggles. A ?syb={query} parameter is referenced by the interface, but on a plain GET the page returns the empty form with NO document or PDF links. Because it is WebForms, actual results require a POST carrying __VIEWSTATE / __EVENTVALIDATION / __doPostBack state, not a stateless GET.\n\n## Filters\nBody, Session, Type, Country, Subject, Mandate, Symbol Number - all driven through the post-back form rather than clean URL parameters.\n\n## Download\nDocument PDFs are only reachable from the results grid produced after form submission (record-page flow). No direct-PDF links exist on the initial page.\n\n## Metadata & Enrichment\nNo REST/JSON API. Metadata (symbol, body, session, type) appears in the results grid. Enrichment mode is none.\n\n## Limitations\nHONEST ASSESSMENT: this is a stateful WebForms app. A stateless scraper cannot retrieve documents from a plain GET; it must either replay the __VIEWSTATE post-back sequence or drive the form with a headless browser. Only browseAll is claimed as a near-stub; search/download over a simple URL are NOT verified.",
+  "verified": true,
+  "probeNotes": "WebFetch of https://ap.ohchr.org/documents/mainec.aspx returned a server-rendered ASP.NET page containing only the search form (Body/Session/Type + Country/Subject/Mandate/Symbol filters, All-Words/Any toggles) and NO document or PDF links. Results depend on a WebForms post-back, so plain-GET scraping yields no documents. No API."
+}

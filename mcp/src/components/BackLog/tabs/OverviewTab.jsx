@@ -1,4 +1,4 @@
-/**
+﻿/**
  * OverviewTab — Basic task information (migrated from TaskDetailDialog)
  */
 import React from 'react';
@@ -57,7 +57,7 @@ export default function OverviewTab({ task }) {
           </Typography>
           <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
             {tags.map((t, i) => (
-              <Chip key={i} label={t} size="small" variant="outlined" sx={{ fontSize: 11 }} />
+              <Chip key={i} label={t} size="small" variant="outlined" sx={{ fontSize: 13 }} />
             ))}
           </Stack>
         </Box>
@@ -76,7 +76,7 @@ export default function OverviewTab({ task }) {
         )}
         {task.parentId && (
           <Typography variant="caption" color="text.disabled">
-            Parent: <Chip label={task.parentId} size="small" variant="outlined" sx={{ fontSize: 10, height: 18 }} />
+            Parent: <Chip label={task.parentId} size="small" variant="outlined" sx={{ fontSize: 12, height: 18 }} />
           </Typography>
         )}
         {task.childCount > 0 && (

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ValidationPanel — Codex compliance validation dashboard
  * Score ring + summary cards + violations table + run button
  */
@@ -30,7 +30,7 @@ function ScoreRing({ score, size = 100 }) {
       </svg>
       <Box sx={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
         <Typography sx={{ fontSize: 28, fontWeight: 700, color, lineHeight: 1 }}>{s}</Typography>
-        <Typography sx={{ fontSize: 10, color: 'text.disabled' }}>/ 100</Typography>
+        <Typography sx={{ fontSize: 12, color: 'text.disabled' }}>/ 100</Typography>
       </Box>
     </Box>
   );
@@ -43,7 +43,7 @@ function SummaryCard({ count, label, icon: Icon, color, bgColor }) {
       <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 }, textAlign: 'center' }}>
         <Icon size={18} style={{ color, marginBottom: 4 }} />
         <Typography sx={{ fontSize: 24, fontWeight: 700, color, lineHeight: 1.2 }}>{count}</Typography>
-        <Typography sx={{ fontSize: 11, color: 'text.disabled' }}>{label}</Typography>
+        <Typography sx={{ fontSize: 13, color: 'text.disabled' }}>{label}</Typography>
       </CardContent>
     </Card>
   );
@@ -75,7 +75,7 @@ function HistorySparkline({ history }) {
 
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-      <Typography sx={{ fontSize: 10, color: 'text.disabled' }}>History:</Typography>
+      <Typography sx={{ fontSize: 12, color: 'text.disabled' }}>History:</Typography>
       <svg width={w} height={h} style={{ overflow: 'visible' }}>
         <polyline points={points} fill="none" stroke="#4fd1c5" strokeWidth={1.5} />
         {scores.map((s, i) => (
@@ -183,10 +183,10 @@ export default function ValidationPanel() {
             </Button>
             {report && (
               <Box>
-                <Typography sx={{ fontSize: 10, color: 'text.disabled' }}>
+                <Typography sx={{ fontSize: 12, color: 'text.disabled' }}>
                   {report.duration}ms · {report.checksRun} checks
                 </Typography>
-                <Typography sx={{ fontSize: 10, color: 'text.disabled' }}>
+                <Typography sx={{ fontSize: 12, color: 'text.disabled' }}>
                   {new Date(report.timestamp).toLocaleString()}
                 </Typography>
               </Box>
@@ -226,7 +226,7 @@ export default function ValidationPanel() {
           sx={{ flex: 1, maxWidth: 300 }}
         />
 
-        <Typography sx={{ fontSize: 11, color: 'text.disabled', ml: 'auto' }}>
+        <Typography sx={{ fontSize: 13, color: 'text.disabled', ml: 'auto' }}>
           {violations.length} violations shown
         </Typography>
       </Box>

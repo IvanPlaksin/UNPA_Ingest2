@@ -1,0 +1,24 @@
+{
+  "key": "unccd",
+  "name": "UNCCD Resources",
+  "family": "url-catalog",
+  "capabilities": ["search", "browseAll", "paginate", "download"],
+  "filterSchema": [],
+  "config": {
+    "url": "https://www.unccd.int/resources/all-resources",
+    "searchUrlTemplate": "https://www.unccd.int/resources/all-resources?search_api_fulltext={query}",
+    "linkFilter": "",
+    "includeAllLinks": false
+  },
+  "download": {
+    "mode": "record-page",
+    "notes": "Resource titles link to record pages under /resources/{resource-type}/{slug}. The downloadable PDF is exposed on the record page. Two-step crawl (listing -> record -> PDF) required."
+  },
+  "enrich": {
+    "mode": "none",
+    "notes": "Resource type, title and date available from listing and record pages; no structured repository API."
+  },
+  "methodologyMarkdown": "## Overview\nUNCCD's resource catalog is a Drupal-based, server-rendered listing. Resource cards, facets and numbered pagination are all present in the initial HTML, making the catalog scrapable without a browser engine.\n\n## Search\nThe listing supports Drupal Search-API full-text filtering via a query parameter (search_api_fulltext={query}) appended to the all-resources URL. Faceted filtering by resource type is also available.\n\n## Filters\nResource type facets (global-land-outlook, brief, other, etc.) appear as URL segments/params. No published filter schema, so facets are treated as opaque URL parameters.\n\n## Download\nEach resource card links to a record page at /resources/{resource-type}/{slug}. The PDF download is exposed on that record page rather than in the listing, so a two-step crawl is needed.\n\n## Metadata & Enrichment\nTitle, resource type and publication date are present in the server-rendered HTML. No JSON/REST API is exposed, so enrichment relies on HTML parsing of record pages.\n\n## Limitations\nNo public repository API. Pagination uses ?page=N. Content is behind a CDN; send a realistic User-Agent. PDF links must be resolved per-record.",
+  "verified": true,
+  "probeNotes": "WebFetch of /resources/all-resources succeeded: server-rendered HTML, record URL pattern /resources/{type}/{slug}, numbered pagination ?page=0.. confirmed. No repository/search API endpoint exposed."
+}

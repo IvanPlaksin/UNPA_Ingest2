@@ -1,0 +1,45 @@
+{
+  "key": "unu",
+  "name": "UNU Collections",
+  "family": "url-catalog",
+  "capabilities": ["search"],
+  "filterSchema": [
+    { "type": "docType", "param": "f.type", "label": "Document type (DSpace facet — usable only if WAF challenge is solved)" },
+    { "type": "language", "param": "f.language", "label": "Language (DSpace facet — usable only if WAF challenge is solved)" }
+  ],
+  "config": {
+    "url": "https://collections.unu.edu/",
+    "searchUrlTemplate": "https://collections.unu.edu/search?query={query}",
+    "linkFilter": "/handle/",
+    "includeAllLinks": false,
+    "_intendedApi": {
+      "family": "dspace",
+      "endpoint": "https://collections.unu.edu/server/api/discover/search/objects",
+      "searchParam": "query",
+      "pageParam": "page",
+      "limitParam": "size",
+      "pageParamStyle": "zero-based",
+      "responseMapping": {
+        "items": "_embedded.searchResult._embedded.objects[]._embedded.indexableObject",
+        "title": "metadata['dc.title'][0].value",
+        "url": "metadata['dc.identifier.uri'][0].value",
+        "date": "metadata['dc.date.issued'][0].value",
+        "total": "_embedded.searchResult.page.totalElements"
+      },
+      "_note": "UNU IS a DSpace instance and this endpoint SHOULD work, BUT it is currently gated by an AWS WAF challenge (see probeNotes). Promote to family 'dspace' once WAF is bypassed (e.g. via a headless/challenge-solving fetch or an allow-listed IP)."
+    }
+  },
+  "download": {
+    "mode": "dspace-bitstream",
+    "urlPattern": "https://collections.unu.edu/server/api/core/bitstreams/{bitstreamUuid}/content",
+    "notes": "Standard DSpace 7 bitstream pattern would apply (items/{uuid}/bundles -> ORIGINAL -> bitstreams -> /content), but all /server/api and /rest paths currently return the AWS WAF challenge. Not reachable without solving the challenge."
+  },
+  "enrich": {
+    "mode": "dspace-item",
+    "endpoint": "https://collections.unu.edu/server/api/core/items/{uuid}",
+    "notes": "Would be DSpace-item enrichment once WAF is bypassed. Currently blocked."
+  },
+  "methodologyMarkdown": "## Overview\nUNU Collections (collections.unu.edu) is a DSpace repository (URL structure and /server/api & /rest endpoints match DSpace). In principle it supports the same DSpace 7 discovery API as FAO and ESCAP. However, live probing found the entire site — including the API — sitting behind an AWS WAF bot challenge, so automated JSON access is not currently possible.\n\n## Search\nThe intended path is GET /server/api/discover/search/objects?query={term}&page=0&size=25, returning objects at _embedded.searchResult._embedded.objects[]._embedded.indexableObject. This is captured in config._intendedApi and should be promoted to family 'dspace' the moment the WAF challenge can be satisfied. As a fallback, the HTML site exposes /handle/ record links that a url-catalog crawl can harvest, but even the HTML is challenge-gated for non-browser clients.\n\n## Filters\nStandard DSpace facets (dateIssued, type, language, collection) would apply via `&f.<facet>=<value>,equals`, mirroring FAO/ESCAP. Unverified due to the WAF block.\n\n## Download\nStandard DSpace ORIGINAL-bundle bitstream resolution (items/{uuid}/bundles -> ORIGINAL -> bitstreams -> /content). Currently unreachable.\n\n## Metadata & Enrichment\nDSpace-item enrichment via /server/api/core/items/{uuid} once accessible.\n\n## Limitations\nHARD BLOCKER: AWS WAF returns HTTP 202 with response header `x-amzn-waf-action: challenge` and an empty/interstitial body for both the v7 (/server/api) and v6 (/rest) APIs, from multiple browser-like User-Agents. Programmatic access requires solving the JS challenge (headless browser producing a valid AWS WAF token) or IP allow-listing. Until then this source is url-catalog only and effectively non-ingestible via plain HTTP.",
+  "verified": false,
+  "probeNotes": "GET /server/api/discover/search/objects?query=climate&size=2 -> HTTP 202, empty body. GET /rest/items?limit=1 -> HTTP 202. HEAD /server/api -> response headers included Server: awselb/2.0 and x-amzn-waf-action: challenge, Access-Control-Expose-Headers: x-amzn-waf-action. Tested with multiple browser User-Agents and cookie jar — all challenged. Confirms UNU is DSpace but WAF-gated. verified=false: intended DSpace config captured in config._intendedApi for future promotion."
+}

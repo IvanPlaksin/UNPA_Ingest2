@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ═══════════════════════════════════════════════════════════════════════════
  * AI Usage Widget
  * Displays current AI API limits and usage by provider
@@ -132,7 +132,7 @@ const ProviderRow = ({ provider, usage, config }) => {
   const providerInfo = PROVIDER_CONFIG[provider] || {
     name: provider,
     icon: Cpu,
-    color: '#6b7280',
+    color: '#94a3b8',
     bgColor: 'rgba(107, 114, 128, 0.1)',
   };
   const Icon = providerInfo.icon;
@@ -182,7 +182,7 @@ const ProviderRow = ({ provider, usage, config }) => {
         {/* Token Usage */}
         <Tooltip title="Token Usage" arrow>
           <Stack direction="row" alignItems="center" spacing={0.5} sx={{ flex: 1 }}>
-            <Zap size={10} style={{ color: '#6b7280' }} />
+            <Zap size={10} style={{ color: '#94a3b8' }} />
             <UsageBar
               value={tokenUsage}
               max={tokenLimit === 'unlimited' ? 'unlimited' : tokenLimit}
@@ -196,7 +196,7 @@ const ProviderRow = ({ provider, usage, config }) => {
         {costLimit > 0 && (
           <Tooltip title="Budget Usage" arrow>
             <Stack direction="row" alignItems="center" spacing={0.5} sx={{ flex: 1 }}>
-              <DollarSign size={10} style={{ color: '#6b7280' }} />
+              <DollarSign size={10} style={{ color: '#94a3b8' }} />
               <UsageBar
                 value={costUsage}
                 max={costLimit}
@@ -210,7 +210,7 @@ const ProviderRow = ({ provider, usage, config }) => {
         {/* RPM */}
         <Tooltip title={`Rate: ${rpmCurrent}/${rpmLimit} RPM`} arrow>
           <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 40 }}>
-            <TrendingUp size={10} style={{ color: '#6b7280' }} />
+            <TrendingUp size={10} style={{ color: '#94a3b8' }} />
             <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'text.secondary' }}>
               {rpmCurrent}/{rpmLimit}
             </Typography>

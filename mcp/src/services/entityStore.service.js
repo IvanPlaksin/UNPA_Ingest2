@@ -98,3 +98,24 @@ export async function expandCluster(clusterId) {
     const { data } = await axios.post(`${base}/viewport/expand`, { clusterId });
     return data.data;
 }
+
+export async function getDocumentRefs(namespace = null) {
+    const params = namespace ? { namespace } : {};
+    const { data } = await axios.get(`${base}/docrefs`, { params });
+    return data.data;
+}
+
+export async function getEntitySubgraph(entityId, depth = 2) {
+    const { data } = await axios.get(`${base}/${entityId}/subgraph`, { params: { depth } });
+    return data.data;
+}
+
+export async function findPaths(fromId, toId, k = 5) {
+    const { data } = await axios.get(`${base}/paths`, { params: { from: fromId, to: toId, k } });
+    return data.data;
+}
+
+export async function interpretPaths(fromEntity, toEntity, paths, structuralAnalysis) {
+    const { data } = await axios.post(`${base}/paths/interpret`, { fromEntity, toEntity, paths, structuralAnalysis });
+    return data.data;
+}

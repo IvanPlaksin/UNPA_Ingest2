@@ -1,4 +1,4 @@
-/**
+﻿/**
  * GapPanel — Knowledge Gap detail and management
  *
  * Displays full gap details and allows status transitions:
@@ -81,11 +81,11 @@ export default function GapPanel({ gap, onStatusChange, onClose }) {
                         <Typography variant="subtitle2" fontWeight={700}>{gap.title || 'Knowledge Gap'}</Typography>
                     </Stack>
                     <Stack direction="row" spacing={1}>
-                        {gap.gapType && <Chip label={gap.gapType} size="small" variant="outlined" sx={{ fontSize: 10, height: 18 }} />}
+                        {gap.gapType && <Chip label={gap.gapType} size="small" variant="outlined" sx={{ fontSize: 12, height: 18 }} />}
                         <Chip
                             label={status}
                             size="small"
-                            sx={{ fontSize: 10, height: 18,
+                            sx={{ fontSize: 12, height: 18,
                                   bgcolor: STATUS_COLORS[status] + '22',
                                   color: STATUS_COLORS[status],
                                   border: `1px solid ${STATUS_COLORS[status]}66` }}
@@ -180,7 +180,7 @@ export default function GapPanel({ gap, onStatusChange, onClose }) {
                             {isComplete && <CheckCircle size={12} color={color} />}
                             <Typography variant="caption" fontWeight={isActive ? 700 : 400}
                                 color={isActive ? color : 'text.secondary'}
-                                display="block" sx={{ fontSize: 10 }}>
+                                display="block" sx={{ fontSize: 12 }}>
                                 {s}
                             </Typography>
                         </Box>

@@ -241,7 +241,8 @@ ${textContent.substring(0, 3000)}`;
 
         const llmResponse = await llm().chat([{ role: 'user', content: analysisPrompt }], {
           temperature: 0.1,
-          maxTokens: 500
+          maxTokens: 500,
+          caller: 'workspace_agent'
         });
 
         const rawLlmContent = llmResponse?.content;

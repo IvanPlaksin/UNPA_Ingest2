@@ -1,0 +1,24 @@
+{
+  "key": "icj",
+  "name": "ICJ Decisions & Orders",
+  "family": "url-catalog",
+  "capabilities": ["browseAll", "download"],
+  "filterSchema": [],
+  "config": {
+    "url": "https://www.icj-cij.org/decisions",
+    "searchUrlTemplate": "",
+    "linkFilter": ".pdf",
+    "includeAllLinks": false
+  },
+  "download": {
+    "mode": "direct-pdf",
+    "notes": "The decisions listing page embeds direct .pdf links to judgments, orders and advisory opinions. Pattern: /sites/default/files/case-related/{caseNo}/{caseNo}-{YYYYMMDD}-{type}-{seq}-{sub}-{lang}.pdf where type is ord (order), jud (judgment) or adv (advisory opinion) and lang is en/fr/bi. Fetch the PDF URL directly."
+  },
+  "enrich": {
+    "mode": "none",
+    "notes": "Case metadata (case number, date, document type, language) is encoded in the PDF filename itself; no separate item/record API is available."
+  },
+  "methodologyMarkdown": "## Overview\nThe International Court of Justice publishes its judgments, orders and advisory opinions as PDF documents. The English entry point is https://www.icj-cij.org/en/decisions (which 302-redirects to https://www.icj-cij.org/decisions). The site is a classic server-rendered Drupal application, not a JavaScript SPA, so a plain HTTP GET returns fully-formed HTML containing real anchor tags to every decision PDF.\n\n## Search\nNo dedicated search API or search-URL template was found for the decisions listing. The page offers only client-side category tabs (All decisions / Judgments / Orders / Advisory opinions). Discovery is therefore by browsing the listing rather than by keyword query.\n\n## Filters\nNone exposed as URL parameters. Tabs filter by document type in the browser only. Case number, date, type and language are recoverable from each PDF filename after harvesting.\n\n## Download\nDirect PDF download. Links follow the stable pattern /sites/default/files/case-related/{caseNo}/{caseNo}-{YYYYMMDD}-{type}-{seq}-{sub}-{lang}.pdf (type codes: ord, jud, adv). No authentication or session is required.\n\n## Metadata & Enrichment\nNo DSpace/record API. Structured metadata is parsed from the filename convention and surrounding HTML link text (case title, date). Enrichment mode is none.\n\n## Limitations\nContent is server-rendered so a headless browser is NOT required. There is no keyword search endpoint, so only browse-all + direct download are supported. The set link filter (.pdf) restricts harvesting to decision documents.",
+  "verified": true,
+  "probeNotes": "WebFetch of https://www.icj-cij.org/en/decisions 302-redirects to http://www.icj-cij.org/decisions. Fetched that URL: confirmed server-rendered HTML with numerous real <a href> links to .pdf files. Extracted the /sites/default/files/case-related/{caseNo}/... PDF pattern with ord/jud/adv type codes and en/fr/bi language suffixes. No API present."
+}

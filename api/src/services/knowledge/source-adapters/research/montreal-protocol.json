@@ -1,0 +1,24 @@
+{
+  "key": "montreal-protocol",
+  "name": "Montreal Protocol",
+  "family": "url-catalog",
+  "capabilities": ["browseAll", "download"],
+  "filterSchema": [],
+  "config": {
+    "url": "https://ozone.unep.org/treaties/montreal-protocol",
+    "searchUrlTemplate": "",
+    "linkFilter": ".pdf",
+    "includeAllLinks": false
+  },
+  "download": {
+    "mode": "direct-pdf",
+    "notes": "The treaty page is server-rendered Drupal and links directly to PDFs under /sites/default/files/... (e.g. /sites/default/files/Handbooks/MP-Handbook-2020-English.pdf, /sites/default/files/2019-04/Original_depositary_notification_english_version_with_corrections.pdf, CN.601.2018-Eng.pdf). Available in EN/ES/FR/AR/CH/RU. Download directly."
+  },
+  "enrich": {
+    "mode": "none",
+    "notes": "Document title/language derivable from link text and filename; the separate Online Reporting System (ors.ozone.unep.org) handles country data, not documents."
+  },
+  "methodologyMarkdown": "## Overview\nThe UNEP Ozone Secretariat hosts the Montreal Protocol treaty texts, handbooks, amendments (Kigali etc.) and depositary notifications at https://ozone.unep.org/treaties/montreal-protocol. The site is server-rendered Drupal HTML with direct PDF links, not a SPA.\n\n## Search\nNo document search API or verified search-URL template for this page. Discovery is by browsing the treaty page and its handbook/amendment sections.\n\n## Filters\nNone as URL parameters. Documents are grouped by section (Handbooks, amendments, depositary notifications) and language (EN/ES/FR/AR/CH/RU), inferable from the URL path and filename.\n\n## Download\nDirect PDF. Links live under /sites/default/files/ with dated or Handbook subfolders, e.g. /sites/default/files/Handbooks/MP-Handbook-2020-English.pdf and /sites/default/files/2019-04/...pdf. No authentication required.\n\n## Metadata & Enrichment\nNo DSpace/record API for documents. Metadata parsed from link text and filename. The Online Reporting System at https://ors.ozone.unep.org/ is a separate country-data submission backend (emissions, HFC-23, contributions) and does not serve these treaty documents. Enrichment mode is none.\n\n## Limitations\nServer-rendered so no headless browser required. There is no keyword search endpoint, so only browseAll + direct download are supported.",
+  "verified": true,
+  "probeNotes": "WebFetch of https://ozone.unep.org/treaties/montreal-protocol confirmed server-rendered HTML with direct .pdf links under /sites/default/files/ (Handbooks/, dated folders, CN.*.pdf depositary notifications) in multiple languages. A separate ORS reporting backend exists but is for country data, not documents. No document API."
+}

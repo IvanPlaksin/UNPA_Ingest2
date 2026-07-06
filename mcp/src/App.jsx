@@ -38,7 +38,15 @@ import KnowledgeHealthPage from './pages/KnowledgeHealthPage';
 import StructuralFormDemoPage from './pages/StructuralFormDemoPage';
 import StructuralEditorPage from './pages/StructuralEditorPage';
 import UnpaChatDemoPage from './pages/UnpaChatDemoPage';
-import EntityStorePage from './pages/EntityStorePage';
+import EntityStorePage      from './pages/EntityStorePage';
+import VectorStorePage      from './pages/VectorStorePage';
+import KnowledgeMapPage     from './pages/KnowledgeMapPage';
+import PipelineManagerPage  from './pages/PipelineManagerPage';
+import PipelineStatsPage    from './pages/PipelineStatsPage';
+import LLMAccessControlPage from './pages/LLMAccessControlPage';
+import InvestigationPage from './pages/InvestigationPage';
+import InvestigationSessionPage from './pages/InvestigationSessionPage';
+import EntitySingularityPage from './pages/EntitySingularityPage';
 
 // import './index.css'; // Removing in favor of CssBaseline and MUI styles
 
@@ -64,15 +72,27 @@ function App() {
             mode,
             primary: { main: '#3b82f6' },
             background: {
-                default: mode === 'dark' ? '#0f172a' : '#f8fafc', // Slate-900 / Slate-50
-                paper: mode === 'dark' ? '#1e293b' : '#ffffff',   // Slate-800 / White
-            }
+                default: mode === 'dark' ? '#0f172a' : '#f8fafc',
+                paper:   mode === 'dark' ? '#1e293b' : '#ffffff',
+            },
+            ...(mode === 'dark' ? {
+                text: {
+                    primary:   '#e2e8f0',  // slate-200 — readable white
+                    secondary: '#94a3b8',  // slate-400 — readable secondary
+                    disabled:  '#64748b',  // slate-500 — muted but visible
+                },
+            } : {}),
         },
         typography: {
             fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
-            h6: { fontWeight: 700 },
+            fontSize: 14,
+            body1:    { fontSize: '0.9rem',   lineHeight: 1.5 },
+            body2:    { fontSize: '0.8375rem', lineHeight: 1.5 },
+            caption:  { fontSize: '0.75rem',  lineHeight: 1.4 },
+            overline: { fontSize: '0.7rem',   lineHeight: 1.4 },
+            h6:        { fontWeight: 700 },
             subtitle1: { fontWeight: 600 },
-            button: { textTransform: 'none', fontWeight: 600 },
+            button:    { textTransform: 'none', fontWeight: 600 },
         },
         components: {
             MuiButton: {
@@ -82,9 +102,42 @@ function App() {
             },
             MuiPaper: {
                 styleOverrides: {
-                    root: { backgroundImage: 'none' }, // Remove default elevation overlay in dark mode
-                }
-            }
+                    root: { backgroundImage: 'none' },
+                },
+            },
+            MuiTypography: {
+                defaultProps: { variantMapping: { body1: 'p', body2: 'p' } },
+            },
+            MuiTableCell: {
+                styleOverrides: {
+                    root: { fontSize: '0.8375rem' },
+                },
+            },
+            MuiMenuItem: {
+                styleOverrides: {
+                    root: { fontSize: '0.875rem' },
+                },
+            },
+            MuiListItemText: {
+                styleOverrides: {
+                    secondary: { fontSize: '0.8rem' },
+                },
+            },
+            MuiTooltip: {
+                styleOverrides: {
+                    tooltip: { fontSize: '0.75rem', maxWidth: 320 },
+                },
+            },
+            MuiChip: {
+                styleOverrides: {
+                    label: { fontSize: '0.78rem' },
+                },
+            },
+            MuiInputBase: {
+                styleOverrides: {
+                    root: { fontSize: '0.875rem' },
+                },
+            },
         },
     }), [mode]);
 
@@ -142,6 +195,9 @@ function App() {
                                 {/* Singularity - 3D Graph Explorer */}
                                 <Route path="/singularity" element={<SingularityPage />} />
 
+                                {/* Entity Singularity - Optimized 3D Entity Store Graph */}
+                                <Route path="/entity-singularity" element={<EntitySingularityPage />} />
+
                                 {/* Experimental Features */}
                                 <Route path="/experimental" element={<ExperimentalPage />} />
 
@@ -172,6 +228,8 @@ function App() {
 
                                 {/* Document Processing — UN document lifecycle */}
                                 <Route path="/documents" element={<DocumentProcessingPage />} />
+                                <Route path="/documents/dashboard" element={<DocumentProcessingPage />} />
+                                <Route path="/documents/search" element={<DocumentProcessingPage />} />
                                 <Route path="/documents/sources" element={<DocumentProcessingPage />} />
                                 <Route path="/documents/sources/:sourceId" element={<DocumentProcessingPage />} />
                                 <Route path="/documents/:documentId" element={<DocumentProcessingPage />} />
@@ -184,7 +242,15 @@ function App() {
 
                                 {/* Knowledge Health — namespace health dashboard */}
                                 <Route path="/knowledge-health" element={<KnowledgeHealthPage />} />
-                                <Route path="/entity-store" element={<EntityStorePage />} />
+                                <Route path="/entity-store"           element={<EntityStorePage />} />
+                                <Route path="/entity-store/:entityId" element={<EntityStorePage />} />
+                                <Route path="/investigation"          element={<InvestigationPage />} />
+                                <Route path="/investigation/:sessionId" element={<InvestigationSessionPage />} />
+                                <Route path="/vector-store"      element={<VectorStorePage />} />
+                                <Route path="/knowledge-map"     element={<KnowledgeMapPage />} />
+                                <Route path="/pipeline-manager"  element={<PipelineManagerPage />} />
+                                <Route path="/pipeline-stats"    element={<PipelineStatsPage />} />
+                                <Route path="/llm-access-control" element={<LLMAccessControlPage />} />
                             </Routes>
                         </Box>
                     </Box>

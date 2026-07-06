@@ -1,0 +1,82 @@
+{
+  "key": "unep-informea",
+  "name": "UNEP Publications",
+  "family": "rest-api",
+  "capabilities": [
+    "browseAll",
+    "paginate",
+    "download",
+    "enrich"
+  ],
+  "filterSchema": [
+    {
+      "key": "treaty",
+      "label": "Treaty / MEA",
+      "type": "string",
+      "param": "$filter",
+      "example": "treaty eq 'basel'"
+    },
+    {
+      "key": "published",
+      "label": "Published date",
+      "type": "date",
+      "param": "$filter",
+      "example": "published ge datetime'2020-01-01T00:00:00'"
+    }
+  ],
+  "config": {
+    "method": "GET",
+    "endpoint": "http://odata.informea.org/informea.svc/Documents",
+    "searchParam": null,
+    "queryParams": {
+      "$format": "json",
+      "$expand": "title,files,types,treaties",
+      "$orderby": "updated desc"
+    },
+    "pageParam": "$skip",
+    "limitParam": "$top",
+    "pageParamStyle": "offset-0",
+    "responseMapping": {
+      "items": "d.results",
+      "title": "title",
+      "url": "",
+      "date": "updated",
+      "description": ""
+    },
+    "_odata": {
+      "apiBaseUrl": "http://odata.informea.org/informea.svc",
+      "documentsEndpoint": "/Documents",
+      "protocol": "OData v2",
+      "format": "json (append $format=json)",
+      "listTemplate": "http://odata.informea.org/informea.svc/Documents?$top={limit}&$skip={offset}&$format=json",
+      "searchTemplate": "http://odata.informea.org/informea.svc/Documents?$filter=substringof('{query}',title)&$format=json",
+      "expandTemplate": "http://odata.informea.org/informea.svc/Documents('{id}')?$expand=title,files,authors,types,treaties,keywords&$format=json",
+      "paginationParams": {
+        "limit": "$top",
+        "offset": "$skip"
+      },
+      "responseMapping": {
+        "records": "d.results",
+        "id": "id",
+        "treaty": "treaty",
+        "published": "published",
+        "updated": "updated",
+        "title": "title (deferred -> $expand=title)",
+        "files": "files (deferred -> $expand=files, contains download URLs)",
+        "authors": "authors (deferred)",
+        "types": "types (deferred)"
+      }
+    }
+  },
+  "download": {
+    "mode": "direct-pdf",
+    "notes": "The Documents entity has a deferred 'files' navigation property. Expand it ($expand=files) to obtain the file/download URLs (typically external PDFs hosted by each MEA secretariat), then fetch directly."
+  },
+  "enrich": {
+    "mode": "dspace-item",
+    "notes": "Not DSpace, but analogous: fetch a single Document by GUID with $expand of title/description/authors/types/treaties/keywords/files to enrich a record fully via one OData call."
+  },
+  "methodologyMarkdown": "## Overview\nUNEP's MEA document corpus is exposed through InforMEA, which provides a genuine REST API (OData v2) at http://odata.informea.org/informea.svc. The Documents collection holds ~44,616 documents. This is a real API family, not HTML scraping. A parallel Drupal REST API (SwaggerHub: eaudeweb-drupal/InforMEA-D8-API) and the browsable server-rendered listing at www.informea.org/en/documents (85k+ items) also exist as fallbacks.\n\n## Search\nUse OData query options against /Documents. Full-text-ish filtering via $filter=substringof('{query}',title). Browse via $top/$skip paging. The service exposes eight collections (Treaties, Meetings, Decisions, Contacts, National reports/action plans, Sites, Documents).\n\n## Filters\nDeclared filters map to OData $filter: treaty (e.g. treaty eq 'basel') and published date ranges (ge/le datetime). Other navigation properties (types, keywords, authors) can be filtered/expanded.\n\n## Download\nThe 'files' navigation property is deferred; expand it ($expand=files) to get download URLs, which are typically direct PDFs hosted by the individual MEA secretariats. Fetch directly.\n\n## Metadata & Enrichment\nRecords are richly modeled: title, description, authors, types, treaties, keywords, identifiers, tags, files. Most are deferred, so one enrichment call per record with $expand returns full metadata.\n\n## Limitations\nHONEST: The base service runs over plain HTTP (odata.informea.org) and most content fields are deferred, requiring an $expand or a second call per record. Dates are OData /Date(ms)/ epoch format needing parsing. Terms of service ask integrators to include usage-tracking. The recjson-style shortcuts are not available; use OData query syntax.",
+  "verified": true,
+  "probeNotes": "www.informea.org/api documents both OData (odata.informea.org) and Drupal REST (SwaggerHub) APIs. Probed http://odata.informea.org/informea.svc/Documents?$top=2&$format=json -> valid JSON, 44,616 Documents, fields id/treaty/published/updated + deferred title/files/authors/types/treaties/keywords. Service metadata lists 8 collections. Confirmed rest-api."
+}

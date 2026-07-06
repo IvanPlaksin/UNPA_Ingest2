@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import useStructuralEditorStore from '../../../stores/structuralEditorStore';
 import FormRenderer from '../../Forms/FormRenderer';
 
@@ -98,17 +98,17 @@ export default function FormPreview({ theme = 'dark' }) {
       <div style={{ maxWidth: 700, margin: '0 auto', padding: 24 }}>
         {/* Locale selector */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-          <span style={{ fontSize: 10, fontWeight: 600, color: t.textSecondary, textTransform: 'uppercase' }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: t.textSecondary, textTransform: 'uppercase' }}>
             Live Preview
           </span>
           <div style={{ flex: 1 }} />
-          <span style={{ fontSize: 9, color: t.textMuted }}>Locale:</span>
+          <span style={{ fontSize: 11, color: t.textMuted }}>Locale:</span>
           {['en', 'fr', 'ru'].map(l => (
             <button
               key={l}
               onClick={() => { setLocale(l); setSubmittedData(null); }}
               style={{
-                padding: '2px 8px', fontSize: 10, fontWeight: 600, borderRadius: 4,
+                padding: '2px 8px', fontSize: 12, fontWeight: 600, borderRadius: 4,
                 border: 'none', cursor: 'pointer',
                 background: locale === l ? t.btnBg : 'transparent',
                 color: locale === l ? t.btnText : t.textSecondary,
@@ -121,7 +121,7 @@ export default function FormPreview({ theme = 'dark' }) {
 
         {!hasFields ? (
           <div style={{
-            padding: 40, textAlign: 'center', color: t.textMuted, fontSize: 12,
+            padding: 40, textAlign: 'center', color: t.textMuted, fontSize: 13,
             border: `1px dashed ${t.border}`, borderRadius: 8,
           }}>
             Add fields in the Form Editor tab to see the preview.
@@ -151,8 +151,8 @@ export default function FormPreview({ theme = 'dark' }) {
             marginTop: 16, padding: 12,
             background: t.successBg, border: `1px solid ${t.successBorder}`, borderRadius: 8,
           }}>
-            <div style={{ fontSize: 10, fontWeight: 600, color: t.successText, marginBottom: 6 }}>Submitted data:</div>
-            <pre style={{ fontSize: 10, color: t.textSecondary, margin: 0, whiteSpace: 'pre-wrap', maxHeight: 200, overflow: 'auto' }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: t.successText, marginBottom: 6 }}>Submitted data:</div>
+            <pre style={{ fontSize: 12, color: t.textSecondary, margin: 0, whiteSpace: 'pre-wrap', maxHeight: 200, overflow: 'auto' }}>
               {JSON.stringify(submittedData, null, 2)}
             </pre>
           </div>

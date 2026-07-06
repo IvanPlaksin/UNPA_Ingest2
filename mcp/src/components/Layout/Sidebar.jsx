@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { MessageSquare, Database, GitGraph, Settings, Search, LayoutDashboard, ListTodo, FolderTree, Bot, FlaskConical, Layers, Microscope, Workflow, Brain, Network, Globe, DatabaseZap, Activity, ClipboardList, BookOpen, BarChart3, FolderKanban, PenTool, FormInput, ChevronDown, ChevronRight, Headphones, FileText, Triangle, AlertTriangle, HeartPulse, Archive } from 'lucide-react';
+import { MessageSquare, Database, GitGraph, Settings, Search, LayoutDashboard, ListTodo, FolderTree, Bot, FlaskConical, Layers, Microscope, Workflow, Brain, Network, Globe, DatabaseZap, Activity, Cpu, ClipboardList, BookOpen, BarChart3, FolderKanban, PenTool, FormInput, ChevronDown, ChevronRight, Headphones, FileText, Triangle, AlertTriangle, HeartPulse, Archive, Boxes, Map, LineChart, ShieldAlert, ScanSearch } from 'lucide-react';
 import {
     Box,
     Drawer,
@@ -120,7 +120,10 @@ const Sidebar = () => {
                     <NavItem to="/knowledge-triangle" icon={Triangle} label="Triangle Explorer" />
                     <NavItem to="/gaps" icon={AlertTriangle} label="Gap Manager" />
                     <NavItem to="/knowledge-health" icon={HeartPulse} label="Health Dashboard" />
-                    <NavItem to="/entity-store" icon={Archive} label="Entity Store" />
+                    <NavItem to="/entity-store"  icon={Archive} label="Entity Store" />
+                    <NavItem to="/investigation" icon={ScanSearch} label="Investigation" />
+                    <NavItem to="/vector-store"  icon={Boxes}  label="Vector Store"   indent />
+                    <NavItem to="/knowledge-map" icon={Map}    label="Knowledge Map"  indent />
                     <NavItem to="/knowledge/graph" icon={GitGraph} label="Knowledge Graph" />
                     <NavItem to="/knowledge/planes" icon={Layers} label="Knowledge Planes" />
                     <NavItem to="/knowledge/crud" icon={DatabaseZap} label="Graph Manager" />
@@ -210,7 +213,9 @@ const Sidebar = () => {
                     </Collapse>
 
                     <SectionHeader title="Pipeline" />
-                    <NavItem to="/pipeline-lab" icon={Microscope} label="Pipeline Lab" />
+                    <NavItem to="/pipeline-lab"     icon={Microscope} label="Pipeline Lab" />
+                    <NavItem to="/pipeline-manager" icon={Cpu}        label="Pipeline Manager" />
+                    <NavItem to="/pipeline-stats"   icon={LineChart}  label="Pipeline Stats" />
                     <NavItem to="/aopeg" icon={Workflow} label="AOPEG Editor" />
                     <NavItem to="/gxe" icon={Brain} label="GXE Visualizer" />
                     <NavItem to="/gxe-manager" icon={Activity} label="GXE Manager" />
@@ -222,6 +227,7 @@ const Sidebar = () => {
                     <SectionHeader title="Advanced" />
                     <NavItem to="/gnn" icon={Network} label="GNN Dashboard" />
                     <NavItem to="/singularity" icon={Globe} label="Singularity 3D" />
+                    <NavItem to="/entity-singularity" icon={Boxes} label="Entity Singularity" />
 
                     <SectionHeader title="Assistant" />
                     <NavItem to="/agent" icon={Bot} label="Chat Agent" />
@@ -232,6 +238,7 @@ const Sidebar = () => {
 
                     <SectionHeader title="Monitoring" />
                     <NavItem to="/observability" icon={BarChart3} label="Observability" />
+                    <NavItem to="/llm-access-control" icon={ShieldAlert} label="LLM Access Control" />
                 </List>
             </Box>
 

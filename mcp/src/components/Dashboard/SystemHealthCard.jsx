@@ -1,4 +1,4 @@
-/**
+﻿/**
  * SystemHealthCard — system-wide health overview
  *
  * Shows a circular progress ring with health score, health level label,
@@ -85,7 +85,7 @@ export default function SystemHealthCard({ healthScore = 0, healthLevel = 'FAIR'
                     <Typography variant="h5" fontWeight={800} sx={{ color, lineHeight: 1 }}>
                         {healthScore}%
                     </Typography>
-                    <Typography variant="caption" sx={{ color, fontWeight: 600, fontSize: 9 }}>
+                    <Typography variant="caption" sx={{ color, fontWeight: 600, fontSize: 11 }}>
                         {healthLevel}
                     </Typography>
                 </Box>
@@ -106,7 +106,7 @@ export default function SystemHealthCard({ healthScore = 0, healthLevel = 'FAIR'
                         label={`${metrics.totalProcesses} processes`}
                         size="small"
                         variant="outlined"
-                        sx={{ fontSize: 11 }}
+                        sx={{ fontSize: 13 }}
                     />
                 </Box>
             )}

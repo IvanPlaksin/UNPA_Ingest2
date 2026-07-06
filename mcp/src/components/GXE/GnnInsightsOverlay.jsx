@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+﻿import React, { useMemo } from 'react';
 
 // ═══════════════════════════════════════════════════════════════════════
 // GnnInsightsOverlay
@@ -50,7 +50,7 @@ export function buildPredictedEdges(predictions = []) {
       opacity: Math.min(p.probability || 0.5, 0.9),
     },
     label: `${Math.round((p.probability || 0) * 100)}%`,
-    labelStyle: { fill: '#d2a8ff', fontSize: 10, fontWeight: 600 },
+    labelStyle: { fill: '#d2a8ff', fontSize: 12, fontWeight: 600 },
     markerEnd: { type: 'arrowclosed', color: '#a855f7' },
     data: { isGnnPrediction: true, probability: p.probability },
   }));
@@ -153,7 +153,7 @@ const GnnInsightsOverlay = ({
               <span style={{
                 padding: '2px 6px',
                 borderRadius: 4,
-                fontSize: 9,
+                fontSize: 11,
                 fontWeight: 600,
                 background: cls.color + '20',
                 color: cls.color,
@@ -167,7 +167,7 @@ const GnnInsightsOverlay = ({
               <span style={{
                 padding: '2px 6px',
                 borderRadius: 4,
-                fontSize: 9,
+                fontSize: 11,
                 fontWeight: 600,
                 background: comm.color + '20',
                 color: comm.color,

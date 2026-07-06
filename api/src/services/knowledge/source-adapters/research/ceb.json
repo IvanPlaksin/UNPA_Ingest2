@@ -1,0 +1,24 @@
+{
+  "key": "ceb",
+  "name": "CEB Reports",
+  "family": "url-catalog",
+  "capabilities": ["browseAll", "paginate", "download"],
+  "filterSchema": [],
+  "config": {
+    "url": "https://unsceb.org/content/reports",
+    "searchUrlTemplate": "",
+    "linkFilter": ".pdf",
+    "includeAllLinks": false
+  },
+  "download": {
+    "mode": "direct-pdf",
+    "notes": "Reports are direct .pdf links hosted under https://unsceb.org/sites/default/files/. Resolve relative hrefs against https://unsceb.org."
+  },
+  "enrich": {
+    "mode": "none",
+    "notes": "No item API. Title, session and date derived from anchor text and filename (e.g. CEB.2026.3, AOR_2025-E2026-50.pdf)."
+  },
+  "methodologyMarkdown": "## Overview\nThe UN System Chief Executives Board (CEB) publishes session reports (HLCM, HLCP, HRN, DTN) and annual overviews at https://unsceb.org/content/reports. It is a server-rendered Drupal site: a plain GET returns real HTML with direct PDF anchors, so the listing is reliably scrapable.\n\n## Search\nNo JSON/REST search API. The documented site search endpoint https://unsceb.org/search?q={query} returned an empty/JS-driven body on probing and did not yield server-rendered result links, so 'search' is NOT claimed. The safe strategy is to browse and paginate the /content/reports listing rather than rely on the search box.\n\n## Filters\nThe navigation exposes taxonomy filters as URL params (e.g. ?field_mechanism[94]=94, ?field_product[5]=5), but these are opaque numeric term IDs, not human-friendly date/type filters, so no filterSchema is declared. Pagination uses ?page=N.\n\n## Download\nReports appear as direct .pdf links under /sites/default/files/. Download is a plain GET of the resolved absolute URL. Filenames encode the body and session (e.g. 'CEB.2026.3 - HLCM 51st Session - Final Report_published.pdf').\n\n## Metadata & Enrichment\nNo per-document metadata endpoint. Session, body and approximate date are parsed from anchor text and filename. No enrichment adapter needed.\n\n## Limitations\nList browsing is solid and server-rendered, but keyword search is not usable via a simple URL (search page appears JS-driven / returned no scrapable links). Coverage is therefore best via paginated browse of /content/reports and sibling category pages (/content/notes etc.).",
+  "verified": true,
+  "probeNotes": "WebFetch of https://unsceb.org/content/reports returned server-rendered HTML with direct .pdf links under /sites/default/files/ and ?page=N pagination. WebFetch of https://unsceb.org/search?q=climate returned an empty body (no server-rendered results), so search capability was dropped."
+}

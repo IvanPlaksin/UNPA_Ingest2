@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useMemo } from 'react';
+﻿import React, { useCallback, useRef, useMemo } from 'react';
 import useStructuralEditorStore from '../../../stores/structuralEditorStore';
 
 const THEMES = {
@@ -65,19 +65,19 @@ function FieldCard({ node, index, isSelected, onSelect, onDragStart, onDragOver,
         {d.nodeType === 'ENUM' ? 'enum' : d.dataType}
       </div>
 
-      <div style={{ fontSize: 12, fontWeight: 600, color: t.text, marginBottom: 2, paddingRight: 50 }}>
+      <div style={{ fontSize: 13, fontWeight: 600, color: t.text, marginBottom: 2, paddingRight: 50 }}>
         {d.label?.en || d.name}
         {d.required && <span style={{ color: '#ef4444', marginLeft: 4 }}>*</span>}
       </div>
 
-      <div style={{ fontSize: 10, color: t.textSecondary }}>{d.name}</div>
+      <div style={{ fontSize: 12, color: t.textSecondary }}>{d.name}</div>
 
       {d.dataSource?.dataSourceId && (
         <div style={{
-          marginTop: 4, fontSize: 9, color: '#a78bfa',
+          marginTop: 4, fontSize: 11, color: '#a78bfa',
           display: 'flex', alignItems: 'center', gap: 4,
         }}>
-          <span style={{ fontSize: 11 }}>{'\u26A1'}</span>
+          <span style={{ fontSize: 13 }}>{'\u26A1'}</span>
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 140 }}>
             {d.dataSource.dataSourceId}
           </span>
@@ -99,7 +99,7 @@ function FieldCard({ node, index, isSelected, onSelect, onDragStart, onDragOver,
       <div style={{
         marginTop: 8, padding: '6px 10px', borderRadius: 4,
         background: t.inputBg, border: `1px solid ${t.inputBorder}`,
-        fontSize: 11, color: t.textMuted,
+        fontSize: 13, color: t.textMuted,
         minHeight: d.uiHints?.widget === 'textarea' ? 50 : 28,
       }}>
         {d.nodeType === 'ENUM'
@@ -192,7 +192,7 @@ export default function FormLayoutEditor({ theme = 'dark' }) {
               width: 40, height: 32, borderRadius: 6,
               background: t.paletteCardBg, border: `1px solid ${t.paletteBorder}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 12, fontWeight: 700, color: ft.color,
+              fontSize: 13, fontWeight: 700, color: ft.color,
               cursor: 'pointer', transition: 'border-color 0.15s',
             }}
             onMouseEnter={e => e.currentTarget.style.borderColor = ft.color}
@@ -232,7 +232,7 @@ export default function FormLayoutEditor({ theme = 'dark' }) {
           {fieldNodes.length === 0 && (
             <div style={{
               width: '100%', padding: 40, textAlign: 'center',
-              border: `2px dashed ${t.border}`, borderRadius: 8, color: t.textMuted, fontSize: 12,
+              border: `2px dashed ${t.border}`, borderRadius: 8, color: t.textMuted, fontSize: 13,
             }}>
               Drag fields from the palette or click to add
             </div>

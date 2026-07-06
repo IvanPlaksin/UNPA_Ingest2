@@ -36,7 +36,7 @@ async function summarizeWithLLM(llmService, text, maxTokens = 150, model) {
   try {
     const result = await llmService.chat(
       [{ role: 'user', content: SEGMENT_PROMPT(text.slice(0, 3000)) }],
-      { model: model || process.env.SUMMARY_MODEL || 'claude-haiku-4-5-20251001', maxTokens }
+      { model: model || process.env.SUMMARY_MODEL || 'claude-haiku-4-5-20251001', maxTokens, caller: 'aopeg_dialogue' }
     );
     const rawContent = result.content;
     const content = Array.isArray(rawContent)

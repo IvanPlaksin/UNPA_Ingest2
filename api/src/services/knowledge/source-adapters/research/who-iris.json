@@ -1,0 +1,82 @@
+{
+  "key": "who-iris",
+  "name": "WHO IRIS Repository",
+  "family": "dspace",
+  "capabilities": ["search", "browseAll", "paginate", "filter", "sort", "download", "enrich", "fulltext"],
+  "filterSchema": [
+    {
+      "type": "dateFrom",
+      "param": "f.dateIssued",
+      "label": "Date issued range",
+      "notes": "DSpace range filter. Value format: [YYYY TO YYYY],equals (URL-encoded). Verified returned 2276 results for [2020 TO 2023]."
+    },
+    {
+      "type": "docType",
+      "param": "f.itemtype",
+      "label": "Document type",
+      "options": [
+        "Governing Bodies documents",
+        "Journal articles",
+        "Technical Documents",
+        "Publications",
+        "Meeting reports",
+        "Press Releases, Fact Sheets, Newsletters, Statements",
+        "Speeches and Remarks",
+        "Multimedia material"
+      ],
+      "notes": "Value format: <value>,equals. Verified f.itemtype=Publications,equals returned 3891 results. Labels are inconsistently cased in the index (e.g. both 'Governing Bodies documents' and 'Governing Bodies Documents' exist)."
+    },
+    {
+      "type": "language",
+      "param": "f.language",
+      "label": "Language",
+      "notes": "Facet exists (name 'language'). ISO codes stored in dc.language.iso (e.g. 'en'). Facet value listing via /discover/facets/language returned HTTP 400 without a query context; apply as f.language=<code>,equals within a search."
+    },
+    {
+      "type": "subject",
+      "param": "f.subject",
+      "label": "Subject / MeSH",
+      "notes": "Additional verified facets: author, mesh, publisher, series, entityType."
+    }
+  ],
+  "config": {
+    "endpoint": "https://iris.who.int/server/api/discover/search/objects",
+    "method": "GET",
+    "searchParam": "query",
+    "queryParams": {
+      "dsoType": "item"
+    },
+    "pageParam": "page",
+    "limitParam": "size",
+    "pageParamStyle": "offset-0",
+    "sortParam": "sort",
+    "sortExample": "dc.date.issued,DESC",
+    "responseMapping": {
+      "items": "_embedded.searchResult._embedded.objects",
+      "itemRoot": "_embedded.indexableObject",
+      "title": "metadata['dc.title'][0].value",
+      "url": "metadata['dc.identifier.uri'][0].value",
+      "date": "metadata['dc.date.issued'][0].value",
+      "total": "_embedded.searchResult.page.totalElements",
+      "symbol": "metadata['dc.identifier.govdoc'][0].value",
+      "description": "metadata['dc.description'][0].value",
+      "uuid": "uuid",
+      "language": "metadata['dc.language.iso'][0].value",
+      "type": "metadata['dc.type'][0].value",
+      "publisher": "metadata['dc.publisher'][0].value"
+    }
+  },
+  "download": {
+    "mode": "dspace-bitstream",
+    "urlPattern": "https://iris.who.int/server/api/core/bitstreams/{bitstreamUuid}/content",
+    "notes": "Resolve chain (all verified): GET /server/api/core/items/{itemUuid}/bundles -> find bundle name=='ORIGINAL' -> GET /server/api/core/bundles/{bundleUuid}/bitstreams -> take bitstream (or primaryBitstream) -> use its _links.content.href. GET on the content URL returns 200 application/pdf (verified: %PDF-1.4 header, 18899 bytes). NOTE: HTTP HEAD on the content URL returns 500 and sets a DSPACE-XSRF-COOKIE; use GET, not HEAD. Bundles present per item: ORIGINAL, LICENSE, TEXT (extracted full text), THUMBNAIL."
+  },
+  "enrich": {
+    "mode": "dspace-item",
+    "endpoint": "https://iris.who.int/server/api/core/items/{uuid}",
+    "notes": "Returns full item metadata block. Verified metadata keys: dc.contributor.author, dc.coverage.spatial, dc.date.accessioned, dc.date.available, dc.date.issued, dc.description, dc.identifier.govdoc (WHO document symbol), dc.identifier.uri (handle), dc.language, dc.language.iso, dc.publisher, dc.subject, dc.subject.mesh, dc.subject.meshqualifier, dc.title, dc.type, who.relation.languageVersion. Extracted plain text available via the TEXT bundle bitstream for fulltext indexing."
+  },
+  "methodologyMarkdown": "## Overview\nWHO IRIS (Institutional Repository for Information Sharing) is the World Health Organization's DSpace 7 repository, exposing ~33,700+ items on a query for 'malaria' alone (total corpus is far larger). It holds Governing Bodies documents, technical documents, journal articles, publications and meeting reports. Access is via the standard DSpace 7 Discovery REST API and requires no authentication for reads.\n\n## Search\nGET `https://iris.who.int/server/api/discover/search/objects` with `query=<terms>`, `dsoType=item`, `page` (0-based), `size` (page size), and `sort` (e.g. `dc.date.issued,DESC`). Results live under `_embedded.searchResult._embedded.objects[]._embedded.indexableObject`, each carrying `uuid`, `name` and a `metadata` map. Total count is at `_embedded.searchResult.page.totalElements`.\n\n## Filters\nApply DSpace facet filters as query params. Verified working: `f.itemtype=Publications,equals` (document type; returned 3891 hits), `f.dateIssued=[2020 TO 2023],equals` (date range; URL-encode brackets; returned 2276 hits). Additional facets exposed by the API: `author`, `mesh`, `publisher`, `subject`, `series`, `entityType`, `language`, `has_content_in_original_bundle`. Multiple `f.*` params can be combined.\n\n## Download\nFull PDFs are DSpace bitstreams. Chain: `GET /server/api/core/items/{uuid}/bundles` -> pick bundle `ORIGINAL` -> `GET /server/api/core/bundles/{bundleUuid}/bitstreams` -> follow `_links.content.href`, i.e. `/server/api/core/bitstreams/{bitstreamUuid}/content`. Use HTTP GET (verified 200, application/pdf); a HEAD request returns 500.\n\n## Metadata & Enrichment\n`GET /server/api/core/items/{uuid}` returns the complete Dublin Core metadata block. Useful fields: `dc.identifier.govdoc` (WHO document symbol), `dc.identifier.uri` (handle), `dc.subject.mesh` (MeSH terms), `dc.type`, `dc.language.iso`, `who.relation.languageVersion` (links to translations). Machine-extracted full text is available via the `TEXT` bundle for downstream indexing.\n\n## Limitations\nWebFetch is blocked by a WAF (HTTP 403); a browser-like User-Agent via direct HTTP client works. Facet-value listing endpoints (e.g. `/discover/facets/language`) require a search context and may 400 when called bare. Item-type labels are inconsistently cased in the index, so exact-match filters should account for case variants.",
+  "verified": true,
+  "probeNotes": "Called (200 unless noted): GET /server/api/discover/search/objects?query=malaria&size=2&dsoType=item -> total 33711, first item uuid dc9a8577-c1cf-4fdf-b583-9d908251c148 'Malaria, including proposal for establishment of Malaria Day', dc.type='Governing Bodies documents', dc.identifier.uri='https://iris.who.int/handle/10665/22591'. Facets returned: author, mesh, dateIssued, has_content_in_original_bundle, entityType, publisher, subject, series, itemtype. GET /server/api/core/items/{uuid} -> 200 metadata. GET /server/api/core/items/{uuid}/bundles -> ORIGINAL/LICENSE/TEXT/THUMBNAIL. GET /server/api/core/bundles/{orig}/bitstreams -> A60_R18-en.pdf, content link followed with GET -> 200 %PDF-1.4 18899 bytes. GET /discover/facets/itemtype -> value list (Publications, Journal articles, etc.). Filter tests: f.itemtype=Publications,equals -> 200 total 3891; f.dateIssued=[2020 TO 2023],equals -> 200 total 2276 (note: f.dateIssued.min/.max style returned 422). sort=dc.date.issued,DESC -> 200. HEAD on bitstream content -> 500 (use GET). WebFetch on iris.who.int -> 403 (WAF)."
+}

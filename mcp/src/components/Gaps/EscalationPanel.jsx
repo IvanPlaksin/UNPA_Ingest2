@@ -1,4 +1,4 @@
-/**
+﻿/**
  * EscalationPanel — Gap escalation view and actions
  *
  * Shows:
@@ -224,7 +224,7 @@ export default function EscalationPanel({ gap, onEscalate, onSnooze, onClose }) 
                     <Button key={days} variant="outlined" size="small"
                         onClick={() => handleSnooze(days)}
                         disabled={saving}
-                        sx={{ fontSize: 11, px: 1 }}>
+                        sx={{ fontSize: 13, px: 1 }}>
                         Snooze {days}d
                     </Button>
                 ))}

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * CodexGraphView — interactive Codex graph with lazy expansion.
  *
  * Two layout modes:
@@ -376,7 +376,7 @@ function CodexGraphInner({ parts, crossRefs, adrLinks, loading, error, onSelectP
       newEdges.push({
         id: `cr-${i}`, source: cr.source, target: cr.target,
         animated: true, label: cr.reason?.slice(0, 25),
-        labelStyle: { fontSize: 9, fill: '#a0aec0' },
+        labelStyle: { fontSize: 13, fill: '#a0aec0' },
         style: { stroke: '#4fd1c5', strokeWidth: 1.5 },
         markerEnd: { type: MarkerType.ArrowClosed, color: '#4fd1c5', width: 12, height: 12 }
       });

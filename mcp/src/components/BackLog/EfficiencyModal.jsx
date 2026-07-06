@@ -1,4 +1,4 @@
-/**
+﻿/**
  * EfficiencyModal — Shows efficiency analysis results for a backlog task.
  * Displays: overall score gauge, metrics breakdown, recommendations list.
  * "Create Optimization Task" button at the bottom.
@@ -289,7 +289,7 @@ export default function EfficiencyModal({ open, onClose, item }) {
                           <Chip
                             label={rec.impact}
                             size="small"
-                            sx={{ fontSize: 9, height: 18, ml: 1 }}
+                            sx={{ fontSize: 11, height: 18, ml: 1 }}
                           />
                         )}
                       </ListItem>

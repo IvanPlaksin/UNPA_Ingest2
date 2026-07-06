@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
     Box,
     Card,
@@ -69,8 +69,8 @@ function TopToolsChart({ data }) {
                 <Box sx={{ width: '100%', height: 300 }}>
                     <ResponsiveContainer>
                         <BarChart data={chartData} layout="vertical" margin={{ left: 10, right: 20, top: 5, bottom: 5 }}>
-                            <XAxis type="number" tick={{ fontSize: 12 }} />
-                            <YAxis type="category" dataKey="name" width={140} tick={{ fontSize: 11 }} />
+                            <XAxis type="number" tick={{ fontSize: 13 }} />
+                            <YAxis type="category" dataKey="name" width={140} tick={{ fontSize: 13 }} />
                             <Tooltip />
                             <Bar dataKey="calls" fill={COLORS[0]} radius={[0, 4, 4, 0]} />
                         </BarChart>
@@ -100,8 +100,8 @@ function TopCodexRulesChart({ data }) {
                 <Box sx={{ width: '100%', height: 300 }}>
                     <ResponsiveContainer>
                         <BarChart data={chartData} layout="vertical" margin={{ left: 10, right: 20, top: 5, bottom: 5 }}>
-                            <XAxis type="number" tick={{ fontSize: 12 }} />
-                            <YAxis type="category" dataKey="name" width={140} tick={{ fontSize: 11 }} />
+                            <XAxis type="number" tick={{ fontSize: 13 }} />
+                            <YAxis type="category" dataKey="name" width={140} tick={{ fontSize: 13 }} />
                             <Tooltip />
                             <Bar dataKey="hits" fill={COLORS[1]} radius={[0, 4, 4, 0]} />
                         </BarChart>

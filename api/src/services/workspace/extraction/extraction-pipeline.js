@@ -186,7 +186,7 @@ async function runExtractionPipeline(workspaceId, sourceId, options = {}) {
 
         const response = await llm().chat(
           [{ role: 'user', content: filledPrompt }],
-          { maxTokens: 4000, temperature: 0.1 }
+          { maxTokens: 4000, temperature: 0.1, caller: 'workspace_agent' }
         );
 
         const rawRC = response?.content;

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * DocumentVertex — Triangle vertex document list
  *
  * Displays documents linked to a process via a specific triangle edge type.
@@ -66,7 +66,7 @@ export default function DocumentVertex({ vertexType, documents = [], processId, 
                         {meta.label} Documents
                     </Typography>
                     <Chip label={`${meta.edgeLabel}`} size="small" variant="outlined"
-                        sx={{ fontSize: 10, height: 18, color: meta.color, borderColor: meta.color + '66' }} />
+                        sx={{ fontSize: 12, height: 18, color: meta.color, borderColor: meta.color + '66' }} />
                     <Typography variant="caption" color="text.disabled">{meta.layers}</Typography>
                 </Stack>
                 {!readonly && (
@@ -128,7 +128,7 @@ export default function DocumentVertex({ vertexType, documents = [], processId, 
                                     </Tooltip>
                                     {doc.layer && (
                                         <Chip label={doc.layer} size="small"
-                                            sx={{ height: 16, fontSize: 10,
+                                            sx={{ height: 16, fontSize: 12,
                                                   bgcolor: LAYER_COLORS[doc.layer] || '#64748b',
                                                   color: '#fff' }} />
                                     )}

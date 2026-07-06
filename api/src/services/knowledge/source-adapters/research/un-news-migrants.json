@@ -1,0 +1,17 @@
+{
+  "key": "un-news-migrants",
+  "name": "UN News — Migrants & Refugees",
+  "family": "rss-feed",
+  "capabilities": ["search", "browseAll", "paginate"],
+  "filterSchema": [
+    { "type": "dateFrom", "param": "_clientDateFrom", "label": "From date", "clientSide": true },
+    { "type": "dateTo", "param": "_clientDateTo", "label": "To date", "clientSide": true },
+    { "type": "keyword", "param": "_clientKeyword", "label": "Keyword (title/description)", "clientSide": true }
+  ],
+  "config": { "url": "https://news.un.org/feed/subscribe/en/news/topic/migrants-and-refugees/feed/rss.xml" },
+  "download": { "mode": "record-page", "notes": "item link is an HTML article page on news.un.org; no direct PDF. enclosure is a JPEG lead image, not a document." },
+  "enrich": { "mode": "none", "notes": "no per-item metadata API" },
+  "methodologyMarkdown": "## Overview\nUN News — Migrants & Refugees is the topic-scoped RSS 2.0 feed of the United Nations news service (news.un.org) filtered to the migration and displacement desk. It covers UNHCR and IOM operations, refugee protection, asylum, resettlement, statelessness and the human stories of people on the move.\n\n## Search\nClient-side keyword filtering over RSS item title/description; no server query API. The feed URL scopes content to migrants and refugees on the server side; any finer keyword match (a route, camp or country) must be applied in-memory as a substring scan over each item's title and description.\n\n## Filters\nTopic scoping to migrants and refugees is fixed by the feed URL. Beyond that only client-side filters apply: publication date range (from pubDate) and keyword. Items carry no per-item `<category>`/`dc:subject` tags, so no secondary category filter is available.\n\n## Download\nThe retrievable document is the item `<link>` HTML article page. Each item also has an `<enclosure>` pointing to a JPEG lead image, not a PDF; no direct document downloads are offered.\n\n## Metadata & Enrichment\nNot supported.\n\n## Limitations\nFeed returns only the most recent ~30 items; no historical pagination beyond the feed window and no archive parameter.",
+  "verified": true,
+  "probeNotes": "Reachable, valid RSS 2.0. Observed 30 items. Fields: title, link, description, guid, pubDate, enclosure (JPEG). No <category>/dc:subject tags. No PDF links."
+}

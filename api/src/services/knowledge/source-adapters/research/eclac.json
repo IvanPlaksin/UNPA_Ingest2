@@ -1,0 +1,84 @@
+{
+  "key": "eclac",
+  "name": "ECLAC Repository",
+  "family": "dspace",
+  "capabilities": ["search", "browseAll", "paginate", "filter", "sort", "download", "enrich", "fulltext"],
+  "filterSchema": [
+    {
+      "type": "dateFrom",
+      "param": "f.dateIssued",
+      "label": "Date issued range",
+      "notes": "DSpace 7 range filter, same platform as WHO IRIS. Value format: [YYYY TO YYYY],equals (URL-encode brackets). 'dateIssued' confirmed present in the facet list."
+    },
+    {
+      "type": "docType",
+      "param": "f.typedoc",
+      "label": "Document type",
+      "options": [
+        "libro",
+        "contribución a congreso",
+        "capítulo de libro",
+        "artículo",
+        "publicación seriada",
+        "video",
+        "revista",
+        "bibliografía",
+        "informe"
+      ],
+      "notes": "Verified via /discover/facets/typedoc. Labels are in Spanish. Value format: <value>,equals. Top counts: libro 20989, contribución a congreso 15965, capítulo de libro 5346, artículo 4151."
+    },
+    {
+      "type": "language",
+      "param": "f.language",
+      "label": "Language",
+      "options": ["spa", "eng", "fra", "por", "mul", "ita", "zho"],
+      "notes": "Verified via /discover/facets/language. ISO codes. Counts: spa 37399, eng 14547, fra 1128, por 970, mul 486. Value format: <code>,equals."
+    },
+    {
+      "type": "subject",
+      "param": "f.subject",
+      "label": "Subject",
+      "notes": "Rich facet set (27 total). Notable: unsymbol (UN document symbol), sdg (Sustainable Development Goal), regionaloffice, series, publisher, project, event, coverageEng/coverageSpa (country coverage), subjectEng/subjectSpa, topicEng/topicSpa, workareaEng/workareaSpa."
+    }
+  ],
+  "config": {
+    "endpoint": "https://repositorio.cepal.org/server/api/discover/search/objects",
+    "method": "GET",
+    "searchParam": "query",
+    "queryParams": {
+      "dsoType": "item"
+    },
+    "pageParam": "page",
+    "limitParam": "size",
+    "pageParamStyle": "offset-0",
+    "sortParam": "sort",
+    "sortExample": "dc.date.issued,DESC",
+    "responseMapping": {
+      "items": "_embedded.searchResult._embedded.objects",
+      "itemRoot": "_embedded.indexableObject",
+      "title": "metadata['dc.title'][0].value",
+      "url": "metadata['dc.identifier.uri'][0].value",
+      "date": "metadata['dc.date.issued'][0].value",
+      "total": "_embedded.searchResult.page.totalElements",
+      "symbol": "metadata['dc.identifier.unsymbol'][0].value",
+      "description": "metadata['dc.description.abstract'][0].value",
+      "uuid": "uuid",
+      "language": "metadata['dc.language.iso'][0].value",
+      "type": "metadata['dc.type.coar'][0].value",
+      "publisher": "metadata['dc.publisher'][0].value"
+    }
+  },
+  "download": {
+    "mode": "dspace-bitstream",
+    "urlPattern": "https://repositorio.cepal.org/server/api/core/bitstreams/{bitstreamUuid}/content",
+    "notes": "Same DSpace 7 chain as WHO IRIS: GET /server/api/core/items/{itemUuid}/bundles -> bundle name=='ORIGINAL' -> GET /server/api/core/bundles/{bundleUuid}/bitstreams -> _links.content.href. Verified: item add0bc7e-... has bundles ORIGINAL/TEXT/THUMBNAIL; ORIGINAL bitstream LCcarG555_en.pdf resolves to https://repositorio.cepal.org/server/api/core/bitstreams/3d9f8200-97ed-41ab-a24b-df8318afd544/content. dc.format.mimetype in item metadata is application/pdf. TEXT bundle holds extracted full text for indexing."
+  },
+  "enrich": {
+    "mode": "dspace-item",
+    "endpoint": "https://repositorio.cepal.org/server/api/core/items/{uuid}",
+    "notes": "Returns full DC metadata. Verified fields on sample item: dc.title, dc.date.issued, dc.identifier.uri (handle, e.g. https://hdl.handle.net/11362/24751), dc.language.iso, dc.type.coar (COAR resource type, Spanish label), dc.publisher (ECLAC), dc.format.mimetype, dc.coverage.spatialEng. UN document symbol is indexed under the 'unsymbol' facet."
+  },
+  "methodologyMarkdown": "## Overview\nThe ECLAC (CEPAL) Digital Repository at repositorio.cepal.org is a DSpace 7 institutional repository holding the publications of the UN Economic Commission for Latin America and the Caribbean: books, conference contributions, book chapters, articles, serials and reports (7,757 hits on a 'poverty' query). Content is largely bilingual/trilingual (Spanish, English, French, Portuguese). No authentication is required for reads.\n\n## Search\nUse the DSpace Discovery API (preferred over OAI-PMH, which is harvest-only and has no keyword search). GET `https://repositorio.cepal.org/server/api/discover/search/objects` with `query=<terms>`, `dsoType=item`, `page` (0-based), `size`, and `sort` (e.g. `dc.date.issued,DESC`). Items sit under `_embedded.searchResult._embedded.objects[]._embedded.indexableObject` with `uuid`, `name` and a `metadata` map; total at `_embedded.searchResult.page.totalElements`.\n\n## Filters\nApply DSpace facets as `f.<facet>=<value>,equals`. Verified facets and values: `f.typedoc` (document type; Spanish labels: libro, contribución a congreso, capítulo de libro, artículo, publicación seriada, video, informe), `f.language` (spa, eng, fra, por, mul), `f.dateIssued=[YYYY TO YYYY],equals` (date range). The API exposes 27 facets total, including `unsymbol` (UN document symbol), `sdg`, `regionaloffice`, `series`, `publisher`, `project`, `coverageEng`/`coverageSpa`, `subjectEng`/`subjectSpa`.\n\n## Download\nPDFs are DSpace bitstreams. Chain: `GET /server/api/core/items/{uuid}/bundles` -> pick `ORIGINAL` -> `GET /server/api/core/bundles/{bundleUuid}/bitstreams` -> follow `_links.content.href` (`/server/api/core/bitstreams/{uuid}/content`). Verified resolution on a sample item to LCcarG555_en.pdf.\n\n## Metadata & Enrichment\n`GET /server/api/core/items/{uuid}` returns the full Dublin Core block: `dc.identifier.uri` (Handle), `dc.type.coar`, `dc.language.iso`, `dc.publisher`, `dc.format.mimetype`, `dc.coverage.spatialEng` (country), plus the UN symbol via the `unsymbol` index. The `TEXT` bundle provides machine-extracted full text.\n\n## Limitations\nWebFetch succeeds here (no aggressive WAF), unlike WHO IRIS. Facet labels for document type are Spanish only. OAI-PMH exists at `https://repositorio.cepal.org/server/oai/request` but supports only bulk harvesting by set/date, not keyword queries — keep it as a bulk-sync fallback, not the primary search path.",
+  "verified": true,
+  "probeNotes": "Called (200): GET /server/api/discover/search/objects?query=poverty&size=3&dsoType=item -> total 7757, first item uuid add0bc7e-4677-4759-99c7-2a135c556132, dc.identifier.uri=https://hdl.handle.net/11362/24751, dc.type.coar='contribución a congreso', dc.publisher=ECLAC, dc.format.mimetype=application/pdf, dc.language.iso=eng. Facets (27): author, subjectSpa, subjectEng, subject, dateIssued, entityType, regionaloffice, typedoc, mimetype, biblevel, language, coverageSpa, coverageEng, series, publisher, topicSpa, topicEng, topic, event, project, unsymbol, sdg, work, workareaSpa, workareaEng. GET /discover/facets/typedoc -> libro/contribución a congreso/capítulo de libro/artículo/publicación seriada/video/revista/bibliografía/informe. GET /discover/facets/language -> spa/eng/fra/por/mul/ita/zho. GET /server/api/core/items/{uuid}/bundles -> ORIGINAL/TEXT/THUMBNAIL. GET /server/api/core/bundles/{orig}/bitstreams -> LCcarG555_en.pdf content=/server/api/core/bitstreams/3d9f8200-97ed-41ab-a24b-df8318afd544/content. OAI-PMH base https://repositorio.cepal.org/server/oai/request noted as harvest-only fallback."
+}

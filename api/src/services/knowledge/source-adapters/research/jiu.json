@@ -1,0 +1,24 @@
+{
+  "key": "jiu",
+  "name": "JIU Reports",
+  "family": "url-catalog",
+  "capabilities": ["search", "browseAll", "paginate", "download"],
+  "filterSchema": [],
+  "config": {
+    "url": "https://www.unjiu.org/content/reports",
+    "searchUrlTemplate": "",
+    "linkFilter": ".pdf",
+    "includeAllLinks": false
+  },
+  "download": {
+    "mode": "direct-pdf",
+    "notes": "Each report row on the reports table carries a direct .pdf link under https://www.unjiu.org/sites/www.unjiu.org/files/{filename}.pdf (e.g. jiu_rep_2026_2_english.rev__0.pdf). Filenames follow jiu_rep_{YEAR}_{NUMBER}_{lang}.pdf. Download directly."
+  },
+  "enrich": {
+    "mode": "none",
+    "notes": "Metadata (reference JIU/REP/YYYY/N, title, year, type, preparing inspector) is in the server-rendered table row; no separate record API."
+  },
+  "methodologyMarkdown": "## Overview\nThe UN Joint Inspection Unit publishes system-wide reports, notes and management letters issued since 1968. The reports listing at https://www.unjiu.org/content/reports is a server-rendered Drupal table with real PDF links in every row.\n\n## Search\nThe site header contains a search form; the reports table itself is server-side filterable and paginated. A verified search-URL template was not captured, but on-page dropdown filters (Prepared by, Reference, Scope, Year, Type) drive server-side filtering, and pagination is server-side (9 pages). Search/paginate are therefore supported.\n\n## Filters\nDropdown filters: Prepared by, Reference, Scope, Year, Type. These are handled server-side. Year and reference are also recoverable from the JIU/REP/{YEAR}/{N} symbol and the PDF filename.\n\n## Download\nDirect PDF. Pattern: https://www.unjiu.org/sites/www.unjiu.org/files/{filename}.pdf, filenames like jiu_rep_2026_2_english.rev__0.pdf and jiu_rep_2026_1_0.pdf. Most reports also carry 'Review Highlights' PDFs and organization-response PDFs.\n\n## Metadata & Enrichment\nNo DSpace/item API. Metadata is parsed from the table row (reference symbol, title, year, type) and the filename. Enrichment mode is none.\n\n## Limitations\nContent is server-rendered so no headless browser is needed. Full capability set (search/browseAll/paginate/download) is supported through the server-rendered filterable/paginated table.",
+  "verified": true,
+  "probeNotes": "WebFetch of https://www.unjiu.org/content/reports-notes and /content/reports confirmed server-rendered HTML: a filterable, 9-page-paginated table with a direct .pdf link in each row (pattern https://www.unjiu.org/sites/www.unjiu.org/files/jiu_rep_{YEAR}_{N}_*.pdf). Header search form present. No REST API."
+}

@@ -1,0 +1,24 @@
+{
+  "key": "unodc",
+  "name": "UNODC Publications",
+  "family": "url-catalog",
+  "capabilities": ["search", "browseAll", "download"],
+  "filterSchema": [],
+  "config": {
+    "url": "https://www.unodc.org/unodc/en/data-and-analysis/",
+    "searchUrlTemplate": "https://www.unodc.org/search/?q={query}",
+    "linkFilter": "",
+    "includeAllLinks": true
+  },
+  "download": {
+    "mode": "direct-pdf",
+    "notes": "UNODC hosts report PDFs directly under /documents/data-and-analysis/{...}.pdf (e.g. WDR2014/World_Drug_Report_2014_web.pdf). Landing/report pages under /unodc/en/data-and-analysis/{report}.html link out to these PDFs; some flagship reports also have web-based interactive sections. includeAllLinks with .pdf filtering is appropriate."
+  },
+  "enrich": {
+    "mode": "none",
+    "notes": "Title and year available from landing pages; no structured repository API."
+  },
+  "methodologyMarkdown": "## Overview\nUNODC's data-and-analysis section is a classic static/CMS site of HTML landing pages (.html) that link to report PDFs. It is server-rendered. The overall hub is /unodc/en/data-and-analysis/, with report landing pages such as /unodc/en/data-and-analysis/world-drug-report-2025.html and a publications-by-date index.\n\n## Search\nA site-wide search endpoint exists at /search/ (template /search/?q={query}). Results are server-rendered but span the whole site, so filtering to /documents/ or /data-and-analysis/ paths and to .pdf/.html is recommended.\n\n## Filters\nNo formal facet API; discovery is via curated landing pages (World Drug Report, research on drug trafficking, statistics publications) and the by-date index. No filter schema declared.\n\n## Download\nReport PDFs are hosted directly under /documents/data-and-analysis/{...}.pdf and linked from landing pages. Direct-pdf download works well; because reports are spread across landing pages, includeAllLinks=true with a .pdf link filter is the pragmatic strategy.\n\n## Metadata & Enrichment\nTitle and year are available from landing pages. No JSON/REST API; enrichment is HTML-based.\n\n## Limitations\nHONEST: URL structure is inconsistent across the site and several probed paths (index.html, statistics/publications.html, publications-by-date.html) returned 404, so exact entry points must be verified per report series. Flagship reports (e.g. World Drug Report) increasingly use interactive web sections in addition to PDFs. No pagination in the traditional sense; browse is via curated indexes.",
+  "verified": true,
+  "probeNotes": "index.html and several stats paths returned 404; hub /unodc/en/data-and-analysis/ and per-report .html landings confirmed via WebSearch. Direct PDF hosting under /documents/data-and-analysis/ confirmed (WDR2014 PDF). Site search at /search/. Characterized as static HTML url-catalog with direct-pdf; includeAllLinks=true due to scattered structure."
+}

@@ -1,0 +1,74 @@
+{
+  "key": "world-bank",
+  "name": "World Bank Documents & Reports",
+  "family": "rest-api",
+  "capabilities": ["search", "browseAll", "paginate", "filter", "sort", "download", "enrich", "fulltext"],
+  "filterSchema": [
+    { "type": "dateFrom", "param": "strdate", "label": "Published from (YYYY-MM-DD)" },
+    { "type": "dateTo", "param": "enddate", "label": "Published to (YYYY-MM-DD)" },
+    {
+      "type": "docType",
+      "param": "docty_exact",
+      "label": "Document type",
+      "options": [
+        "Procurement Plan",
+        "Implementation Status and Results Report",
+        "Auditing Document",
+        "Environmental Assessment",
+        "Project Information Document",
+        "Working Paper",
+        "Report",
+        "Project Paper",
+        "Agreement",
+        "Brief",
+        "Disbursement Letter",
+        "Integrated Safeguards Data Sheet",
+        "Resettlement Plan",
+        "Environmental and Social Review Summary",
+        "Environmental and Social Commitment Plan",
+        "Project Appraisal Document",
+        "Stakeholder Engagement Plan",
+        "Implementation Completion and Results Report",
+        "Financing Agreement",
+        "Environmental and Social Management Plan"
+      ]
+    },
+    { "type": "language", "param": "lang_exact", "label": "Language", "options": ["English", "French", "Spanish", "Arabic", "Chinese", "Portuguese", "Russian"] },
+    { "type": "country", "param": "count", "label": "Country" },
+    { "type": "owner", "param": "owner", "label": "Owner / Vice Presidency" }
+  ],
+  "config": {
+    "endpoint": "https://search.worldbank.org/api/v3/wds",
+    "method": "GET",
+    "searchParam": "qterm",
+    "queryParams": {
+      "format": "json",
+      "fl": "docdt,docty,lang,count,pdfurl,txturl,url,display_title,abstracts,entityids,guid,topicv3"
+    },
+    "pageParam": "os",
+    "limitParam": "rows",
+    "pageParamStyle": "offset-0",
+    "responseMapping": {
+      "items": "documents",
+      "title": "display_title",
+      "url": "pdfurl",
+      "date": "docdt",
+      "total": "total",
+      "symbol": "id",
+      "description": "abstracts.cdata!"
+    }
+  },
+  "download": {
+    "mode": "direct-pdf",
+    "urlPattern": "{pdfurl}",
+    "notes": "Each document record exposes pdfurl (direct PDF) and often txturl (plain text). Example: http://documents.worldbank.org/curated/en/679601468208181189/pdf/multi0page.pdf . url field is the HTML record landing page. Some records lack pdfurl (metadata-only)."
+  },
+  "enrich": {
+    "mode": "wds-detail",
+    "endpoint": "https://search.worldbank.org/api/v3/wds",
+    "notes": "The WDS search record is already rich (abstracts, docty, lang, count, entityids, topicv3). No separate detail call is normally needed; to expand fields just widen the fl (field list) param. For a single doc, filter by its guid/id. Full text available via txturl."
+  },
+  "methodologyMarkdown": "## Overview\nThe World Bank Documents & Reports (WDS) API v3 exposes ~295k+ operational and research documents (procurement plans, working papers, project appraisals, environmental assessments, etc.). It is a flat REST/JSON API, no auth required. Endpoint: `https://search.worldbank.org/api/v3/wds`.\n\n## Search\nFree-text search uses `qterm`. Always pass `format=json`. Control returned fields with `fl` (comma-separated field list) to keep payloads small. Response top-level keys: `documents` (map of records keyed by id), `total` (int result count), `rows`, `os`, `page`, `facets`.\n\n## Filters\nVerified working params: `strdate` / `enddate` (date range, `YYYY-MM-DD`), `lang_exact` (language, e.g. `English`), `docty_exact` (document type — use exact facet labels such as `Working Paper`, `Project Appraisal Document`), `count` (country, e.g. `Kenya`), `owner` (owning unit). Retrieve valid facet values by calling with `rows=0&fct=docty_exact` — response returns `facets.docty_exact` map of `{name,count}`. Note: `docty_exact` requires the exact canonical label; a wrong label silently returns `total:0`.\n\n## Download\nEach record carries `pdfurl` (direct PDF link) and frequently `txturl` (plain-text extraction, ideal for full-text ingestion) plus `url` (HTML landing page). Download PDFs directly from `pdfurl` — no bitstream indirection.\n\n## Metadata & Enrichment\nRecords are self-contained: `display_title`, `docdt` (ISO datetime), `docty`, `lang`, `count`, `abstracts`, `entityids`, `topicv3`, `guid`. No secondary enrich request needed — widen `fl` instead. Full text via `txturl`.\n\n## Limitations\nPagination uses `os` (offset, 0-based) with `rows` page size. Very large offsets may be rate-limited. `docty_exact` label mismatches fail silently (empty result). Not every document has a `pdfurl`.",
+  "verified": true,
+  "probeNotes": "GET https://search.worldbank.org/api/v3/wds?qterm=water&format=json&rows=2 -> top keys rows,os,page,total(208872+),documents,facets; record fields id,count,docty,lang,entityids,docdt,abstracts,display_title,pdfurl,txturl,guid,url; pdfurl example http://documents.worldbank.org/curated/en/679601468208181189/pdf/multi0page.pdf, docdt 1972-12-01T05:00:00Z. Confirmed strdate=2021-01-01&enddate=2021-01-31&lang_exact=English -> returned doc docdt 2021-01-21, lang English (filters honored). Confirmed count=Kenya -> returned Kenya document. Confirmed fct=docty_exact -> facets.docty_exact list (Procurement Plan 97683, Working Paper 7752, Project Appraisal Document 3982, ...). Note docty_exact=Working%20Paper with an unrelated count_exact returned 0 (count_exact is not the right country param; the working param is count)."
+}

@@ -1,0 +1,62 @@
+{
+  "key": "unhcr",
+  "name": "UNHCR Refworld",
+  "family": "url-catalog",
+  "capabilities": ["search", "filter", "sort", "download"],
+  "filterSchema": [
+    {
+      "type": "docType",
+      "param": "sm_doc_type[]",
+      "label": "Document type",
+      "notes": "Solr multivalue faceted field (sm_* = string multivalue). Applied as repeatable URL params on the search page. Exact facet field names for type could not be captured programmatically because the site is behind a Cloudflare bot challenge; sm_country_name[] was observed in a live result URL, and the UI documents filtering by document type, country, keyword and source."
+    },
+    {
+      "type": "country",
+      "param": "sm_country_name[]",
+      "label": "Country",
+      "notes": "VERIFIED from a live search-results URL: refworld.org/search?order=desc&sm_country_name[]=Yemen&sort=score. Repeatable for multiple countries."
+    },
+    {
+      "type": "sort",
+      "param": "sort",
+      "label": "Sort order",
+      "options": ["score", "date"],
+      "notes": "Observed sort=score with companion order=desc. UI also offers sort by date and title."
+    }
+  ],
+  "config": {
+    "endpoint": "https://www.refworld.org/search",
+    "method": "GET",
+    "searchParam": "query",
+    "queryParams": {
+      "sort": "score",
+      "order": "desc"
+    },
+    "pageParam": "page",
+    "limitParam": null,
+    "pageParamStyle": "offset-0",
+    "responseMapping": {
+      "items": null,
+      "title": null,
+      "url": null,
+      "date": null,
+      "total": null,
+      "symbol": null,
+      "description": null,
+      "notes": "No JSON API. Results are server-rendered HTML (Drupal + Solr). Programmatic use would require HTML scraping of the search-results page, which is blocked by Cloudflare's interactive bot challenge. Treat as a human-facing catalog URL, not a structured feed."
+    }
+  },
+  "download": {
+    "mode": "record-page",
+    "urlPattern": "https://www.refworld.org/{category}/{doctype}/{source}/{year}/{lang}/{id}",
+    "notes": "Individual documents have canonical record pages (e.g. https://www.refworld.org/policy/strategy/unhcr/2024/en/147980) and legacy /docid/{id}.html URLs. Some records link directly to hosted PDFs under /sites/default/files/. Downloads must go through the record page; there is no bitstream/content API. Cloudflare challenge applies to automated fetches."
+  },
+  "enrich": {
+    "mode": "none",
+    "endpoint": null,
+    "notes": "No item/metadata JSON endpoint. Metadata (document source, type, country, date) is embedded in the record-page HTML only."
+  },
+  "methodologyMarkdown": "## Overview\nRefworld (refworld.org) is UNHCR's Global Law and Policy Database — the authoritative source of refugee, asylum, statelessness and IDP legal and policy documents: country-of-origin reports, case law, legal instruments, UNHCR positions and guidance. This is the correct target for DOCUMENTS. It is distinct from api.unhcr.org (the Refugee Statistics API), which returns population/statistics DATA, not documents, and should not be used as a document source. The prior configuration pointing at the population-statistics API was therefore wrong for document ingestion.\n\n## Search\nRefworld runs on Drupal with an Apache Solr faceted search. The human search URL is `https://www.refworld.org/search?query=<terms>&sort=score&order=desc`. There is NO documented public JSON/REST or OpenSearch API; results are returned as server-rendered HTML. Recommended integration family is `url-catalog`: store the working search URL and treat Refworld as a curated link source rather than a structured feed.\n\n## Filters\nFilters are Solr facet params appended to the search URL. Verified from a live results URL: `sm_country_name[]=Yemen` (country; repeatable). The UI also filters by document type, keyword and source, and supports Boolean operators (`*` wildcard, `-` exclusion, `(a,b)` OR, `\"phrase\"~N` proximity). `sort` accepts `score` (relevance) with `order=desc`, and the UI offers date and title sorting.\n\n## Download\nEach document has a canonical record page, e.g. `https://www.refworld.org/policy/strategy/unhcr/2024/en/147980`, and legacy `/docid/{id}.html` URLs. Some records embed a direct PDF under `/sites/default/files/`. Retrieval is via the record page; there is no bitstream API.\n\n## Metadata & Enrichment\nNo metadata JSON endpoint exists. Document source, type, country and date are only available inside the record-page HTML and would need parsing.\n\n## Limitations\nThe entire site sits behind Cloudflare's interactive bot challenge ('Just a moment...'); both WebFetch and direct HTTP clients received HTTP 403, so search params, pagination and facet field names could not be fully enumerated programmatically. Any automated ingestion needs a Cloudflare-capable fetch (headless browser / official access) or a manual URL-catalog approach. Recommendation: register Refworld as family=url-catalog with the search URL above; do NOT wire it to api.unhcr.org (statistics, not documents).",
+  "verified": false,
+  "probeNotes": "WebFetch on https://www.refworld.org/ and /search?query=afghanistan -> HTTP 403. Direct curl with browser UA -> HTTP 403 'Just a moment...' Cloudflare challenge page (server: cloudflare, challenge CSP with challenges.cloudflare.com). Attempted /api/search?query=afghanistan -> 403 (challenge, no API confirmed). Facts gathered via web search: (1) live results URL confirms param format refworld.org/search?order=desc&sm_country_name[]=Yemen&sort=score; (2) canonical record page pattern refworld.org/{category}/{type}/{source}/{year}/{lang}/{id} e.g. /policy/strategy/unhcr/2024/en/147980; (3) legacy /docid/{id}.html; (4) some PDFs at /sites/default/files/; (5) UNHCR relaunched Refworld on a new platform in 2023 (Drupal+Solr) with left-side facet filters (document type, country, keyword, source) and Boolean/wildcard/proximity search; (6) NO public JSON/REST/OpenSearch API is documented. Separately confirmed api.unhcr.org is the Refugee Statistics API (data, not documents) and is the wrong target for document ingestion. verified=false because no endpoint could be called successfully due to Cloudflare; capabilities limited to what the human UI exposes."
+}

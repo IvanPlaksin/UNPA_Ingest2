@@ -72,10 +72,13 @@ class StartupManager {
     await this._initSigillumSchema();
     await this._initDialogueCollection();
     await this._initExtractionQueue();
+    await this._initDateTypeRegistry();
     this._initOrphanDetector();
     this._initTombstoneExpirer();
     this._initKBHealthCollector();
     this._initMetacognitionCycle();
+    this._initDocumentIndexer();
+    this._initValidityRefresh();
     this._checkStrictValidation();
     this._logSummary();
 
@@ -180,6 +183,18 @@ class StartupManager {
     }
   }
 
+  // ─── DateTypeRegistry ──────────────────────────────────────────────
+
+  async _initDateTypeRegistry() {
+    try {
+      const { dateTypeRegistryService } = require('../knowledge/date-type-registry.service');
+      await dateTypeRegistryService.seedBuiltIns();
+      this._log('info', 'DateTypeRegistry: built-in date types seeded');
+    } catch (err) {
+      this._log('warn', `DateTypeRegistry init skipped: ${err.message}`);
+    }
+  }
+
   // ─── OrphanDetector ────────────────────────────────────────────────
 
   _initOrphanDetector() {
@@ -225,6 +240,38 @@ class StartupManager {
     }
   }
 
+  // ─── ValidityRefresh ───────────────────────────────────────────────
+  // Recomputes Document.inForceStatus for documents with temporal/supersession
+  // signals — statuses drift as expiry/mandate dates pass. Not run on startup.
+
+  _initValidityRefresh() {
+    if (process.env.VALIDITY_REFRESH_ENABLED === 'false') {
+      this._log('info', 'ValidityRefresh disabled (VALIDITY_REFRESH_ENABLED=false)');
+      return;
+    }
+    try {
+      const intervalMs = parseInt(process.env.VALIDITY_REFRESH_INTERVAL_MS, 10) || TWENTY_FOUR_HOURS;
+
+      const job = async () => {
+        try {
+          const { validityService } = require('../document/validity.service');
+          const { processed, counts } = await validityService.refreshAll({ limit: 5000 });
+          if (processed > 0) {
+            this._log('info', `ValidityRefresh: ${processed} documents → ${JSON.stringify(counts)}`);
+          }
+        } catch (err) {
+          this._log('error', `ValidityRefresh failed: ${err.message}`);
+        }
+      };
+
+      const handle = setInterval(job, intervalMs);
+      this.timers.push({ name: 'ValidityRefresh', interval: intervalMs, handle });
+      this._log('info', `ValidityRefresh scheduled (every ${intervalMs / 3600000}h)`);
+    } catch (err) {
+      this._log('warn', `ValidityRefresh init skipped: ${err.message}`);
+    }
+  }
+
   // ─── KBHealthCollector ───────────────────────────────────────────────
 
   _initKBHealthCollector() {
@@ -256,6 +303,31 @@ class StartupManager {
       this._log('info', `MetacognitionCycle scheduled (every ${intervalMs / 60000}min)`);
     } catch (err) {
       this._log('warn', `MetacognitionCycle init skipped: ${err.message}`);
+    }
+  }
+
+  // ─── Document Indexer (always-on source-document harvester) ─────────
+
+  _initDocumentIndexer() {
+    if (process.env.DOCUMENT_INDEXER_ENABLED === 'false') {
+      this._log('info', 'Document Indexer disabled (DOCUMENT_INDEXER_ENABLED=false)');
+      return;
+    }
+    try {
+      const { getDocumentIndexService } = require('../indexing/document-index.service');
+      const indexer = getDocumentIndexService(this.log);
+
+      // Autostart harvesting on boot unless explicitly disabled; otherwise the
+      // worker is created and can be started later via POST /document-index/control.
+      if (process.env.DOCUMENT_INDEXER_AUTOSTART !== 'false') {
+        const handle = indexer.schedule();
+        this.timers.push({ name: 'DocumentIndexer', interval: 0, handle });
+        this._log('info', 'Document Indexer started (harvesting source metadata)');
+      } else {
+        this._log('info', 'Document Indexer ready (autostart off — start via API)');
+      }
+    } catch (err) {
+      this._log('warn', `Document Indexer init skipped: ${err.message}`);
     }
   }
 

@@ -1,0 +1,24 @@
+{
+  "key": "unidir",
+  "name": "UNIDIR Publications",
+  "family": "url-catalog",
+  "capabilities": ["search", "browseAll", "paginate", "download"],
+  "filterSchema": [],
+  "config": {
+    "url": "https://unidir.org/publications",
+    "searchUrlTemplate": "https://unidir.org/?s={query}",
+    "linkFilter": "",
+    "includeAllLinks": false
+  },
+  "download": {
+    "mode": "record-page",
+    "notes": "Publication cards link to /publication/{slug}/ record pages where the PDF download is exposed. Listing does not surface direct PDF links. Two-step crawl (listing -> record -> PDF) required."
+  },
+  "enrich": {
+    "mode": "none",
+    "notes": "Title, date and program category available from listing/record pages; no repository API."
+  },
+  "methodologyMarkdown": "## Overview\nUNIDIR's publications catalog (~855 items) is server-rendered HTML with dynamic filtering, running on a WordPress-style backend. Cards (title, date, program), facets and numbered pagination are present in the initial HTML, so the catalog is scrapable without a JavaScript engine.\n\n## Search\nWordPress-standard full-text search is available via ?s={query} at the site root. Note this searches the whole site, so results should be path-filtered to /publication/. The /publications listing provides faceted browse.\n\n## Filters\nThe listing exposes rich facets: focus areas (12), programs/projects (7), languages (14) and date range. These render server-side and appear as URL parameters; treated as opaque params (no formal schema).\n\n## Download\nCards link to /publication/{slug}/ record pages. Direct PDF links are NOT exposed in the listing; the download is on the record page. A two-step crawl is required.\n\n## Metadata & Enrichment\nTitle, publication date and program category are in server-rendered HTML. No JSON/REST API; enrichment is HTML-based (WordPress could theoretically expose /wp-json but this was not verified).\n\n## Limitations\nNo verified public API. Site-wide ?s= search needs type-filtering. PDFs require resolving each record page. Pagination shows 30/page (~29 pages).",
+  "verified": true,
+  "probeNotes": "WebFetch of /publications succeeded: server-rendered HTML with server-side filtering, 855 items, 30/page (~29 pages), record URL /publication/{slug}/, no direct PDF in listing (record-page download). WordPress ?s= search assumed from platform; /wp-json not probed."
+}

@@ -1,8 +1,11 @@
 'use strict';
 const express = require('express');
 const { entityStoreService }    = require('../services/knowledge/entity-store.service');
+const { supersessionService }   = require('../services/knowledge/supersession.service');
+const { impactAnalysisService } = require('../services/knowledge/impact-analysis.service');
 const { clusterPyramidService } = require('../services/knowledge/cluster-pyramid.service');
 const { viewportService }       = require('../services/knowledge/viewport.service');
+const edgeWeightService         = require('../services/knowledge/edge-weight.service');
 const router = express.Router();
 
 // GET /api/v1/entity-store/namespaces
@@ -148,6 +151,217 @@ router.get('/', async (req, res) => {
 router.delete('/namespace/:ns', async (req, res) => {
   try {
     res.json({ success: true, data: await entityStoreService.deleteNamespace(req.params.ns) });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// GET /api/v1/entity-store/rel-weights
+router.get('/rel-weights', async (req, res) => {
+  try {
+    const data = await edgeWeightService.getWeightsWithEdgeCounts();
+    res.json({ success: true, data });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// POST /api/v1/entity-store/rel-weights/recalculate?includeDegree=true
+router.post('/rel-weights/recalculate', async (req, res) => {
+  try {
+    const includeDegree = req.query.includeDegree === 'true';
+    const stats = await edgeWeightService.recalculateAllEdgeCosts(includeDegree);
+    res.json({ success: true, data: { ...stats, includeDegree } });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// GET /api/v1/entity-store/rel-weights/unknown — relTypes not in weight table
+router.get('/rel-weights/unknown', async (req, res) => {
+  try {
+    const mg = require('../services/memgraph.service');
+    // Get all known relTypes from weight table
+    const knownRows = await mg.runQuery(
+      `MATCH (w:RelTypeWeight) RETURN w.relType AS relType`, {}
+    );
+    const known = new Set(knownRows.map(r => r.relType));
+
+    const allRows = await mg.runQuery(
+      `MATCH ()-[r:ES_RELATED_TO]->()
+       WHERE r.relType IS NOT NULL
+       RETURN r.relType AS relType, count(*) AS cnt
+       ORDER BY cnt DESC`,
+      {}
+    );
+    const rows = allRows
+      .filter(r => !known.has(r.relType))
+      .slice(0, 20)
+      .map(r => ({
+        relType: r.relType,
+        count: typeof r.cnt === 'object' ? (r.cnt?.low ?? 0) : (r.cnt || 0),
+      }));
+    res.json({ success: true, data: rows });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// PUT /api/v1/entity-store/rel-weights/:relType
+router.put('/rel-weights/:relType', async (req, res) => {
+  try {
+    const { relType } = req.params;
+    const { strength, description } = req.body;
+    if (strength == null || typeof strength !== 'number' || strength <= 0 || strength > 1) {
+      return res.status(400).json({ success: false, error: 'strength must be a number in (0, 1]' });
+    }
+    const stats = await edgeWeightService.updateWeight(relType, strength, description);
+    res.json({ success: true, data: stats });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// POST /api/v1/entity-store/paths/interpret
+router.post('/paths/interpret', async (req, res) => {
+  try {
+    const { fromEntity, toEntity, paths, structuralAnalysis } = req.body;
+    if (!fromEntity || !toEntity) {
+      return res.status(400).json({ success: false, error: 'fromEntity and toEntity are required' });
+    }
+    const pathInterpreter = require('../services/knowledge/path-interpreter.service');
+    const result = await pathInterpreter.interpretPathConnection(fromEntity, toEntity, paths, structuralAnalysis);
+    res.json({ success: true, data: result });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// GET /api/v1/entity-store/paths?from=<id>&to=<id>&k=5
+router.get('/paths', async (req, res) => {
+  try {
+    const { from, to, k = '5' } = req.query;
+    if (!from || !to) return res.status(400).json({ success: false, error: 'from and to entity ids are required' });
+    if (from === to) return res.status(400).json({ success: false, error: 'from and to must be different entities' });
+    const data = await entityStoreService.findKShortestPaths(from, to, parseInt(k) || 5);
+    res.json({ success: true, data });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// GET /api/v1/entity-store/docrefs?namespace=X
+router.get('/docrefs', async (req, res) => {
+  try {
+    const data = await entityStoreService.getDocumentRefs({ namespace: req.query.namespace || null });
+    res.json({ success: true, count: data.length, data });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Impact Analysis endpoints ─────────────────────────────────────────────────
+
+// GET /api/v1/entity-store/:id/impact?maxDepth=5&includeStructural=true
+router.get('/:id/impact', async (req, res) => {
+  try {
+    const { maxDepth = '5', includeStructural = 'true' } = req.query;
+    const data = await impactAnalysisService.analyzeImpact(req.params.id, {
+      maxDepth:          Math.min(parseInt(maxDepth) || 5, 8),
+      includeStructural: includeStructural !== 'false',
+    });
+    res.json({ success: true, data });
+  } catch (e) { res.status(e.message.includes('not found') ? 404 : 500).json({ success: false, error: e.message }); }
+});
+
+// GET /api/v1/entity-store/:id/impact-summary — lightweight count + risk level
+router.get('/:id/impact-summary', async (req, res) => {
+  try {
+    const data = await impactAnalysisService.quickSummary(req.params.id);
+    res.json({ success: true, data });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── RelationshipEvidence endpoints ────────────────────────────────────────────
+
+// GET /api/v1/entity-store/evidence?sourceId=X&targetId=Y&relType=Z
+router.get('/evidence', async (req, res) => {
+  try {
+    const { sourceId, targetId, relType } = req.query;
+    if (!sourceId || !targetId) return res.status(400).json({ success: false, error: 'sourceId and targetId are required' });
+    const data = await entityStoreService.getRelationshipEvidence(sourceId, targetId, relType || null);
+    res.json({ success: true, count: data.length, data });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// POST /api/v1/entity-store/evidence — add a relationship evidence node manually
+router.post('/evidence', async (req, res) => {
+  try {
+    const { sourceId, targetId, relType, documentId, context, confidence } = req.body;
+    if (!sourceId || !targetId || !relType) return res.status(400).json({ success: false, error: 'sourceId, targetId and relType are required' });
+    const id = await entityStoreService.addRelationshipEvidence(sourceId, targetId, relType, { documentId, context, confidence });
+    res.status(201).json({ success: true, data: { id } });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Supersession endpoints ─────────────────────────────────────────────────────
+
+// GET /api/v1/entity-store/:id/supersession-chain
+router.get('/:id/supersession-chain', async (req, res) => {
+  try {
+    const data = await supersessionService.getSupersessionChain(req.params.id);
+    res.json({ success: true, data });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// GET /api/v1/entity-store/:id/is-in-force
+router.get('/:id/is-in-force', async (req, res) => {
+  try {
+    const data = await supersessionService.isInForce(req.params.id);
+    res.json({ success: true, data });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// GET /api/v1/entity-store/:id/current-version
+router.get('/:id/current-version', async (req, res) => {
+  try {
+    const data = await supersessionService.findCurrentVersion(req.params.id);
+    if (!data) return res.status(404).json({ success: false, error: 'No current version found' });
+    res.json({ success: true, data });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// GET /api/v1/entity-store/:id/supersession-family
+router.get('/:id/supersession-family', async (req, res) => {
+  try {
+    const data = await supersessionService.getSupersessionFamily(req.params.id);
+    res.json({ success: true, count: data.length, data });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// POST /api/v1/entity-store/:id/supersedes/:olderId — create supersession link
+router.post('/:id/supersedes/:olderId', async (req, res) => {
+  try {
+    const { reason, effectiveDate } = req.body;
+    const data = await supersessionService.createSupersession(req.params.id, req.params.olderId, { reason, effectiveDate });
+    res.status(201).json({ success: true, data });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// DELETE /api/v1/entity-store/:id/supersedes/:olderId — remove supersession link
+router.delete('/:id/supersedes/:olderId', async (req, res) => {
+  try {
+    const data = await supersessionService.removeSupersession(req.params.id, req.params.olderId);
+    res.json({ success: true, data });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// PATCH /api/v1/entity-store/:id/document-attrs — set document metadata attributes
+router.patch('/:id/document-attrs', async (req, res) => {
+  try {
+    const data = await supersessionService.updateDocumentAttributes(req.params.id, req.body);
+    res.json({ success: true, data });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// POST /api/v1/entity-store/backfill-mentions — create MENTIONS edges for existing data
+router.post('/backfill-mentions', async (req, res) => {
+  try {
+    const { namespace } = req.body;
+    const result = await entityStoreService.backfillMentionsEdges(namespace || null);
+    res.json({ success: true, data: result });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// GET /api/v1/entity-store/:id/subgraph?depth=2  (must be before /:id)
+router.get('/:id/subgraph', async (req, res) => {
+  try {
+    const data = await entityStoreService.getEntitySubgraph(req.params.id, parseInt(req.query.depth) || 2);
+    res.json({ success: true, data });
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 

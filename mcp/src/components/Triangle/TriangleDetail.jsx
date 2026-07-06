@@ -1,4 +1,4 @@
-/**
+﻿/**
  * TriangleDetail — Full Knowledge Triangle view for one process
  *
  * Layout:
@@ -133,7 +133,7 @@ export default function TriangleDetail({ processId, onClose, onViewDocument, onL
                         )}
                         {completeness?.missingVertices?.map(v => (
                             <Chip key={v} label={`No ${v.toLowerCase()}`} size="small"
-                                variant="outlined" color="error" sx={{ fontSize: 10 }} />
+                                variant="outlined" color="error" sx={{ fontSize: 12 }} />
                         ))}
                     </Stack>
                 </Box>
@@ -185,10 +185,10 @@ export default function TriangleDetail({ processId, onClose, onViewDocument, onL
             {/* ── Tabs ── */}
             <Tabs value={tab} onChange={(_, v) => { setTab(v); setHighlightV(null); }}
                 sx={{ flexShrink: 0, borderBottom: 1, borderColor: 'divider', px: 1 }}>
-                <Tab label={`Normative (${normative.length})`}    sx={{ minHeight: 40, py: 0.5, fontSize: 12 }} />
-                <Tab label={`Operational (${operational.length})`} sx={{ minHeight: 40, py: 0.5, fontSize: 12 }} />
-                <Tab label={`Empirical (${empirical.length})`}    sx={{ minHeight: 40, py: 0.5, fontSize: 12 }} />
-                <Tab label={`Gaps (${gaps.length})`}              sx={{ minHeight: 40, py: 0.5, fontSize: 12,
+                <Tab label={`Normative (${normative.length})`}    sx={{ minHeight: 40, py: 0.5, fontSize: 13 }} />
+                <Tab label={`Operational (${operational.length})`} sx={{ minHeight: 40, py: 0.5, fontSize: 13 }} />
+                <Tab label={`Empirical (${empirical.length})`}    sx={{ minHeight: 40, py: 0.5, fontSize: 13 }} />
+                <Tab label={`Gaps (${gaps.length})`}              sx={{ minHeight: 40, py: 0.5, fontSize: 13,
                     color: gaps.length > 0 ? 'warning.main' : undefined }} />
             </Tabs>
 
@@ -266,7 +266,7 @@ function GapList({ gaps, onSelectGap }) {
                                 <Typography variant="body2" fontWeight={600}>{gap.title || 'Untitled Gap'}</Typography>
                                 <Stack direction="row" spacing={0.75} sx={{ mt: 0.25 }}>
                                     <Chip label={gap.severity || '?'} size="small"
-                                        sx={{ height: 16, fontSize: 10,
+                                        sx={{ height: 16, fontSize: 12,
                                               bgcolor: (SEVERITY_COLORS[gap.severity] || '#94a3b8') + '22',
                                               color: SEVERITY_COLORS[gap.severity] || '#94a3b8' }} />
                                     {gap.ageDays != null && (
@@ -278,7 +278,7 @@ function GapList({ gaps, onSelectGap }) {
                             </Box>
                         </Stack>
                         <Chip label={gap.status} size="small"
-                            sx={{ fontSize: 10, height: 18,
+                            sx={{ fontSize: 12, height: 18,
                                   color: STATUS_COLORS[gap.status] || '#94a3b8',
                                   bgcolor: (STATUS_COLORS[gap.status] || '#94a3b8') + '18' }} />
                     </Stack>

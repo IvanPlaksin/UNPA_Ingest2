@@ -1,4 +1,4 @@
-/**
+﻿/**
  * GraphToolbar Component
  * Toolbar for GXE graph operations, layout formatting, and view controls.
  * Rendered at the top of each active graph tab.
@@ -595,7 +595,7 @@ const GraphToolbar = ({
         onClick={() => useImportSqlStore.getState().openDialog()}
         className="flex items-center gap-1 px-2 py-0.5 rounded hover:bg-[#30363d] transition-colors"
         title="Import from SQL Server"
-        style={{ color: '#d2a8ff', fontSize: 11 }}>
+        style={{ color: '#d2a8ff', fontSize: 13 }}>
         <Database size={13} />
         <span className="text-[10px]">SQL</span>
       </button>
@@ -641,7 +641,7 @@ const GraphToolbar = ({
         onClick={() => useCatalogStore.getState().toggle()}
         className="flex items-center gap-1 px-2 py-0.5 rounded hover:bg-[#30363d] transition-colors"
         title="Tool Catalog (Ctrl+K)"
-        style={{ color: '#f0883e', fontSize: 11 }}>
+        style={{ color: '#f0883e', fontSize: 13 }}>
         <BookOpen size={13} />
         <span className="text-[10px]">Catalog</span>
       </button>
@@ -651,7 +651,7 @@ const GraphToolbar = ({
         onClick={onToggleSearch}
         className="flex items-center gap-1 px-2 py-0.5 rounded hover:bg-[#30363d] transition-colors"
         title="Search Graph (Ctrl+F)"
-        style={{ color: '#58a6ff', fontSize: 11 }}>
+        style={{ color: '#58a6ff', fontSize: 13 }}>
         <Search size={13} />
         <span className="text-[10px]">Search</span>
       </button>
@@ -661,7 +661,7 @@ const GraphToolbar = ({
         onClick={onToggleSimilarity}
         className="flex items-center gap-1 px-2 py-0.5 rounded hover:bg-[#30363d] transition-colors"
         title="Similarity Explorer"
-        style={{ color: '#a78bfa', fontSize: 11 }}>
+        style={{ color: '#a78bfa', fontSize: 13 }}>
         <GitCompare size={13} />
         <span className="text-[10px]">Similar</span>
       </button>
@@ -671,7 +671,7 @@ const GraphToolbar = ({
         onClick={onToggleAssistant}
         className="flex items-center gap-1 px-2 py-0.5 rounded hover:bg-[#30363d] transition-colors"
         title="AI Graph Assistant"
-        style={{ color: '#7ee787', fontSize: 11 }}>
+        style={{ color: '#7ee787', fontSize: 13 }}>
         <Bot size={13} />
         <span className="text-[10px]">Assistant</span>
       </button>
@@ -681,7 +681,7 @@ const GraphToolbar = ({
         onClick={onToggleGuidedMode}
         className="flex items-center gap-1 px-2 py-0.5 rounded hover:bg-[#30363d] transition-colors"
         title="Guided Analysis (4 phases)"
-        style={{ color: '#c084fc', fontSize: 11 }}>
+        style={{ color: '#c084fc', fontSize: 13 }}>
         <Search size={13} />
         <span className="text-[10px]">Guided</span>
       </button>
@@ -691,7 +691,7 @@ const GraphToolbar = ({
         onClick={onToggleGNNPanel}
         className="flex items-center gap-1 px-2 py-0.5 rounded hover:bg-[#30363d] transition-colors"
         title="GNN Intelligence (predictions + settings)"
-        style={{ color: '#a78bfa', fontSize: 11 }}>
+        style={{ color: '#a78bfa', fontSize: 13 }}>
         <Sparkles size={13} />
         <span className="text-[10px]">GNN</span>
       </button>
@@ -701,7 +701,7 @@ const GraphToolbar = ({
         onClick={onToggleProperties}
         className="flex items-center gap-1 px-2 py-0.5 rounded hover:bg-[#30363d] transition-colors"
         title="Properties Panel (Ctrl+I)"
-        style={{ color: '#f78166', fontSize: 11 }}>
+        style={{ color: '#f78166', fontSize: 13 }}>
         <Settings size={13} />
         <span className="text-[10px]">Props</span>
       </button>
@@ -711,7 +711,7 @@ const GraphToolbar = ({
         onClick={onToggleDynamicPorts}
         className={`flex items-center gap-1 px-2 py-0.5 rounded transition-colors ${dynamicPortsEnabled ? 'bg-cyan-500/20 ring-1 ring-cyan-500/40' : 'hover:bg-[#30363d]'}`}
         title="Toggle dynamic multi-handle ports"
-        style={{ color: dynamicPortsEnabled ? '#22d3ee' : '#8b949e', fontSize: 11 }}>
+        style={{ color: dynamicPortsEnabled ? '#22d3ee' : '#8b949e', fontSize: 13 }}>
         <Spline size={13} />
         <span className="text-[10px]">Ports</span>
       </button>

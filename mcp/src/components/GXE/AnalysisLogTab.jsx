@@ -1,4 +1,4 @@
-/**
+﻿/**
  * AnalysisLogTab - Real-time analysis event trace + graph comparison view.
  *
  * Three view modes:
@@ -26,7 +26,7 @@ const ANALYSIS_EVENT_TYPES = {
   consolidation: { label: 'Consolidation', color: '#10b981', Icon: Database },
   ai_validation: { label: 'AI Validation', color: '#f97316', Icon: ShieldCheck },
   checkpoint: { label: 'Checkpoint', color: '#6366f1', Icon: CheckCircle },
-  info: { label: 'Info', color: '#6b7280', Icon: Terminal },
+  info: { label: 'Info', color: '#94a3b8', Icon: Terminal },
   error: { label: 'Error', color: '#ef4444', Icon: AlertCircle },
   complete: { label: 'Complete', color: '#22c55e', Icon: CheckCircle },
 };

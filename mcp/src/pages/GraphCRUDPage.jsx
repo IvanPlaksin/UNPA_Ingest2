@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
     Box,
     Paper,
@@ -155,7 +155,7 @@ const GraphCRUDNode = ({ data, selected }) => {
                         <span
                             key={label}
                             style={{
-                                fontSize: 9,
+                                fontSize: 13,
                                 fontWeight: 700,
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.5px',
@@ -186,7 +186,7 @@ const GraphCRUDNode = ({ data, selected }) => {
                 {data.isCenter && (
                     <div style={{
                         marginTop: 6,
-                        fontSize: 9,
+                        fontSize: 13,
                         color: c.text,
                         opacity: 0.8,
                         display: 'flex',
@@ -463,7 +463,7 @@ const GraphCRUDPage = () => {
                 type: 'smoothstep',
                 animated: false,
                 label: e.label || e.data?.label || '',
-                labelStyle: { fontSize: 10, fill: '#6b7280' },
+                labelStyle: { fontSize: 13, fill: '#6b7280' },
                 style: { stroke: '#8b5cf6', strokeWidth: 2 },
                 markerEnd: { type: MarkerType.ArrowClosed, color: '#8b5cf6' }
             }));
@@ -610,7 +610,7 @@ const GraphCRUDPage = () => {
                 type: 'smoothstep',
                 animated: false,
                 label: e.type, // Show relationship type
-                labelStyle: { fontSize: 10, fill: '#6b7280' },
+                labelStyle: { fontSize: 13, fill: '#6b7280' },
                 labelBgStyle: { fill: '#fff', fillOpacity: 0.8 },
                 style: {
                     stroke: e.direction === 'incoming' ? '#3b82f6' : '#10b981',

@@ -20,6 +20,8 @@ const codexTools = require('./tools/codex/index.js');
 const workspaceTools = require('./tools/workspace/index.js');
 const dialogueTools = require('./tools/dialogue/index.js');
 const sourceTools = require('./tools/sources/index.js');
+const documentIndexTools = require('./tools/document-index/index.js');
+const entityStoreTools = require('./tools/entity-store/index.js');
 
 function createAllTools() {
   return [
@@ -40,6 +42,8 @@ function createAllTools() {
     ...workspaceTools.createWorkspaceTools(),
     ...dialogueTools.createDialogueTools(),
     ...sourceTools.createSourceCatalogTools(),
+    ...documentIndexTools.createDocumentIndexTools(),
+    ...entityStoreTools.createEntityStoreTools(),
   ];
 }
 

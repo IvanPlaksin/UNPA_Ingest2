@@ -1,4 +1,4 @@
-/**
+﻿/**
  * NamespaceHealthTable — sortable namespace overview table
  *
  * Columns: Namespace | Docs | Completeness (bar) | Avg KQS | Gaps | Health
@@ -90,7 +90,7 @@ export default function NamespaceHealthTable({ namespaces = [], selectedNamespac
                                 key={col.id}
                                 align={col.numeric ? 'right' : 'left'}
                                 sortDirection={orderBy === col.id ? order : false}
-                                sx={{ fontWeight: 700, fontSize: 12 }}
+                                sx={{ fontWeight: 700, fontSize: 13 }}
                             >
                                 <TableSortLabel
                                     active={orderBy === col.id}
@@ -116,10 +116,10 @@ export default function NamespaceHealthTable({ namespaces = [], selectedNamespac
                                 sx={{ cursor: 'pointer',
                                       '&.Mui-selected': { bgcolor: 'primary.main' + '22' } }}
                             >
-                                <TableCell sx={{ fontWeight: selected ? 700 : 400, fontSize: 12 }}>
+                                <TableCell sx={{ fontWeight: selected ? 700 : 400, fontSize: 13 }}>
                                     {ns.namespace}
                                 </TableCell>
-                                <TableCell align="right" sx={{ fontSize: 12 }}>{ns.documentCount}</TableCell>
+                                <TableCell align="right" sx={{ fontSize: 13 }}>{ns.documentCount}</TableCell>
                                 <TableCell align="right" sx={{ width: 140 }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-end' }}>
                                         <Box sx={{ width: 80 }}>
@@ -135,13 +135,13 @@ export default function NamespaceHealthTable({ namespaces = [], selectedNamespac
                                         </Typography>
                                     </Box>
                                 </TableCell>
-                                <TableCell align="right" sx={{ fontSize: 12 }}>
+                                <TableCell align="right" sx={{ fontSize: 13 }}>
                                     {ns.avgKQS.toFixed(2)}
                                 </TableCell>
                                 <TableCell align="right">
                                     {ns.openGaps > 0 ? (
                                         <Chip label={ns.openGaps} size="small"
-                                            sx={{ height: 18, fontSize: 10, bgcolor: '#f59e0b22', color: '#f59e0b' }} />
+                                            sx={{ height: 18, fontSize: 12, bgcolor: '#f59e0b22', color: '#f59e0b' }} />
                                     ) : (
                                         <Typography variant="caption" color="text.disabled">0</Typography>
                                     )}

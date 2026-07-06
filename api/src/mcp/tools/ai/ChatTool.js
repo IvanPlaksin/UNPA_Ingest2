@@ -1,5 +1,6 @@
 const { BaseTool } = require('../primitives/BaseTool.js');
-const { getInstance: getLLMProvider } = require('../../../services/llm/LLMProviderService');
+const { getScopedProvider } = require('../../../services/llm-access-control.service');
+const llmProvider = getScopedProvider('mcp_tools');
 
 class ChatTool extends BaseTool {
   getDefinition() {
@@ -169,7 +170,7 @@ class ChatTool extends BaseTool {
     const systemMessage = messages.find(m => m.role === 'system');
     const chatMessages = messages.filter(m => m.role !== 'system');
 
-    const data = await getLLMProvider().chat(chatMessages, {
+    const data = await llmProvider.chat(chatMessages, {
       model,
       maxTokens,
       temperature,

@@ -16,7 +16,8 @@ const { PluginBase, createSimpleExecutor, createSuccessResult, createErrorResult
 // Import real services
 const qdrantService = require('../../../../services/qdrant.service');
 const memgraphService = require('../../../../services/memgraph.service');
-const { getInstance: getLLMProvider } = require('../../../../services/llm/LLMProviderService');
+const { getScopedProvider } = require('../../../../services/llm-access-control.service');
+const llmProvider = getScopedProvider('aopeg_rag');
 const { EmbeddingService } = require('../../../../services/structuring/embeddings/EmbeddingService');
 const { HybridSearch, createHybridSearch } = require('../../../../services/retrieval/hybrid-search');
 const { QueryExpansionService, createQueryExpansionService } = require('../../../../services/retrieval/query-expansion.service');
@@ -70,7 +71,7 @@ function getQueryExpansion() {
     queryExpansionInstance = createQueryExpansionService({
       maxExpansions: 5,
       maxSynonymsPerTerm: 3,
-      llmService: getLLMProvider(),
+      llmService: llmProvider,
     });
   }
   return queryExpansionInstance;
@@ -545,9 +546,6 @@ const rerankResultsExecutor = createSimpleExecutor({
 
     if (method === 'llm') {
       // LLM reranking: ask LLM to score 0-10, fall back to bm25 on any error
-      let llmProvider = null;
-      try { llmProvider = getLLMProvider(); } catch { /* no provider */ }
-
       if (llmProvider) {
         try {
           const batch = results.slice(0, 15);
@@ -559,7 +557,7 @@ const rerankResultsExecutor = createSimpleExecutor({
             `Query: "${query}"\n\nResults:\n${lines}\n\n` +
             `Respond with ONLY a JSON array of ${batch.length} integers, e.g. [8,3,9,5].`;
 
-          const raw = await llmProvider.chat([{ role: 'user', content: prompt }], { maxTokens: 120, temperature: 0 });
+          const raw = await llmProvider.chat([{ role: 'user', content: prompt }], { maxTokens: 120, temperature: 0, caller: 'aopeg_rag' });
           const text = Array.isArray(raw)
             ? raw.filter(b => b.type === 'text').map(b => b.text).join('')
             : (typeof raw === 'string' ? raw : raw?.content || '');
@@ -654,7 +652,7 @@ Instructions:
       // Call LLM
       let response;
       try {
-        response = await getLLMProvider().chat(messages);
+        response = await llmProvider.chat(messages);
       } catch (llmError) {
         console.warn('[generate] LLM call failed:', llmError.message);
         return createErrorResult('LLM_ERROR', `LLM unavailable: ${llmError.message}`, true);
@@ -729,7 +727,7 @@ const summarizeResultsExecutor = createSimpleExecutor({
 
       let summary;
       try {
-        const response = await getLLMProvider().chat(messages);
+        const response = await llmProvider.chat(messages);
         const rc = response?.content;
         summary = Array.isArray(rc)
           ? rc.filter(b => b.type === 'text').map(b => b.text).join('')

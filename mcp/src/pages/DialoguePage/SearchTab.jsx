@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   Box, TextField, InputAdornment, Chip, Typography, CircularProgress, Stack,
   Paper, FormControlLabel, Switch, Divider, Collapse, ToggleButton,
@@ -41,7 +41,7 @@ function RelatedSessionMiniCard({ session, onOpen }) {
         }}>{smart}</Typography>
         <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }}>
           <Chip label={type} size="small" variant="outlined"
-            sx={{ height: 18, fontSize: 10, borderColor: style.border, color: style.color }} />
+            sx={{ height: 18, fontSize: 12, borderColor: style.border, color: style.color }} />
           {session.startedAt && (
             <Typography variant="caption" color="text.disabled" sx={{ alignSelf: 'center' }}>
               {new Date(session.startedAt).toLocaleDateString()}
@@ -95,7 +95,7 @@ function RelatedPanel({ sessionId, onOpen }) {
       }}>
         {expanded ? <ExpandLess sx={{ fontSize: 16 }} /> : <ExpandMore sx={{ fontSize: 16 }} />}
         <Typography variant="caption">Related sessions</Typography>
-        <LinkIcon sx={{ fontSize: 12, ml: 0.5 }} />
+        <LinkIcon sx={{ fontSize: 13, ml: 0.5 }} />
       </Box>
       <Collapse in={expanded}>
         <Box sx={{ bgcolor: 'background.default', borderTop: '1px solid', borderColor: 'divider' }}>
@@ -150,17 +150,17 @@ function SearchSessionCard({ result, onOpen, idx, total }) {
           }}>{smart}</Typography>
           <Stack direction="row" spacing={0.5} sx={{ mt: 0.75 }} flexWrap="wrap" gap={0.5}>
             <Chip label={type} size="small" variant="outlined"
-              sx={{ height: 20, fontSize: 11, borderColor: style.border, color: style.color, fontWeight: 600 }} />
+              sx={{ height: 20, fontSize: 13, borderColor: style.border, color: style.color, fontWeight: 600 }} />
             {topics.map(topic => (
               <Chip key={topic} label={topic} size="small" variant="outlined"
-                sx={{ height: 20, fontSize: 11, color: 'text.secondary' }} />
+                sx={{ height: 20, fontSize: 13, color: 'text.secondary' }} />
             ))}
             {score > 0 && (
               <Chip
                 label={`${Math.round(score * 100)}% match`}
                 size="small"
                 color={score >= 0.7 ? 'success' : score >= 0.5 ? 'warning' : 'default'}
-                sx={{ height: 20, fontSize: 11 }}
+                sx={{ height: 20, fontSize: 13 }}
               />
             )}
             <Typography variant="caption" color="text.disabled" sx={{ alignSelf: 'center' }}>
@@ -181,7 +181,7 @@ function SearchSessionCard({ result, onOpen, idx, total }) {
                 <Chip key={e.name}
                   label={`${e.name} ${Math.round(e.confidence * 100)}%`}
                   size="small" color={ENTITY_TYPE_COLOR[e.type] || 'default'}
-                  variant="outlined" sx={{ height: 18, fontSize: 10 }} />
+                  variant="outlined" sx={{ height: 18, fontSize: 12 }} />
               ))}
             </Stack>
           )}
@@ -259,7 +259,7 @@ function AIStrategyPanel({ strategy, reasoning, searchParams }) {
               size="small"
               color={STRATEGY_COLOR[strategy] || 'default'}
               icon={STRATEGY_ICON[strategy]}
-              sx={{ height: 18, fontSize: 10 }}
+              sx={{ height: 18, fontSize: 12 }}
             />
           )}
         </Stack>
@@ -277,7 +277,7 @@ function AIStrategyPanel({ strategy, reasoning, searchParams }) {
               <span style={{ fontWeight: 600 }}>Focus: </span>
             </Typography>
             {searchParams.entityFocus.map(e => (
-              <Chip key={e} label={e} size="small" variant="outlined" sx={{ height: 18, fontSize: 10 }} />
+              <Chip key={e} label={e} size="small" variant="outlined" sx={{ height: 18, fontSize: 12 }} />
             ))}
           </Stack>
         )}

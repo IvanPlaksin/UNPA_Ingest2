@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+﻿import React, { useMemo, useCallback } from 'react';
 import FormRenderer from '../../Forms/FormRenderer';
 import ChoiceButtons from './ChoiceButtons';
 import { isStructuralNode, waitingNodeToFormDefinition, extractFormResponse } from '../utils/waitingNodeToForm';
@@ -57,8 +57,8 @@ export default function FormWidget({ waitingNode, choices, sessionState, isLoadi
   };
   const formSx = {
     '& .MuiTypography-h6': { fontSize: 13, fontWeight: 600, color: '#6366f1' },
-    '& .MuiTypography-body2': { fontSize: 11 },
-    '& .MuiButton-contained': { fontSize: 11, py: 0.5, px: 2 },
+    '& .MuiTypography-body2': { fontSize: 13 },
+    '& .MuiButton-contained': { fontSize: 13, py: 0.5, px: 2 },
   };
 
   return (

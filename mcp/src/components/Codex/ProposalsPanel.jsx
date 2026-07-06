@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   Box, Card, CardContent, Typography, Chip, IconButton,
   Tabs, Tab, Badge, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions,
@@ -56,7 +56,7 @@ function Field({ icon: Icon, label, children, mono }) {
       <Icon size={15} style={{ marginTop: 3, flexShrink: 0, opacity: 0.5 }} />
       <Box sx={{ minWidth: 0 }}>
         <Typography variant="caption" color="text.disabled" sx={{ display: 'block', lineHeight: 1.2 }}>{label}</Typography>
-        <Typography variant="body2" sx={{ wordBreak: 'break-word', ...(mono && { fontFamily: 'monospace', fontSize: 12 }) }}>
+        <Typography variant="body2" sx={{ wordBreak: 'break-word', ...(mono && { fontFamily: 'monospace', fontSize: 13 }) }}>
           {children}
         </Typography>
       </Box>
@@ -150,10 +150,10 @@ function ManualActionPanel({ proposal: p, onClose }) {
       {/* Node references */}
       {(result.nodeName || result.nodeId) && (
         <Box sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap' }}>
-          <Chip size="small" label={`Primary: ${result.nodeName || result.nodeId}`} variant="outlined" sx={{ fontSize: 11 }}
+          <Chip size="small" label={`Primary: ${result.nodeName || result.nodeId}`} variant="outlined" sx={{ fontSize: 13 }}
             icon={<Tag size={12} />} />
           {result.duplicateId && (
-            <Chip size="small" label={`Duplicate: ${result.duplicateId?.slice(0, 12)}...`} variant="outlined" color="warning" sx={{ fontSize: 11 }}
+            <Chip size="small" label={`Duplicate: ${result.duplicateId?.slice(0, 12)}...`} variant="outlined" color="warning" sx={{ fontSize: 13 }}
               icon={<Tag size={12} />} />
           )}
         </Box>
@@ -171,7 +171,7 @@ function ManualActionPanel({ proposal: p, onClose }) {
           return (
             <Button key={a.key} size="small" variant="outlined" color={a.color}
               startIcon={<ActionIcon size={14} />} disabled={disabled}
-              onClick={() => handleAction(a.key)} sx={{ textTransform: 'none', fontSize: 12 }}>
+              onClick={() => handleAction(a.key)} sx={{ textTransform: 'none', fontSize: 13 }}>
               {a.label}
             </Button>
           );
@@ -180,7 +180,7 @@ function ManualActionPanel({ proposal: p, onClose }) {
 
       {/* Action result feedback */}
       {actionResult && (
-        <Alert severity={actionResult.success ? 'success' : 'error'} variant="outlined" sx={{ mt: 1.5, fontSize: 12 }}>
+        <Alert severity={actionResult.success ? 'success' : 'error'} variant="outlined" sx={{ mt: 1.5, fontSize: 13 }}>
           {actionResult.message}
         </Alert>
       )}
@@ -237,10 +237,10 @@ function ProposalDetailDialog({ proposal: p, open, onClose, onApprove, onReject,
             <Typography variant="overline" color="text.disabled" sx={{ letterSpacing: 1.5 }}>Issue</Typography>
             <Stack spacing={1.5} sx={{ mt: 0.5 }}>
               <Field icon={FileText} label="Type">
-                <Chip label={p.issue?.type} size="small" variant="outlined" sx={{ fontSize: 11, height: 22 }} />
+                <Chip label={p.issue?.type} size="small" variant="outlined" sx={{ fontSize: 13, height: 22 }} />
               </Field>
               <Field icon={SevIcon} label="Severity">
-                <Chip label={sev.label} size="small" sx={{ bgcolor: `${sev.color}18`, color: sev.color, fontSize: 11, height: 22 }} />
+                <Chip label={sev.label} size="small" sx={{ bgcolor: `${sev.color}18`, color: sev.color, fontSize: 13, height: 22 }} />
               </Field>
               {p.issue?.nodeId && (
                 <Field icon={ExternalLink} label="Node ID" mono>{p.issue.nodeId}</Field>
@@ -263,7 +263,7 @@ function ProposalDetailDialog({ proposal: p, open, onClose, onApprove, onReject,
               <Field icon={LevelIcon} label="Autonomy Level">
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Chip label={`${p.autonomyLevel} — ${cfg.label}`} size="small"
-                    sx={{ bgcolor: `${cfg.color}18`, color: cfg.color, fontWeight: 600, fontSize: 11, height: 22 }} />
+                    sx={{ bgcolor: `${cfg.color}18`, color: cfg.color, fontWeight: 600, fontSize: 13, height: 22 }} />
                 </Box>
                 <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 0.3 }}>{cfg.desc}</Typography>
               </Field>
@@ -276,7 +276,7 @@ function ProposalDetailDialog({ proposal: p, open, onClose, onApprove, onReject,
               {p.issue?.suggestedAction && (
                 <Field icon={Zap} label="Suggested Action">
                   <Chip label={p.issue.suggestedAction.replace(/_/g, ' ')} size="small"
-                    variant="outlined" color="primary" sx={{ fontSize: 11, height: 22 }} />
+                    variant="outlined" color="primary" sx={{ fontSize: 13, height: 22 }} />
                 </Field>
               )}
             </Stack>
@@ -302,7 +302,7 @@ function ProposalDetailDialog({ proposal: p, open, onClose, onApprove, onReject,
                 </Field>
               )}
               {slaOverdue && (
-                <Alert severity="warning" variant="outlined" sx={{ py: 0, fontSize: 12 }}>
+                <Alert severity="warning" variant="outlined" sx={{ py: 0, fontSize: 13 }}>
                   SLA overdue — action required
                 </Alert>
               )}
@@ -360,19 +360,19 @@ function ProposalDetailDialog({ proposal: p, open, onClose, onApprove, onReject,
               <Box>
                 <Typography variant="overline" color="text.disabled" sx={{ letterSpacing: 1.5 }}>Execution Result</Typography>
                 {p.executionError && (
-                  <Alert severity="error" variant="outlined" sx={{ mt: 0.5, fontSize: 12 }}>{p.executionError}</Alert>
+                  <Alert severity="error" variant="outlined" sx={{ mt: 0.5, fontSize: 13 }}>{p.executionError}</Alert>
                 )}
                 {p.executionResult && (
                   <Stack spacing={1.5} sx={{ mt: 0.5 }}>
                     {/* Summary */}
                     {p.executionResult.summary && (
-                      <Alert severity={p.executionResult.verified === false ? 'warning' : 'success'} variant="outlined" sx={{ fontSize: 12 }}>
+                      <Alert severity={p.executionResult.verified === false ? 'warning' : 'success'} variant="outlined" sx={{ fontSize: 13 }}>
                         {p.executionResult.summary}
                       </Alert>
                     )}
                     {/* Structured fields */}
                     <Field icon={Zap} label="Action">
-                      <Chip label={p.executionResult.action?.replace(/_/g, ' ')} size="small" variant="outlined" color="primary" sx={{ fontSize: 11, height: 22 }} />
+                      <Chip label={p.executionResult.action?.replace(/_/g, ' ')} size="small" variant="outlined" color="primary" sx={{ fontSize: 13, height: 22 }} />
                     </Field>
                     {p.executionResult.nodeName && (
                       <Field icon={Tag} label="Target Node">{p.executionResult.nodeName} ({p.executionResult.nodeLabel || ''})</Field>
@@ -390,7 +390,7 @@ function ProposalDetailDialog({ proposal: p, open, onClose, onApprove, onReject,
                       <Field icon={p.executionResult.verified ? CheckCircle : AlertTriangle} label="Verified">
                         <Chip label={p.executionResult.verified ? 'Confirmed' : 'Unverified'} size="small"
                           sx={{ bgcolor: p.executionResult.verified ? '#4caf5018' : '#ff980018',
-                            color: p.executionResult.verified ? '#4caf50' : '#ff9800', fontSize: 11, height: 22 }} />
+                            color: p.executionResult.verified ? '#4caf50' : '#ff9800', fontSize: 13, height: 22 }} />
                       </Field>
                     )}
                     {p.executionResult.status === 'requires_manual' && (
@@ -473,7 +473,7 @@ function ProposalCard({ p, onClick }) {
             <Typography variant="caption" color="text.disabled" sx={{ fontFamily: 'monospace' }}>{p.id}</Typography>
           </Box>
           <Chip label={p.autonomyLevel} size="small" sx={{ bgcolor: `${cfg.color}20`, color: cfg.color, fontWeight: 'bold' }} />
-          <Chip label={p.status.replace('_', ' ')} size="small" color={STATUS_COLOR[p.status] || 'default'} sx={{ fontSize: 10 }} />
+          <Chip label={p.status.replace('_', ' ')} size="small" color={STATUS_COLOR[p.status] || 'default'} sx={{ fontSize: 12 }} />
           <Tooltip title="Open details">
             <ChevronRight size={16} style={{ opacity: 0.4, flexShrink: 0 }} />
           </Tooltip>

@@ -5,7 +5,8 @@
  * LLM is required — throws an error if evaluation fails.
  */
 
-const { getInstance: getLLMProvider } = require('../llm/LLMProviderService');
+const { getScopedProvider } = require('../llm-access-control.service');
+const llmProvider = getScopedProvider('graph_services');
 const memgraphService = require('../memgraph.service');
 
 const COHERENCE_PROMPT = `You are evaluating whether a group of nodes from a knowledge graph forms a coherent logical unit.
@@ -127,7 +128,7 @@ class CoherenceEvaluator {
       .replace('{{EDGES}}', edgesText || '(none)');
 
     try {
-      const response = await getLLMProvider().chat([
+      const response = await llmProvider.chat([
         { role: 'user', content: prompt },
       ]);
 

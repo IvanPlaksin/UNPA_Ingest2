@@ -13,6 +13,18 @@ function mg() {
   return _mg;
 }
 
+let _symbolParser = null;
+function symbolParser() {
+  if (!_symbolParser) _symbolParser = require('./source-adapters/lib/symbol-parser');
+  return _symbolParser;
+}
+
+// A valid UN document symbol is authoritative about the document type
+// (S/RES/2235(2015) IS a Security Council resolution). We add a large bonus to
+// the matching type's score so the symbol dominates, while still letting content
+// signals corroborate and populate the alternatives list.
+const SYMBOL_MATCH_BONUS = 0.6;
+
 class DocumentClassifier {
 
   /**
@@ -22,15 +34,35 @@ class DocumentClassifier {
     const rules = await this.loadClassifierRules();
     if (!rules.length) return { document_type_id: 'unknown', confidence: 0, alternatives: [], requires_llm_classification: true };
 
+    // Symbol-derived primary signal: parse un_symbol (fall back to a symbol-like title)
+    let parsedSymbol = null;
+    try {
+      const candidate = metadata.un_symbol || metadata.document_title || null;
+      if (candidate) {
+        const p = symbolParser().parseUNSymbol(candidate);
+        if (p && p.valid && p.documentType) parsedSymbol = p;
+      }
+    } catch { /* parser is best-effort; never block classification */ }
+
     const scores = [];
     for (const rule of rules) {
       const { score, signals } = this.scoreDocument(documentText, metadata, rule);
+      let finalScore = score;
+      if (parsedSymbol && parsedSymbol.documentType === rule.document_type_id) {
+        finalScore = Math.min(1.0, finalScore + SYMBOL_MATCH_BONUS);
+        signals.push({
+          signal:       'symbol_match',
+          symbol:       parsedSymbol.normalized,
+          documentType: parsedSymbol.documentType,
+          contribution: SYMBOL_MATCH_BONUS
+        });
+      }
       scores.push({
         document_type_id:   rule.document_type_id,
         document_type_name: rule.document_type_name,
         epistemicLayer:     rule.epistemicLayer,
         normativeWeight:    rule.normativeWeight,
-        score,
+        score:              finalScore,
         signals,
         threshold:          rule.threshold
       });

@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Handle, Position } from 'reactflow';
 
 const TYPE_COLORS = {
@@ -44,16 +44,16 @@ export default function FieldNode({ data, selected }) {
           width: 24, height: 24, borderRadius: 6,
           background: `${color}20`, border: `1px solid ${color}60`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 11, fontWeight: 700, color,
+          fontSize: 13, fontWeight: 700, color,
           flexShrink: 0,
         }}>
           {badge ? badge.label[0] : icon}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: '#e2e8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#e2e8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {data.name}
           </div>
-          <div style={{ fontSize: 9, color: '#8b949e' }}>
+          <div style={{ fontSize: 11, color: '#8b949e' }}>
             {badge ? badge.label : data.dataType}
             {data.required && <span style={{ color: '#ef4444', marginLeft: 4 }}>*</span>}
           </div>
@@ -61,14 +61,14 @@ export default function FieldNode({ data, selected }) {
       </div>
 
       {data.nodeType === 'ENUM' && data.enumValues?.length > 0 && (
-        <div style={{ marginTop: 6, fontSize: 9, color: '#6b7280', borderTop: '1px solid #30363d', paddingTop: 4 }}>
+        <div style={{ marginTop: 6, fontSize: 11, color: '#94a3b8', borderTop: '1px solid #30363d', paddingTop: 4 }}>
           {data.enumValues.slice(0, 3).join(', ')}{data.enumValues.length > 3 && '...'}
         </div>
       )}
 
       {data.dataSource?.dataSourceId && (
-        <div style={{ marginTop: 6, fontSize: 9, color: '#a78bfa', borderTop: '1px solid #30363d', paddingTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-          <span style={{ fontSize: 10 }}>{'{'}</span>
+        <div style={{ marginTop: 6, fontSize: 11, color: '#a78bfa', borderTop: '1px solid #30363d', paddingTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ fontSize: 12 }}>{'{'}</span>
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {data.dataSource.dataSourceId}
           </span>

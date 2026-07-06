@@ -8,7 +8,7 @@
  * Implements proper agentic loop with streaming.
  */
 
-const { getInstance: getLLMProvider } = require('./llm/LLMProviderService');
+const { getScopedProvider } = require('../llm-access-control.service');
 const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
 const { StdioClientTransport } = require('@modelcontextprotocol/sdk/client/stdio.js');
 const { CODEX_TOOLS, executeCodexTool } = require('../codex/codex-tools');
@@ -48,7 +48,7 @@ const OVERLOAD_BACKOFF_BASE_MS = parseInt(process.env.AGENT_OVERLOAD_BACKOFF_MS 
 
 class AnthropicAgentService {
   constructor() {
-    this.llmProvider = getLLMProvider();
+    this.llmProvider = getScopedProvider('agent_service');
     this.mcpClient = null;
     this.mcpTransport = null;
     this.allTools = [];

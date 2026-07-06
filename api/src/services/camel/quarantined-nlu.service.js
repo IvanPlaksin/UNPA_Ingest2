@@ -15,6 +15,7 @@
  */
 
 const Anthropic = require('@anthropic-ai/sdk');
+const { isAllowed } = require('../llm-access-control.service');
 
 const ALLOWED_INTENTS = [
   'laptop_request',
@@ -80,6 +81,10 @@ class QuarantinedNLUService {
    * @returns {Promise<IntentObject>}
    */
   async parseIntent(rawMessage, conversationHistory = []) {
+    if (!isAllowed('direct:quarantined_nlu')) {
+      return this._unknownIntent('llm_disabled');
+    }
+
     if (typeof rawMessage !== 'string' || rawMessage.trim().length === 0) {
       return this._unknownIntent('empty input');
     }

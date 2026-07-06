@@ -44,8 +44,24 @@ CREATE INDEX ON :PendingDeletion(entityId);
 // === KNOWLEDGE GRAPH INDEXES ===
 // Performance indexes for common query patterns
 CREATE INDEX ON :Entity(normalizedForm);
-CREATE INDEX ON :Document(sourceHash);
-CREATE INDEX ON :Document(fileHash);
+// Document indexes — primary lookup keys used across the ingest pipeline.
+// NOTE: the code writes `contentHash` (SHA-256), not sourceHash/fileHash — the
+// legacy hash indexes below indexed properties that are never set.
+CREATE INDEX ON :Document(id);
+CREATE INDEX ON :Document(contentHash);
+CREATE INDEX ON :Document(unSymbol);
+CREATE INDEX ON :Document(baseSymbol);
+CREATE INDEX ON :Document(organCode);
+CREATE INDEX ON :Document(status);
+// SourceDocument (harvester cache) lookup keys.
+CREATE INDEX ON :SourceDocument(id);
+CREATE INDEX ON :SourceDocument(sourceId);
+CREATE INDEX ON :SourceDocument(symbol);
+CREATE INDEX ON :SourceDocument(importedDocumentId);
+// UN document-management node types (series / agenda) — used by MARC promotion.
+CREATE INDEX ON :DocumentSeries(id);
+CREATE INDEX ON :DocumentSeries(name);
+CREATE INDEX ON :AgendaItem(id);
 CREATE INDEX ON :KnowledgeQuantum(quantumId);
 CREATE INDEX ON :KnowledgeQuantum(namespace);
 CREATE INDEX ON :KnowledgeQuantum(fullNamespace);

@@ -1,0 +1,43 @@
+{
+  "key": "ods-ecosoc",
+  "name": "UN ODS — Economic and Social Council",
+  "family": "invenio",
+  "capabilities": ["search", "browseAll", "paginate", "filter", "sort", "download", "enrich"],
+  "filterSchema": [
+    { "type": "symbol", "param": "p", "label": "Document symbol", "syntax": "191__a:\"E/*\"", "preset": "191__b:\"E/\"", "notes": "ECOSOC scope: symbols beginning E/ (E/RES/..., E/2023/..., E/CN.x/...). Series subfield 191$b = 'E/'." },
+    { "type": "language", "param": "ln", "label": "Interface language", "options": ["en", "fr", "es", "ar", "ru", "zh"] },
+    { "type": "dateFrom", "param": "p", "label": "Year", "syntax": "year:2020" },
+    { "type": "author", "param": "p", "label": "Authoring body", "syntax": "710__a:\"UN. Economic and Social Council\"" },
+    { "type": "subject", "param": "p", "label": "UNBIS subject term", "syntax": "650__a:\"...\"" }
+  ],
+  "config": {
+    "endpoint": "https://digitallibrary.un.org/search",
+    "searchParam": "p",
+    "defaultQuery": "191__b:\"E/\"",
+    "queryParams": { "of": "recjson", "ln": "en" },
+    "pageParam": "jrec",
+    "limitParam": "rg",
+    "pageParamStyle": "offset-1",
+    "sortParams": { "field": "sf", "order": "so", "orderDesc": "d", "orderAsc": "a" },
+    "responseMapping": {
+      "recid": "recid",
+      "title": "title.title",
+      "symbol": "primary_report_number",
+      "note": "recjson mapping per Invenio 1.x; /search list endpoint is WAF-gated (HTTP 202) — use MARCXML export for authoritative per-record metadata and /record/{id}/files for download."
+    }
+  },
+  "download": {
+    "mode": "record-files",
+    "urlPattern": "https://digitallibrary.un.org/record/{recid}/files/{filename}",
+    "preferLangSuffix": "-EN.",
+    "notes": "ECOSOC filenames encode the E/ symbol (e.g. E_RES_2023_1-EN.pdf). Same /record/{recid}/files mechanism as the GA/SC ODS sources; 302 → signed URL → application/pdf."
+  },
+  "enrich": {
+    "mode": "marcxml",
+    "endpoint": "https://digitallibrary.un.org/record/{recid}/export/xm?",
+    "notes": "MARC21 XML, WAF-safe. For ECOSOC records 981$a reads 'Economic and Social Council'; 191$b='E/'."
+  },
+  "methodologyMarkdown": "## Overview\nThis source scopes the UN Digital Library (Invenio) to Economic and Social Council documents — every symbol beginning `E/`: resolutions (`E/RES/...`), session documents (`E/2023/...`) and functional-commission documents (`E/CN.x/...`). It reuses the shared UNDL Invenio mechanism, constrained to the ECOSOC series.\n\n## Search\nEndpoint `https://digitallibrary.un.org/search`, query in `p`, `of=recjson`. Constrain to ECOSOC with `191__b:\"E/\"` (default) or an exact symbol `191__a:\"E/RES/2023/1\"`. Combine with `year:`, subjects (`650__a`) or body (`710__a`) via Boolean `AND`.\n\n## Filters\nSymbol scope is the ECOSOC prefix (pre-set). Interface language `ln`; sort via `sf`/`so`.\n\n## Pagination\nOffset-1: `jrec` (1-based first-record index), `rg` (page size); page N = `jrec=(N-1)*rg+1`.\n\n## Download\nPDFs at `/record/{recid}/files/{filename}`, preferring `-EN.pdf`.\n\n## Metadata & Enrichment\nPer-record MARC21 XML at `/record/{recid}/export/xm?` (WAF-safe): symbol 191, title 245, subjects 650, ECOSOC body 981/710, files 856.\n\n## Limitations\nScope is ECOSOC symbols only. The `/search` list endpoint is AWS-WAF-challenged for server-to-server calls (HTTP 202); the `export/xm` and `files` record paths are not, so enrichment and download are reliable while result-listing may need retries / a challenge solver.",
+  "verified": true,
+  "probeNotes": "Derived from the verified ods-ga probe (same Invenio platform). ECOSOC discriminator 191__b='E/' mirrors the GA 'A/' and SC 'S/' series subfields; download/enrich record paths confirmed WAF-safe on sibling ODS sources."
+}

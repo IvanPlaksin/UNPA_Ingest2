@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ExecutionResultPanel Component
  *
  * Visualizes graph execution results using Span Tree + Summary Panel pattern.
@@ -33,11 +33,11 @@ const NODE_KINDS = {
 
 // Status configurations
 const STATUS_CONFIG = {
-  pending: { color: '#6b7280', Icon: Clock, label: 'Pending' },
+  pending: { color: '#94a3b8', Icon: Clock, label: 'Pending' },
   running: { color: '#eab308', Icon: Activity, label: 'Running', animate: true },
   done: { color: '#22c55e', Icon: CheckCircle, label: 'Done' },
   error: { color: '#ef4444', Icon: XCircle, label: 'Error' },
-  skipped: { color: '#6b7280', Icon: SkipForward, label: 'Skipped' }
+  skipped: { color: '#94a3b8', Icon: SkipForward, label: 'Skipped' }
 };
 
 /**

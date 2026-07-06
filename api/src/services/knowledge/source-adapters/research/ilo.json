@@ -1,0 +1,27 @@
+{
+  "key": "ilo",
+  "name": "ILO Publications",
+  "family": "url-catalog",
+  "capabilities": ["search"],
+  "filterSchema": [],
+  "config": {
+    "url": "https://labordoc.ilo.org/discovery/search?vid=41ILO_INST:41ILO_V2",
+    "searchUrlTemplate": "https://labordoc.ilo.org/discovery/search?query=any,contains,{query}&tab=default_tab&search_scope=41ILO_DISCOVERY&vid=41ILO_INST:41ILO_V2&offset=0",
+    "linkFilter": "/discovery/fulldisplay",
+    "includeAllLinks": false,
+    "_note": "labordoc.ilo.org has migrated to Ex Libris Alma / Primo VE (a JS single-page discovery app). The public search page is JS-rendered; there is no anonymous JSON scraping path. The internal /primaws/rest/pub/pnxs endpoint returns HTTP 400 without the correct signed/apikey parameters. Record permalinks follow /discovery/fulldisplay?docid=alma...&vid=41ILO_INST:41ILO_V2."
+  },
+  "download": {
+    "mode": "record-page",
+    "urlPattern": "https://labordoc.ilo.org/discovery/fulldisplay?docid={docid}&vid=41ILO_INST:41ILO_V2",
+    "notes": "No deterministic direct-PDF pattern. Full-text/PDF (when open) is delivered through the Primo VE delivery service on the record page; links are per-record and often point to external hosts or webapps.ilo.org. Must resolve via the fulldisplay record page."
+  },
+  "enrich": {
+    "mode": "none",
+    "endpoint": null,
+    "notes": "Primo VE exposes a REST API (pnxs / search) but it requires an Ex Libris Developer Network API key (apikey) tied to the ILO institution. Without that key, no per-record JSON metadata is retrievable anonymously. To enable full API ingestion, obtain an Alma/Primo VE API key from ILO and switch family to 'rest-api' using GET https://api-*.exlibrisgroup.com/primo/v1/search."
+  },
+  "methodologyMarkdown": "## Overview\nILO's Labordoc catalogue (labordoc.ilo.org) has migrated from its former Invenio installation to Ex Libris Alma with a Primo VE discovery front-end. Probing confirmed this: the root redirects to an Alma management login (mng/login) and legacy Invenio endpoints (search?of=recjson, of=xm) now return Ex Libris Alma error pages (HTTP 404, 'Exlibris Alma - Error report'). This changes the integration strategy substantially versus a plain Invenio scraper.\n\n## Search\nThe user-facing search is a JS single-page app at /discovery/search with a `query` parameter in Primo syntax (any,contains,{term}) plus vid, tab and search_scope. Because results render client-side, static HTML scraping yields no result rows. A clean integration requires the Primo REST API (pnxs), which needs an institutional apikey.\n\n## Filters\nPrimo VE supports facets (resource type, creation date, language, availability) but these are only reachable through the authenticated pnxs/search REST API using `multiFacets` / `qInclude` parameters. No anonymous facet params are usable.\n\n## Download\nRecord permalinks use /discovery/fulldisplay?docid=...&vid=41ILO_INST:41ILO_V2. Full text, when open access, is delivered via Primo's link-resolver on the record page (often to webapps.ilo.org or external hosts). There is no stable direct-PDF URL pattern.\n\n## Metadata & Enrichment\nPer-record metadata is available as PNX JSON only through the authenticated Primo REST API. Anonymous /primaws/rest/pub/pnxs calls returned HTTP 400.\n\n## Limitations\nNo anonymous JSON API. Recommended path: register for an Ex Libris Primo VE API key for ILO and reconfigure this adapter to family 'rest-api' against api-eu.hosted.exlibrisgroup.com/primo/v1/search. Until then, treat as a url-catalog with limited (link-only, JS-dependent) coverage.",
+  "verified": false,
+  "probeNotes": "GET https://labordoc.ilo.org/ -> redirect Location: mng/login (Ex Libris Alma). GET /search?p=climate&of=recjson -> HTTP 404 'Exlibris Alma - Error report' (legacy Invenio API gone). GET /search?p=climate&of=xm -> HTTP 404 same. GET /primaws/rest/pub/pnxs?... (full and minimal param sets) -> HTTP 400 with empty body (requires apikey/signed params). Conclusion: migrated to Alma/Primo VE; no anonymous JSON API. verified=false — needs institutional Primo VE API key to become a true rest-api source."
+}

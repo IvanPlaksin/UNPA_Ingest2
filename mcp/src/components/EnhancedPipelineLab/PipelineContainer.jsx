@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -38,7 +38,7 @@ const STAGES = [
 
 const StatusBadge = ({ status }) => {
   const config = {
-    pending: { color: '#6b7280', bg: '#1f2937', icon: Clock, label: 'Pending' },
+    pending: { color: '#94a3b8', bg: '#1f2937', icon: Clock, label: 'Pending' },
     processing: { color: '#3b82f6', bg: '#1e3a5f', icon: Loader, label: 'Processing' },
     complete: { color: '#10b981', bg: '#064e3b', icon: CheckCircle, label: 'Complete' },
     error: { color: '#ef4444', bg: '#450a0a', icon: null, label: 'Error' }

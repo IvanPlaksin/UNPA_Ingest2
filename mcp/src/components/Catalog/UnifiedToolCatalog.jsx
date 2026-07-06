@@ -1,4 +1,4 @@
-/**
+﻿/**
  * UnifiedToolCatalog (UTC-003)
  *
  * Single catalog component that replaces both FloatingToolCatalog (GXE) and
@@ -69,7 +69,7 @@ const WORKSPACE_DRAFT_ITEMS = [
 const S = {
   root: (embedded) => ({
     display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0,
-    background: '#0d1117', color: '#e2e8f0', fontSize: 12,
+    background: '#0d1117', color: '#e2e8f0', fontSize: 13,
     ...(embedded ? {} : { width: 400, maxHeight: 600, borderRadius: 8, border: '1px solid #30363d', overflow: 'hidden' })
   }),
   header: {
@@ -78,7 +78,7 @@ const S = {
   },
   searchInput: {
     flex: 1, background: '#0d1117', border: '1px solid #30363d', borderRadius: 6,
-    padding: '4px 8px', color: '#e2e8f0', fontSize: 11, outline: 'none'
+    padding: '4px 8px', color: '#e2e8f0', fontSize: 13, outline: 'none'
   },
   body: { display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0 },
   sidebar: {
@@ -87,7 +87,7 @@ const S = {
   },
   main: { flex: 1, overflowY: 'auto', padding: 0, minWidth: 0 },
   catItem: (active) => ({
-    padding: '5px 8px', cursor: 'pointer', fontSize: 11, display: 'flex', alignItems: 'center', gap: 5,
+    padding: '5px 8px', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 5,
     background: active ? '#161b22' : 'transparent', borderLeft: `2px solid ${active ? '#58a6ff' : 'transparent'}`,
     transition: 'background 0.12s'
   }),
@@ -96,19 +96,19 @@ const S = {
     background: selected ? '#1c2333' : 'transparent', transition: 'background 0.1s'
   }),
   chip: (color) => ({
-    display: 'inline-block', fontSize: 9, padding: '1px 5px', borderRadius: 4,
+    display: 'inline-block', fontSize: 13, padding: '1px 5px', borderRadius: 4,
     background: color + '22', color, fontWeight: 600, lineHeight: '14px'
   }),
-  section: { padding: '6px 8px', fontSize: 10, color: '#484f58', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid #21262d' },
-  detail: { padding: 10, fontSize: 11 },
-  detailLabel: { color: '#8b949e', fontWeight: 600, marginBottom: 2, fontSize: 10, display: 'block' }
+  section: { padding: '6px 8px', fontSize: 13, color: '#484f58', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid #21262d' },
+  detail: { padding: 10, fontSize: 13 },
+  detailLabel: { color: '#8b949e', fontWeight: 600, marginBottom: 2, fontSize: 13, display: 'block' }
 };
 
 const CategoryItem = ({ cat, active, count, onClick }) => (
   <div style={S.catItem(active)} onClick={onClick} title={cat.description || cat.name}>
     <span>{cat.emoji || '•'}</span>
     <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.name}</span>
-    {count > 0 && <span style={{ color: '#484f58', fontSize: 9 }}>{count}</span>}
+    {count > 0 && <span style={{ color: '#484f58', fontSize: 13 }}>{count}</span>}
   </div>
 );
 
@@ -152,7 +152,7 @@ const ToolItemRow = ({ item, selected, onSelect, onDragStart }) => {
         {item.draftType && <span style={S.chip(item.color || '#888')}>{item.draftType}</span>}
       </div>
       {item.description && (
-        <div style={{ color: '#8b949e', fontSize: 10, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <div style={{ color: '#8b949e', fontSize: 13, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {item.description}
         </div>
       )}
@@ -162,7 +162,7 @@ const ToolItemRow = ({ item, selected, onSelect, onDragStart }) => {
 
 const DetailPanel = ({ item }) => {
   if (!item) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#484f58', fontSize: 11 }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#484f58', fontSize: 13 }}>
       Select an item to view details
     </div>
   );
@@ -174,7 +174,7 @@ const DetailPanel = ({ item }) => {
       {item.executorId && (
         <>
           <span style={S.detailLabel}>Executor</span>
-          <code style={{ fontSize: 10, color: '#58a6ff', display: 'block', marginBottom: 6 }}>{item.executorId}</code>
+          <code style={{ fontSize: 13, color: '#58a6ff', display: 'block', marginBottom: 6 }}>{item.executorId}</code>
         </>
       )}
       {item.draftType && (
@@ -195,7 +195,7 @@ const DetailPanel = ({ item }) => {
         <>
           <span style={S.detailLabel}>Input Schema</span>
           <pre style={{
-            fontSize: 9, background: '#161b22', padding: 6, borderRadius: 4,
+            fontSize: 13, background: '#161b22', padding: 6, borderRadius: 4,
             overflow: 'auto', maxHeight: 150, color: '#c9d1d9', margin: '0 0 6px'
           }}>
             {JSON.stringify(item.inputSchema, null, 2)}
@@ -204,7 +204,7 @@ const DetailPanel = ({ item }) => {
       )}
       <div style={{
         marginTop: 8, padding: '4px 8px', background: '#21262d', borderRadius: 4,
-        fontSize: 10, color: '#8b949e', textAlign: 'center'
+        fontSize: 13, color: '#8b949e', textAlign: 'center'
       }}>
         Drag to canvas to add
       </div>
@@ -346,7 +346,7 @@ const UnifiedToolCatalog = ({
             <button
               onClick={() => setActiveView('browse')}
               style={{
-                padding: '2px 6px', fontSize: 10, border: 'none', borderRadius: 4, cursor: 'pointer',
+                padding: '2px 6px', fontSize: 13, border: 'none', borderRadius: 4, cursor: 'pointer',
                 background: activeView === 'browse' ? '#30363d' : 'transparent',
                 color: activeView === 'browse' ? '#e2e8f0' : '#8b949e'
               }}
@@ -354,7 +354,7 @@ const UnifiedToolCatalog = ({
             <button
               onClick={() => setActiveView('ai')}
               style={{
-                padding: '2px 6px', fontSize: 10, border: 'none', borderRadius: 4, cursor: 'pointer',
+                padding: '2px 6px', fontSize: 13, border: 'none', borderRadius: 4, cursor: 'pointer',
                 background: activeView === 'ai' ? '#30363d' : 'transparent',
                 color: activeView === 'ai' ? '#e2e8f0' : '#8b949e'
               }}
@@ -375,7 +375,7 @@ const UnifiedToolCatalog = ({
           </>
         )}
         {activeView === 'ai' && (
-          <span style={{ flex: 1, fontSize: 11, color: '#8b949e' }}>AI Assistant</span>
+          <span style={{ flex: 1, fontSize: 13, color: '#8b949e' }}>AI Assistant</span>
         )}
         {showDetail && activeView === 'browse' && (
           <button
@@ -418,10 +418,10 @@ const UnifiedToolCatalog = ({
             >
               <span>📋</span>
               <span style={{ flex: 1 }}>All</span>
-              <span style={{ color: '#484f58', fontSize: 9 }}>{allItems.length}</span>
+              <span style={{ color: '#484f58', fontSize: 13 }}>{allItems.length}</span>
             </div>
             {categories.map(cat => cat.isDivider ? (
-              <div key={cat.id} style={{ padding: '6px 8px', fontSize: 9, color: '#484f58', fontWeight: 600, borderTop: '1px solid #21262d', marginTop: 4 }}>
+              <div key={cat.id} style={{ padding: '6px 8px', fontSize: 13, color: '#484f58', fontWeight: 600, borderTop: '1px solid #21262d', marginTop: 4 }}>
                 {cat.name}
               </div>
             ) : (
@@ -466,7 +466,7 @@ const UnifiedToolCatalog = ({
       {/* Footer */}
       <div style={{
         padding: '4px 8px', borderTop: '1px solid #30363d', background: '#161b22',
-        fontSize: 9, color: '#484f58', textAlign: 'center', flexShrink: 0
+        fontSize: 13, color: '#484f58', textAlign: 'center', flexShrink: 0
       }}>
         {filteredItems.length} item{filteredItems.length !== 1 ? 's' : ''} •
         {mode === 'workspace' ? ' Workspace drafts' : ` ${gxeTools.length} tools loaded`}
