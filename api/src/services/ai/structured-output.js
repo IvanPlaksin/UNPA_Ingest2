@@ -28,6 +28,7 @@ const {
     getApiKey,
     getDefaultModelId
 } = require('../../config/ai-models.config');
+const { invokeClaudeCode, extractJSON } = require('./providers/claude-code.provider');
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CONFIGURATION
@@ -36,7 +37,9 @@ const {
 const DEFAULT_OPTIONS = {
     maxRetries: 2,
     temperature: 0.1,       // Low for deterministic output
-    defaultProvider: 'gemini',
+    // Dev default: Claude Code CLI instance (no API key / no credit balance required).
+    // Override via STRUCTURED_OUTPUT_PROVIDER=gemini|anthropic|ollama|claude-code.
+    defaultProvider: process.env.STRUCTURED_OUTPUT_PROVIDER || 'claude-code',
     strictValidation: true,
     timeout: 30000,         // 30 seconds
     verbose: false
@@ -99,6 +102,9 @@ class StructuredOutputService {
         let result;
         try {
             switch (provider) {
+                case 'claude-code':
+                    result = await this._generateWithClaudeCode(prompt, resolvedSchema, { ...options, modelId });
+                    break;
                 case 'anthropic':
                     result = await this._generateWithClaude(prompt, resolvedSchema, { ...options, modelId });
                     break;
@@ -131,6 +137,91 @@ class StructuredOutputService {
 
         result.duration = Date.now() - startTime;
         return result;
+    }
+
+    /**
+     * Alias for generate() matching the SDA-pipeline call convention.
+     *
+     * The generation stages (task-planner, intent-classifier) call
+     * `generateStructured(prompt, schemaName, options)` — a method LLMProviderService
+     * does not expose, which is why constrained decoding silently fell back to plain
+     * chat. This alias wires the existing constrained-decoding path to those callers.
+     *
+     * `schema` may be a registered schema NAME (resolved via schemaRegistry) or a
+     * schema OBJECT — generate() handles both. Returns `{ success, data, ... }`.
+     *
+     * @param {string} prompt
+     * @param {string|Object} schema - registered schema name or schema object
+     * @param {Object} [options]
+     * @returns {Promise<Object>}
+     */
+    async generateStructured(prompt, schema, options = {}) {
+        return this.generate(prompt, schema, options);
+    }
+
+    /**
+     * Claude Code CLI: prompt-based JSON + post-validation.
+     *
+     * The CLI has no server-side constrained decoding (no responseSchema/tool_use
+     * enforcement), so structural validity is achieved via a strict "return ONLY JSON
+     * matching this schema" system prompt + extractJSON() + _validateAgainstSchema().
+     * Auth is via the local Claude Code install (no API key / credit balance).
+     * @private
+     */
+    async _generateWithClaudeCode(prompt, schema, options = {}) {
+        const schemaStr = JSON.stringify(this._cleanSchemaForClaude(schema), null, 2);
+        const baseSystem =
+            'You are a strict JSON generator. Output ONLY a single valid JSON value that ' +
+            'conforms to the following JSON Schema. No markdown, no code fences, no commentary.\n\n' +
+            'JSON Schema:\n' + schemaStr;
+
+        // The CLI has no server-side schema enforcement, so a chatty/non-JSON response is
+        // possible. Retry a few times (firmer instruction each round) before giving up.
+        const maxAttempts = (this.options.maxRetries ?? 2) + 1;
+        let lastError = 'unknown';
+        let totalCost = 0;
+
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            const systemPrompt = attempt === 0
+                ? baseSystem
+                : baseSystem + '\n\nCRITICAL: your previous reply was not parseable. Reply with ONLY the raw JSON value, starting with { or [.';
+
+            let text, cost;
+            try {
+                ({ text, cost } = await invokeClaudeCode({
+                    systemPrompt,
+                    prompt,
+                    model: options.modelId || options.model,
+                    timeoutMs: options.timeout || this.options.timeout,
+                    signal: options.signal,
+                }));
+            } catch (e) {
+                lastError = e.message;
+                this.stats.retries++;
+                continue;
+            }
+            totalCost += cost || 0;
+
+            const data = extractJSON(text);
+            if (!data) {
+                lastError = 'Failed to extract JSON from Claude Code output';
+                this.stats.retries++;
+                continue;
+            }
+
+            if (options.strictValidation !== false && this.options.strictValidation) {
+                const validation = this._validateAgainstSchema(data, schema);
+                if (!validation.valid) {
+                    lastError = `Schema validation failed: ${(validation.errors || []).join('; ')}`;
+                    this.stats.retries++;
+                    continue;
+                }
+            }
+
+            return { success: true, data, provider: 'claude-code', cost: totalCost, attempts: attempt + 1 };
+        }
+
+        return { success: false, error: lastError, provider: 'claude-code', cost: totalCost };
     }
 
     /**
@@ -986,6 +1077,7 @@ Respond ONLY with valid JSON, no other text.`;
      */
     _getDefaultModelForProvider(provider) {
         const defaults = {
+            'claude-code': process.env.CLAUDE_CODE_MODEL || 'claude-sonnet-4-6',
             anthropic: 'claude-sonnet-4-5-20250929',
             gemini: 'gemini-pro-latest',
             ollama: 'llama3.1:8b'

@@ -101,6 +101,33 @@ function formatTypeCatalog(types) {
 }
 
 /**
+ * Build a live domain summary from the executor catalog (registry-driven).
+ * Replaces the previously hardcoded Node Categories / Domains blocks, which drifted
+ * from the runtime (they advertised gateway/loop/control/aggregator categories and an
+ * "integration" domain that have no registered executors — the #1 cause of phantom
+ * executor generation, see the generation baseline report).
+ */
+function buildDomainSummary(executorCatalog) {
+  if (!executorCatalog || executorCatalog.length === 0) {
+    return 'Domains and node types are discovered from the live executor registry. Use `get_available_executors` and `list_domains` to enumerate them.';
+  }
+  const byDomain = {};
+  for (const e of executorCatalog) {
+    const d = e.domain || 'general';
+    byDomain[d] = (byDomain[d] || 0) + 1;
+  }
+  const lines = Object.keys(byDomain).sort()
+    .map(d => `- **${d}** (${byDomain[d]} executor${byDomain[d] === 1 ? '' : 's'})`);
+  return `## Available Domains (live registry — ${executorCatalog.length} executors)
+${lines.join('\n')}
+
+Node "categories" are defined by the executor domain/type listed in **AVAILABLE EXECUTORS** above.
+CRITICAL: only use executor types that appear there. Do NOT invent categories or executor types.
+There are no gateway/loop/parallel/aggregator executors — use \`workflow.condition\` with labelled
+edges (true/false) for branching, and graph topology for parallelism.`;
+}
+
+/**
  * Build the system prompt with current context
  * @param {Object} context - Context including executors and current graph
  * @returns {string} Complete system prompt
@@ -143,21 +170,7 @@ The system has a central Type Catalog stored in the Core Knowledge Base that def
 4. **Validate configurations** - Use \`validate_node_against_type\` to ensure nodes match their type schema
 5. **Find compatible connections** - Use \`find_compatible_nodes\` to discover what can follow a node
 
-## Node Categories
-- **executor** - Performs a specific operation (parsing, chunking, embedding, etc.)
-- **condition** - Evaluates a condition and branches the flow
-- **transformer** - Transforms data format without external calls
-- **aggregator** - Combines multiple inputs into one output
-- **event** - Triggers on external events (webhook, timer, etc.)
-- **gateway** - Parallel split/join, exclusive/inclusive gateways
-- **control** - Flow control (loop, break, continue)
-
-## Domains
-- **common** - Universal types (condition, merge, split, etc.)
-- **ingestion** - Document parsing, chunking, entity extraction
-- **rag** - Search, ranking, context assembly, generation
-- **workflow** - Business process types (task, decision, event)
-- **integration** - External system connectors
+${buildDomainSummary(executorCatalog)}
 
 ## Edge Types
 - **data_flow** - Normal data transfer between nodes
@@ -176,6 +189,8 @@ ${typeCatalog.length > 0 ? `## Available Types\n${formatTypeCatalog(typeCatalog)
 
 2. **RAG Pipelines** typically follow:
    \`expand_query → hybrid_search → rerank → assemble_context → generate_response\`
+   (These are illustrative shapes, not executor ids. Verify every step against **AVAILABLE EXECUTORS** /
+   \`get_available_executors\` before adding it — some (e.g. query-expansion, reranking) may be unavailable.)
 
 3. **Error Handling**: Add retry policies for external service calls (LLM, embedding, database)
 
@@ -343,4 +358,5 @@ module.exports = {
   formatExecutorCatalog,
   formatGraphState,
   formatTypeCatalog,
+  buildDomainSummary,
 };

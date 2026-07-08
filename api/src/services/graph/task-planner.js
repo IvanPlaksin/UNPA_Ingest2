@@ -126,10 +126,15 @@ class TaskPlanner {
     _getLlmService() {
         if (!this._llmService) {
             try {
-                const { getInstance: getLLMProvider } = require('../llm/LLMProviderService');
-                this._llmService = getLLMProvider();
+                // Constrained decoding: use StructuredOutputService (Claude tool_use /
+                // Gemini responseSchema) so TaskPlan/IR generation is schema-validated.
+                // It exposes generateStructured(prompt, schema, options) → { success, data }.
+                // (Previously this loaded LLMProviderService, which lacks generateStructured,
+                //  so _generateWithLLM always returned null and fell back to sequential plans.)
+                const { structuredOutput } = require('../ai/structured-output');
+                this._llmService = structuredOutput;
             } catch (e) {
-                console.warn('TaskPlanner: LLM service not available');
+                console.warn('TaskPlanner: structured LLM service not available');
             }
         }
         return this._llmService;

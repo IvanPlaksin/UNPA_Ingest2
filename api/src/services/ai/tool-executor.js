@@ -224,6 +224,11 @@ class ToolExecutor {
       backlog_record_file_change: this.handleBacklogRecordFileChange,
       backlog_record_graph_change: this.handleBacklogRecordGraphChange,
       backlog_complete_execution: this.handleBacklogCompleteExecution,
+
+      // Codex governance tools (P1-004) — align toolset with the system prompt's
+      // MANDATORY Knowledge Access Protocol (previously referenced but non-existent).
+      codex_search_rules: this.handleCodexSearchRules,
+      codex_get_blackcodex: this.handleCodexGetBlackcodex,
     };
 
     return handlers[toolName];
@@ -772,6 +777,30 @@ class ToolExecutor {
       success: true,
       data: { explanation },
     };
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // CODEX GOVERNANCE HANDLERS (P1-004)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  async handleCodexSearchRules(args) {
+    try {
+      const { codexService } = require('../codex');
+      const results = await codexService.searchCodexDocuments(args.query);
+      return { success: true, data: { query: args.query, results } };
+    } catch (error) {
+      return { success: false, error: `Codex search failed: ${error.message}` };
+    }
+  }
+
+  async handleCodexGetBlackcodex(args) {
+    try {
+      const { blackCodexService } = require('../codex');
+      const antiPatterns = await blackCodexService.getAll();
+      return { success: true, data: { antiPatterns } };
+    } catch (error) {
+      return { success: false, error: `BlackCodex fetch failed: ${error.message}` };
+    }
   }
 
   // ══════════════════════════════════════════════════════════════════════════

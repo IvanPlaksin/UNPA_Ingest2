@@ -437,7 +437,13 @@ class IntentClassifier {
       }
     }
 
-    // Fallback to regular chat
+    // Fallback to regular chat — only if the injected service is chat-capable.
+    // (StructuredOutputService is structured-only and exposes no .chat(); in that case
+    //  the structured attempt above is the terminal LLM path.)
+    if (!this.llmService || typeof this.llmService.chat !== 'function') {
+      return ruleBasedResult;
+    }
+
     const systemPrompt = `You are an intent classifier for a graph execution system.
 Classify the user's task into ONE of these intents: ingest, query, route, approve, transform, monitor, analyze, create, read, update, delete, extract, aggregate, compare, link, export.
 
@@ -690,10 +696,23 @@ Provide domain, intent, confidence (0-1), and brief reasoning.`;
 
 /**
  * Create IntentClassifier instance
- * @param {Object} [llmService=null] - Optional LLM service
+ *
+ * When no llmService is supplied, defaults to the StructuredOutputService singleton
+ * so intent classification uses constrained decoding (INTENT_DESCRIPTOR_SCHEMA) instead
+ * of being skipped. classifyWithLLM prefers the structured path and only uses .chat()
+ * as a fallback when the injected service exposes it.
+ *
+ * @param {Object} [llmService=null] - Optional LLM service (chat- or structured-capable)
  * @returns {IntentClassifier}
  */
 function createIntentClassifier(llmService = null) {
+  if (!llmService) {
+    try {
+      llmService = require('../ai/structured-output').structuredOutput;
+    } catch (e) {
+      // structured-output unavailable — fall back to rule-based only
+    }
+  }
   return new IntentClassifier(llmService);
 }
 

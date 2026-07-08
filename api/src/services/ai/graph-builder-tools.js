@@ -983,6 +983,33 @@ const GRAPH_BUILDER_TOOLS = [
         required: ['backlogId', 'summary']
       }
     }
+  },
+
+  {
+    type: 'function',
+    function: {
+      name: 'codex_search_rules',
+      description: 'Search Codex governance rules by keywords. Use BEFORE creating or modifying a graph to find applicable rules (e.g. branch discipline, executor conventions).',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: 'Search keywords (e.g. "condition branch labels", "executor tool binding")' }
+        },
+        required: ['query']
+      }
+    }
+  },
+
+  {
+    type: 'function',
+    function: {
+      name: 'codex_get_blackcodex',
+      description: 'Get BlackCodex anti-patterns (known rejected approaches) to avoid when building graphs.',
+      parameters: {
+        type: 'object',
+        properties: {}
+      }
+    }
   }
 ];
 
