@@ -88,6 +88,18 @@ async function test(name, fn) {
     assert.ok(session.messages.some(m => /restored the previous best/.test(m.content || '')), 'rollback prompt expected on degradation');
   });
 
+  await test('stream loop: verify fails then passes → reflection prompt injected, grade A', async () => {
+    const agent = makeAgent();
+    agent._streamResponse = async () => {}; // no-op stream sink
+    stubVerifier(agent, [{ grade: 'F', pass: false, issues: [{ code: 'E', severity: 'error', message: 'e', suggestion: 's' }] }, { grade: 'A', pass: true }]);
+    const session = makeSession();
+    const chunks = [];
+    const res = await agent._agentLoopStream(session, (c) => chunks.push(c));
+    assert.strictEqual(res.grade, 'A');
+    assert.ok(session.messages.some(m => /Graph Validation Failed/.test(m.content || '')), 'reflection prompt must be injected in stream loop');
+    assert.ok(chunks.some(c => /Re-validating/.test(String(c))), 'stream should emit a re-validation notice');
+  });
+
   await test('reflectionEnabled=false → returns on first STOP without verifying', async () => {
     const agent = makeAgent({ reflectionEnabled: false });
     let verifyCalled = false;

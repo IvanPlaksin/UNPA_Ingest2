@@ -747,6 +747,7 @@ After you make changes I will re-validate automatically. Do NOT say you are done
     const allToolCalls = [];
     let iteration = 0;
     let finalContent = '';
+    let reflectionCount = 0;
 
     while (iteration < this.config.maxToolIterations) {
       iteration++;
@@ -756,16 +757,24 @@ After you make changes I will re-validate automatically. Do NOT say you are done
 
       // Check if we have tool calls
       if (!llmResponse.tool_calls || llmResponse.tool_calls.length === 0) {
-        // Stream the final response
-        if (llmResponse.content) {
-          await this._streamResponse(session.messages, onChunk);
-          finalContent = llmResponse.content;
+        // STOP → external validation (reflection loop), same as _agentLoop.
+        const reflect = await this._verifyAndReflect(session, reflectionCount);
+        if (reflect) {
+          // Stream the final response
+          if (llmResponse.content) {
+            await this._streamResponse(session.messages, onChunk);
+            finalContent = llmResponse.content;
+          }
+          return {
+            content: finalContent || llmResponse.content || '',
+            toolCalls: allToolCalls,
+            ...reflect,
+          };
         }
-
-        return {
-          content: finalContent || llmResponse.content || '',
-          toolCalls: allToolCalls,
-        };
+        // Validation failed → reflection prompt injected; iterate again.
+        reflectionCount++;
+        if (onChunk) onChunk(`\n[Re-validating graph… grade ${session._bestGrade || '?'}]\n`);
+        continue;
       }
 
       // Notify about tool execution
