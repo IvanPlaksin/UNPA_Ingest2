@@ -1194,6 +1194,24 @@ async function callClaudeForGraphEnhanced(task, options = {}) {
       // STEP 4 (SDA): Graph Compilation from TaskPlan
       const compiledGraph = graphCompiler.compileFromTaskPlan(taskPlan, resolvedToolSet);
 
+      // IR-preservation (v3.0 Phase 3): persist the sound-by-construction process TREE
+      // (not the flat TaskPlan) so it can drive pm4py ProcessTree soundness. task-planner
+      // already has the builders that lift {steps, dependencies} into a ProcessRepresentation.
+      if (compiledGraph) {
+        let processTreeIR = null;
+        try {
+          if (taskPlan?.steps && taskPlan?.dependencies) {
+            processTreeIR = (taskPlan.parallelGroups && taskPlan.parallelGroups.length > 0)
+              ? taskPlanner._buildWithParallelGroups(taskPlan.steps, taskPlan.dependencies, taskPlan.parallelGroups)
+              : taskPlanner._buildSequenceFromDependencies(taskPlan.steps, taskPlan.dependencies);
+          }
+        } catch (err) {
+          console.warn('[SDA] process-tree IR build failed, storing flat TaskPlan:', err.message);
+          processTreeIR = taskPlan; // fallback: still useful for lineage
+        }
+        compiledGraph.processIR = processTreeIR || taskPlan;
+      }
+
       // GATE: compilation
       const compileCheck = DAG_THRESHOLDS.compilation.check(compiledGraph);
       if (compileCheck.anomaly) {

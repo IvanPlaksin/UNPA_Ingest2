@@ -222,7 +222,9 @@ class GraphCatalogService {
           wasAutoFixed: false,
           graphType: $graphType,
           graphSubType: $graphSubType,
-          graphDimension: $graphDimension
+          graphDimension: $graphDimension,
+          processIR: $processIR,
+          irVersion: $irVersion
         })
       `, {
         graphId,
@@ -233,7 +235,11 @@ class GraphCatalogService {
         nodeCount: nodes.length,
         edgeCount: edges.length,
         topology, contentHash, now,
-        graphType, graphSubType, graphDimension
+        graphType, graphSubType, graphDimension,
+        // IR-preservation (v3.0 Phase 3): the sound-by-construction process tree the
+        // graph was compiled from. Nullable — legacy/hand-built graphs have no IR.
+        processIR: data.processIR ? JSON.stringify(data.processIR) : null,
+        irVersion: data.processIR ? '1.0' : null
       });
 
       // Create GraphVersion
@@ -834,7 +840,9 @@ class GraphCatalogService {
           wasAutoFixed: false,
           graphType: $graphType,
           graphSubType: $graphSubType,
-          graphDimension: $graphDimension
+          graphDimension: $graphDimension,
+          processIR: $processIR,
+          irVersion: $irVersion
         })
       `, {
         graphId,
@@ -845,7 +853,11 @@ class GraphCatalogService {
         nodeCount: nodes.length,
         edgeCount: edges.length,
         topology, contentHash, now,
-        graphType, graphSubType, graphDimension
+        graphType, graphSubType, graphDimension,
+        // IR-preservation (v3.0 Phase 3): the sound-by-construction process tree the
+        // graph was compiled from. Nullable — legacy/hand-built graphs have no IR.
+        processIR: data.processIR ? JSON.stringify(data.processIR) : null,
+        irVersion: data.processIR ? '1.0' : null
       });
 
       // Create new GraphVersion
@@ -961,6 +973,7 @@ class GraphCatalogService {
       nodes,
       edges,
       requiredParams: data.requiredParams,
+      processIR: data.processIR || null, // IR-preservation (v3.0 Phase 3)
       createdBy: context.userId || 'system',
     });
 
@@ -1117,7 +1130,11 @@ class GraphCatalogService {
       edgeCount: toNumber(definition?.edgeCount) || 0,
       nodes: definition ? JSON.parse(definition.nodes || '[]') : [],
       edges: definition ? JSON.parse(definition.edges || '[]') : [],
-      requiredParams: definition ? JSON.parse(definition.requiredParams || '{}') : {}
+      requiredParams: definition ? JSON.parse(definition.requiredParams || '{}') : {},
+      // IR-preservation (v3.0 Phase 3): sound-by-construction process tree, if the
+      // graph was compiled from an IR (null for legacy/hand-built graphs).
+      processIR: definition?.processIR ? JSON.parse(definition.processIR) : null,
+      irVersion: definition?.irVersion || null
     };
   }
 }

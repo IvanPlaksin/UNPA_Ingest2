@@ -55,7 +55,8 @@ class SaveGraphTool extends BaseTool {
     const {
       name, description = '', type = 'WORKFLOW', namespace = 'default',
       tags = [], visibility = 'PUBLIC', nodes, edges, requiredParams = {},
-      parentGraphId, parentNodeId, changelog, reuseStrategy, sourceGraphId
+      parentGraphId, parentNodeId, changelog, reuseStrategy, sourceGraphId,
+      processIR = null // IR-preservation (v3.0 Phase 3)
     } = args;
 
     // ═══ STEP 1: STRUCTURAL VALIDATION ═══
@@ -128,7 +129,7 @@ class SaveGraphTool extends BaseTool {
       // New version of existing graph
       const result = await catalog.createVersion(
         parentGraphId,
-        { nodes: finalNodes, edges: finalEdges, requiredParams, tags, type },
+        { nodes: finalNodes, edges: finalEdges, requiredParams, tags, type, processIR },
         changelog || 'Updated via Execution Assistant',
         ctxObj
       );
@@ -150,7 +151,7 @@ class SaveGraphTool extends BaseTool {
     } else {
       // New catalog entry
       const result = await catalog.createCatalogEntry(
-        { name, description, type, namespace, tags, visibility, nodes: finalNodes, edges: finalEdges, requiredParams },
+        { name, description, type, namespace, tags, visibility, nodes: finalNodes, edges: finalEdges, requiredParams, processIR },
         validationMeta,
         ctxObj
       );
