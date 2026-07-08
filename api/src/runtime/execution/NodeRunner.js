@@ -152,6 +152,16 @@ class NodeRunner {
         resolvedInput = templateResolver.resolve(input, templateContext);
       }
 
+      // Detect unresolved {{...}} templates — upstream node returned no data for this path
+      const unresolvedTemplates = this._findUnresolvedTemplates(resolvedInput);
+      if (unresolvedTemplates.length > 0) {
+        metrics.phases.validateInputMs = Date.now() - validateInputStart;
+        metrics.wallTimeMs = Date.now() - startTime;
+        return this._failure('UNRESOLVED_TEMPLATE', FailurePhase.VALIDATE_INPUT, metrics, {
+          error: `Unresolved template(s): ${unresolvedTemplates.join(', ')} — upstream node returned empty or null result`,
+        });
+      }
+
       const validationResult = this._validateInput(resolvedInput, toolDef.inputSchema);
 
       if (!validationResult.valid) {
@@ -170,6 +180,18 @@ class NodeRunner {
       const executeStart = Date.now();
 
       let result;
+
+      if (ctx.mock) {
+        // ── MockExecutionMode (Level 2.5) ──────────────────────────────────────
+        // Skip the real, side-effecting tool.execute(). Synthesize output from the
+        // tool's declared outputSchema so downstream template resolution (UNRESOLVED_
+        // TEMPLATE) and the scheduler's skip-cascade detection run against a realistic
+        // shape — a dry-run that validates data-flow without touching external systems.
+        // Nodes without an outputSchema yield {} (the caller/verifier flags the
+        // undeclared output contract).
+        result = { data: this._mockOutput(toolDef), __mock: true };
+        metrics.phases.executeMs = Date.now() - executeStart;
+      } else {
       let timeoutTimer = null;
 
       try {
@@ -215,6 +237,7 @@ class NodeRunner {
       }
 
       metrics.phases.executeMs = Date.now() - executeStart;
+      } // end else (real execution)
 
       // ═══════════════════════════════════════════════════════════════════════
       // CHECK: WAIT_FOR_SIGNAL — new AsyncSignalContract format
@@ -395,6 +418,67 @@ class NodeRunner {
       valid: errors.length === 0,
       errors
     };
+  }
+
+  /**
+   * Find unresolved {{...}} templates in a (possibly nested) value.
+   * Returns an array of unresolved template strings found.
+   * @private
+   */
+  _findUnresolvedTemplates(value, found = []) {
+    if (typeof value === 'string') {
+      const matches = value.match(/\{\{[^}]+\}\}/g);
+      if (matches) found.push(...matches);
+    } else if (value && typeof value === 'object' && !Array.isArray(value)) {
+      for (const v of Object.values(value)) this._findUnresolvedTemplates(v, found);
+    } else if (Array.isArray(value)) {
+      for (const v of value) this._findUnresolvedTemplates(v, found);
+    }
+    return found;
+  }
+
+  /**
+   * Synthesize a mock output object from a tool's declared outputSchema.
+   * Used by MockExecutionMode to produce a realistic-shaped output without running
+   * the real (side-effecting) tool. Returns {} when no outputSchema is declared —
+   * downstream {{node.field}} references then surface as UNRESOLVED_TEMPLATE, which
+   * the Level-2.5 verifier classifies as an undeclared-output-contract signal.
+   * @private
+   */
+  _mockOutput(toolDef) {
+    const schema = toolDef?.outputSchema;
+    if (!schema || !schema.properties || typeof schema.properties !== 'object') {
+      return {};
+    }
+    const out = {};
+    for (const [key, prop] of Object.entries(schema.properties)) {
+      out[key] = this._mockValue(prop);
+    }
+    return out;
+  }
+
+  /**
+   * Type-appropriate placeholder value for a JSON-schema property.
+   * @private
+   */
+  _mockValue(prop) {
+    const type = Array.isArray(prop?.type) ? prop.type[0] : prop?.type;
+    switch (type) {
+      case 'string':  return prop.default ?? (Array.isArray(prop.enum) ? prop.enum[0] : 'mock');
+      case 'number':
+      case 'integer': return prop.default ?? 0;
+      case 'boolean': return prop.default ?? true;
+      case 'array':   return prop.default ?? [];
+      case 'object': {
+        if (prop.properties) {
+          const o = {};
+          for (const [k, p] of Object.entries(prop.properties)) o[k] = this._mockValue(p);
+          return o;
+        }
+        return prop.default ?? {};
+      }
+      default: return prop?.default ?? 'mock';
+    }
   }
 
   /**

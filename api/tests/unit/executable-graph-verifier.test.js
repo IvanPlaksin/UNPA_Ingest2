@@ -22,6 +22,21 @@ function makeVerifier() {
   return new ExecutableGraphVerifier({ pluginRegistry: fakeRegistry, GraphValidator });
 }
 
+// L2.5 helpers: an MCP tool whose real execute() must never run under mock mode,
+// plus a verifier wired with matching plugin + mcp registries.
+function mcpTool(outputSchema) {
+  return {
+    getDefinition: () => ({ inputSchema: {}, outputSchema: outputSchema || {} }),
+    execute: async () => { throw new Error('REAL_EXECUTE'); },
+  };
+}
+function makeL25Verifier(mcpTools) {
+  const known = new Set(Object.keys(mcpTools));
+  const pluginReg = { validateGraphExecutors: (types) => ({ missingExecutors: types.filter(t => !known.has(t)) }) };
+  const mcpRegistry = { getTool: (id) => mcpTools[id] || null, listTools: () => Object.keys(mcpTools).map(id => ({ id })) };
+  return new ExecutableGraphVerifier({ pluginRegistry: pluginReg, GraphValidator, mcpRegistry });
+}
+
 let passed = 0, failed = 0;
 async function test(name, fn) {
   try { await fn(); passed++; console.log(`  ✓ ${name}`); }
@@ -144,6 +159,38 @@ const badTemplateGraph = {
     }
     assert.ok(r.levels.l1 && r.levels.l2, 'levels.l1 and levels.l2 required');
     assert.ok(Array.isArray(r.issues) && Array.isArray(r.suggestions));
+  });
+
+  await test('L2.5: INVALID_TEMPLATE_REF when upstream declares schema without the field', async () => {
+    const v = makeL25Verifier({ producer: mcpTool({ properties: { value: { type: 'string' } } }), consumer: mcpTool({}) });
+    const g = {
+      nodes: [{ id: 'n1', executorType: 'producer' }, { id: 'n2', executorType: 'consumer', parameters: { ref: '{{n1.missing}}' } }],
+      edges: [{ id: 'e1', source: 'n1', target: 'n2' }],
+    };
+    const r = await v.verify(g);
+    const codes = r.issues.map(i => i.code);
+    assert.ok(codes.includes('INVALID_TEMPLATE_REF'), `expected INVALID_TEMPLATE_REF (got ${codes.join(',')})`);
+    assert.strictEqual(r.levels.l2_5.pass, false);
+    assert.strictEqual(r.pass, false);
+  });
+
+  await test('L2.5: UNDECLARED_OUTPUT_CONTRACT warning when upstream lacks schema', async () => {
+    const v = makeL25Verifier({ producer: mcpTool({}), consumer: mcpTool({}) });
+    const g = {
+      nodes: [{ id: 'n1', executorType: 'producer' }, { id: 'n2', executorType: 'consumer', parameters: { ref: '{{n1.value}}' } }],
+      edges: [{ id: 'e1', source: 'n1', target: 'n2' }],
+    };
+    const r = await v.verify(g);
+    const codes = r.issues.map(i => i.code);
+    assert.ok(codes.includes('UNDECLARED_OUTPUT_CONTRACT'), `expected UNDECLARED_OUTPUT_CONTRACT (got ${codes.join(',')})`);
+    assert.ok(!codes.includes('INVALID_TEMPLATE_REF'), 'must not hard-fail an undeclared-schema upstream');
+    assert.strictEqual(r.levels.l2_5.pass, true);
+  });
+
+  await test('L2.5: skipped when no mcpRegistry; valid graph still grade A', async () => {
+    const r = await makeVerifier().verify(validGraph);
+    assert.ok(r.levels.l2_5.skipped, 'l2_5 should be skipped without a runtime');
+    assert.strictEqual(r.grade, 'A');
   });
 
   console.log(`\n${passed} passed, ${failed} failed`);

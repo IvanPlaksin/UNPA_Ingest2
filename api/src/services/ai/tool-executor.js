@@ -39,6 +39,15 @@ class GraphState {
     return { ...this.graph };
   }
 
+  /**
+   * Replace the full graph state (deep clone). Used for best-attempt rollback
+   * in the agent reflection loop.
+   */
+  setGraph(graph) {
+    this.graph = JSON.parse(JSON.stringify(graph || this.graph));
+    this.graph.updatedAt = new Date().toISOString();
+  }
+
   addNode(node) {
     this.graph.nodes.push(node);
     this.graph.updatedAt = new Date().toISOString();

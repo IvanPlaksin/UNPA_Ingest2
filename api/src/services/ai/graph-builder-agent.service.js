@@ -45,6 +45,12 @@ const DEFAULT_CONFIG = {
   temperature: 0.1,              // Low for deterministic tool calling
   maxTokens: 4096,
   timeout: 60000,                // 60 second timeout per LLM call
+  // Reflection loop (v3.0 Phase 2): on STOP, verify the graph and inject a
+  // structured-feedback reflection prompt if it fails (external signal, per
+  // Huang et al. 2024). Feature-flagged for safe rollback.
+  reflectionEnabled: true,
+  maxReflections: 3,             // reflection rounds beyond tool iterations
+  targetGrade: 'B',              // minimum acceptable verifier grade
 };
 
 // Models that support native function calling in Ollama
@@ -524,6 +530,108 @@ class GraphBuilderAgent extends EventEmitter {
   // AGENT LOOP
   // ══════════════════════════════════════════════════════════════════════════
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // REFLECTION LOOP (v3.0 Phase 2) — external validation as a signal
+  // ══════════════════════════════════════════════════════════════════════════
+
+  _getVerifier() {
+    if (!this._verifier) {
+      const { ExecutableGraphVerifier } = require('../verification/executable-graph-verifier.service');
+      this._verifier = new ExecutableGraphVerifier({
+        pluginRegistry: this.executorRegistry,
+        // L2.5 (MockExecutionMode) needs an MCP tool registry; the builder agent has
+        // only the AOPEG executor registry, so L2.5 graceful-skips (L1+L2 signal).
+        mcpRegistry: this.executorRegistry && typeof this.executorRegistry.getTool === 'function'
+          ? this.executorRegistry : null,
+      });
+    }
+    return this._verifier;
+  }
+
+  _gradeRank(grade) {
+    return { A: 5, B: 4, C: 3, D: 2, F: 1 }[grade] || 0;
+  }
+
+  _cloneGraph(graph) {
+    return JSON.parse(JSON.stringify(graph || {}));
+  }
+
+  _buildReflectionPrompt(validation) {
+    const errs = validation.issues.filter(i => i.severity === 'error');
+    const warns = validation.issues.filter(i => i.severity === 'warning').slice(0, 5);
+    const errText = errs.map(i => `- **[${i.code}]** ${i.message}\n  → Fix: ${i.suggestion || 'Review and correct'}`).join('\n');
+    const warnText = warns.map(i => `- [${i.code}] ${i.message}`).join('\n');
+    return {
+      role: 'user',
+      content: `## Graph Validation Failed (Grade: ${validation.grade})
+
+Your graph did not pass validation. You MUST fix the errors before finishing.
+
+### Errors (${errs.length}):
+${errText || 'None'}
+
+### Warnings:
+${warnText || 'None'}
+
+Use the graph tools (update_node, remove_node, add_edge, remove_edge, …) to fix these.
+After you make changes I will re-validate automatically. Do NOT say you are done until validation passes.`,
+    };
+  }
+
+  _buildRollbackPrompt(bestGrade, currentGrade) {
+    return {
+      role: 'user',
+      content: `Note: your last changes lowered the graph grade from ${bestGrade} to ${currentGrade}, so I restored the previous best version (grade ${bestGrade}). Try a different approach to the remaining issues.`,
+    };
+  }
+
+  /**
+   * Verify the current graph; on failure inject a reflection prompt and signal the
+   * loop to continue. Returns a final result object when done (passed or budget
+   * exhausted), or null to continue iterating.
+   * @private
+   */
+  async _verifyAndReflect(session, reflectionCount) {
+    // Disabled → truthy sentinel so the STOP branch returns normally (null means "continue").
+    if (this.config.reflectionEnabled === false) return { reflectionDisabled: true };
+
+    let validation;
+    try {
+      const graph = session.graphState.getGraph();
+      validation = await this._getVerifier().verify(graph, { includeDynamic: false });
+
+      // Best-attempt tracking
+      if (!session._bestAttempt || this._gradeRank(validation.grade) > this._gradeRank(session._bestGrade || 'F')) {
+        session._bestAttempt = this._cloneGraph(graph);
+        session._bestGrade = validation.grade;
+      }
+
+      const targetRank = this._gradeRank(this.config.targetGrade || 'B');
+      if (validation.pass && this._gradeRank(validation.grade) >= targetRank) {
+        return { grade: validation.grade, validation, reflections: reflectionCount };
+      }
+
+      if (reflectionCount >= (this.config.maxReflections ?? 3)) {
+        // Restore best attempt before returning
+        if (session._bestAttempt) session.graphState.setGraph(session._bestAttempt);
+        return { grade: session._bestGrade || validation.grade, validation, partial: true, reason: 'max_reflections', reflections: reflectionCount };
+      }
+
+      // Degradation → rollback to best and tell the model
+      if (session._bestGrade && this._gradeRank(validation.grade) < this._gradeRank(session._bestGrade) - 1) {
+        session.graphState.setGraph(session._bestAttempt);
+        session.messages.push(this._buildRollbackPrompt(session._bestGrade, validation.grade));
+      }
+
+      session.messages.push(this._buildReflectionPrompt(validation));
+      return null; // continue
+    } catch (e) {
+      // Verifier failure must never break the agent — fall back to normal STOP.
+      console.warn('[Agent] reflection verify failed, exiting normally:', e.message);
+      return { grade: null, error: e.message, reflectionSkipped: true };
+    }
+  }
+
   /**
    * Main agent loop - handles tool calling iterations
    * @private
@@ -532,6 +640,7 @@ class GraphBuilderAgent extends EventEmitter {
     const toolExecutor = new ToolExecutor(session.graphState, this.executorRegistry);
     const allToolCalls = [];
     let iteration = 0;
+    let reflectionCount = 0;
 
     while (iteration < this.config.maxToolIterations) {
       iteration++;
@@ -541,11 +650,14 @@ class GraphBuilderAgent extends EventEmitter {
 
       // Check if we have tool calls
       if (!llmResponse.tool_calls || llmResponse.tool_calls.length === 0) {
-        // No more tool calls - return final response
-        return {
-          content: llmResponse.content || '',
-          toolCalls: allToolCalls,
-        };
+        // STOP: the model believes it is done → external validation (reflection loop).
+        // On failure a structured reflection prompt is injected and we iterate again.
+        const reflect = await this._verifyAndReflect(session, reflectionCount);
+        if (reflect) {
+          return { content: llmResponse.content || '', toolCalls: allToolCalls, ...reflect };
+        }
+        reflectionCount++;
+        continue;
       }
 
       // Process tool calls

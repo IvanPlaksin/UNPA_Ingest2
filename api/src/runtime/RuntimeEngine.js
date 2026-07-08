@@ -202,8 +202,8 @@ class RuntimeEngine extends EventEmitter {
       // Register ports for each node — collect missing tools
       const missingTools = [];
       for (const node of workingDag.nodes) {
-        // Support multiple formats: executorType (AOPEG), data.toolId, data.kind
-        const toolId = node.executorType || node.data?.toolId || node.data?.tool || node.data?.kind;
+        // Support multiple formats: executorType (AOPEG), data.toolId, data.kind, or top-level type
+        const toolId = node.executorType || node.data?.toolId || node.data?.tool || node.data?.kind || node.type;
 
         if (toolId) {
           const tool = this._mcpRegistry.getTool(toolId);
@@ -280,7 +280,8 @@ class RuntimeEngine extends EventEmitter {
           strategy: config.schedulingStrategy,
           failureStrategy: config.errorStrategy,
           executionId: this._executionId,
-          executionContext: this._executionContext
+          executionContext: this._executionContext,
+          mock: config.mode === 'mock' || config.mock === true
         }
       );
 

@@ -93,7 +93,8 @@ class TopologicalScheduler extends EventEmitter {
       strategy: config.strategy ?? SchedulerStrategy.PARALLEL_BOUNDED,
       failureStrategy: config.failureStrategy ?? FailureStrategy.FAIL_FAST,
       nodeTimeoutMs: config.nodeTimeoutMs ?? 60000,
-      executionId: config.executionId ?? `exec-${Date.now()}`
+      executionId: config.executionId ?? `exec-${Date.now()}`,
+      mock: config.mock ?? false
     };
 
     // Retry policy - accept instance or create from config
@@ -356,8 +357,8 @@ class TopologicalScheduler extends EventEmitter {
       });
     }
 
-    // Run the node - support both AOPEG (executorType) and React Flow (data.toolId/tool/kind) formats
-    const toolId = node.executorType || node.data?.toolId || node.data?.tool || node.data?.kind;
+    // Run the node - support both AOPEG (executorType) and React Flow (data.toolId/tool/kind) formats, or top-level type
+    const toolId = node.executorType || node.data?.toolId || node.data?.tool || node.data?.kind || node.type;
     // Node parameters: AOPEG uses 'parameters', ReactFlow uses 'data.config' or 'data'
     const nodeParameters = node.parameters || node.data?.config || node.data || {};
 
@@ -369,7 +370,8 @@ class TopologicalScheduler extends EventEmitter {
       executionId: this._config.executionId,
       config: { nodeTimeoutMs: this._config.nodeTimeoutMs },
       nodeParameters,
-      executionContext: this._executionContext
+      executionContext: this._executionContext,
+      mock: this._config.mock
     });
 
     // Handle result

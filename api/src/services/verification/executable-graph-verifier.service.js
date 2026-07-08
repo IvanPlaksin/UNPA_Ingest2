@@ -23,10 +23,11 @@
 // ── Grading configuration (generation domain) ────────────────────────────────
 
 const WEIGHTS = {
-  structure: 0.30, // L1 structural (GraphValidator)
-  executors: 0.25, // L1 EXECUTOR_EXISTS
-  templates: 0.25, // L2 TEMPLATE_REFS_EXIST
-  branches: 0.20,  // L2 BRANCH_DISCIPLINE
+  structure: 0.25,        // L1 structural (GraphValidator)
+  executors: 0.20,        // L1 EXECUTOR_EXISTS
+  templates: 0.20,        // L2 TEMPLATE_REFS_EXIST (static)
+  branches: 0.15,         // L2 BRANCH_DISCIPLINE
+  dynamicTemplates: 0.20, // L2.5 MockExecutionMode dry-run
 };
 
 const THRESHOLDS = { A: 0.95, B: 0.85, C: 0.70, D: 0.50 };
@@ -72,6 +73,10 @@ class ExecutableGraphVerifier {
   constructor(deps = {}) {
     this._pluginRegistry = deps.pluginRegistry || null;
     this._GraphValidator = deps.GraphValidator || null;
+    // L2.5 dynamic validation needs an MCP tool registry to build a RuntimeEngine.
+    // When absent, verifyLevel2_5 degrades gracefully (skipped, non-blocking).
+    this._mcpRegistry = deps.mcpRegistry || null;
+    this._RuntimeEngine = deps.RuntimeEngine || null;
   }
 
   async _getPluginRegistry() {
@@ -234,6 +239,121 @@ class ExecutableGraphVerifier {
     };
   }
 
+  // ── LEVEL 2.5: DYNAMIC (MockExecutionMode dry-run) ──────────────────────────
+
+  _getRuntimeEngine() {
+    if (!this._mcpRegistry) return null;
+    let RuntimeEngine = this._RuntimeEngine;
+    if (!RuntimeEngine) {
+      try { RuntimeEngine = require('../../runtime/RuntimeEngine').RuntimeEngine; }
+      catch { return null; }
+    }
+    try { return new RuntimeEngine(this._mcpRegistry, { enableValidation: false, recordExecutions: false }); }
+    catch { return null; }
+  }
+
+  /**
+   * Dry-run the graph through RuntimeEngine in MockExecutionMode and classify the
+   * per-node outcomes. Catches data-flow defects a static pass cannot: field-level
+   * UNRESOLVED_TEMPLATE, undeclared output contracts, and skip-cascades.
+   *
+   * Graceful degradation: if no MCP registry is available, returns skipped=true
+   * (non-blocking), mirroring the Petri soundness gate.
+   *
+   * @param {{nodes: Array, edges: Array}} graph
+   * @returns {Promise<{pass, skipped?, reason?, errors, warnings, score: {dynamicTemplates}}>}
+   */
+  async verifyLevel2_5(graph) {
+    const engine = this._getRuntimeEngine();
+    if (!engine) {
+      return { pass: true, skipped: true, reason: 'RUNTIME_UNAVAILABLE', errors: [], warnings: [], score: { dynamicTemplates: 1 } };
+    }
+
+    const errors = [];
+    const warnings = [];
+    let result;
+    try {
+      const dag = { nodes: graph?.nodes || [], edges: graph?.edges || [], graphType: 'EXECUTABLE' };
+      result = await engine.execute(dag, {}, { mode: 'mock' });
+    } catch (err) {
+      errors.push({ code: 'MOCK_EXECUTION_ERROR', severity: 'error', message: `Mock execution threw: ${err.message}`, suggestion: 'Fix graph structure before dynamic validation' });
+      return { pass: false, errors, warnings, score: { dynamicTemplates: 0 } };
+    }
+
+    const nodeResults = result.nodeResults || {};
+    let refCount = 0;
+    let hardFail = 0;
+
+    for (const [nodeId, nr] of Object.entries(nodeResults)) {
+      if (nr.status === 'FAILED' && nr.error === 'UNRESOLVED_TEMPLATE') {
+        refCount++;
+        const ref = this._extractRefFromDetails(nr.details);
+        const upstreamId = ref ? ref.split('.')[0] : null;
+        const upstreamHasSchema = upstreamId ? this._upstreamHasOutputSchema(graph, upstreamId) : false;
+
+        if (upstreamHasSchema) {
+          hardFail++;
+          errors.push({
+            code: 'INVALID_TEMPLATE_REF',
+            severity: 'error',
+            nodeId,
+            ref,
+            message: `Template {{${ref || '?'}}} in "${nodeId}" cannot be resolved: field not produced by upstream (declared) outputSchema`,
+            suggestion: 'Fix the reference or ensure the upstream executor produces that field',
+          });
+        } else {
+          warnings.push({
+            code: 'UNDECLARED_OUTPUT_CONTRACT',
+            severity: 'warning',
+            nodeId,
+            ref,
+            message: `Template {{${ref || '?'}}} in "${nodeId}" is unverifiable: upstream node lacks an outputSchema`,
+            suggestion: 'Declare an outputSchema on the upstream executor to enable field-level validation',
+          });
+        }
+      } else if (nr.status === 'SKIPPED') {
+        warnings.push({
+          code: 'SKIP_CASCADE',
+          severity: 'warning',
+          nodeId,
+          message: `Node "${nodeId}" was skipped during mock execution (upstream failure or untaken branch)`,
+          suggestion: 'Review upstream failures and branch routing',
+        });
+      } else if (nr.status === 'FAILED' && nr.error !== 'UNRESOLVED_TEMPLATE') {
+        errors.push({
+          code: 'MOCK_NODE_FAILED',
+          severity: 'error',
+          nodeId,
+          message: `Node "${nodeId}" failed during mock execution: ${nr.error}`,
+          suggestion: 'Review node configuration / data flow',
+        });
+      }
+    }
+
+    const dynamicTemplates = refCount > 0 ? (refCount - hardFail) / refCount : 1;
+    return { pass: errors.length === 0, errors, warnings, score: { dynamicTemplates } };
+  }
+
+  _extractRefFromDetails(details) {
+    const s = details?.error || (typeof details === 'string' ? details : '');
+    const m = /\{\{\s*([^}]+?)\s*\}\}/.exec(s);
+    return m ? m[1] : null;
+  }
+
+  _upstreamHasOutputSchema(graph, upstreamId) {
+    if (upstreamId === 'input') return true;
+    const node = (graph?.nodes || []).find(n => n.id === upstreamId);
+    if (!node) return false;
+    const type = nodeExecutorType(node);
+    if (!type || !this._mcpRegistry?.getTool) return false;
+    try {
+      const tool = this._mcpRegistry.getTool(type);
+      const def = tool?.getDefinition?.();
+      const os = def?.outputSchema;
+      return !!(os && os.properties && Object.keys(os.properties).length > 0);
+    } catch { return false; }
+  }
+
   // ── GRADING ────────────────────────────────────────────────────────────────
 
   _computeGrade(scores) {
@@ -259,18 +379,28 @@ class ExecutableGraphVerifier {
     const l1 = await this.verifyLevel1(graph);
     const l2 = this.verifyLevel2(graph);
 
-    const scores = { ...l1.score, ...l2.score };
+    // Only mock-run once the static levels pass — no point dry-running a broken graph.
+    let l2_5 = { pass: true, skipped: true, errors: [], warnings: [], score: { dynamicTemplates: 1 } };
+    if (l1.pass && l2.pass && options.includeDynamic !== false) {
+      l2_5 = await this.verifyLevel2_5(graph);
+    }
+
+    const scores = { ...l1.score, ...l2.score, ...l2_5.score };
     const { grade, score } = this._computeGrade(scores);
 
-    const issues = [...l1.errors, ...l1.warnings, ...l2.errors, ...l2.warnings];
+    const issues = [
+      ...l1.errors, ...l1.warnings,
+      ...l2.errors, ...l2.warnings,
+      ...(l2_5.errors || []), ...(l2_5.warnings || []),
+    ];
     const suggestions = [...new Set(issues.map(i => i.suggestion).filter(Boolean))];
 
     return {
-      pass: l1.pass && l2.pass,
+      pass: l1.pass && l2.pass && (l2_5.pass !== false),
       grade,
       score,
       scores,
-      levels: { l1, l2 },
+      levels: { l1, l2, l2_5 },
       issues,
       suggestions,
     };
