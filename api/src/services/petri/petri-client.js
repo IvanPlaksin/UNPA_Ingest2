@@ -81,6 +81,34 @@ class PetriClient {
   }
 
   /**
+   * Validate a ProcessRepresentation IR (process tree) for soundness via pm4py
+   * ProcessTree conversion. Preferred over validateGraph when a sound-by-construction
+   * process tree is available (it validates the formal model, not a reconstructed DAG).
+   *
+   * @param {Object} ir - Serialized ProcessRepresentation process tree
+   * @param {string} [graphId]
+   * @returns {Promise<SoundnessResult>}
+   */
+  async validateIR(ir, graphId = null) {
+    const url = `${this.baseUrl}/petri/validate-ir`;
+    const body = { ir };
+    if (graphId) body.graph_id = graphId;
+
+    logger.debug(`Validating IR${graphId ? ` [${graphId}]` : ''} (process tree, type=${ir?.type || '?'})`);
+
+    const result = await this._fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    if (!result.sound) {
+      logger.warn(`IR${graphId ? ` [${graphId}]` : ''} soundness FAILED:`, result.errors);
+    }
+    return result;
+  }
+
+  /**
    * Check if gnn-service is reachable (non-throwing).
    * @returns {Promise<boolean>}
    */

@@ -193,6 +193,55 @@ const badTemplateGraph = {
     assert.strictEqual(r.grade, 'A');
   });
 
+  // ── L3 formal soundness (Petri) ──────────────────────────────────────────────
+  function makeL3Verifier(petriClient) {
+    return new ExecutableGraphVerifier({ pluginRegistry: fakeRegistry, GraphValidator, petriClient });
+  }
+
+  await test('L3: skipped by default (PETRI disabled); valid graph grade A', async () => {
+    delete process.env.PETRI_VALIDATION_ENABLED;
+    const r = await makeVerifier().verify(validGraph);
+    assert.ok(r.levels.l3.skipped, 'l3 must skip when PETRI disabled');
+    assert.strictEqual(r.levels.l3.reason, 'PETRI_DISABLED');
+    assert.strictEqual(r.grade, 'A');
+  });
+
+  await test('L3: dispatches to validateIR for a process-tree IR', async () => {
+    process.env.PETRI_VALIDATION_ENABLED = 'true';
+    let irCalled = false, dagCalled = false;
+    const petri = {
+      validateIR: async () => { irCalled = true; return { sound: true, errors: [], warnings: [] }; },
+      validateGraph: async () => { dagCalled = true; return { sound: true, errors: [], warnings: [] }; },
+    };
+    const g = { ...validGraph, processIR: { _type: 'ProcessRepresentation', type: 'sequence', steps: [{ _type: 'TaskStep', id: 'a' }] } };
+    const r = await makeL3Verifier(petri).verify(g);
+    delete process.env.PETRI_VALIDATION_ENABLED;
+    assert.ok(irCalled && !dagCalled, 'process-tree IR must route to validateIR');
+    assert.strictEqual(r.levels.l3.pass, true);
+  });
+
+  await test('L3: dispatches to validateGraph (DAG) when no process-tree IR', async () => {
+    process.env.PETRI_VALIDATION_ENABLED = 'true';
+    let irCalled = false, dagCalled = false;
+    const petri = {
+      validateIR: async () => { irCalled = true; return { sound: true, errors: [], warnings: [] }; },
+      validateGraph: async () => { dagCalled = true; return { sound: true, errors: [], warnings: [] }; },
+    };
+    const r = await makeL3Verifier(petri).verify(validGraph); // no processIR
+    delete process.env.PETRI_VALIDATION_ENABLED;
+    assert.ok(dagCalled && !irCalled, 'no-IR graph must route to validateGraph');
+  });
+
+  await test('L3: soundness violation → SOUNDNESS_VIOLATION error, verify fails', async () => {
+    process.env.PETRI_VALIDATION_ENABLED = 'true';
+    const petri = { validateGraph: async () => ({ sound: false, errors: ['deadlock detected'], warnings: [] }) };
+    const r = await makeL3Verifier(petri).verify(validGraph);
+    delete process.env.PETRI_VALIDATION_ENABLED;
+    assert.ok(r.issues.some(i => i.code === 'SOUNDNESS_VIOLATION'), 'expected SOUNDNESS_VIOLATION');
+    assert.strictEqual(r.levels.l3.pass, false);
+    assert.strictEqual(r.pass, false);
+  });
+
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed === 0 ? 0 : 1);
 })();

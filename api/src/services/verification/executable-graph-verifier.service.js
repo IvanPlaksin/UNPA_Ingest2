@@ -77,6 +77,8 @@ class ExecutableGraphVerifier {
     // When absent, verifyLevel2_5 degrades gracefully (skipped, non-blocking).
     this._mcpRegistry = deps.mcpRegistry || null;
     this._RuntimeEngine = deps.RuntimeEngine || null;
+    // L3 formal soundness (Petri/Woflan via gnn-service). Gated by PETRI_VALIDATION_ENABLED.
+    this._petriClient = deps.petriClient || null;
   }
 
   async _getPluginRegistry() {
@@ -354,6 +356,67 @@ class ExecutableGraphVerifier {
     } catch { return false; }
   }
 
+  // ── LEVEL 3: FORMAL SOUNDNESS (Petri / Woflan) ──────────────────────────────
+
+  _getPetriClient() {
+    // Gated: opt-in via env, mirroring the existing SaveGraphTool Petri gate.
+    if (process.env.PETRI_VALIDATION_ENABLED !== 'true') return null;
+    if (this._petriClient) return this._petriClient;
+    try {
+      const { PetriClient } = require('../petri/petri-client');
+      this._petriClient = new PetriClient();
+    } catch {
+      this._petriClient = null;
+    }
+    return this._petriClient;
+  }
+
+  /**
+   * Formal WF-net soundness. Dispatches by IR shape:
+   *   - graph has a ProcessRepresentation process tree → /petri/validate-ir
+   *     (validates the sound-by-construction formal model)
+   *   - otherwise → /petri/validate on the flat DAG (reconstructed WF-net)
+   * Graceful degradation: disabled/unavailable/error → skipped (non-blocking).
+   *
+   * @param {{nodes, edges, processIR?}} graph
+   * @returns {Promise<{pass, skipped?, reason?, errors, warnings, score:{soundness}}>}
+   */
+  async verifyLevel3(graph) {
+    const client = this._getPetriClient();
+    if (!client) {
+      return { pass: true, skipped: true, reason: 'PETRI_DISABLED', errors: [], warnings: [], score: { soundness: 1 } };
+    }
+
+    let result;
+    try {
+      const ir = graph?.processIR;
+      if (ir && ir._type === 'ProcessRepresentation') {
+        result = await client.validateIR(ir);
+      } else {
+        result = await client.validateGraph(graph?.nodes || [], graph?.edges || []);
+      }
+    } catch (e) {
+      return { pass: true, skipped: true, reason: `PETRI_UNAVAILABLE: ${e.message}`, errors: [], warnings: [], score: { soundness: 1 } };
+    }
+
+    const errors = [];
+    const warnings = [];
+    for (const msg of (result.errors || [])) {
+      errors.push({ code: 'SOUNDNESS_VIOLATION', severity: 'error', message: msg, suggestion: 'Fix the control-flow so the graph can always complete (no deadlock/dead transition)' });
+    }
+    for (const msg of (result.warnings || [])) {
+      warnings.push({ code: 'SOUNDNESS_WARNING', severity: 'warning', message: msg, suggestion: 'Review the flagged control-flow' });
+    }
+
+    return {
+      pass: result.sound !== false && errors.length === 0,
+      errors,
+      warnings,
+      score: { soundness: result.sound ? 1 : 0 },
+      metrics: result.metrics,
+    };
+  }
+
   // ── GRADING ────────────────────────────────────────────────────────────────
 
   _computeGrade(scores) {
@@ -385,22 +448,29 @@ class ExecutableGraphVerifier {
       l2_5 = await this.verifyLevel2_5(graph);
     }
 
-    const scores = { ...l1.score, ...l2.score, ...l2_5.score };
+    // L3 formal soundness runs last, only on an otherwise-clean graph (final pass).
+    let l3 = { pass: true, skipped: true, errors: [], warnings: [], score: { soundness: 1 } };
+    if (l1.pass && l2.pass && l2_5.pass !== false && options.includeFormal !== false) {
+      l3 = await this.verifyLevel3(graph);
+    }
+
+    const scores = { ...l1.score, ...l2.score, ...l2_5.score, ...l3.score };
     const { grade, score } = this._computeGrade(scores);
 
     const issues = [
       ...l1.errors, ...l1.warnings,
       ...l2.errors, ...l2.warnings,
       ...(l2_5.errors || []), ...(l2_5.warnings || []),
+      ...(l3.errors || []), ...(l3.warnings || []),
     ];
     const suggestions = [...new Set(issues.map(i => i.suggestion).filter(Boolean))];
 
     return {
-      pass: l1.pass && l2.pass && (l2_5.pass !== false),
+      pass: l1.pass && l2.pass && (l2_5.pass !== false) && (l3.pass !== false),
       grade,
       score,
       scores,
-      levels: { l1, l2, l2_5 },
+      levels: { l1, l2, l2_5, l3 },
       issues,
       suggestions,
     };
