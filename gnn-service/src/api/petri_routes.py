@@ -42,6 +42,15 @@ class SoundnessResult(BaseModel):
     metrics: Dict[str, Any]
 
 
+class IRValidationRequest(BaseModel):
+    # Serialized ProcessRepresentation process tree:
+    #   composite: {_type:'ProcessRepresentation', type:'sequence'|'choice'|'parallel'|'loop',
+    #               steps:[...], choiceCondition?, loopCondition?}
+    #   leaf:      {_type:'TaskStep', id, intent, ...}
+    ir: Dict[str, Any] = Field(..., description="ProcessRepresentation IR (process tree)")
+    graph_id: Optional[str] = Field(None, description="Optional graph identifier for logging")
+
+
 # ============================================================================
 # WAIT_FOR_INPUT node detection
 # ============================================================================
@@ -120,6 +129,39 @@ async def validate_graph(request: GraphValidationRequest):
         return _check_soundness(net, im, fm, node_map, wait_node_ids)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Validation error: {str(e)}")
+
+
+@router.post("/validate-ir", response_model=SoundnessResult)
+async def validate_ir(request: IRValidationRequest):
+    """
+    Validate a ProcessRepresentation IR (process tree) via pm4py ProcessTree soundness.
+
+    Process trees are block-structured and sound by construction: mapping the GXE IR
+    (SEQUENCE/CHOICE/PARALLEL/LOOP) to a pm4py ProcessTree and converting to a WF-net
+    yields a net whose soundness is guaranteed for well-formed trees — so this validates
+    the *formal model* directly rather than a reconstructed flat DAG (see /validate).
+
+    LOOP(body, condition) maps to pm4py LOOP(body, silent-tau): "do body, then optionally
+    repeat" — the classic while-loop; the data condition is abstracted for structural soundness.
+    """
+    try:
+        import pm4py  # noqa: F401
+        from pm4py.objects.conversion.process_tree import converter as pt_converter
+    except ImportError:
+        raise HTTPException(status_code=503, detail="pm4py not installed. Run: pip install pm4py>=2.7.0")
+
+    try:
+        tree = _ir_to_process_tree(request.ir)
+        if tree is None:
+            raise ValueError("IR produced an empty process tree")
+        net, im, fm = pt_converter.apply(tree)
+        # Build node_map from the converted net (transition name → activity label).
+        node_map = {t.name: (t.label or t.name) for t in net.transitions}
+        return _check_soundness(net, im, fm, node_map, wait_node_ids=[])
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"IR validation error: {str(e)}")
 
 
 # ============================================================================
@@ -201,6 +243,62 @@ def _reactflow_to_petri_net(nodes: List[ReactFlowNode], edges: List[ReactFlowEdg
     fm[p_end] = 1
 
     return net, im, fm, node_map, wait_node_ids
+
+
+def _ir_to_process_tree(ir: Dict[str, Any], parent=None):
+    """
+    Recursively map a GXE ProcessRepresentation IR into a pm4py ProcessTree.
+
+    Mapping:
+      SEQUENCE → Operator.SEQUENCE   CHOICE → Operator.XOR
+      PARALLEL → Operator.PARALLEL   LOOP   → Operator.LOOP(body, silent-tau)
+      TaskStep (leaf) → ProcessTree(label=<id|intent>)
+    """
+    from pm4py.objects.process_tree.obj import ProcessTree, Operator
+
+    if not isinstance(ir, dict):
+        raise ValueError("IR node must be an object")
+
+    # Leaf: a TaskStep (or anything that is not a ProcessRepresentation composite).
+    if ir.get("_type") != "ProcessRepresentation":
+        label = ir.get("id") or ir.get("intent") or ir.get("capability") or "task"
+        return ProcessTree(label=str(label), parent=parent)
+
+    op_map = {
+        "sequence": Operator.SEQUENCE,
+        "choice": Operator.XOR,
+        "parallel": Operator.PARALLEL,
+        "loop": Operator.LOOP,
+    }
+    ptype = ir.get("type")
+    if ptype not in op_map:
+        raise ValueError(f"Unknown ProcessRepresentation type: {ptype}")
+
+    children_ir = ir.get("steps") or []
+    if not isinstance(children_ir, list) or len(children_ir) == 0:
+        raise ValueError(f"ProcessRepresentation '{ptype}' has no steps")
+
+    node = ProcessTree(operator=op_map[ptype], parent=parent)
+
+    if ptype == "loop":
+        # pm4py LOOP requires [do, redo]. Wrap a multi-step body in a SEQUENCE, then
+        # add a silent tau as the redo child → "do body, then optionally repeat".
+        if len(children_ir) == 1:
+            do_part = _ir_to_process_tree(children_ir[0], parent=node)
+        else:
+            do_part = ProcessTree(operator=Operator.SEQUENCE, parent=node)
+            do_part.children = [_ir_to_process_tree(c, parent=do_part) for c in children_ir]
+        tau = ProcessTree(label=None, parent=node)  # silent redo
+        node.children = [do_part, tau]
+    else:
+        child_trees = [_ir_to_process_tree(c, parent=node) for c in children_ir]
+        # Degenerate 1-child composite → collapse to the child (avoid empty operator).
+        if len(child_trees) == 1 and ptype in ("sequence", "choice", "parallel"):
+            child_trees[0].parent = parent
+            return child_trees[0]
+        node.children = child_trees
+
+    return node
 
 
 def _check_soundness(net, im, fm, node_map: Dict[str, str], wait_node_ids: Optional[List[str]] = None) -> SoundnessResult:
