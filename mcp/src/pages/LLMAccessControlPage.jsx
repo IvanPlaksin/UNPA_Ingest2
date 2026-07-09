@@ -5,6 +5,7 @@ import {
   Chip, IconButton, Collapse,
 } from '@mui/material';
 import { ShieldAlert, RotateCcw, ChevronDown, ChevronRight, Info } from 'lucide-react';
+import LLMProviderSelector from '../components/GXE/LLMProviderSelector';
 
 const API_BASE = 'http://localhost:3010/api/v1/llm-access';
 
@@ -352,6 +353,9 @@ export default function LLMAccessControlPage() {
           </Button>
         </Stack>
       </Stack>
+
+      {/* Structured-generation LLM provider (SDA) — v3.0 */}
+      <LLMProviderSelector />
 
       {error && (
         <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>

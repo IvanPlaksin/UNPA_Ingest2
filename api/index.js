@@ -116,6 +116,7 @@ const { initFormRoutes } = require('./src/routes/structural-form.route');
 const { initStructuralRoutes } = require('./src/routes/structural.route');
 const llmAccessControlRoutes = require('./src/routes/llm-access-control.route');
 const investigationRoutes = require('./src/routes/investigation.route');
+const methodologyRoutes = require('./src/routes/methodology.route');
 
 // ═══════════════════════════════════════════════════════════════════
 // App Setup
@@ -186,6 +187,7 @@ app.use('/api/v1/graph-types', graphTypesRoutes);
 app.use('/api/v1/ainfra', ainfraRoutes);
 app.use('/api/v1/graph', immutableGraphRoutes);
 app.use('/api/v1/gxe', gxeRoutes);
+app.use('/api/v1/settings', require('./src/routes/settings.route'));
 app.use('/api/v1/gxe-manager', gxeManagerRoutes);
 app.use('/api/v1/graph-catalog', graphCatalogRoutes);
 app.use('/api/v1/tensors', tensorRoutes);
@@ -260,6 +262,7 @@ app.use('/api/v1/gaps',             gapManagerRoutes);
 app.use('/api/v1/knowledge-health', knowledgeHealthRoutes);
 app.use('/api/v1/llm-access', llmAccessControlRoutes);
 app.use('/api/v1/investigation', investigationRoutes);
+app.use('/api/v1/methodology/investigation', methodologyRoutes);
 const _mg = require('./src/services/memgraph.service');
 app.use('/api/v1/forms', initFormRoutes(_mg));
 const { getFormService } = require('./src/routes/structural-form.route');

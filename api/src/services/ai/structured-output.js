@@ -90,7 +90,10 @@ class StructuredOutputService {
             };
         }
 
-        const provider = options.provider || this.options.defaultProvider;
+        // Provider resolution: explicit option → runtime setting (UI-tunable) → configured default.
+        let runtimeProvider = null;
+        try { runtimeProvider = require('../settings/runtime-settings').getLlmProvider(); } catch { /* optional */ }
+        const provider = options.provider || runtimeProvider || this.options.defaultProvider;
         const modelId = options.modelId || this._getDefaultModelForProvider(provider);
 
         // Track by provider
