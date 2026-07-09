@@ -88,7 +88,7 @@ measured** — it needs live generation runs.
 | 1 | Agent doesn't finish without L1+L2(+L2.5) validation | ✅ implemented, unit-verified (flag-guarded) |
 | 2 | Failed validation → structured feedback + fix attempt + best-attempt rollback | ✅ unit-verified (6/6 reflection tests) |
 | 3 | Constrained decoding wired to SDA | ✅ unit + live e2e (schema-valid JSON via Claude Code CLI) |
-| 4 | IR preserved; soundness on IR level | ✅ persistence live round-trip + pm4py logic verified locally; **live Petri deploy blocked** (see §5) |
+| 4 | IR preserved; soundness on IR level | ✅ **live-verified end-to-end** — gnn `/petri/validate-ir` + api `/verify-graph` L3 return real Woflan verdicts (see §5) |
 | 5 | Reference graph passes MockExecutionMode | ⚠️ mechanism ready + unit-verified; the specific reference graph was **not** run through it live |
 | 6 | `find_similar_graphs` few-shot tool for the agent | ⏸️ deferred |
 | 7 | Generation first-try success improved ≥20pp vs baseline | 📊 **not measured** (needs live generation runs) |
@@ -116,18 +116,25 @@ measured** — it needs live generation runs.
 
 ## 5. Open / blocked items
 
-- **P3-005 live Petri (infra-blocked).** The `gnn-service` Docker image is ~4 months old and
-  **never had pm4py** — so `/petri/*` was never mounted (the Petri feature was dormant regardless
-  of this work). `pm4py>=2.7.0` is now in `requirements.txt`, but a rebuild must compile
-  `torch-scatter` + `torch-sparse` from source (~20 min) and did not finalize inside the available
-  background window. **Action:** run to completion in a dedicated terminal:
-  ```bash
-  cd d:/UN/Repos/UNPA/UNPA_Ingest
-  docker compose build gnn --no-cache --progress=plain
-  docker compose up -d --no-deps gnn
-  curl http://localhost:5000/petri/health   # expect {"status":"ok","pm4py_version":"2.7.x"}
-  ```
-  The IR→ProcessTree→Woflan logic is already verified against pm4py 2.7.22 locally.
+- **P3-005 live Petri — RESOLVED (2026-07-09, commit `b532f7d`).** Now live end-to-end.
+  Two blockers beyond the missing pm4py were fixed:
+  - pm4py ≥2.7 `constants.py` calls `psutil.Process(os.getppid()).name()` at import (PowerBI
+    detection); inside a container `ppid==0` → `NoSuchProcess`, crashing the first `/petri/*`
+    call. Dockerfile now guards it (try/except).
+  - `gnn_config.yaml` `service.port` was `5001` but Docker maps host `:5001`→container `:5000`;
+    reverted to `5000` (the `5001` value made the rebuilt image unhealthy/unreachable).
+  - Operational: the api reaches gnn via `GNN_SERVICE_URL` (set to `http://127.0.0.1:5001` in
+    `api/.env`, **not** `localhost` — Docker Desktop/WSL2 shadows `[::1]:5001` so `localhost`
+    times out from Node), and `PETRI_VALIDATION_ENABLED=true` activates L3.
+
+  Verified: `/petri/health` → `{"status":"ok","pm4py_version":"2.7.23.1"}`; `/petri/validate-ir`
+  → `sound=true` for nested SEQUENCE/PARALLEL/LOOP/CHOICE IR; flat parallel-split-without-join
+  → `sound=false` (Woflan discriminates, not a rubber stamp); api `/verify-graph` → L3 live,
+  grade A, `soundness=1`, real net metrics.
+
+  Note: the live image was produced as a fast overlay on the existing built image (adds the
+  pm4py patch + refreshed source, seconds) to avoid the ~20-min `torch-scatter`/`torch-sparse`
+  recompile. A clean `docker compose build gnn` now bakes the same fixes from the Dockerfile.
 - **outputSchema for core executors** — most executors declare no `outputSchema`, so L2.5/L3
   field-level checks currently emit `UNDECLARED_OUTPUT_CONTRACT` warnings instead of hard errors.
 - **find_similar_graphs** few-shot tool; **MCP-registry** into the agent (enables L2.5 in the
