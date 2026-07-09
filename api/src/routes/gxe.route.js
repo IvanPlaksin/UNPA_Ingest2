@@ -147,6 +147,9 @@ router.get('/display-rules/list', controller.listDisplayRules);
 
 router.post('/validate-graph', controller.validateGraph);
 
+// Full ExecutableGraphVerifier stack (L1-L3 + grade A-F). v3.0 Phase 1-3.
+router.post('/verify-graph', controller.verifyGraph);
+
 // ═══════════════════════════════════════════════════════════════════════════
 // A/B Testing & Test Corpus
 // ═══════════════════════════════════════════════════════════════════════════

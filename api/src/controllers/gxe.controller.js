@@ -1907,6 +1907,40 @@ Respond in clear, structured markdown. Be concise but thorough.`;
  * Body: { nodes, edges }
  * Returns: { valid, errors, warnings, stats, fixable?, fixed? }
  */
+/**
+ * POST /api/v1/gxe/verify-graph
+ * Full ExecutableGraphVerifier stack (L1 structural+executor-existence,
+ * L2 branch-discipline+template-refs, L2.5 mock dry-run when a registry is available,
+ * L3 Petri soundness when PETRI_VALIDATION_ENABLED). Returns {pass, grade, levels, issues}.
+ */
+exports.verifyGraph = async (req, res) => {
+  try {
+    const { nodes, edges, processIR } = req.body;
+    if (!Array.isArray(nodes)) {
+      return res.status(400).json({ error: 'nodes (array) is required' });
+    }
+
+    const { ExecutableGraphVerifier } = require('../services/verification/executable-graph-verifier.service');
+
+    // AOPEG plugin registry → EXECUTOR_EXISTS (L1). Optional; L1 degrades if absent.
+    let pluginRegistry = null;
+    try {
+      const aopeg = require('../core/aopeg/index.js');
+      if (aopeg.isAOPEGInitialized && !aopeg.isAOPEGInitialized() && aopeg.initializeAOPEG) {
+        await aopeg.initializeAOPEG();
+      }
+      pluginRegistry = aopeg.pluginRegistry || null;
+    } catch (_) { /* L1 EXECUTOR_EXISTS skipped */ }
+
+    const verifier = new ExecutableGraphVerifier({ pluginRegistry });
+    const result = await verifier.verify({ nodes, edges: edges || [], processIR });
+    return res.json({ success: true, ...result });
+  } catch (err) {
+    console.error('[GXE] verifyGraph error:', err.message);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+};
+
 exports.validateGraph = async (req, res) => {
   try {
     const { nodes, edges } = req.body;
