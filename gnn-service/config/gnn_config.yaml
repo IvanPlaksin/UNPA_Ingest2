@@ -3,7 +3,10 @@
 service:
   name: "gnn-service"
   version: "0.1.0"
-  port: 5001
+  # Container-internal port. Docker maps host ${GNN_PORT:-5001} -> container 5000
+  # (EXPOSE 5000, healthcheck localhost:5000, api reaches it via localhost:5001).
+  # Must stay 5000 to match that mapping.
+  port: 5000
   debug: true
 
 memgraph:
