@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { MessageSquare, Database, GitGraph, Settings, Search, LayoutDashboard, ListTodo, FolderTree, Bot, FlaskConical, Layers, Microscope, Workflow, Brain, Network, Globe, DatabaseZap, Activity, Cpu, ClipboardList, BookOpen, BarChart3, FolderKanban, PenTool, FormInput, ChevronDown, ChevronRight, Headphones, FileText, Triangle, AlertTriangle, HeartPulse, Archive, Boxes, Map, LineChart, ShieldAlert, ScanSearch } from 'lucide-react';
+import { MessageSquare, Database, GitGraph, Settings, Search, LayoutDashboard, ListTodo, FolderTree, Bot, FlaskConical, Layers, Microscope, Workflow, Brain, Network, Globe, DatabaseZap, Activity, Cpu, ClipboardList, BookOpen, BarChart3, FolderKanban, PenTool, FormInput, ChevronDown, ChevronRight, Headphones, FileText, Triangle, AlertTriangle, HeartPulse, Archive, Boxes, Map, LineChart, ShieldAlert, ScanSearch, ShieldCheck } from 'lucide-react';
 import {
     Box,
     Drawer,
@@ -121,7 +121,8 @@ const Sidebar = () => {
                     <NavItem to="/gaps" icon={AlertTriangle} label="Gap Manager" />
                     <NavItem to="/knowledge-health" icon={HeartPulse} label="Health Dashboard" />
                     <NavItem to="/entity-store"  icon={Archive} label="Entity Store" />
-                    <NavItem to="/investigation" icon={ScanSearch} label="Investigation" />
+                    <NavItem to="/investigation" icon={ScanSearch} label="Investigation" exact />
+                    <NavItem to="/investigation/methodologies" icon={BookOpen} label="Methodologies" indent />
                     <NavItem to="/vector-store"  icon={Boxes}  label="Vector Store"   indent />
                     <NavItem to="/knowledge-map" icon={Map}    label="Knowledge Map"  indent />
                     <NavItem to="/knowledge/graph" icon={GitGraph} label="Knowledge Graph" />
@@ -219,6 +220,7 @@ const Sidebar = () => {
                     <NavItem to="/aopeg" icon={Workflow} label="AOPEG Editor" />
                     <NavItem to="/gxe" icon={Brain} label="GXE Visualizer" />
                     <NavItem to="/gxe-manager" icon={Activity} label="GXE Manager" />
+                    <NavItem to="/graph-verifier" icon={ShieldCheck} label="Graph Verifier" />
 
                     <SectionHeader title="Structural" />
                     <NavItem to="/structural-editor" icon={PenTool} label="Structural Editor" />

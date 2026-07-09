@@ -23,6 +23,7 @@ import ExperimentalPage from './pages/ExperimentalPage';
 import GraphCRUDPage from './pages/GraphCRUDPage';
 import TensorDashboardPage from './pages/TensorDashboardPage';
 import GxeManagerPage from './pages/GxeManagerPage';
+import GraphVerifierPage from './pages/GraphVerifierPage';
 import FlowDeskPage from './instances/flowdesk/pages/FlowDeskPage';
 import FlowDeskConfigPage from './instances/flowdesk/pages/FlowDeskConfigPage';
 import BackLogPage from './pages/BackLogPage';
@@ -47,6 +48,9 @@ import LLMAccessControlPage from './pages/LLMAccessControlPage';
 import InvestigationPage from './pages/InvestigationPage';
 import InvestigationSessionPage from './pages/InvestigationSessionPage';
 import EntitySingularityPage from './pages/EntitySingularityPage';
+import MethodologyLibraryPage from './components/Methodology/MethodologyLibraryPage';
+import MethodologyEditorPage from './components/Methodology/MethodologyEditorPage';
+import MethodologyRunnerPage from './components/Methodology/MethodologyRunnerPage';
 
 // import './index.css'; // Removing in favor of CssBaseline and MUI styles
 
@@ -207,6 +211,9 @@ function App() {
                                 {/* GxeManager - Execution Orchestrator Monitor */}
                                 <Route path="/gxe-manager" element={<GxeManagerPage />} />
 
+                                {/* Graph Verifier - ExecutableGraphVerifier L1-L3 dashboard */}
+                                <Route path="/graph-verifier" element={<GraphVerifierPage />} />
+
                                 {/* FlowDesk AI Intake Demo */}
                                 <Route path="/flowdesk" element={<FlowDeskPage />} />
                                 <Route path="/forms-demo" element={<StructuralFormDemoPage />} />
@@ -244,8 +251,11 @@ function App() {
                                 <Route path="/knowledge-health" element={<KnowledgeHealthPage />} />
                                 <Route path="/entity-store"           element={<EntityStorePage />} />
                                 <Route path="/entity-store/:entityId" element={<EntityStorePage />} />
-                                <Route path="/investigation"          element={<InvestigationPage />} />
-                                <Route path="/investigation/:sessionId" element={<InvestigationSessionPage />} />
+                                <Route path="/investigation"                              element={<InvestigationPage />} />
+                                <Route path="/investigation/methodologies"               element={<MethodologyLibraryPage />} />
+                                <Route path="/investigation/methodologies/:id/edit"      element={<MethodologyEditorPage />} />
+                                <Route path="/investigation/methodologies/:id/run"       element={<MethodologyRunnerPage />} />
+                                <Route path="/investigation/:sessionId"                  element={<InvestigationSessionPage />} />
                                 <Route path="/vector-store"      element={<VectorStorePage />} />
                                 <Route path="/knowledge-map"     element={<KnowledgeMapPage />} />
                                 <Route path="/pipeline-manager"  element={<PipelineManagerPage />} />

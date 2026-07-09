@@ -40,6 +40,16 @@ export const getCapabilities = async () => {
 };
 
 /**
+ * Run the full ExecutableGraphVerifier stack (L1-L3) on a graph.
+ * @param {{nodes: Array, edges: Array, processIR?: Object}} graph
+ * @returns {Promise<{success, pass, grade, score, scores, levels, issues, suggestions}>}
+ */
+export const verifyGraph = async (graph) => {
+  const response = await api.post('/verify-graph', graph);
+  return response.data;
+};
+
+/**
  * Get available scenario templates
  * @returns {Promise<Array>} List of scenarios
  */
