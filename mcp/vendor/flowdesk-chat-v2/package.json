@@ -1,0 +1,52 @@
+{
+  "name": "@flowdesk/chat-v2",
+  "version": "1.0.9",
+  "description": "FlowDesk Chat V2 — conversational service-request intake component (React)",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./dist/flowdesk-chat-v2.cjs",
+  "module": "./dist/flowdesk-chat-v2.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/flowdesk-chat-v2.js",
+      "require": "./dist/flowdesk-chat-v2.cjs"
+    },
+    "./styles.css": "./dist/flowdesk-chat-v2.css",
+    "./package.json": "./package.json"
+  },
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0 || ^19.0.0",
+    "react-dom": "^18.2.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.1.1",
+    "i18next": "^26.3.6",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-i18next": "^17.0.9",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "vite": "^7.2.4",
+    "zustand": "^5.0.11"
+  },
+  "keywords": [
+    "flowdesk",
+    "chat",
+    "service-request",
+    "react"
+  ]
+}

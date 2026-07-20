@@ -4,6 +4,8 @@ WORKDIR /app
 ARG VITE_API_URL=/api/v1
 ENV VITE_API_URL=$VITE_API_URL
 COPY package*.json ./
+# vendored local package (@flowdesk/chat-v2, file:./vendor/...) must exist before install
+COPY vendor ./vendor
 RUN npm install --prefer-offline
 COPY . .
 RUN npm run build

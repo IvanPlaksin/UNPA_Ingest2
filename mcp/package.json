@@ -14,7 +14,7 @@
     "dependencies": {
         "@emotion/react": "^11.14.0",
         "@emotion/styled": "^11.14.1",
-        "@flowdesk/chat-v2": "file:../../../FlowDesk/FlowDesk/Frontend/Components/flowdesk-chat-v2",
+        "@flowdesk/chat-v2": "file:./vendor/flowdesk-chat-v2",
         "@monaco-editor/react": "^4.7.0",
         "@mui/icons-material": "^7.3.6",
         "@mui/material": "^7.3.6",
