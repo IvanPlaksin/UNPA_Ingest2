@@ -31,6 +31,7 @@ jobs:
       env_name: ${{ steps.meta.outputs.env_name }}
       image_tag: ${{ steps.meta.outputs.image_tag }}
       moving_tag: ${{ steps.meta.outputs.moving_tag }}
+      deploy_tag: ${{ steps.meta.outputs.deploy_tag }}
       services: ${{ steps.changes.outputs.services }}
       redeploy_only: ${{ steps.meta.outputs.redeploy_only }}
     steps:
@@ -48,10 +49,18 @@ jobs:
             echo "moving_tag=dev"  >> "$GITHUB_OUTPUT"
           fi
           if [ -n "${{ github.event.inputs.tag }}" ]; then
-            echo "image_tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+            echo "image_tag=${{ github.event.inputs.tag }}"  >> "$GITHUB_OUTPUT"
+            echo "deploy_tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"   # explicit rollback tag
             echo "redeploy_only=true"  >> "$GITHUB_OUTPUT"
           else
             echo "image_tag=sha-${SHORT}" >> "$GITHUB_OUTPUT"
+            # deploy by the MOVING tag so unchanged services (not rebuilt this run)
+            # still resolve; the immutable sha-<short> tag is kept for manual rollback.
+            if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+              echo "deploy_tag=latest" >> "$GITHUB_OUTPUT"
+            else
+              echo "deploy_tag=dev" >> "$GITHUB_OUTPUT"
+            fi
             echo "redeploy_only=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -184,7 +193,7 @@ jobs:
             sudo docker compose --env-file .env up -d --remove-orphans
             sudo docker image prune -f
         env:
-          IMAGE_TAG: ${{ needs.setup.outputs.image_tag }}
+          IMAGE_TAG: ${{ needs.setup.outputs.deploy_tag }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_USER: ${{ github.actor }}
           MEMGRAPH_PASSWORD: ${{ secrets.MEMGRAPH_PASSWORD }}
