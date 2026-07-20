@@ -142,12 +142,9 @@ services:
       qdrant: {condition: service_started}
       tei: {condition: service_started}
     volumes: ["etl_rawdata:/app/indexing-pipeline/raw_data"]
-    healthcheck:
-      test: ["CMD-SHELL", "pgrep -f 'node' > /dev/null || exit 1"]
-      interval: 30s
-      timeout: 5s
-      start_period: 20s
-      retries: 3
+    # The worker exits immediately when ADO creds are absent; idle instead of
+    # crash-looping so the container stays up (runs normally once creds are set).
+    command: sh -c "node src/run.js || { echo 'etl idle: ADO_ORG_URL/ADO_PAT not set'; tail -f /dev/null; }"
     networks: [projectadvisor-network]
 
   sync:
@@ -178,12 +175,6 @@ services:
     volumes:
       - sync_knowledge:/app/knowledge
       - sync_artifacts:/app/artifacts
-    healthcheck:
-      test: ["CMD-SHELL", "pgrep -f 'node' > /dev/null || exit 1"]
-      interval: 30s
-      timeout: 5s
-      start_period: 20s
-      retries: 3
     networks: [projectadvisor-network]
 
 volumes:

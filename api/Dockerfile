@@ -39,6 +39,11 @@ COPY --chown=appuser:appgroup indexing-pipeline/src/processors/ /indexing-pipeli
 # Remove dev files
 RUN rm -rf tests coverage .env.example jest.config.js tsconfig.json
 
+# Pre-create runtime-writable dirs owned by the non-root user
+# (app does mkdir /app/Artefacts et al. at startup — would EACCES otherwise)
+RUN mkdir -p /app/Artefacts /app/logs /app/uploads /app/data /app/tmp \
+ && chown -R appuser:appgroup /app/Artefacts /app/logs /app/uploads /app/data /app/tmp
+
 USER appuser
 
 # Environment

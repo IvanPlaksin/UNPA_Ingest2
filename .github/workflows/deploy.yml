@@ -218,18 +218,22 @@ jobs:
           username: ${{ vars.VM_USER }}
           key: ${{ secrets.VM_SSH_PRIVATE_KEY }}
           script: |
-            set -e
+            set +e
             cd ~/unpa-ci
-            echo "--- compose ps ---"; sudo docker compose ps
+            # retry helper: wait up to N*5s for an HTTP endpoint
+            wait_http() { local url=$1 name=$2 tries=${3:-24}; for i in $(seq 1 $tries); do
+              curl -fsS -o /dev/null "$url" && { echo "$name OK"; return 0; }; sleep 5; done
+              echo "$name FAIL ($url)"; return 1; }
             fail=0
             sudo docker exec projectadvisor-redis redis-cli ping | grep -q PONG || { echo "redis FAIL"; fail=1; }
-            curl -fsS -o /dev/null http://localhost:6333/healthz || { echo "qdrant FAIL"; fail=1; }
-            curl -fsS -o /dev/null http://localhost:8081/health  || { echo "tei FAIL (may still be loading model)"; }
-            curl -fsS -o /dev/null http://localhost:5100/health  || { echo "gliner FAIL (may still be loading)"; }
-            curl -fsS -o /dev/null http://localhost:3010/health  || { echo "api FAIL"; fail=1; }
-            curl -fsS -o /dev/null http://localhost:8080/        || { echo "mcp FAIL"; fail=1; }
+            wait_http http://localhost:6333/healthz qdrant 12 || fail=1
+            wait_http http://localhost:3010/health  api    36 || fail=1     # api boots + DB connects
+            wait_http http://localhost:8080/        mcp    12 || fail=1
+            wait_http http://localhost:5100/health  gliner 48 || echo "gliner still loading (non-fatal)"
+            wait_http http://localhost:8081/health  tei    48 || echo "tei still loading model (non-fatal)"
             for c in projectadvisor-etl projectadvisor-sync; do
               st=$(sudo docker inspect -f '{{.State.Status}}' $c 2>/dev/null || echo missing)
               [ "$st" = "running" ] || { echo "$c not running ($st)"; fail=1; }
             done
+            echo "--- compose ps ---"; sudo docker compose ps
             exit $fail
