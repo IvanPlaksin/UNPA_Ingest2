@@ -14,6 +14,13 @@ export const getIndexerStatus = ()          => axios.get(`${BASE}/status`).then(
 export const controlIndexer   = (action)    => axios.post(`${BASE}/control`, { action }).then(r => r.data);
 export const reindexSource    = (id, body = {}) => axios.post(`${BASE}/sources/${id}/reindex`, body).then(r => r.data);
 export const probeSourceCount = (id)            => axios.post(`${BASE}/sources/${id}/probe-count`).then(r => r.data);
+export const recountAllSources = (body = {})    => axios.post(`${BASE}/recount-all`, body).then(r => r.data);
+export const setSourceEnabled  = (id, enabled)   => axios.post(`${BASE}/sources/${id}/enabled`, { enabled }).then(r => r.data);
+
+// Pool-share quota allocation.
+export const getQuota          = ()              => axios.get(`${BASE}/quota`).then(r => r.data);
+export const setQuotaMode      = (mode, body = {}) => axios.post(`${BASE}/quota/mode`, { mode, ...body }).then(r => r.data);
+export const setQuotaShares    = (shares)        => axios.post(`${BASE}/quota/shares`, { shares }).then(r => r.data);
 
 // Observability: processing errors/warnings log + throughput series.
 export const getIndexErrors     = (params = {}) => axios.get(`${BASE}/errors`, { params }).then(r => r.data);
@@ -22,6 +29,12 @@ export const getIndexCategories = ()             => axios.get(`${BASE}/categorie
 
 // Indexer config — worker count applied instantly.
 export const setIndexerConfig   = (body = {})    => axios.post(`${BASE}/config`, body).then(r => r.data);
+
+// Quarantine — durable source & per-document parking (survives restart).
+export const getQuarantine      = ()             => axios.get(`${BASE}/quarantine`).then(r => r.data);
+export const quarantineSource   = (id, body = {}) => axios.post(`${BASE}/sources/${id}/quarantine`, body).then(r => r.data);
+export const unquarantineSource = (id)           => axios.post(`${BASE}/sources/${id}/unquarantine`).then(r => r.data);
+export const clearDocQuarantine = (id)           => axios.post(`${BASE}/sources/${id}/clear-doc-quarantine`).then(r => r.data);
 
 // Incident / AI error-response system.
 export const getIncidents       = (params = {})  => axios.get(`${BASE}/incidents`, { params }).then(r => r.data);

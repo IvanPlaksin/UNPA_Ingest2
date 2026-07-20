@@ -65,6 +65,12 @@ export function BatchedEdges({ links, nodes, positionsRef, tick, edgeOpacity = 0
         } else {
             geo.attributes.position.needsUpdate = true;
         }
+
+        // Invalidate the cached bounding sphere so edge-hover raycasting stays accurate
+        // as endpoints move outward each tick. Line.raycast caches boundingSphere on first
+        // use and never recomputes it, so a stale sphere would make edges un-hoverable once
+        // the graph spreads beyond its initial (clustered) extent.
+        geo.boundingSphere = null;
     }, [tick, links, nodeIndexMap, positionsRef, posBuffer]);
 
     // Update edge opacity without rebuilding anything

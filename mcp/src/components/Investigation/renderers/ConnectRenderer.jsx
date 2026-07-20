@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Box, Typography, Chip, Tooltip, Stack } from '@mui/material';
 import EvidencePanel from '../EvidencePanel';
+import { fromEnvelope } from './envelope-compat';
 
 const AGGREGABLE = new Set([
   'IMPLEMENTS', 'REQUIRES', 'AUTHORED_BY', 'FUNDED_BY',
@@ -71,9 +72,10 @@ function BundleDisplay({ bundle }) {
 }
 
 export default function ConnectRenderer({ content, compact }) {
-  const paths = content?.paths || [];
-  const bundles = content?.bundles || {};
-  const analysis = content?.structuralAnalysis;
+  const data = fromEnvelope(content, 'CONNECT');
+  const paths = data?.paths || [];
+  const bundles = data?.bundles || {};
+  const analysis = data?.structuralAnalysis;
 
   if (!paths.length) {
     return (
@@ -154,12 +156,12 @@ export default function ConnectRenderer({ content, compact }) {
           </Typography>
         </Box>
       )}
-      {content.fromEntityId && content.toEntityId && !compact && (
+      {data?.fromEntityId && data?.toEntityId && !compact && (
         <Box sx={{ mt: 1, pt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
-          <EvidencePanel sourceId={content.fromEntityId} targetId={content.toEntityId} />
+          <EvidencePanel sourceId={data.fromEntityId} targetId={data.toEntityId} />
         </Box>
       )}
-      {content.evidentialLimitation && !content.fromEntityId && (
+      {data?.evidentialLimitation && !data?.fromEntityId && (
         <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 1 }}>
           ℹ Edge provenance shows most recent source document only.
         </Typography>

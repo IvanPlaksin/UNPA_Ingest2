@@ -15,6 +15,7 @@ import {
     alpha
 } from '@mui/material';
 import { API_ENDPOINTS } from '../../config/api.config';
+import { useStreamThrottle } from '../../hooks/useStreamThrottle';
 
 const ChatInterface = () => {
     const [messages, setMessages] = useState([
@@ -23,6 +24,8 @@ const ChatInterface = () => {
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const messagesEndRef = useRef(null);
+    // Coalesce per-token stream updates into ≤1 render per ~80ms.
+    const { schedule: scheduleTokenFlush, flushNow: flushTokens } = useStreamThrottle(80);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -43,6 +46,15 @@ const ChatInterface = () => {
         // Create a placeholder for the assistant's message
         const assistantMessage = { role: 'assistant', content: '', sources: [] };
         setMessages(prev => [...prev, assistantMessage]);
+
+        // Accumulate streamed text; throttled flush writes the absolute value.
+        let fullContent = '';
+        const flushContent = () => setMessages(prev => {
+            const nm = [...prev];
+            const last = nm[nm.length - 1];
+            if (last) last.content = fullContent;
+            return nm;
+        });
 
         try {
             const response = await fetch(API_ENDPOINTS.CHAT_STREAM, {
@@ -82,20 +94,12 @@ const ChatInterface = () => {
                                     return newMessages;
                                 });
                             } else if (data.type === 'token') {
-                                setMessages(prev => {
-                                    const newMessages = [...prev];
-                                    const lastMsg = newMessages[newMessages.length - 1];
-                                    lastMsg.content += data.content;
-                                    return newMessages;
-                                });
+                                fullContent += data.content;
+                                scheduleTokenFlush(flushContent);
                             } else if (data.type === 'error') {
                                 console.error("Stream error:", data.message);
-                                setMessages(prev => {
-                                    const newMessages = [...prev];
-                                    const lastMsg = newMessages[newMessages.length - 1];
-                                    lastMsg.content += `\n\n**Error:** ${data.message}`;
-                                    return newMessages;
-                                });
+                                fullContent += `\n\n**Error:** ${data.message}`;
+                                scheduleTokenFlush(flushContent);
                             }
                         } catch (e) {
                             console.warn("Error parsing stream chunk", e);
@@ -103,9 +107,11 @@ const ChatInterface = () => {
                     }
                 }
             }
+            flushTokens();
 
         } catch (error) {
             console.error("Chat error:", error);
+            flushTokens();
             setMessages(prev => {
                 const newMessages = [...prev];
                 const lastMsg = newMessages[newMessages.length - 1];

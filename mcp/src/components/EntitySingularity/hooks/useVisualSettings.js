@@ -7,6 +7,7 @@ export const VISUAL_DEFAULTS = {
     nodes:  { opacity: 0.85, sizeMultiplier: 1.0, emissiveIntensity: 0.25, degreeScale: 1.5 },
     edges:  { opacity: 0.15, weightFade: 0 },
     fog:    { enabled: true },
+    selection: { depth: 2 },
 };
 
 function load() {
@@ -16,10 +17,11 @@ function load() {
         const parsed = JSON.parse(saved);
         // Deep merge so new default keys are always present
         return {
-            bloom:  { ...VISUAL_DEFAULTS.bloom,  ...parsed.bloom  },
-            nodes:  { ...VISUAL_DEFAULTS.nodes,  ...parsed.nodes  },
-            edges:  { ...VISUAL_DEFAULTS.edges,  ...parsed.edges  },
-            fog:    { ...VISUAL_DEFAULTS.fog,    ...parsed.fog    },
+            bloom:     { ...VISUAL_DEFAULTS.bloom,     ...parsed.bloom     },
+            nodes:     { ...VISUAL_DEFAULTS.nodes,     ...parsed.nodes     },
+            edges:     { ...VISUAL_DEFAULTS.edges,     ...parsed.edges     },
+            fog:       { ...VISUAL_DEFAULTS.fog,       ...parsed.fog       },
+            selection: { ...VISUAL_DEFAULTS.selection, ...parsed.selection },
         };
     } catch { return VISUAL_DEFAULTS; }
 }

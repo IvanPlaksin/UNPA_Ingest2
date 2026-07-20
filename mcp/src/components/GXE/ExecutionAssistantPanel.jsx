@@ -24,6 +24,7 @@ import {
   AlertTriangle, ChevronDown, ChevronRight, ShieldCheck, ShieldAlert,
 } from 'lucide-react';
 import { streamExecutionAssistantChat } from '../../services/gxe.service';
+import { useStreamThrottle } from '../../hooks/useStreamThrottle';
 
 /* ═══════════════════════════════════════════════════════════════════════════
    QUICK ACTIONS
@@ -474,6 +475,9 @@ const ExecutionAssistantPanel = forwardRef(({
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const abortRef = useRef(null);
+  // Coalesce per-token stream updates into ≤1 render per ~80ms (avoids
+  // re-parsing the whole markdown message on every token).
+  const { schedule: scheduleTokenFlush, flushNow: flushTokens } = useStreamThrottle(80);
   const isResizing = useRef(false);
   const startX = useRef(0);
   const startWidth = useRef(0);
@@ -586,14 +590,14 @@ const ExecutionAssistantPanel = forwardRef(({
           switch (data.type) {
             case 'token':
               fullContent += (data.content || '');
-              setMessages(prev => {
+              scheduleTokenFlush(() => setMessages(prev => {
                 const updated = [...prev];
                 const last = updated[updated.length - 1];
                 if (last?.role === 'assistant') {
-                  updated[updated.length - 1] = { ...last, content: last.content + (data.content || '') };
+                  updated[updated.length - 1] = { ...last, content: fullContent };
                 }
                 return updated;
-              });
+              }));
               break;
 
             case 'tool_call':
@@ -672,6 +676,9 @@ const ExecutionAssistantPanel = forwardRef(({
         }
       }
 
+      // Apply any pending throttled token update before finalizing.
+      flushTokens();
+
       // Extract mutations from text if not received via backend event
       if (!receivedMutations) {
         receivedMutations = extractMutations(fullContent);
@@ -685,6 +692,7 @@ const ExecutionAssistantPanel = forwardRef(({
         // Validation runs automatically via useEffect on pendingMutations change
       }
     } catch (err) {
+      flushTokens();
       if (err.name === 'AbortError') {
         setMessages(prev => {
           const updated = [...prev];

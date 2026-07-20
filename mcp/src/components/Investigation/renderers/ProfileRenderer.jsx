@@ -6,6 +6,7 @@ import {
 } from '@mui/material';
 import { ChevronDown, ArrowRight, ArrowLeft, Building2, FileText, Users, Link2, Layers, Zap } from 'lucide-react';
 import SupersessionChain from '../SupersessionChain';
+import { fromEnvelope } from './envelope-compat';
 
 // ── Category config ────────────────────────────────────────────────────────────
 
@@ -215,7 +216,7 @@ function SummaryFooter({ summary }) {
 
 export default function ProfileRenderer({ content, compact }) {
   if (!content) return null;
-  const { entity, relationships = {}, provenance, summary } = content;
+  const { entity, relationships = {}, provenance, summary } = fromEnvelope(content, 'PROFILE');
 
   return (
     <Box>

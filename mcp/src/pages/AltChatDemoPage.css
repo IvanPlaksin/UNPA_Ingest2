@@ -1,0 +1,40 @@
+/* Theme bridge for the embedded AltioraChat (@flowdesk/chat-v2).
+ *
+ * The component styles resolve through shadcn design tokens (--primary,
+ * --background, --border, --radius …). Project Advisor is a MUI app and defines
+ * none of them, so we supply a set scoped to the demo wrapper that mirrors the
+ * MUI palette (slate + blue #3b82f6). App.jsx toggles `.dark` on <html>, so the
+ * dark values key on that class exactly as the component expects. */
+.alt-chat-scope {
+  --background: 216 60% 98%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 214 95% 93%;
+  --secondary: 214 95% 93%;
+  --secondary-foreground: 221 83% 45%;
+  --border: 214.3 31.8% 91.4%;
+  --primary: 217 91% 60%;              /* #3b82f6 — MUI primary */
+  --primary-foreground: 0 0% 100%;
+  --ring: 217 91% 75%;
+  --destructive: 0 84.2% 60.2%;
+  --radius: 0.5rem;
+}
+
+.dark .alt-chat-scope {
+  --background: 222 47% 11%;            /* slate-900 — MUI paper-ish */
+  --foreground: 210 40% 96%;
+  --card: 222 47% 14%;
+  --muted: 217 33% 20%;
+  --muted-foreground: 215 20% 65%;
+  --accent: 217 33% 24%;
+  --secondary: 217 33% 20%;
+  --secondary-foreground: 210 40% 96%;
+  --border: 217 33% 24%;
+  --primary: 217 91% 60%;
+  --primary-foreground: 222 47% 11%;
+  --ring: 217 91% 60%;
+  --destructive: 0 63% 45%;
+  --radius: 0.5rem;
+}

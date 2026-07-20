@@ -28,6 +28,7 @@ import {
   streamAgentMessage
 } from '../../services/workspace.service';
 import { ResilientSSEClient } from '../../utils/sse-client';
+import { useStreamThrottle } from '../../hooks/useStreamThrottle';
 
 const ACTION_TYPE_COLORS = {
   CREATE_NODE: '#4CAF50',
@@ -131,6 +132,8 @@ const WorkspaceAgentPanel = ({ workspaceId }) => {
   const [error, setError] = useState(null);
   const [isReconnecting, setIsReconnecting] = useState(false);
   const messagesEndRef = useRef(null);
+  // Coalesce per-token streaming-text updates into ≤1 render per ~80ms.
+  const { schedule: scheduleTextFlush, flushNow: flushText } = useStreamThrottle(80);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -193,7 +196,7 @@ const WorkspaceAgentPanel = ({ workspaceId }) => {
       onEvent: (eventName, data) => {
         if (eventName === 'text' && data?.content) {
           buffer += data.content;
-          setStreamingText(buffer);
+          scheduleTextFlush(() => setStreamingText(buffer));
         }
         if (eventName === 'error' && data?.error) {
           setError(data.error);
@@ -218,6 +221,7 @@ const WorkspaceAgentPanel = ({ workspaceId }) => {
       { message: text }
     );
 
+    flushText();
     setStreaming(false);
     setStreamingText('');
     setIsReconnecting(false);

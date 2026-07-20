@@ -11,6 +11,7 @@ import React from 'react';
 import {
   Box, Typography, Chip, Stack, LinearProgress, Tooltip,
 } from '@mui/material';
+import { fromEnvelope } from './envelope-compat';
 
 function SimilarityBar({ value }) {
   const pct = Math.round(value * 100);
@@ -31,11 +32,12 @@ function SimilarityBar({ value }) {
 }
 
 export default function ResolveRenderer({ content, compact }) {
-  if (!content?.anchor) {
+  const data = fromEnvelope(content, 'RESOLVE');
+  if (!data?.anchor) {
     return <Typography color="text.secondary" variant="body2">No resolution data.</Typography>;
   }
 
-  const { anchor, candidates, suggestedMerges, summary } = content;
+  const { anchor, candidates, suggestedMerges, summary } = data;
   const suggestedIds = new Set((suggestedMerges || []).map(m => m.mergeId));
   const displayCandidates = compact ? candidates.slice(0, 5) : candidates;
 

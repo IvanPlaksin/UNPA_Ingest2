@@ -21,6 +21,7 @@ import {
   Replace, Eye, ChevronDown, ChevronUp, WifiOff
 } from 'lucide-react';
 import { useSSEStream } from '../../hooks/useSSEStream';
+import { useStreamThrottle } from '../../hooks/useStreamThrottle';
 
 const API_BASE = '/api/v1';
 
@@ -72,6 +73,8 @@ const CatalogAIPanel = ({ workspaceId, workspaceName, selectedNodes = [], mode =
   const [patternsError, setPatternsError] = useState(null);
   const messagesEndRef = useRef(null);
   const bufferRef = useRef('');
+  // Coalesce per-token stream-buffer updates into ≤1 render per ~80ms.
+  const { schedule: scheduleBufferFlush, flushNow: flushBuffer } = useStreamThrottle(80);
 
   const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   useEffect(scrollToBottom, [messages, streamBuffer]);
@@ -87,10 +90,11 @@ const CatalogAIPanel = ({ workspaceId, workspaceName, selectedNodes = [], mode =
     onEvent: (eventName, data) => {
       if (eventName === 'text' && data?.content) {
         bufferRef.current += data.content;
-        setStreamBuffer(bufferRef.current);
+        scheduleBufferFlush(() => setStreamBuffer(bufferRef.current));
       }
     },
     onComplete: () => {
+      flushBuffer();
       setStreamBuffer('');
       if (bufferRef.current) {
         setMessages(prev => [...prev, { role: 'assistant', content: bufferRef.current }]);

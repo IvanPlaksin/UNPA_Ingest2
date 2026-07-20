@@ -24,8 +24,12 @@ import GraphCRUDPage from './pages/GraphCRUDPage';
 import TensorDashboardPage from './pages/TensorDashboardPage';
 import GxeManagerPage from './pages/GxeManagerPage';
 import GraphVerifierPage from './pages/GraphVerifierPage';
+import GraphTransferPage from './pages/GraphTransferPage';
+import KnowledgeDashboardPage from './pages/KnowledgeDashboardPage';
 import FlowDeskPage from './instances/flowdesk/pages/FlowDeskPage';
 import FlowDeskConfigPage from './instances/flowdesk/pages/FlowDeskConfigPage';
+import FlowDeskChatV2 from './features/flowdesk-chat-v2/FlowDeskChatV2';
+import FlowDeskAdminPage from './features/flowdesk-admin/FlowDeskAdminPage';
 import BackLogPage from './pages/BackLogPage';
 import CodexViewerPage from './pages/CodexViewerPage';
 import DialoguePage from './pages/DialoguePage/DialoguePage';
@@ -39,6 +43,7 @@ import KnowledgeHealthPage from './pages/KnowledgeHealthPage';
 import StructuralFormDemoPage from './pages/StructuralFormDemoPage';
 import StructuralEditorPage from './pages/StructuralEditorPage';
 import UnpaChatDemoPage from './pages/UnpaChatDemoPage';
+import AltChatDemoPage from './pages/AltChatDemoPage';
 import EntityStorePage      from './pages/EntityStorePage';
 import VectorStorePage      from './pages/VectorStorePage';
 import KnowledgeMapPage     from './pages/KnowledgeMapPage';
@@ -213,13 +218,19 @@ function App() {
 
                                 {/* Graph Verifier - ExecutableGraphVerifier L1-L3 dashboard */}
                                 <Route path="/graph-verifier" element={<GraphVerifierPage />} />
+                                <Route path="/graph-transfer" element={<GraphTransferPage />} />
+                                <Route path="/knowledge-dashboard" element={<KnowledgeDashboardPage />} />
 
                                 {/* FlowDesk AI Intake Demo */}
                                 <Route path="/flowdesk" element={<FlowDeskPage />} />
+                                <Route path="/flowdesk-v2" element={<FlowDeskChatV2 />} />
+                                <Route path="/alt-chat-demo" element={<AltChatDemoPage />} />
                                 <Route path="/forms-demo" element={<StructuralFormDemoPage />} />
                                 <Route path="/unpa-chat-demo" element={<UnpaChatDemoPage />} />
                                 <Route path="/structural-editor" element={<StructuralEditorPage />} />
                                 <Route path="/flowdesk/config" element={<FlowDeskConfigPage />} />
+                                {/* FlowDesk Chat Admin — Chat V2 ↔ Altiora observability */}
+                                <Route path="/flowdesk-admin/*" element={<FlowDeskAdminPage />} />
 
                                 {/* BackLog — AI-generated code modification tasks */}
                                 <Route path="/backlog" element={<BackLogPage />} />

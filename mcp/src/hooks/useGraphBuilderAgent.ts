@@ -7,6 +7,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { API_BASE_URL } from '../config/api.config';
+import { useStreamThrottle } from './useStreamThrottle';
 
 const API_BASE = `${API_BASE_URL}/ai-agent`;
 
@@ -139,6 +140,9 @@ export function useGraphBuilderAgent(options: UseGraphBuilderAgentOptions = {}) 
 
   // Refs
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Coalesce per-token stream updates into ≤1 render per ~80ms.
+  const { schedule: scheduleStreamFlush, flushNow: flushStream } = useStreamThrottle(80);
 
   // ══════════════════════════════════════════════════════════════════════════
   // API HELPERS
@@ -445,11 +449,11 @@ export function useGraphBuilderAgent(options: UseGraphBuilderAgentOptions = {}) 
             switch (data.type) {
               case 'chunk':
                 fullContent += data.content;
-                setMessages(prev => prev.map(msg =>
+                scheduleStreamFlush(() => setMessages(prev => prev.map(msg =>
                   msg.id === assistantId
                     ? { ...msg, content: fullContent }
                     : msg
-                ));
+                )));
                 break;
 
               case 'complete':
@@ -474,6 +478,7 @@ export function useGraphBuilderAgent(options: UseGraphBuilderAgentOptions = {}) 
         }
       }
 
+      flushStream();
       setMessages(prev => prev.map(msg =>
         msg.id === assistantId
           ? { ...msg, content: fullContent, toolCalls, streaming: false }
@@ -498,6 +503,7 @@ export function useGraphBuilderAgent(options: UseGraphBuilderAgentOptions = {}) 
       return { content: fullContent, toolCalls, graph: finalGraph };
 
     } catch (err) {
+      flushStream();
       if (err instanceof Error && err.name === 'AbortError') {
         setMessages(prev => prev.map(msg =>
           msg.id === assistantId

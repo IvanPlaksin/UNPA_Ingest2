@@ -14,6 +14,7 @@ import {
   Dialog, DialogTitle, DialogContent, IconButton,
 } from '@mui/material';
 import { X } from 'lucide-react';
+import { fromEnvelope } from './envelope-compat';
 
 function cellKey(rowId, colId) {
   return `${rowId}:${colId}`;
@@ -74,12 +75,13 @@ function MatrixCellChip({ cell, onDetail }) {
 
 export default function MatrixRenderer({ content, compact }) {
   const [detail, setDetail] = useState(null);
+  const c = fromEnvelope(content, 'MATRIX');
 
-  if (!content?.rowEntities?.length) {
+  if (!c?.rowEntities?.length) {
     return <Typography color="text.secondary" variant="body2">No matrix data.</Typography>;
   }
 
-  const { rowEntities, colEntities, cells, summary } = content;
+  const { rowEntities, colEntities, cells, summary } = c;
   const cellMap = buildCellMap(cells);
 
   const displayRows = compact ? rowEntities.slice(0, 4) : rowEntities;

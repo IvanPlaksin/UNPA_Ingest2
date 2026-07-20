@@ -35,6 +35,7 @@ import ExtractionResults from '../components/Documents/ExtractionResults';
 import SourceCatalogTab from '../components/Documents/SourceCatalog/SourceCatalogTab';
 import DocumentIndexTab from '../components/Documents/DocumentIndex/DocumentIndexTab';
 import SourcesDashboard from '../components/Documents/DocumentIndex/SourcesDashboard';
+import IndexerControls from '../components/Documents/DocumentIndex/IndexerControls';
 import DocumentCardDialog from '../components/Documents/DocumentCardDialog';
 import {
     listDocuments, getDocumentStats,
@@ -269,6 +270,9 @@ export default function DocumentProcessingPage() {
                         </FormControl>
                     </Stack>
                 )}
+
+                {/* Dashboard tab: indexer control bar lives in the header (one line). */}
+                {activeTab === 3 && <IndexerControls />}
             </Stack>
 
             {/* ── Tabs ── */}

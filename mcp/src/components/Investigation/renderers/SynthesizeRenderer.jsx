@@ -1,8 +1,10 @@
 import React from 'react';
 import { Typography } from '@mui/material';
+import { fromEnvelope } from './envelope-compat';
 
 export default function SynthesizeRenderer({ content, compact }) {
-  const text = content?.narrative || 'No narrative generated.';
+  const c = fromEnvelope(content, 'SYNTHESIZE');
+  const text = c?.narrative || 'No narrative generated.';
   return (
     <Typography
       variant="body2"

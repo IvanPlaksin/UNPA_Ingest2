@@ -1,0 +1,8 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.0
+gliner==0.2.13
+# huggingface_hub <0.25 still has proxies/resume_download expected by gliner 0.2.13
+huggingface_hub==0.23.4
+# transformers 4.44 works with PyTorch 2.4 and huggingface_hub 0.23
+transformers==4.44.2
+pydantic==2.9.0

@@ -10,7 +10,9 @@ import {
 } from '@mui/material';
 
 const API_BASE = '/api/v1/tensors';
-const SSE_URL = `${API_BASE}/stream`;
+// scope=summary → lightweight payload (summary/metrics/alerts only); this widget
+// is always mounted in the sidebar, so it avoids parsing the fat full-status frame.
+const SSE_URL = `${API_BASE}/stream?scope=summary`;
 
 const TensorMonitorWidget = () => {
   const navigate = useNavigate();

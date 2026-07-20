@@ -10,6 +10,7 @@ import { useNodeFilter } from './hooks/useNodeFilter';
 import { InstancedNodes } from './scene/InstancedNodes';
 import { BatchedEdges } from './scene/BatchedEdges';
 import { WeightedBatchedEdges } from './scene/WeightedBatchedEdges';
+import { SelectionOverlay } from './scene/SelectionOverlay';
 import { VisualSettingsPanel } from './ui/VisualSettingsPanel';
 import { NodeFilterPanel } from './ui/NodeFilterPanel';
 import { DetailPanel } from './ui/DetailPanel';
@@ -291,7 +292,7 @@ function ControlBar({ namespace, namespaces, onNamespace, stratified, onStratifi
 // ── Scene (inside R3F Canvas) ─────────────────────────────────────────────────
 
 function GraphScene({
-    nodes, links, stratified, highlightIds, visualSettings, weightSum,
+    nodes, links, stratified, highlightIds, visualSettings, weightSum, selection,
     onNodeHover, onNodeClick, onEdgeHover, onEdgeClick,
 }) {
     const { positionsRef, tick } = useForceSimulation(nodes, links, { stratified });
@@ -361,6 +362,20 @@ function GraphScene({
                 />
             )}
 
+            {selection && selection.nodeIds.size > 0 && (
+                <SelectionOverlay
+                    nodes={nodes}
+                    links={links}
+                    positionsRef={positionsRef}
+                    tick={tick}
+                    selectedNodeIds={selection.nodeIds}
+                    selectedEdgeKeys={selection.edgeKeys}
+                    nodeSettings={visualSettings.nodes}
+                    degreeMap={degreeMap}
+                    maxDegree={maxDegree}
+                />
+            )}
+
             <OrbitControls enableDamping dampingFactor={0.1} minDistance={30} maxDistance={6000} makeDefault />
 
             <EffectComposer>
@@ -381,7 +396,7 @@ function GraphScene({
 export default function EntitySingularityGraph({ namespace: propNamespace = null }) {
     const {
         graphData, namespaces, namespace, setNamespace,
-        loading, error, refresh, expandNode,
+        loading, error, refresh,
     } = useEntityStoreGraph(propNamespace);
 
     const { settings: visualSettings, update: updateVisual, reset: resetVisual } = useVisualSettings();
@@ -401,6 +416,79 @@ export default function EntitySingularityGraph({ namespace: propNamespace = null
         if (!filter.weightSum) return filteredLinks;
         return collapseParallelEdges(filteredLinks);
     }, [filteredLinks, filter.weightSum]);
+
+    // ── Selection neighbourhood — BFS up to N hops from the clicked node ──────
+    // Highlighted nodes + the edges between them. Recomputed from state only
+    // (never mutates the graph) so selecting a node NEVER restarts the physics.
+    const selection = useMemo(() => {
+        const empty = { nodeIds: new Set(), edgeKeys: new Set() };
+        if (!selectedItem || selectedItem.itemType !== 'node') return empty;
+
+        const depth = Math.max(1, visualSettings.selection?.depth ?? 2);
+
+        const adj = new Map();
+        const edgeOf = l => {
+            const s = typeof l.source === 'object' ? l.source.id : l.source;
+            const t = typeof l.target === 'object' ? l.target.id : l.target;
+            return [s, t];
+        };
+        displayLinks.forEach(l => {
+            const [s, t] = edgeOf(l);
+            if (!adj.has(s)) adj.set(s, []);
+            if (!adj.has(t)) adj.set(t, []);
+            adj.get(s).push(t);
+            adj.get(t).push(s);
+        });
+
+        const nodeIds = new Set([selectedItem.id]);
+        let frontier = [selectedItem.id];
+        for (let d = 0; d < depth && frontier.length; d++) {
+            const next = [];
+            frontier.forEach(id => (adj.get(id) || []).forEach(nb => {
+                if (!nodeIds.has(nb)) { nodeIds.add(nb); next.push(nb); }
+            }));
+            frontier = next;
+        }
+
+        const edgeKeys = new Set();
+        displayLinks.forEach(l => {
+            const [s, t] = edgeOf(l);
+            if (nodeIds.has(s) && nodeIds.has(t)) edgeKeys.add(`${s}__${t}`);
+        });
+
+        return { nodeIds, edgeKeys };
+    }, [selectedItem, displayLinks, visualSettings.selection?.depth]);
+
+    // ── Direct connections of the selected node (for the DetailPanel list) ────
+    // One entry per incident edge: the relation (type + context text) and the
+    // neighbour node on the other end. Sorted by relation type, then neighbour name.
+    const connections = useMemo(() => {
+        if (!selectedItem || selectedItem.itemType !== 'node') return [];
+        const nodeById = new Map(filteredNodes.map(n => [n.id, n]));
+        const out = [];
+        displayLinks.forEach(l => {
+            const s = typeof l.source === 'object' ? l.source.id : l.source;
+            const t = typeof l.target === 'object' ? l.target.id : l.target;
+            let neighborId, direction;
+            if (s === selectedItem.id)      { neighborId = t; direction = 'out'; }
+            else if (t === selectedItem.id) { neighborId = s; direction = 'in';  }
+            else return;
+            const neighbor = nodeById.get(neighborId);
+            if (!neighbor) return;
+            out.push({
+                type: l.type || 'RELATED_TO',
+                direction,
+                context: l.context,
+                confidence: l.confidence,
+                weight: l.weight,
+                neighbor,
+            });
+        });
+        out.sort((a, b) =>
+            a.type.localeCompare(b.type)
+            || (a.neighbor.name || '').localeCompare(b.neighbor.name || ''));
+        return out;
+    }, [selectedItem, displayLinks, filteredNodes]);
 
     // ── Hover handlers (from HoverScanner) ───────────────────────────────────
     const handleNodeHover = useCallback((node) => {
@@ -424,11 +512,14 @@ export default function EntitySingularityGraph({ namespace: propNamespace = null
     }, []);
 
     // ── Click handlers ────────────────────────────────────────────────────────
+    // Select-only: highlight the node + its N-hop neighbourhood. Does NOT mutate
+    // the graph, so the force simulation is never restarted on click.
     const handleNodeClick = useCallback((node) => {
         if (!node) return;
         setSelectedItem({ itemType: 'node', ...node });
-        expandNode(node.id, 2);
-    }, [expandNode]);
+        setHoveredNode(null);
+        setHighlightIds(new Set());
+    }, []);
 
     const handleEdgeClick = useCallback((edge) => {
         if (!edge) return;
@@ -466,9 +557,10 @@ export default function EntitySingularityGraph({ namespace: propNamespace = null
                         nodes={filteredNodes}
                         links={displayLinks}
                         stratified={stratified}
-                        highlightIds={highlightIds}
+                        highlightIds={selection.nodeIds.size > 0 ? selection.nodeIds : highlightIds}
                         visualSettings={visualSettings}
                         weightSum={filter.weightSum}
+                        selection={selection}
                         onNodeHover={handleNodeHover}
                         onNodeClick={handleNodeClick}
                         onEdgeHover={handleEdgeHover}
@@ -497,7 +589,12 @@ export default function EntitySingularityGraph({ namespace: propNamespace = null
             )}
 
             <HoverTooltip node={hoveredNode} edge={!hoveredNode ? hoveredEdge : null} />
-            <DetailPanel item={selectedItem} onClose={() => setSelectedItem(null)} />
+            <DetailPanel
+                item={selectedItem}
+                connections={connections}
+                onSelectNode={handleNodeClick}
+                onClose={() => setSelectedItem(null)}
+            />
 
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>

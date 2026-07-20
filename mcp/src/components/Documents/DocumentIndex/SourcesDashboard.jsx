@@ -10,28 +10,32 @@ import {
   Box, Stack, Typography, Paper, Grid, Chip, IconButton, Tooltip, Button,
   LinearProgress, Table, TableBody, TableCell, TableHead, TableRow,
   CircularProgress, Alert, FormControl, InputLabel, Select, MenuItem, TextField,
-  Collapse, Divider, ToggleButtonGroup, ToggleButton,
+  Collapse, Divider, ToggleButtonGroup, ToggleButton, Switch,
 } from '@mui/material';
 import {
-  Database, FileText, Download, CheckCircle, Activity, RefreshCw,
-  Play, Pause, Square, RotateCw, Search, Layers, Clock, Hash,
+  Database, FileText, Download, CheckCircle,
+  RotateCw, Search, Layers, Clock, Hash,
   TrendingUp, AlertTriangle, ChevronRight, ChevronDown, Server,
+  PanelRightClose, PanelRightOpen, BarChart3,
 } from 'lucide-react';
 import {
   ResponsiveContainer, AreaChart, Area, Line, XAxis, YAxis, CartesianGrid,
   Tooltip as RTooltip, Legend,
 } from 'recharts';
 import {
-  getIndexStats, getIndexerStatus, controlIndexer, reindexSource, probeSourceCount,
-  getIndexThroughput, getIndexErrors, setIndexerConfig,
+  getIndexStats, getIndexerStatus, reindexSource, probeSourceCount,
+  getIndexThroughput, getIndexErrors, recountAllSources, setSourceEnabled,
 } from '../../../services/documentIndex.service';
 import IncidentsPanel from './IncidentsPanel';
+import QuarantinePanel from './QuarantinePanel';
+import QuotaAllocator from './QuotaAllocator';
 
 const STATUS_META = {
   complete: { color: 'success', label: 'Complete' },
   indexing: { color: 'info',    label: 'Indexing' },
   enriched: { color: 'success', label: 'Enriched' },
   pending:  { color: 'default', label: 'Pending' },
+  partial:  { color: 'warning', label: 'Partial' },
   failed:   { color: 'error',   label: 'Failed' },
 };
 
@@ -77,15 +81,28 @@ function Kpi({ icon: Icon, label, value, sub, color = 'text.primary' }) {
   );
 }
 
-function StateChip({ state }) {
-  const map = {
-    RUNNING: { color: 'success', label: 'Running' },
-    PAUSED:  { color: 'warning', label: 'Paused' },
-    STOPPED: { color: 'error',   label: 'Stopped' },
-    IDLE:    { color: 'default', label: 'Idle' },
-  };
-  const m = map[state] || map.IDLE;
-  return <Chip label={m.label} color={m.color} size="small" />;
+const TIER_META = {
+  fast:    { color: '#16a34a', label: 'Fast' },
+  normal:  { color: '#2563eb', label: 'Normal' },
+  slow:    { color: '#d97706', label: 'Slow' },
+  stalled: { color: '#dc2626', label: 'Stalled' },
+  unrated: { color: '#9ca3af', label: '—' },
+};
+
+// Per-source indexing-efficiency badge: score/tier + pool quota + new-docs/min.
+function EfficiencyCell({ r }) {
+  if (!r) return <Typography variant="caption" color="text.disabled">—</Typography>;
+  const t = TIER_META[r.tier] || TIER_META.unrated;
+  const title = `Efficiency ${r.score ?? '—'}/100 · ${t.label}\nquota ${r.quota} slot(s) · ${r.newPerMin}/min new · ${r.docsPerMin}/min processed\navg latency ${r.avgLatencyMs}ms · new-ratio ${Math.round((r.newRatio||0)*100)}% · pages ${r.pages}`;
+  return (
+    <Tooltip title={<span style={{ whiteSpace: 'pre-line' }}>{title}</span>}>
+      <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="flex-end">
+        <Chip label={r.tier === 'unrated' ? '—' : `${r.score}`} size="small"
+          sx={{ height: 17, minWidth: 30, fontSize: '0.58rem', fontWeight: 700, color: '#fff', bgcolor: t.color }} />
+        <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.58rem' }}>×{r.quota}</Typography>
+      </Stack>
+    </Tooltip>
+  );
 }
 
 function hhmm(iso) {
@@ -296,7 +313,6 @@ export default function SourcesDashboard({ onOpenSearch, onBrowseSource }) {
   const [stats,   setStats]   = useState(null);
   const [status,  setStatus]  = useState(null);
   const [error,   setError]   = useState(null);
-  const [busy,    setBusy]    = useState(false);
   const [reidx,   setReidx]   = useState({});
   const [probing, setProbing] = useState({});
   const [filter,  setFilter]  = useState('');
@@ -306,9 +322,29 @@ export default function SourcesDashboard({ onOpenSearch, onBrowseSource }) {
   const [errors, setErrors] = useState({ summary: null, items: [] });
   const [errLevel, setErrLevel] = useState('');
   const [windowMin, setWindowMin] = useState(60);
-  const [workers, setWorkers] = useState(10);
-  const workersInit = useRef(false);
+  const [toggling, setToggling] = useState({});      // per-source enable/disable in flight
+  const [showChart, setShowChart] = useState(false); // throughput chart collapsed by default
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarWidth, setSidebarWidth] = useState(400);
   const timer = useRef(null);
+  const splitRef = useRef(null);
+  const resizing = useRef(false);
+
+  // Drag-to-resize the right diagnostics sidebar.
+  useEffect(() => {
+    const onMove = (e) => {
+      if (!resizing.current || !splitRef.current) return;
+      const rect = splitRef.current.getBoundingClientRect();
+      const w = rect.right - e.clientX;
+      const max = Math.max(300, rect.width - 340);   // keep the main column ≥ 340px
+      setSidebarWidth(Math.max(300, Math.min(max, w)));
+    };
+    const onUp = () => { if (resizing.current) { resizing.current = false; document.body.style.userSelect = ''; document.body.style.cursor = ''; } };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, []);
+  const startResize = (e) => { e.preventDefault(); resizing.current = true; document.body.style.userSelect = 'none'; document.body.style.cursor = 'col-resize'; };
 
   const load = useCallback(async () => {
     try {
@@ -321,8 +357,6 @@ export default function SourcesDashboard({ onOpenSearch, onBrowseSource }) {
       setStats(s.data); setStatus(st.data);
       setThroughput(tp.data || []);
       setErrors(er.data || { summary: null, items: [] });
-      // Initialize the workers field once from the live concurrency (don't clobber typing after).
-      if (!workersInit.current && st.data?.stats?.concurrency != null) { setWorkers(st.data.stats.concurrency); workersInit.current = true; }
       setError(null);
     } catch (e) {
       setError(e.response?.data?.error || e.message);
@@ -335,21 +369,13 @@ export default function SourcesDashboard({ onOpenSearch, onBrowseSource }) {
     return () => clearInterval(timer.current);
   }, [load]);
 
-  const control = async (action) => {
-    setBusy(true);
-    try { await controlIndexer(action); await load(); }
-    catch (e) { setError(e.response?.data?.error || e.message); }
-    setBusy(false);
-  };
-
-  const applyWorkers = async () => {
-    const n = parseInt(workers, 10);
-    if (!Number.isFinite(n) || n < 1) return;
-    try {
-      const r = await setIndexerConfig({ concurrency: n });
-      if (r?.data?.status) setStatus(r.data.status);
-    } catch (e) { setError(e.response?.data?.error || e.message); }
-  };
+  // Map sourceId → efficiency rating. Must run unconditionally (before any early
+  // return) so the hook order stays stable across renders.
+  const ratingsById = React.useMemo(() => {
+    const m = {};
+    for (const r of (status?.ratings || [])) m[r.sourceId] = r;
+    return m;
+  }, [status]);
 
   const handleReindex = async (id) => {
     setReidx(m => ({ ...m, [id]: true }));
@@ -365,6 +391,21 @@ export default function SourcesDashboard({ onOpenSearch, onBrowseSource }) {
     setProbing(m => ({ ...m, [id]: false }));
   };
 
+  const handleRecountAll = async () => {
+    if (!window.confirm('Re-probe an accurate document count for every source and reset Complete/Partial sources back to Pending so they are re-harvested? This runs in the background.')) return;
+    try { await recountAllSources(); await load(); }
+    catch (e) { setError(e.response?.data?.error || e.message); }
+  };
+
+  const handleToggleEnabled = async (id, enabled) => {
+    setToggling(m => ({ ...m, [id]: true }));
+    // Optimistic: reflect the switch instantly in the table.
+    setStats(prev => prev ? { ...prev, sources: prev.sources.map(s => s.id === id ? { ...s, enabled } : s) } : prev);
+    try { await setSourceEnabled(id, enabled); await load(); }
+    catch (e) { setError(e.response?.data?.error || e.message); await load(); }
+    setToggling(m => ({ ...m, [id]: false }));
+  };
+
   if (!stats) {
     return (
       <Stack alignItems="center" justifyContent="center" sx={{ height: 240 }}>
@@ -373,10 +414,10 @@ export default function SourcesDashboard({ onOpenSearch, onBrowseSource }) {
     );
   }
 
-  const state = status?.state || 'IDLE';
   const active = status?.stats?.active || (status?.stats?.current ? [status.stats.current] : []);
   const activeIds = new Set(active.map(a => a.sourceId));
   const concurrency = status?.stats?.concurrency;
+  const recountAll = status?.stats?.recountAll;
   const overallPct = stats.sourcesTotal ? Math.round((stats.sourcesComplete / stats.sourcesTotal) * 100) : 0;
 
   // Sources summary: total docs known to exist in sources (where the count is
@@ -390,7 +431,8 @@ export default function SourcesDashboard({ onOpenSearch, onBrowseSource }) {
   const totalWarns = errSummary?.warnings || 0;
   const coveragePct = knownTotal ? Math.min(100, Math.round((stats.total / knownTotal) * 100)) : 0;
 
-  let rows = (stats.sources || []).filter(s => s.enabled);
+  // Show ALL sources (including disabled) so they can be toggled back on.
+  let rows = (stats.sources || []);
   if (filter.trim()) rows = rows.filter(s => s.name.toLowerCase().includes(filter.toLowerCase()));
   if (statusFilter) rows = rows.filter(s => (s.indexStatus || 'pending') === statusFilter);
   rows = [...rows].sort((a, b) => {
@@ -403,130 +445,74 @@ export default function SourcesDashboard({ onOpenSearch, onBrowseSource }) {
   const maxIndexed = Math.max(1, ...rows.map(s => s.indexed));
 
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 1.5, overflow: 'hidden' }}>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 1.25, overflow: 'hidden' }}>
 
       {error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
 
-      {/* ── KPI row ── */}
-      <Grid container spacing={1.5}>
-        <Grid item xs={6} sm={4} md={2.4}>
+      <Box ref={splitRef} sx={{ display: 'flex', flex: 1, minHeight: 0 }}>
+        {/* ══════ LEFT — main content ══════ */}
+        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1.25, overflow: 'hidden' }}>
+
+      {/* ── KPI row (counters + coverage + in-sources, one flowing line) ── */}
+      <Grid container spacing={1.25} sx={{ flexShrink: 0 }}>
+        <Grid item xs={6} sm={4} md={1.6}>
           <Kpi icon={FileText} label="Indexed docs" value={stats.total.toLocaleString()}
             sub={`${stats.withPdf.toLocaleString()} with file link`} />
         </Grid>
-        <Grid item xs={6} sm={4} md={2.4}>
+        <Grid item xs={6} sm={4} md={1.6}>
           <Kpi icon={Database} label="Enriched" value={stats.enriched.toLocaleString()}
             sub={stats.total ? `${Math.round((stats.enriched / stats.total) * 100)}% of index` : '—'} color="#7c3aed" />
         </Grid>
-        <Grid item xs={6} sm={4} md={2.4}>
+        <Grid item xs={6} sm={4} md={1.6}>
           <Kpi icon={CheckCircle} label="Sources complete" value={`${stats.sourcesComplete}/${stats.sourcesTotal}`}
             sub={`${stats.sourcesIndexing} indexing · ${stats.sourcesPending} pending`} color="#16a34a" />
         </Grid>
-        <Grid item xs={6} sm={4} md={2.4}>
+        <Grid item xs={6} sm={4} md={1.6}>
           <Kpi icon={Download} label="With download link" value={stats.withPdf.toLocaleString()}
             sub={stats.total ? `${Math.round((stats.withPdf / stats.total) * 100)}% of index` : '—'} />
         </Grid>
-        <Grid item xs={12} sm={4} md={2.4}>
-          <Paper variant="outlined" sx={{ p: 1.5, height: '100%' }}>
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
-              <Activity size={15} style={{ opacity: 0.6 }} />
-              <Typography variant="caption" color="text.secondary" fontWeight={600}
-                sx={{ textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: '0.62rem' }}>Indexer</Typography>
-              <Box flex={1} />
-              <StateChip state={state} />
-            </Stack>
-            <Stack direction="row" spacing={0.25}>
-              <Tooltip title="Start"><span><IconButton size="small" disabled={busy || state === 'RUNNING'} onClick={() => control('start')}><Play size={16} /></IconButton></span></Tooltip>
-              <Tooltip title="Pause"><span><IconButton size="small" disabled={busy || state !== 'RUNNING'} onClick={() => control('pause')}><Pause size={16} /></IconButton></span></Tooltip>
-              <Tooltip title="Resume"><span><IconButton size="small" disabled={busy || state !== 'PAUSED'} onClick={() => control('resume')}><Play size={16} /></IconButton></span></Tooltip>
-              <Tooltip title="Stop"><span><IconButton size="small" disabled={busy || ['STOPPED', 'IDLE'].includes(state)} onClick={() => control('stop')}><Square size={16} /></IconButton></span></Tooltip>
-              <Tooltip title="Refresh"><IconButton size="small" onClick={load}><RefreshCw size={15} /></IconButton></Tooltip>
-            </Stack>
-            <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mt: 0.75 }}>
-              <Tooltip title="Number of parallel indexing workers — press Enter to apply instantly">
-                <TextField
-                  label="Workers" size="small" type="number" value={workers}
-                  onChange={e => setWorkers(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); applyWorkers(); } }}
-                  onBlur={applyWorkers}
-                  inputProps={{ min: 1, max: 64 }}
-                  sx={{ width: 96, '& input': { py: 0.5 } }}
-                />
-              </Tooltip>
-              {status?.stats?.concurrency != null && String(status.stats.concurrency) !== String(workers) && (
-                <Typography variant="caption" color="warning.main">↵ apply ({status.stats.concurrency} now)</Typography>
-              )}
-            </Stack>
-          </Paper>
+        <Grid item xs={6} sm={4} md={1.6}>
+          <Kpi icon={CheckCircle} label="Overall coverage" value={`${overallPct}%`}
+            sub={active.length ? `${active.length}/${concurrency} pages active` : `${stats.sourcesComplete}/${stats.sourcesTotal} sources`}
+            color={overallPct >= 100 ? '#16a34a' : 'text.primary'} />
+        </Grid>
+        <Grid item xs={6} sm={4} md={1.6}>
+          <Kpi icon={Server} label="In sources" value={knownTotal.toLocaleString()}
+            sub={knownTotal ? `${coveragePct}% of known indexed${unknownCount ? ` · +${unknownCount} unknown` : ''}` : '—'} />
         </Grid>
       </Grid>
 
-      {/* ── Overall progress + current activity ── */}
-      <Paper variant="outlined" sx={{ p: 1.25 }}>
-        <Stack direction="row" alignItems="center" spacing={1.5}>
-          <Typography variant="caption" fontWeight={700} sx={{ minWidth: 130 }}>
-            Overall coverage {overallPct}%
+      {/* ── Throughput chart (collapsible, hidden by default) ── */}
+      <Paper variant="outlined" sx={{ flexShrink: 0 }}>
+        <Stack direction="row" spacing={1} alignItems="center"
+          sx={{ px: 1.25, py: 0.6, cursor: 'pointer' }} onClick={() => setShowChart(v => !v)}>
+          {showChart ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+          <BarChart3 size={15} style={{ opacity: 0.6 }} />
+          <Typography variant="caption" fontWeight={700}
+            sx={{ textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: '0.62rem' }}>
+            Throughput chart
           </Typography>
-          <Box sx={{ flex: 1 }}>
-            <LinearProgress variant="determinate" value={overallPct} sx={{ height: 8, borderRadius: 4 }} />
-          </Box>
-          {active.length
-            ? <Stack direction="row" spacing={0.75} alignItems="center" sx={{ minWidth: 0 }}>
-                <CircularProgress size={11} />
-                <Typography variant="caption" color="text.secondary" noWrap>
-                  harvesting {active.length}{concurrency ? `/${concurrency}` : ''}:{' '}
-                  <b>{active.map(a => a.name).filter(Boolean).join(', ')}</b>
-                </Typography>
-              </Stack>
-            : <Typography variant="caption" color="text.disabled">
-                {status?.stats?.ticks ? `${status.stats.docsIndexed} indexed this run` : 'idle'}
-              </Typography>}
-        </Stack>
-      </Paper>
-
-      {/* ── Sources summary: total-in-sources vs processed vs errors ── */}
-      <Paper variant="outlined" sx={{ p: 1.25 }}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }}>
-          <Stack direction="row" spacing={0.75} alignItems="baseline" sx={{ minWidth: 180 }}>
-            <Server size={14} style={{ opacity: 0.6, alignSelf: 'center' }} />
-            <Typography variant="h6" fontWeight={700}>{knownTotal.toLocaleString()}</Typography>
-            <Typography variant="caption" color="text.secondary">
-              in sources{unknownCount ? ` (+${unknownCount} unknown)` : ''}
-            </Typography>
-          </Stack>
-          <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', sm: 'block' } }} />
-          <Stack direction="row" spacing={0.75} alignItems="baseline" sx={{ minWidth: 150 }}>
-            <FileText size={14} style={{ opacity: 0.6, alignSelf: 'center' }} />
-            <Typography variant="h6" fontWeight={700} sx={{ color: '#2563eb' }}>{stats.total.toLocaleString()}</Typography>
-            <Typography variant="caption" color="text.secondary">processed</Typography>
-          </Stack>
-          <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', sm: 'block' } }} />
-          <Stack direction="row" spacing={0.75} alignItems="baseline" sx={{ minWidth: 150 }}>
-            <AlertTriangle size={14} style={{ opacity: 0.7, alignSelf: 'center', color: totalErrors ? LEVEL_COLOR.error : undefined }} />
-            <Typography variant="h6" fontWeight={700} sx={{ color: totalErrors ? LEVEL_COLOR.error : 'text.primary' }}>
-              {totalErrors.toLocaleString()}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              errors{totalWarns ? ` · ${totalWarns} warn` : ''}{sourcesWithErrors ? ` · ${sourcesWithErrors} sources` : ''}
-            </Typography>
-          </Stack>
-          <Box sx={{ flex: 1, minWidth: 120 }}>
-            <Stack direction="row" justifyContent="space-between">
-              <Typography variant="caption" color="text.secondary">Coverage of known</Typography>
-              <Typography variant="caption" color="text.secondary">{knownTotal ? `${coveragePct}%` : '—'}</Typography>
+          <Box flex={1} />
+          {active.length > 0 && (
+            <Stack direction="row" spacing={0.5} alignItems="center">
+              <CircularProgress size={10} />
+              <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 320 }}>
+                pool {active.length}/{concurrency} · {[...new Set(active.map(a => a.name).filter(Boolean))].join(', ')}
+              </Typography>
             </Stack>
-            <LinearProgress variant="determinate" value={coveragePct} sx={{ height: 6, borderRadius: 3 }} />
-          </Box>
+          )}
         </Stack>
+        <Collapse in={showChart} unmountOnExit>
+          <Box sx={{ px: 1, pb: 1 }}>
+            <ThroughputChart data={throughput} windowMin={windowMin} onWindow={setWindowMin} />
+          </Box>
+        </Collapse>
+        {/* Pool-share allocation — same container/width as the chart, below it. */}
+        <Divider />
+        <Box sx={{ px: 1.25, py: 1 }}>
+          <QuotaAllocator />
+        </Box>
       </Paper>
-
-      {/* ── Throughput chart ── */}
-      <ThroughputChart data={throughput} windowMin={windowMin} onWindow={setWindowMin} />
-
-      {/* ── Errors / warnings log ── */}
-      <ErrorsPanel summary={errSummary} items={errors.items} categories={errors.categories} level={errLevel} onLevel={setErrLevel} />
-
-      {/* ── Incidents & AI response ── */}
-      <IncidentsPanel />
 
       {/* ── Toolbar ── */}
       <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
@@ -549,24 +535,47 @@ export default function SourcesDashboard({ onOpenSearch, onBrowseSource }) {
           </Select>
         </FormControl>
         <Box flex={1} />
+        {recountAll && !recountAll.finishedAt && (
+          <Chip size="small" color="info" variant="outlined"
+            icon={<CircularProgress size={11} />}
+            label={`Recounting ${recountAll.done}/${recountAll.total}${recountAll.current ? ` · ${recountAll.current}` : ''}`}
+            sx={{ maxWidth: 260, '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }} />
+        )}
+        <Tooltip title="Re-probe an accurate document count for every source and reset Complete/Partial sources to re-harvest">
+          <span><Button size="small" variant="outlined" color="warning" startIcon={<Hash size={14} />}
+            disabled={recountAll && !recountAll.finishedAt} onClick={handleRecountAll}>
+            Recount all
+          </Button></span>
+        </Tooltip>
         {onOpenSearch && (
           <Button size="small" variant="outlined" startIcon={<Layers size={14} />} onClick={onOpenSearch}>
             Search index
           </Button>
         )}
         <Typography variant="caption" color="text.secondary">{rows.length} sources</Typography>
+        {!sidebarOpen && (
+          <Tooltip title="Show diagnostics (errors, quarantine, incidents)">
+            <IconButton size="small" onClick={() => setSidebarOpen(true)}><PanelRightOpen size={16} /></IconButton>
+          </Tooltip>
+        )}
       </Stack>
 
       {/* ── Per-source table ── */}
-      <Box sx={{ flex: 1, overflow: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+      <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
         <Table size="small" stickyHeader>
           <TableHead>
             <TableRow>
+              <TableCell width={52} align="center">
+                <Tooltip title="Enable / disable this source for indexing (takes effect immediately)"><span>On</span></Tooltip>
+              </TableCell>
               <TableCell>Source</TableCell>
               <TableCell width={64}>Type</TableCell>
               <TableCell width={220}>Progress</TableCell>
               <TableCell width={90} align="right">Indexed</TableCell>
               <TableCell width={80} align="right">Enriched</TableCell>
+              <TableCell width={78} align="right">
+                <Tooltip title="Indexing efficiency score (0–100) and pool quota (×slots). Slow/stalled sources are capped so they can't clog the pool."><span>Efficiency</span></Tooltip>
+              </TableCell>
               <TableCell width={90}>Updated</TableCell>
               <TableCell width={60} align="right" />
             </TableRow>
@@ -577,8 +586,15 @@ export default function SourcesDashboard({ onOpenSearch, onBrowseSource }) {
               const sm = STATUS_META[s.indexStatus] || STATUS_META.pending;
               const isCurrent = activeIds.has(s.id);
               const unknownTotal = s.indexTotal == null;
+              const enabled = s.enabled !== false;
               return (
-                <TableRow key={s.id} hover selected={isCurrent} sx={{ verticalAlign: 'middle' }}>
+                <TableRow key={s.id} hover selected={isCurrent} sx={{ verticalAlign: 'middle', opacity: enabled ? 1 : 0.5 }}>
+                  <TableCell align="center" sx={{ py: 0.25 }}>
+                    <Tooltip title={enabled ? 'Disable indexing for this source' : 'Enable indexing for this source'}>
+                      <span><Switch size="small" checked={enabled} disabled={!!toggling[s.id]}
+                        onChange={(e) => handleToggleEnabled(s.id, e.target.checked)} /></span>
+                    </Tooltip>
+                  </TableCell>
                   <TableCell sx={{ py: 0.75 }}>
                     <Stack direction="row" spacing={0.75} alignItems="center">
                       {isCurrent && <CircularProgress size={11} />}
@@ -620,6 +636,7 @@ export default function SourcesDashboard({ onOpenSearch, onBrowseSource }) {
                     )}
                   </TableCell>
                   <TableCell align="right"><Typography variant="caption" color={s.enriched ? '#7c3aed' : 'text.disabled'}>{s.enriched.toLocaleString()}</Typography></TableCell>
+                  <TableCell align="right"><EfficiencyCell r={ratingsById[s.id]} /></TableCell>
                   <TableCell><Typography variant="caption" color="text.secondary"><Clock size={10} style={{ verticalAlign: -1, marginRight: 3, opacity: 0.5 }} />{timeAgo(s.lastIndexedAt)}</Typography></TableCell>
                   <TableCell align="right">
                     <Stack direction="row" spacing={0} justifyContent="flex-end">
@@ -641,6 +658,36 @@ export default function SourcesDashboard({ onOpenSearch, onBrowseSource }) {
           </TableBody>
         </Table>
       </Box>
+        </Box>{/* ══════ end LEFT ══════ */}
+
+        {/* ══════ resize handle + RIGHT diagnostics sidebar ══════ */}
+        {sidebarOpen && (
+          <Box onMouseDown={startResize}
+            sx={{ width: 6, flexShrink: 0, cursor: 'col-resize', borderRadius: 1, mx: 0.25,
+              '&:hover': { bgcolor: 'primary.main' }, transition: 'background-color 0.15s' }} />
+        )}
+        {sidebarOpen && (
+          <Box sx={{ width: sidebarWidth, flexShrink: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <Stack direction="row" alignItems="center" spacing={0.5} sx={{ pb: 0.75 }}>
+              <AlertTriangle size={15} style={{ opacity: 0.7 }} />
+              <Typography variant="caption" fontWeight={700}
+                sx={{ textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: '0.62rem' }}>
+                Diagnostics
+              </Typography>
+              {totalErrors > 0 && <Chip label={`${totalErrors} err`} size="small" sx={{ height: 16, fontSize: '0.55rem', color: '#fff', bgcolor: LEVEL_COLOR.error }} />}
+              <Box flex={1} />
+              <Tooltip title="Hide diagnostics panel">
+                <IconButton size="small" onClick={() => setSidebarOpen(false)}><PanelRightClose size={16} /></IconButton>
+              </Tooltip>
+            </Stack>
+            <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 1.25, pr: 0.5 }}>
+              <ErrorsPanel summary={errSummary} items={errors.items} categories={errors.categories} level={errLevel} onLevel={setErrLevel} />
+              <QuarantinePanel />
+              <IncidentsPanel />
+            </Box>
+          </Box>
+        )}
+      </Box>{/* ══════ end split ══════ */}
     </Box>
   );
 }

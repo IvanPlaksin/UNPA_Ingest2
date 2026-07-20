@@ -1,24 +1,26 @@
 import React from 'react';
 import { Box, Typography, Stack, Chip } from '@mui/material';
 import { AlertTriangle } from 'lucide-react';
+import { fromEnvelope } from './envelope-compat';
 
 const DOC_TYPES = new Set(['DOCUMENT', 'POLICY', 'RESOLUTION', 'REGULATION', 'GUIDELINE']);
 
 export default function LocateRenderer({ content, compact }) {
-  if (!content?.results?.length) {
+  const data = fromEnvelope(content, 'LOCATE');
+  if (!data?.results?.length) {
     return (
       <Typography color="text.secondary" variant="body2">
-        No entities found{content?.query ? ` for "${content.query}"` : ''}.
+        No entities found{data?.query ? ` for "${data.query}"` : ''}.
       </Typography>
     );
   }
 
-  const results = compact ? content.results.slice(0, 5) : content.results;
+  const results = compact ? data.results.slice(0, 5) : data.results;
 
   return (
     <Box>
       <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-        Query: <strong>{content.query}</strong> — {content.results.length} result(s)
+        Query: <strong>{data.query}</strong> — {data.results.length} result(s)
       </Typography>
       {results.map((e, i) => {
         const isDocType = DOC_TYPES.has((e.type || '').toUpperCase());
@@ -47,9 +49,9 @@ export default function LocateRenderer({ content, compact }) {
           </Box>
         );
       })}
-      {compact && content.results.length > 5 && (
+      {compact && data.results.length > 5 && (
         <Typography variant="caption" color="text.secondary" sx={{ pt: 0.5, display: 'block' }}>
-          +{content.results.length - 5} more
+          +{data.results.length - 5} more
         </Typography>
       )}
     </Box>

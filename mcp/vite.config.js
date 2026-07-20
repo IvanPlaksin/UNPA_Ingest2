@@ -8,12 +8,14 @@ export default defineConfig({
         dedupe: ['react', 'react-dom', 'three', '@react-three/fiber'],
     },
     optimizeDeps: {
+        // @flowdesk/chat-v2 pinned so a local rebuild is re-optimized. (v1.0.9)
         include: [
             'elkjs/lib/elk.bundled.js',
             '@react-three/fiber',
             '@react-three/drei',
             '@react-three/postprocessing',
             'three',
+            '@flowdesk/chat-v2',
         ],
     },
     server: {

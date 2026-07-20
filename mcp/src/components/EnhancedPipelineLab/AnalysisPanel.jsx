@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import { Send, Sparkles, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { useStreamThrottle } from '../../hooks/useStreamThrottle';
 
 const QUICK_ACTIONS = [
   { label: 'Quality Report', prompt: 'Give me a detailed quality score breakdown' },
@@ -30,6 +31,8 @@ export default function AnalysisPanel({ sessionId, isReady, onAnalysisComplete }
 
   const messagesEndRef = useRef(null);
   const eventSourceRef = useRef(null);
+  // Coalesce per-chunk stream updates into ≤1 render per ~80ms.
+  const { schedule: scheduleChunkFlush, flushNow: flushChunks } = useStreamThrottle(80);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -83,6 +86,7 @@ export default function AnalysisPanel({ sessionId, isReady, onAnalysisComplete }
 
       // Connect to stream
       console.log('[AnalysisPanel] Connecting to SSE stream...');
+      let analysisBuffer = ''; // accumulate chunks; throttled flush writes absolute value
       const eventSource = new EventSource(
         `/api/v1/pipeline-lab/analysis/${sessionId}/stream`
       );
@@ -102,11 +106,12 @@ export default function AnalysisPanel({ sessionId, isReady, onAnalysisComplete }
           const content = data.content || '';
           console.log('[AnalysisPanel] Received chunk:', content.substring(0, 50));
           if (content) {
-            setMessages(prev => prev.map(msg =>
+            analysisBuffer += content;
+            scheduleChunkFlush(() => setMessages(prev => prev.map(msg =>
               msg.id === aiMessageId
-                ? { ...msg, content: msg.content + content }
+                ? { ...msg, content: analysisBuffer }
                 : msg
-            ));
+            )));
           }
         } catch (parseErr) {
           console.error('[AnalysisPanel] Parse error:', parseErr, e.data);
@@ -114,6 +119,7 @@ export default function AnalysisPanel({ sessionId, isReady, onAnalysisComplete }
       });
 
       eventSource.addEventListener('analysis_complete', () => {
+        flushChunks();
         setMessages(prev => prev.map(msg =>
           msg.id === aiMessageId
             ? { ...msg, isStreaming: false }
@@ -181,6 +187,7 @@ export default function AnalysisPanel({ sessionId, isReady, onAnalysisComplete }
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
+      let fullContent = ''; // accumulate tokens; throttled flush writes absolute value
 
       while (true) {
         const { done, value } = await reader.read();
@@ -195,17 +202,19 @@ export default function AnalysisPanel({ sessionId, isReady, onAnalysisComplete }
             try {
               const data = JSON.parse(line.slice(6));
               if (data.content) {
-                setMessages(prev => prev.map(msg =>
+                fullContent += data.content;
+                scheduleChunkFlush(() => setMessages(prev => prev.map(msg =>
                   msg.id === aiMessageId
-                    ? { ...msg, content: msg.content + data.content }
+                    ? { ...msg, content: fullContent }
                     : msg
-                ));
+                )));
               }
             } catch (e) {
               // Skip
             }
           }
           if (line.includes('chat_complete')) {
+            flushChunks();
             setMessages(prev => prev.map(msg =>
               msg.id === aiMessageId
                 ? { ...msg, isStreaming: false }
@@ -214,7 +223,9 @@ export default function AnalysisPanel({ sessionId, isReady, onAnalysisComplete }
           }
         }
       }
+      flushChunks();
     } catch (err) {
+      flushChunks();
       setError(err.message);
     } finally {
       setIsAnalyzing(false);

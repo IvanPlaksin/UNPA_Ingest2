@@ -1,33 +1,35 @@
 import React from 'react';
 import { Box, Typography, Chip, Stack } from '@mui/material';
+import { fromEnvelope } from './envelope-compat';
 
 export default function TextRenderer({ content, compact }) {
-  if (!content) return null;
+  const c = fromEnvelope(content, 'TEXT');
+  if (!c) return null;
 
   return (
     <Box>
-      {content.title && (
+      {c.title && (
         <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
-          {content.title}
+          {c.title}
         </Typography>
       )}
       <Typography
         variant="body2"
         sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.75 }}
       >
-        {compact && content.body?.length > 300
-          ? content.body.slice(0, 300) + '…'
-          : content.body || ''}
+        {compact && c.body?.length > 300
+          ? c.body.slice(0, 300) + '…'
+          : c.body || ''}
       </Typography>
       {!compact && (
         <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
           <Chip
             size="small"
-            label={`${content.wordCount || 0} words`}
+            label={`${c.wordCount || 0} words`}
             variant="outlined"
             sx={{ fontSize: '0.65rem', height: 18 }}
           />
-          {content.hasEvidence && (
+          {c.hasEvidence && (
             <Chip size="small" label="Evidence linked" color="primary" variant="outlined" sx={{ fontSize: '0.65rem', height: 18 }} />
           )}
         </Stack>

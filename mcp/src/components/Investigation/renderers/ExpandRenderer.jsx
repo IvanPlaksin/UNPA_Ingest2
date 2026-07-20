@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Typography, Stack, Chip, Divider } from '@mui/material';
 import { Network, Link2 } from 'lucide-react';
 import EvidencePanel from '../EvidencePanel';
+import { fromEnvelope } from './envelope-compat';
 
 const DOC_TYPES = new Set(['DOCUMENT', 'POLICY', 'RESOLUTION', 'REGULATION', 'GUIDELINE']);
 
@@ -15,8 +16,9 @@ function buildEntityMap(nodes) {
 }
 
 export default function ExpandRenderer({ content, compact }) {
-  const nodes = content?.nodes || [];
-  const edges = content?.edges || [];
+  const data  = fromEnvelope(content, 'EXPAND');
+  const nodes = data?.nodes || [];
+  const edges = data?.edges || [];
   const nodeLimit = compact ? 5 : 12;
   const edgeLimit = compact ? 0 : 8;
   const entityMap = buildEntityMap(nodes);
@@ -24,7 +26,7 @@ export default function ExpandRenderer({ content, compact }) {
   return (
     <Box>
       <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-        Depth {content?.depth} · {content?.nodeCount ?? nodes.length} nodes · {content?.edgeCount ?? edges.length} edges
+        Depth {data?.depth} · {data?.nodeCount ?? nodes.length} nodes · {data?.edgeCount ?? edges.length} edges
       </Typography>
 
       {/* Nodes list */}

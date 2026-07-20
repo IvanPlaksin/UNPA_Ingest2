@@ -17,6 +17,7 @@ import {
   CheckCircle, XCircle, Wrench, Loader2, MessageSquare,
 } from 'lucide-react';
 import { streamGraphAnalystChat } from '../../services/gxe.service';
+import { useStreamThrottle } from '../../hooks/useStreamThrottle';
 
 // ────────────────────────────────────────────────────────────────────────────
 // QUICK ACTIONS (shown when chat is empty)
@@ -176,6 +177,8 @@ const GraphAnalystChat = ({ nodes = [], edges = [], namespace }) => {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const abortRef = useRef(null);
+  // Coalesce per-token stream updates into ≤1 render per ~80ms.
+  const { schedule: scheduleTokenFlush, flushNow: flushTokens } = useStreamThrottle(80);
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -238,6 +241,7 @@ const GraphAnalystChat = ({ nodes = [], edges = [], namespace }) => {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
+      let fullContent = ''; // accumulate tokens; throttled flush writes absolute value
 
       while (true) {
         const { done, value } = await reader.read();
@@ -257,14 +261,15 @@ const GraphAnalystChat = ({ nodes = [], edges = [], namespace }) => {
 
           switch (data.type) {
             case 'token':
-              setMessages(prev => {
+              fullContent += (data.content || '');
+              scheduleTokenFlush(() => setMessages(prev => {
                 const updated = [...prev];
                 const last = updated[updated.length - 1];
                 if (last?.role === 'assistant') {
-                  updated[updated.length - 1] = { ...last, content: last.content + (data.content || '') };
+                  updated[updated.length - 1] = { ...last, content: fullContent };
                 }
                 return updated;
-              });
+              }));
               break;
 
             case 'tool_call':
@@ -335,7 +340,9 @@ const GraphAnalystChat = ({ nodes = [], edges = [], namespace }) => {
           }
         }
       }
+      flushTokens();
     } catch (err) {
+      flushTokens();
       if (err.name === 'AbortError') {
         // User cancelled
         setMessages(prev => {

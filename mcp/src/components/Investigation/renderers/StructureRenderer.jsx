@@ -13,13 +13,15 @@ import {
   Box, Typography, Chip, Stack,
   Table, TableHead, TableBody, TableRow, TableCell, TableContainer,
 } from '@mui/material';
+import { fromEnvelope } from './envelope-compat';
 
 export default function StructureRenderer({ content, compact }) {
-  if (!content?.metrics?.length) {
+  const data = fromEnvelope(content, 'STRUCTURE');
+  if (!data?.metrics?.length) {
     return <Typography color="text.secondary" variant="body2">No structural data.</Typography>;
   }
 
-  const { metrics, bridges, summary } = content;
+  const { metrics, bridges, summary } = data;
   const mostCentralId = summary?.mostCentral?.entityId;
   const bridgeNodeIds = new Set(
     (bridges || []).flatMap(b => [b.sourceId, b.targetId])

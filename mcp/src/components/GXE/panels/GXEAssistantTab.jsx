@@ -18,6 +18,7 @@ import { API_BASE_URL } from '../../../config/api.config';
 import useGraphValidation from './useGraphValidation';
 import useAutoLayout from './useAutoLayout';
 import AssistantStatusBar from './AssistantStatusBar';
+import { useStreamThrottle } from '../../../hooks/useStreamThrottle';
 
 // ── Action type labels ──
 const ACTION_LABELS = {
@@ -64,6 +65,13 @@ function formatContent(text) {
   });
   return elements;
 }
+
+// Memoized wrapper: re-parses markdown only when this message's content changes.
+// During streaming, prev.map preserves object identity for unchanged messages,
+// so their content string stays referentially equal and this component skips.
+const MessageContent = React.memo(function MessageContent({ content }) {
+  return <>{formatContent(content)}</>;
+});
 
 function generateSessionId() {
   return 'sess-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
@@ -208,7 +216,10 @@ function NodeExecutionRow({ nodeId, nr, isLast }) {
 }
 
 // ── Execution Progress Card — full execution display ──
-function ExecutionCard({ msg }) {
+// Memoized: during chat streaming, execution messages keep their object identity
+// (prev.map returns the same ref for unmatched messages) so this whole subtree —
+// including the per-node execution rows — skips re-rendering.
+const ExecutionCard = React.memo(function ExecutionCard({ msg }) {
   const nodeEntries = msg.nodeResults ? Object.entries(msg.nodeResults) : [];
   const succeededCount = nodeEntries.filter(([, nr]) => nr.status === 'SUCCEEDED').length;
   const failedCount = nodeEntries.filter(([, nr]) => nr.status === 'FAILED').length;
@@ -295,7 +306,7 @@ function ExecutionCard({ msg }) {
       )}
     </div>
   );
-}
+});
 
 // ── Main Component ──
 const WELCOME_MSG = {
@@ -334,6 +345,10 @@ const GXEAssistantTab = ({
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const abortRef = useRef(null);
+  // Coalesce high-frequency streaming updates (chat tokens / execution events)
+  // into ≤1 render per window instead of one render per SSE event.
+  const chatThrottle = useStreamThrottle(80);
+  const execThrottle = useStreamThrottle(80);
   const sendMessageRef = useRef(null);
   const nodesRef = useRef(nodes);
   const edgesRef = useRef(edges);
@@ -615,14 +630,14 @@ const GXEAssistantTab = ({
             }
 
             case 'progress': {
-              // Update progress info on execution message
-              setMessages(prev => prev.map(m =>
+              // Update progress info on execution message (throttled)
+              execThrottle.schedule(() => setMessages(prev => prev.map(m =>
                 m.id === execMsgId ? {
                   ...m,
                   nodeResults: { ...nodeResults },
                   progress: event,
                 } : m
-              ));
+              )));
               continue; // Skip the generic update below
             }
 
@@ -661,7 +676,7 @@ const GXEAssistantTab = ({
 
           // Update execution message in place (after each event)
           const isTerminal = evType === 'complete' || evType === 'error';
-          setMessages(prev => prev.map(m =>
+          const applyExecUpdate = () => setMessages(prev => prev.map(m =>
             m.id === execMsgId ? {
               ...m,
               nodeResults: { ...nodeResults },
@@ -674,8 +689,17 @@ const GXEAssistantTab = ({
                 : m.content,
             } : m
           ));
+          // Terminal events apply immediately; intermediate node events coalesce.
+          if (isTerminal) {
+            execThrottle.flushNow();
+            applyExecUpdate();
+          } else {
+            execThrottle.schedule(applyExecUpdate);
+          }
         }
       }
+
+      execThrottle.flushNow();
 
       // Finalize
       const finalStatus = Object.values(nodeResults).some(r => r.status === 'FAILED') ? 'FAILED' : 'COMPLETED';
@@ -747,6 +771,9 @@ const GXEAssistantTab = ({
       actions: [],
       isStreaming: true,
     }]);
+
+    // Accumulate streamed tokens here; throttled flush writes the absolute value.
+    let assistantContent = '';
 
     try {
       const body = {
@@ -823,12 +850,14 @@ const GXEAssistantTab = ({
             const event = JSON.parse(jsonStr);
 
             if (event.type === 'chunk') {
-              setMessages(prev => prev.map(m =>
+              assistantContent += event.text;
+              chatThrottle.schedule(() => setMessages(prev => prev.map(m =>
                 m.id === assistantMsgId
-                  ? { ...m, content: m.content + event.text }
+                  ? { ...m, content: assistantContent }
                   : m
-              ));
+              )));
             } else if (event.type === 'done') {
+              chatThrottle.flushNow();
               setMessages(prev => prev.map(m =>
                 m.id === assistantMsgId
                   ? {
@@ -877,11 +906,12 @@ const GXEAssistantTab = ({
               setRetryStatus({ attempt: 1, delay: 5000, reason: event.message });
               setTimeout(() => setRetryStatus(null), 8000);
             } else if (event.type === 'error') {
+              chatThrottle.flushNow();
               setMessages(prev => prev.map(m =>
                 m.id === assistantMsgId
                   ? {
                     ...m,
-                    content: m.content || `Ошибка: ${event.error}`,
+                    content: assistantContent || `Ошибка: ${event.error}`,
                     isStreaming: false,
                     isError: true,
                   }
@@ -899,13 +929,15 @@ const GXEAssistantTab = ({
       }
 
       // Mark streaming done (in case no 'done' event received)
+      chatThrottle.flushNow();
       setMessages(prev => prev.map(m =>
         m.id === assistantMsgId && m.isStreaming
-          ? { ...m, isStreaming: false }
+          ? { ...m, content: assistantContent || m.content, isStreaming: false }
           : m
       ));
 
     } catch (err) {
+      chatThrottle.flushNow();
       setMessages(prev => prev.map(m =>
         m.id === assistantMsgId
           ? {
@@ -1258,7 +1290,7 @@ const GXEAssistantTab = ({
                           ? 'bg-red-500/10 text-red-300 border border-red-500/20 rounded-bl-sm'
                           : 'bg-[#21262d] text-gray-300 rounded-bl-sm'
                     }`}>
-                      {formatContent(msg.content)}
+                      <MessageContent content={msg.content} />
                       {msg.isStreaming && (
                         <span className="inline-block ml-1">
                           <span className="inline-flex gap-0.5">

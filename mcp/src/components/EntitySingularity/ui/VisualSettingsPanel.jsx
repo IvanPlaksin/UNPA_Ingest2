@@ -9,7 +9,7 @@ function loadOpen() {
 
 // ── Slider row ────────────────────────────────────────────────────────────────
 
-function SliderRow({ label, value, min, max, step, onChange }) {
+function SliderRow({ label, value, min, max, step, onChange, integer = false }) {
     return (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
             <span style={{ width: 110, color: '#94a3b8', fontSize: 11, flexShrink: 0 }}>{label}</span>
@@ -20,7 +20,7 @@ function SliderRow({ label, value, min, max, step, onChange }) {
                 style={{ flex: 1, accentColor: '#05d9e8', cursor: 'pointer' }}
             />
             <span style={{ width: 38, color: '#05d9e8', fontSize: 11, textAlign: 'right', fontFamily: 'monospace' }}>
-                {Number(value).toFixed(step < 0.1 ? 2 : 1)}
+                {integer ? Math.round(value) : Number(value).toFixed(step < 0.1 ? 2 : 1)}
             </span>
         </div>
     );
@@ -120,6 +120,10 @@ export function VisualSettingsPanel({ settings, onUpdate, onReset, weightSumActi
                         {weightSumActive && (
                             <SliderRow label="Weight Fade"  value={settings.edges.weightFade} min={0} max={1} step={0.01} onChange={v => onUpdate('edges.weightFade', v)} />
                         )}
+                    </Section>
+
+                    <Section title="Selection">
+                        <SliderRow label="Highlight Depth" value={settings.selection.depth} min={1} max={5} step={1} integer onChange={v => onUpdate('selection.depth', v)} />
                     </Section>
 
                     <Section title="Environment">

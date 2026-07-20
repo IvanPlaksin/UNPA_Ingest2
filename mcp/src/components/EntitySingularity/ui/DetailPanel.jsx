@@ -29,7 +29,78 @@ function Row({ label, value }) {
     );
 }
 
-function NodeBody({ item }) {
+// ── Single connection row — relation text + neighbour node, click to re-select ──
+
+function ConnectionRow({ conn, last, onSelectNode }) {
+    const [hover, setHover] = useState(false);
+    const n = conn.neighbor;
+    const arrow = conn.direction === 'out' ? '→' : '←';
+    return (
+        <div
+            onClick={() => onSelectNode?.(n)}
+            onMouseEnter={() => setHover(true)}
+            onMouseLeave={() => setHover(false)}
+            title={`Select ${n.name}`}
+            style={{
+                padding: '6px 8px', cursor: 'pointer',
+                borderBottom: last ? 'none' : '1px solid rgba(5,217,232,0.06)',
+                background: hover ? 'rgba(5,217,232,0.09)' : 'transparent',
+            }}
+        >
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                <span style={{ color: '#6b7280', fontSize: 12, flexShrink: 0 }}>{arrow}</span>
+                <span style={{ color: '#05d9e8', fontSize: 12, fontWeight: 'bold', flex: 1, wordBreak: 'break-word' }}>
+                    {n.name}
+                </span>
+                {n.canonicalType && (
+                    <span style={{ color: '#374151', fontSize: 9, flexShrink: 0 }}>{n.canonicalType}</span>
+                )}
+            </div>
+            {conn.context && (
+                <div style={{ color: '#94a3b8', fontSize: 10, lineHeight: 1.5, marginTop: 3, paddingLeft: 18 }}>
+                    {conn.context.length > 160 ? conn.context.slice(0, 160) + '…' : conn.context}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ── Connections list — grouped and sorted by relation type ─────────────────────
+
+function ConnectionsList({ connections, onSelectNode }) {
+    if (!connections || connections.length === 0) return null;
+
+    // `connections` arrives pre-sorted by type, so collapse consecutive runs into groups.
+    const groups = [];
+    let cur = null;
+    connections.forEach(c => {
+        if (!cur || cur.type !== c.type) { cur = { type: c.type, items: [] }; groups.push(cur); }
+        cur.items.push(c);
+    });
+
+    return (
+        <div style={{ borderTop: '1px solid rgba(5,217,232,0.08)', paddingTop: 10, marginTop: 4 }}>
+            <div style={{ color: '#374151', fontSize: 9, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 }}>
+                Connections ({connections.length})
+            </div>
+            {groups.map(g => (
+                <div key={g.type} style={{ marginBottom: 9 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                        <span style={{ color: '#f59e0b', fontSize: 10, letterSpacing: 0.8, fontWeight: 'bold' }}>{g.type}</span>
+                        <span style={{ color: '#4b5563', fontSize: 9 }}>×{g.items.length}</span>
+                    </div>
+                    <div style={{ borderRadius: 4, border: '1px solid rgba(5,217,232,0.1)', overflow: 'hidden' }}>
+                        {g.items.map((c, i) => (
+                            <ConnectionRow key={i} conn={c} last={i === g.items.length - 1} onSelectNode={onSelectNode} />
+                        ))}
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function NodeBody({ item, connections, onSelectNode }) {
     const d = item.data || {};
     return (
         <>
@@ -62,6 +133,8 @@ function NodeBody({ item }) {
                 <Row label="Created"    value={d.createdAt ? new Date(d.createdAt).toLocaleDateString() : null} />
                 <Row label="ID"         value={item.id} />
             </div>
+
+            <ConnectionsList connections={connections} onSelectNode={onSelectNode} />
         </>
     );
 }
@@ -145,7 +218,7 @@ function EdgeBody({ item }) {
     );
 }
 
-export function DetailPanel({ item, onClose }) {
+export function DetailPanel({ item, onClose, connections, onSelectNode }) {
     const [pos, setPos] = useState(loadPos);
     const dragging = useRef(false);
     const dragOffset = useRef({ x: 0, y: 0 });
@@ -221,7 +294,9 @@ export function DetailPanel({ item, onClose }) {
 
             {/* Body */}
             <div style={{ padding: '12px 14px', maxHeight: 520, overflowY: 'auto' }}>
-                {isNode ? <NodeBody item={item} /> : <EdgeBody item={item} />}
+                {isNode
+                    ? <NodeBody item={item} connections={connections} onSelectNode={onSelectNode} />
+                    : <EdgeBody item={item} />}
             </div>
         </div>,
         document.body

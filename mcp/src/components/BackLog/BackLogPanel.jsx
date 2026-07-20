@@ -23,9 +23,17 @@ import {
   IconButton,
   CircularProgress,
   Alert,
-  Stack
+  Stack,
+  Checkbox,
+  Tooltip,
+  Menu,
+  ListItemIcon,
+  ListItemText
 } from '@mui/material';
-import { Add, Close, ViewColumn, BarChart, ViewList, AccountTree } from '@mui/icons-material';
+import {
+  Add, Close, ViewColumn, BarChart, ViewList, AccountTree,
+  OpenInFull, DriveFileMove, Cancel as CancelIcon, Block as BlockIcon
+} from '@mui/icons-material';
 import api from '../../services/api';
 import TaskDetailDialog from './TaskDetailDialog';
 import RankingPanel from './RankingPanel';
@@ -66,22 +74,49 @@ const TARGET_TYPES = ['EXECUTOR', 'SERVICE', 'COMPONENT', 'GRAPH', 'API', 'UI', 
 const PRIORITIES = ['P0_CRITICAL', 'P1_HIGH', 'P2_MEDIUM', 'P3_LOW'];
 const EFFORTS = ['XS', 'S', 'M', 'L', 'XL'];
 
-// Status action definitions moved to TaskDetailDialog.jsx
+// ── Bulk transition maps ─────────────────────────────────────────────────────
+// Where a target IS a valid state-machine transition, we call its dedicated
+// endpoint (so proper metadata — approvedBy, assignedTo, completedAt… — is set).
+// Any other target falls back to the generic /move override, which lets an item
+// be recategorised to ANY column, in any direction (not just "forward").
+const TRANSITION_ACTION = {
+  PROPOSED:    { APPROVED: 'approve' },
+  APPROVED:    { IN_PROGRESS: 'start' },
+  IN_PROGRESS: { REVIEW: 'review', BLOCKED: 'block' },
+  BLOCKED:     { IN_PROGRESS: 'unblock' },
+  REVIEW:      { DONE: 'complete', IN_PROGRESS: 'unblock' }
+};
+
+// Resolve how to move `from` → `to`: a dedicated action, or the generic override.
+function resolveMove(from, to) {
+  const action = TRANSITION_ACTION[from]?.[to];
+  return action ? { action } : { action: 'move', body: { status: to } };
+}
+
+// Statuses from which CANCELLED / REJECTED are valid transitions.
+const CANCELLABLE = new Set(['APPROVED', 'IN_PROGRESS', 'BLOCKED']);
+const REJECTABLE  = new Set(['PROPOSED', 'APPROVED']);
+
+// Small colour dot per status column (for the Move-to menu).
+const STATUS_DOT = {
+  PROPOSED: '#f57c00', APPROVED: '#1976d2', IN_PROGRESS: '#2e7d32',
+  REVIEW: '#7b1fa2', DONE: '#616161'
+};
 
 // ── BackLogCard ────────────────────────────────────────────────────────────
+// Selection via a checkbox (standard list-selection affordance) + a subtle
+// outline — the card body is never darkened, so the open-details icon and any
+// future body interactions stay fully usable.
 
-function BackLogCard({ item, onDoubleClick, onClick, selected }) {
+function BackLogCard({ item, onToggleSelect, onOpen, selected }) {
   return (
     <Card
-      onClick={onClick}
-      onDoubleClick={onDoubleClick}
       sx={{
         mb: 1,
-        cursor: 'pointer',
         borderLeft: `4px solid ${PRIORITY_COLORS[item.priority] || '#555'}`,
-        transition: 'box-shadow 0.15s, transform 0.1s, background-color 0.15s',
-        bgcolor: selected ? 'action.selected' : 'background.paper',
-        outline: selected ? '2px solid' : 'none',
+        transition: 'box-shadow 0.15s, transform 0.1s, outline-color 0.15s',
+        bgcolor: 'background.paper',
+        outline: '2px solid',
         outlineColor: selected ? 'primary.main' : 'transparent',
         '&:hover': {
           boxShadow: 4,
@@ -89,45 +124,157 @@ function BackLogCard({ item, onDoubleClick, onClick, selected }) {
         }
       }}
     >
-      <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
-        <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.75, lineHeight: 1.3 }}>
-          {item.title}
-        </Typography>
-        <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
-          <Chip
-            label={item.backlogId}
-            size="small"
-            variant="outlined"
-            sx={{ fontSize: 12, height: 20 }}
-          />
-          <Chip
-            label={PRIORITY_LABELS[item.priority] || item.priority}
-            size="small"
-            sx={{
-              fontSize: 12,
-              height: 20,
-              bgcolor: (PRIORITY_COLORS[item.priority] || '#555') + '22',
-              color: PRIORITY_COLORS[item.priority] || '#555',
-              fontWeight: 700
-            }}
-          />
-          <Chip
-            label={item.taskType}
-            size="small"
-            sx={{ fontSize: 12, height: 20 }}
-          />
-          {item.assignedTo && (
+      <CardContent sx={{ p: 1, '&:last-child': { pb: 1 }, display: 'flex', alignItems: 'flex-start', gap: 0.5 }}>
+        <Checkbox
+          checked={selected}
+          onChange={onToggleSelect}
+          size="small"
+          inputProps={{ 'aria-label': `Select ${item.backlogId}` }}
+          sx={{ p: 0.25, mt: -0.25 }}
+        />
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.75, lineHeight: 1.3 }}>
+            {item.title}
+          </Typography>
+          <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
             <Chip
-              label={item.assignedTo}
+              label={item.backlogId}
               size="small"
-              color="success"
               variant="outlined"
               sx={{ fontSize: 12, height: 20 }}
             />
-          )}
-        </Stack>
+            <Chip
+              label={PRIORITY_LABELS[item.priority] || item.priority}
+              size="small"
+              sx={{
+                fontSize: 12,
+                height: 20,
+                bgcolor: (PRIORITY_COLORS[item.priority] || '#555') + '22',
+                color: PRIORITY_COLORS[item.priority] || '#555',
+                fontWeight: 700
+              }}
+            />
+            <Chip
+              label={item.taskType}
+              size="small"
+              sx={{ fontSize: 12, height: 20 }}
+            />
+            {item.assignedTo && (
+              <Chip
+                label={item.assignedTo}
+                size="small"
+                color="success"
+                variant="outlined"
+                sx={{ fontSize: 12, height: 20 }}
+              />
+            )}
+          </Stack>
+        </Box>
+        <Tooltip title="Open task details">
+          <IconButton
+            size="small"
+            onClick={onOpen}
+            sx={{ mt: -0.25, flexShrink: 0 }}
+          >
+            <OpenInFull fontSize="small" />
+          </IconButton>
+        </Tooltip>
       </CardContent>
     </Card>
+  );
+}
+
+// ── SelectionToolbar ─────────────────────────────────────────────────────────
+// Bulk actions for the currently-selected column: move to another category,
+// cancel, reject. Rendered only while a selection exists.
+
+function SelectionToolbar({
+  status, count, busy,
+  onMove, onCancel, onReject, onSelectAll, onClear
+}) {
+  const [anchorEl, setAnchorEl] = useState(null);
+  // Any column except the one the selection is currently in — free up/down moves.
+  const moveTargets = STATUS_COLUMNS.filter((s) => s !== status);
+
+  return (
+    <Box sx={{
+      display: 'flex', alignItems: 'center', gap: 1, mb: 1, px: 1, py: 0.5,
+      bgcolor: 'primary.main', borderRadius: 1, color: 'primary.contrastText',
+      flexWrap: 'wrap'
+    }}>
+      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+        {count} selected
+      </Typography>
+      <Chip
+        label={(status || '').replace(/_/g, ' ')}
+        size="small"
+        sx={{ bgcolor: 'rgba(255,255,255,0.18)', color: 'inherit', fontWeight: 700, height: 20 }}
+      />
+      <Button size="small" sx={{ color: 'inherit', textTransform: 'none' }} onClick={onSelectAll}>
+        Select all
+      </Button>
+      <Button size="small" sx={{ color: 'inherit', textTransform: 'none' }} onClick={onClear}>
+        Clear
+      </Button>
+
+      <Box sx={{ flex: 1 }} />
+
+      {busy && <CircularProgress size={16} sx={{ color: 'inherit' }} />}
+
+      {moveTargets.length > 0 && (
+        <>
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<DriveFileMove />}
+            disabled={busy}
+            sx={{ color: 'inherit', borderColor: 'rgba(255,255,255,0.5)', textTransform: 'none' }}
+            onClick={(e) => setAnchorEl(e.currentTarget)}
+          >
+            Move to
+          </Button>
+          <Menu anchorEl={anchorEl} open={!!anchorEl} onClose={() => setAnchorEl(null)}>
+            {moveTargets.map((to) => (
+              <MenuItem
+                key={to}
+                onClick={() => { setAnchorEl(null); onMove(to); }}
+              >
+                <ListItemIcon>
+                  <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: STATUS_DOT[to] || '#888' }} />
+                </ListItemIcon>
+                <ListItemText>{to.replace(/_/g, ' ')}</ListItemText>
+              </MenuItem>
+            ))}
+          </Menu>
+        </>
+      )}
+
+      {REJECTABLE.has(status) && (
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<CancelIcon />}
+          disabled={busy}
+          sx={{ color: 'inherit', borderColor: 'rgba(255,255,255,0.5)', textTransform: 'none' }}
+          onClick={onReject}
+        >
+          Reject
+        </Button>
+      )}
+
+      {CANCELLABLE.has(status) && (
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<BlockIcon />}
+          disabled={busy}
+          sx={{ color: 'inherit', borderColor: 'rgba(255,255,255,0.5)', textTransform: 'none' }}
+          onClick={onCancel}
+        >
+          Cancel task
+        </Button>
+      )}
+    </Box>
   );
 }
 
@@ -289,25 +436,38 @@ function CreateTaskDialog({ open, onClose, onCreated }) {
 export default function BackLogPanel() {
   const [items, setItems] = useState([]);
   const [stats, setStats] = useState(null);
-  const [selectedItem, setSelectedItem] = useState(null); // for detail dialog (double-click)
-  const [selectedIds, setSelectedIds] = useState(new Set()); // multi-select (single-click)
+  const [selectedItem, setSelectedItem] = useState(null); // for detail dialog
+  // Multi-select is scoped to a single status column at a time.
+  const [selection, setSelection] = useState({ status: null, ids: new Set() });
   const [showCreate, setShowCreate] = useState(false);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState('kanban'); // 'kanban' | 'ranking' | 'monitor' | 'list' | 'graph'
   const [efficiencyItem, setEfficiencyItem] = useState(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
-  const toggleSelect = useCallback((backlogId) => {
-    setSelectedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(backlogId)) next.delete(backlogId);
-      else next.add(backlogId);
-      return next;
+  const selectedIds = selection.ids;
+  const hasSelection = selectedIds.size > 0;
+
+  // Toggle a card. Selecting in a different column replaces the previous
+  // selection so a multi-selection always lives within one status column.
+  const toggleSelect = useCallback((item) => {
+    setSelection(prev => {
+      const sameColumn = prev.status === item.status;
+      const ids = new Set(sameColumn ? prev.ids : []);
+      if (ids.has(item.backlogId)) ids.delete(item.backlogId);
+      else ids.add(item.backlogId);
+      return { status: ids.size ? item.status : null, ids };
     });
   }, []);
 
-  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
-  const selectAll = useCallback(() => setSelectedIds(new Set(items.map(i => i.backlogId))), [items]);
-  const hasSelection = selectedIds.size > 0;
+  const clearSelection = useCallback(() => setSelection({ status: null, ids: new Set() }), []);
+
+  const selectAllInColumn = useCallback((status) => {
+    setSelection({
+      status,
+      ids: new Set(items.filter(i => i.status === status).map(i => i.backlogId))
+    });
+  }, [items]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -350,6 +510,45 @@ export default function BackLogPanel() {
       alert(err.response?.data?.error || err.message);
     }
   };
+
+  // Apply an action to every selected task (all share the same status column).
+  const runBulk = useCallback(async (action, body = {}) => {
+    const ids = Array.from(selection.ids);
+    if (ids.length === 0) return;
+    setBulkBusy(true);
+    const failures = [];
+    for (const id of ids) {
+      try {
+        await api.post(`/backlog/items/${id}/${action}`, body);
+      } catch (err) {
+        failures.push(`${id}: ${err.response?.data?.error || err.message}`);
+      }
+    }
+    setBulkBusy(false);
+    clearSelection();
+    fetchData();
+    if (failures.length) {
+      alert(`${failures.length} task(s) failed:\n${failures.join('\n')}`);
+    }
+  }, [selection.ids, clearSelection, fetchData]);
+
+  const bulkMove = useCallback((targetStatus) => {
+    const { action, body } = resolveMove(selection.status, targetStatus);
+    runBulk(action, body || {});
+  }, [runBulk, selection.status]);
+
+  const bulkCancel = useCallback(() => {
+    const reason = window.prompt(`Cancel ${selection.ids.size} task(s)? Optional reason:`, '');
+    if (reason === null) return; // user dismissed
+    runBulk('cancel', reason ? { reason } : {});
+  }, [runBulk, selection.ids.size]);
+
+  const bulkReject = useCallback(() => {
+    const reason = window.prompt(`Reject ${selection.ids.size} task(s). Reason (required):`, '');
+    if (reason === null) return;
+    if (!reason.trim()) { alert('Rejection reason required'); return; }
+    runBulk('reject', { reason: reason.trim() });
+  }, [runBulk, selection.ids.size]);
 
   const getByStatus = (status) => items.filter((i) => i.status === status);
 
@@ -511,26 +710,18 @@ export default function BackLogPanel() {
         </Stack>
       </Box>
 
-      {/* Selection Toolbar */}
+      {/* Selection Toolbar — bulk actions for the selected column */}
       {hasSelection && (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, px: 0.5, py: 0.5, bgcolor: 'primary.main', borderRadius: 1, color: 'primary.contrastText' }}>
-          <Typography variant="body2" sx={{ fontWeight: 600, ml: 1 }}>
-            {selectedIds.size} selected
-          </Typography>
-          <Button size="small" sx={{ color: 'inherit', textTransform: 'none' }} onClick={selectAll}>Select All</Button>
-          <Button size="small" sx={{ color: 'inherit', textTransform: 'none' }} onClick={clearSelection}>Clear</Button>
-          <Box sx={{ flex: 1 }} />
-          <Button size="small" variant="outlined" sx={{ color: 'inherit', borderColor: 'rgba(255,255,255,0.5)', textTransform: 'none' }}
-            onClick={async () => {
-              for (const id of selectedIds) {
-                try { await api.post(`/backlog/items/${id}/approve`); } catch { /* skip */ }
-              }
-              clearSelection();
-              fetchData();
-            }}>
-            Approve Selected
-          </Button>
-        </Box>
+        <SelectionToolbar
+          status={selection.status}
+          count={selectedIds.size}
+          busy={bulkBusy}
+          onMove={bulkMove}
+          onCancel={bulkCancel}
+          onReject={bulkReject}
+          onSelectAll={() => selectAllInColumn(selection.status)}
+          onClear={clearSelection}
+        />
       )}
 
       {/* Kanban Board */}
@@ -569,8 +760,8 @@ export default function BackLogPanel() {
                     key={item.backlogId}
                     item={item}
                     selected={selectedIds.has(item.backlogId)}
-                    onClick={() => toggleSelect(item.backlogId)}
-                    onDoubleClick={() => setSelectedItem(item)}
+                    onToggleSelect={() => toggleSelect(item)}
+                    onOpen={() => setSelectedItem(item)}
                   />
                 ))}
                 {columnItems.length === 0 && (

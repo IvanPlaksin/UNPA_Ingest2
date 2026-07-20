@@ -9,6 +9,7 @@
  */
 import React from 'react';
 import { Box, Typography, Chip, Stack, Tooltip } from '@mui/material';
+import { fromEnvelope } from './envelope-compat';
 
 const EVENT_TYPE_COLORS = {
   ENTITY: '#3b82f6',
@@ -37,17 +38,18 @@ function groupByYear(events) {
 }
 
 export default function TimelineRenderer({ content, compact }) {
-  if (!content?.events?.length) {
+  const c = fromEnvelope(content, 'TIMELINE');
+  if (!c?.events?.length) {
     return (
       <Typography color="text.secondary" variant="body2">
-        No dated events found{content?.summary?.sourcesWithoutDates > 0
-          ? ` (${content.summary.sourcesWithoutDates} entities had no date properties)`
+        No dated events found{c?.summary?.sourcesWithoutDates > 0
+          ? ` (${c.summary.sourcesWithoutDates} entities had no date properties)`
           : ''}.
       </Typography>
     );
   }
 
-  const { events, span, summary } = content;
+  const { events, span, summary } = c;
   const displayEvents = compact ? events.slice(0, 8) : events;
   const grouped = groupByYear(displayEvents);
   const years = Object.keys(grouped).sort((a, b) => {

@@ -4,6 +4,7 @@ import {
   Accordion, AccordionSummary, AccordionDetails,
   List, ListItem, Divider, CircularProgress,
 } from '@mui/material';
+import { fromEnvelope } from './envelope-compat';
 import {
   ChevronDown, AlertTriangle, AlertOctagon, CheckCircle, Info,
   ArrowDown, Bell, Eye, Pause, GitBranch,
@@ -138,15 +139,15 @@ export default function ImpactRenderer({ content, compact }) {
 
   const {
     entity,
-    directDependents   = [],
+    directDependents     = [],
     transitiveDependents = [],
-    impactByCategory   = {},
+    impactByCategory     = {},
     structuralAnalysis,
-    criticalPaths      = [],
+    criticalPaths        = [],
     riskAssessment,
-    recommendations    = [],
+    recommendations      = [],
     summary,
-  } = content;
+  } = fromEnvelope(content, 'IMPACT');
 
   if (!riskAssessment) {
     return (

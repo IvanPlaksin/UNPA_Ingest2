@@ -134,6 +134,14 @@ function InstancedGroup({ type, group, positionsRef, tick, highlightIds, nodeSet
         // Ensure Three.js renders exactly `count` instances (critical after filter changes)
         mesh.count = count;
         mesh.instanceMatrix.needsUpdate = true;
+
+        // Invalidate the cached bounding sphere so raycasting (hover + click) stays
+        // accurate as the force simulation spreads instances outward each tick.
+        // THREE.InstancedMesh.raycast computes boundingSphere only once (while nodes are
+        // still clustered near origin) and then short-circuits every later ray against
+        // that stale sphere — silently breaking hover and selection. Nulling it forces
+        // a fresh recompute on the next raycast.
+        mesh.boundingSphere = null;
     }, [tick, indices, nodes, positionsRef, nodeSettings.sizeMultiplier, nodeSettings.degreeScale, degreeMap, maxDegree, count]);
 
     // Dim non-highlighted nodes
