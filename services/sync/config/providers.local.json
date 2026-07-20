@@ -1,0 +1,38 @@
+{
+  "$schema": "./providers.schema.json",
+
+  "_comment": "Локальная конфигурация с реальными credentials - НЕ коммитить!",
+  "_warning": "Этот файл находится в .gitignore",
+
+  "defaultProvider": "claude-api",
+
+  "providers": {
+    "file": {
+      "type": "file",
+      "enabled": true,
+      "options": {
+        "dataPath": "/app/knowledge",
+        "artifactsPath": "/app/artifacts",
+        "watchEnabled": true,
+        "ignorePatterns": ["node_modules", ".git", "*.log", ".DS_Store"]
+      }
+    },
+
+    "claude-api": {
+      "type": "claude-api",
+      "enabled": true,
+      "options": {
+        "organizationId": "990e8979-b161-420d-925c-9818eebb3718",
+        "projectId": "019b8d63-3b21-758b-8a74-16eec3d3e14a",
+        "sessionKey": "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",
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "requestDelay": 1500
+      }
+    }
+  },
+
+  "sync": {
+    "intervalMs": 300000,
+    "syncOnStart": true
+  }
+}

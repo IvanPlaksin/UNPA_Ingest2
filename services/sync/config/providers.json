@@ -1,0 +1,54 @@
+{
+  "$schema": "./providers.schema.json",
+  
+  "_comment": "Конфигурация провайдеров данных для MCP сервера",
+  "_docs": "https://github.com/your-org/project-knowledge-mcp#providers",
+
+  "defaultProvider": "file",
+  
+  "providers": {
+    "file": {
+      "_comment": "Локальные файлы: экспорт из Claude.ai, Markdown документы, артефакты",
+      "type": "file",
+      "enabled": true,
+      "options": {
+        "dataPath": "/app/knowledge",
+        "artifactsPath": "/app/artifacts",
+        "watchEnabled": true,
+        "ignorePatterns": ["node_modules", ".git", "*.log", ".DS_Store"]
+      }
+    },
+    
+    "claude-api": {
+      "_comment": "Неофициальный API Claude.ai - требует sessionKey из cookies браузера",
+      "type": "claude-api",
+      "enabled": false,
+      "options": {
+        "_sessionKey_howto": "Откройте claude.ai в браузере, DevTools > Application > Cookies > sessionKey",
+        "sessionKey": "${CLAUDE_SESSION_KEY}",
+        "organizationId": "${CLAUDE_ORGANIZATION_ID}",
+        "projectId": "${CLAUDE_PROJECT_ID}",
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "requestDelay": 1000
+      }
+    }
+  },
+  
+  "sync": {
+    "_comment": "Настройки автоматической синхронизации",
+    "intervalMs": 300000,
+    "syncOnStart": true
+  }
+    ,
+    "llmPriorities": {
+      "embedding": [
+        { "model": "llama", "max_length": 512 },
+        { "model": "gemini", "max_length": 2048 }
+      ],
+      "generation": [
+        { "model": "llama", "complexity": "low" },
+        { "model": "gemini", "complexity": "medium" },
+        { "model": "claude", "complexity": "high" }
+      ]
+    }
+}

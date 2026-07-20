@@ -1,0 +1,225 @@
+name: Build & Deploy (UNPA stack)
+
+# feat/gxe-v3-phase1 -> dev (auto) ; main -> prod (approval via Environment)
+on:
+  push:
+    branches: [feat/gxe-v3-phase1, main]
+    paths-ignore: ['**.md', 'docs/**', 'Reports/**']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Image tag to (re)deploy, e.g. sha-abc1234. Empty = build fresh from HEAD.'
+        required: false
+        default: ''
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository }}   # ghcr.io/ivanplaksin/unpa_ingest2
+
+jobs:
+  # ─────────────────────────────────────────────────────────────
+  # 1. Decide environment, image tag, and which services to build
+  # ─────────────────────────────────────────────────────────────
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      env_name: ${{ steps.meta.outputs.env_name }}
+      image_tag: ${{ steps.meta.outputs.image_tag }}
+      moving_tag: ${{ steps.meta.outputs.moving_tag }}
+      services: ${{ steps.changes.outputs.services }}
+      redeploy_only: ${{ steps.meta.outputs.redeploy_only }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 2 }
+
+      - id: meta
+        run: |
+          SHORT=$(git rev-parse --short HEAD)
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "env_name=prod"   >> "$GITHUB_OUTPUT"
+            echo "moving_tag=latest" >> "$GITHUB_OUTPUT"
+          else
+            echo "env_name=dev"    >> "$GITHUB_OUTPUT"
+            echo "moving_tag=dev"  >> "$GITHUB_OUTPUT"
+          fi
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
+            echo "image_tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+            echo "redeploy_only=true"  >> "$GITHUB_OUTPUT"
+          else
+            echo "image_tag=sha-${SHORT}" >> "$GITHUB_OUTPUT"
+            echo "redeploy_only=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Which of the 5 custom services changed (skip rebuilds of unchanged images)
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            api:    ['api/**', 'indexing-pipeline/src/processors/**']
+            mcp:    ['mcp/**']
+            gliner: ['api/services/gliner/**']
+            etl:    ['indexing-pipeline/**', 'api/src/**']
+            sync:   ['services/sync/**']
+
+      - id: changes
+        run: |
+          # On workflow_dispatch redeploy (tag given) OR nothing matched, build all 5.
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
+            echo 'services=[]' >> "$GITHUB_OUTPUT"      # redeploy existing tag, no build
+          else
+            SEL='[]'
+            for s in api mcp gliner etl sync; do
+              v=$(echo '${{ toJSON(steps.filter.outputs) }}' | jq -r --arg s "$s" '.[$s] // "false"')
+              if [ "$v" = "true" ]; then SEL=$(echo "$SEL" | jq -c --arg s "$s" '. + [$s]'); fi
+            done
+            if [ "$SEL" = "[]" ]; then SEL='["api","mcp","gliner","etl","sync"]'; fi
+            echo "services=$SEL" >> "$GITHUB_OUTPUT"
+          fi
+
+  # ─────────────────────────────────────────────────────────────
+  # 2. Build & push changed custom images to GHCR (matrix)
+  # ─────────────────────────────────────────────────────────────
+  build:
+    needs: setup
+    if: needs.setup.outputs.services != '[]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.setup.outputs.services) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve Dockerfile & context
+        id: df
+        run: |
+          case "${{ matrix.service }}" in
+            api)    echo "file=api/Dockerfile"                     >> "$GITHUB_OUTPUT"; echo "ctx=."                       >> "$GITHUB_OUTPUT" ;;
+            mcp)    echo "file=mcp/Dockerfile"                     >> "$GITHUB_OUTPUT"; echo "ctx=mcp"                     >> "$GITHUB_OUTPUT" ;;
+            gliner) echo "file=api/services/gliner/Dockerfile.cpu" >> "$GITHUB_OUTPUT"; echo "ctx=api/services/gliner"    >> "$GITHUB_OUTPUT" ;;
+            etl)    echo "file=indexing-pipeline/Dockerfile.ci"    >> "$GITHUB_OUTPUT"; echo "ctx=."                       >> "$GITHUB_OUTPUT" ;;
+            sync)   echo "file=services/sync/Dockerfile"           >> "$GITHUB_OUTPUT"; echo "ctx=services/sync"          >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ steps.df.outputs.ctx }}
+          file: ${{ steps.df.outputs.file }}
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/${{ matrix.service }}:${{ needs.setup.outputs.image_tag }}
+            ${{ env.IMAGE_PREFIX }}/${{ matrix.service }}:${{ needs.setup.outputs.moving_tag }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  # ─────────────────────────────────────────────────────────────
+  # 3. Deploy to the VM over SSH (environment gate: prod=approval)
+  # ─────────────────────────────────────────────────────────────
+  deploy:
+    needs: [setup, build]
+    # run even if build was skipped (redeploy of an existing tag)
+    if: always() && (needs.build.result == 'success' || needs.build.result == 'skipped')
+    runs-on: ubuntu-latest
+    environment: ${{ needs.setup.outputs.env_name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy compose to VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ vars.VM_HOST }}
+          username: ${{ vars.VM_USER }}
+          key: ${{ secrets.VM_SSH_PRIVATE_KEY }}
+          source: docker-compose.ci.yml
+          target: /home/${{ vars.VM_USER }}/unpa-ci/
+          overwrite: true
+
+      - name: Deploy (login GHCR, render .env, pull, up)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ vars.VM_HOST }}
+          username: ${{ vars.VM_USER }}
+          key: ${{ secrets.VM_SSH_PRIVATE_KEY }}
+          envs: IMAGE_TAG,GHCR_TOKEN,GHCR_USER,MEMGRAPH_PASSWORD,GEMINI_API_KEY,ADO_ORG_URL,ADO_PAT,CLAUDE_SESSION_KEY,CLAUDE_ORGANIZATION_ID,CLAUDE_PROJECT_ID
+          script: |
+            set -e
+            # One-time cutover: stop the old manual stack if present (O-7)
+            if [ -f ~/unpa-stack/docker-compose.yml ]; then
+              (cd ~/unpa-stack && sudo docker compose down) || true
+            fi
+            cd ~/unpa-ci
+            mv -f docker-compose.ci.yml docker-compose.yml
+            # runtime .env (secrets from GitHub) — never printed
+            umask 077
+            cat > .env <<EOF
+            IMAGE_TAG=${IMAGE_TAG}
+            GHCR=ghcr.io/${GHCR_USER}/unpa_ingest2
+            MEMGRAPH_PASSWORD=${MEMGRAPH_PASSWORD}
+            GEMINI_API_KEY=${GEMINI_API_KEY}
+            ADO_ORG_URL=${ADO_ORG_URL}
+            ADO_PAT=${ADO_PAT}
+            CLAUDE_SESSION_KEY=${CLAUDE_SESSION_KEY}
+            CLAUDE_ORGANIZATION_ID=${CLAUDE_ORGANIZATION_ID}
+            CLAUDE_PROJECT_ID=${CLAUDE_PROJECT_ID}
+            EOF
+            echo "${GHCR_TOKEN}" | sudo docker login ghcr.io -u "${GHCR_USER}" --password-stdin
+            sudo docker compose --env-file .env pull
+            sudo docker compose --env-file .env up -d --remove-orphans
+            sudo docker image prune -f
+        env:
+          IMAGE_TAG: ${{ needs.setup.outputs.image_tag }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+          MEMGRAPH_PASSWORD: ${{ secrets.MEMGRAPH_PASSWORD }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ADO_ORG_URL: ${{ secrets.ADO_ORG_URL }}
+          ADO_PAT: ${{ secrets.ADO_PAT }}
+          CLAUDE_SESSION_KEY: ${{ secrets.CLAUDE_SESSION_KEY }}
+          CLAUDE_ORGANIZATION_ID: ${{ secrets.CLAUDE_ORGANIZATION_ID }}
+          CLAUDE_PROJECT_ID: ${{ secrets.CLAUDE_PROJECT_ID }}
+
+  # ─────────────────────────────────────────────────────────────
+  # 4. Verify health on the VM
+  # ─────────────────────────────────────────────────────────────
+  verify:
+    needs: [deploy]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Health & smoke checks
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ vars.VM_HOST }}
+          username: ${{ vars.VM_USER }}
+          key: ${{ secrets.VM_SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd ~/unpa-ci
+            echo "--- compose ps ---"; sudo docker compose ps
+            fail=0
+            sudo docker exec projectadvisor-redis redis-cli ping | grep -q PONG || { echo "redis FAIL"; fail=1; }
+            curl -fsS -o /dev/null http://localhost:6333/healthz || { echo "qdrant FAIL"; fail=1; }
+            curl -fsS -o /dev/null http://localhost:8081/health  || { echo "tei FAIL (may still be loading model)"; }
+            curl -fsS -o /dev/null http://localhost:5100/health  || { echo "gliner FAIL (may still be loading)"; }
+            curl -fsS -o /dev/null http://localhost:3010/health  || { echo "api FAIL"; fail=1; }
+            curl -fsS -o /dev/null http://localhost:8080/        || { echo "mcp FAIL"; fail=1; }
+            for c in projectadvisor-etl projectadvisor-sync; do
+              st=$(sudo docker inspect -f '{{.State.Status}}' $c 2>/dev/null || echo missing)
+              [ "$st" = "running" ] || { echo "$c not running ($st)"; fail=1; }
+            done
+            exit $fail

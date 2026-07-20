@@ -1,0 +1,33 @@
+# CI build of the ETL worker (root build context).
+#   docker build -f indexing-pipeline/Dockerfile.ci -t etl .
+#
+# The worker (indexing-pipeline/src/run.js) imports shared services cross-module
+# from ../../api/src/services/* and ../../config/*. So the image lays out both
+# trees under /app and installs a single node_modules at /app — Node resolves
+# externals by walking UP the tree, so both indexing-pipeline/ and api/src/ find
+# their packages there.
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Unified runtime deps at /app (shared by indexing-pipeline and api/src modules)
+COPY indexing-pipeline/package.json indexing-pipeline/package-lock.json ./
+RUN npm ci --omit=dev || npm install --omit=dev
+
+# Application trees (paths must match the cross-module relative imports).
+# run.js imports ../../api/src/services/*; those api modules resolve un-entities.config
+# from api/src/config — so the whole api/src tree is copied (no repo-root config needed).
+COPY indexing-pipeline/ ./indexing-pipeline/
+COPY api/src/ ./api/src/
+
+# Avoid a stale/empty nested node_modules shadowing /app/node_modules
+RUN rm -rf ./indexing-pipeline/node_modules
+
+ENV NODE_ENV=production \
+    PORT=3000
+
+WORKDIR /app/indexing-pipeline
+EXPOSE 3000
+
+# start:worker => node src/run.js (production, no nodemon)
+CMD ["node", "src/run.js"]

@@ -1,0 +1,29 @@
+# CPU build of the GLiNER NER service (CI/CD target — GPU-less host).
+# The default Dockerfile bases on pytorch/pytorch:*-cuda* (~9.5 GB). This variant
+# bases on python-slim + the CPU-only torch wheel (~1.7 GB) and speaks the same
+# HTTP contract (GET /health, POST /extract). Runs on CPU.
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+ && rm -rf /var/lib/apt/lists/*
+
+# CPU-only torch first, so requirements.txt does not pull the CUDA build.
+RUN pip install --no-cache-dir torch==2.4.1 --index-url https://download.pytorch.org/whl/cpu
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY app/ ./app/
+
+ENV HF_HOME=/models
+ENV PORT=5100
+
+EXPOSE 5100
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=180s --retries=5 \
+  CMD curl -f http://localhost:5100/health || exit 1
+
+CMD ["python", "app/main.py"]

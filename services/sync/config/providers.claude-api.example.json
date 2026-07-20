@@ -1,0 +1,35 @@
+{
+  "$schema": "./providers.schema.json",
+  
+  "_comment": "Пример конфигурации с Claude API как основным провайдером",
+  "_warning": "НЕ коммитьте этот файл с реальными credentials!",
+
+  "defaultProvider": "claude-api",
+  
+  "providers": {
+    "file": {
+      "type": "file",
+      "enabled": true,
+      "options": {
+        "dataPath": "/app/knowledge",
+        "artifactsPath": "/app/artifacts",
+        "watchEnabled": true
+      }
+    },
+    
+    "claude-api": {
+      "type": "claude-api",
+      "enabled": true,
+      "options": {
+        "sessionKey": "sk-ant-sid01-xxxxxx",
+        "projectId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+        "requestDelay": 1500
+      }
+    }
+  },
+  
+  "sync": {
+    "intervalMs": 600000,
+    "syncOnStart": true
+  }
+}
