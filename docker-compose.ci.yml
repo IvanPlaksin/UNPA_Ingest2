@@ -96,6 +96,10 @@ services:
       - GLINER_URL=http://gliner:5100
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - CORS_ORIGINS=${CORS_ORIGINS:-*}
+      # ado.service.js throws at load if these are empty; api catches connect
+      # failures at runtime, so non-empty placeholders let it boot (ADO disabled).
+      - ADO_ORG_URL=${ADO_ORG_URL:-https://ado.invalid/placeholder}
+      - ADO_PAT=${ADO_PAT:-placeholder}
     depends_on:
       redis: {condition: service_healthy}
       memgraph: {condition: service_started}
