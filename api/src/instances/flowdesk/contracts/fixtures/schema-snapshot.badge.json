@@ -1,0 +1,59 @@
+{
+  "serviceId": "SEC-ACC-BADGE",
+  "version": 1,
+  "phases": ["context", "routing", "detail"],
+  "metadata": {
+    "title": "Access Badge Request",
+    "slaHours": 24,
+    "approvalRequired": true,
+    "handlerRef": "resolver:routing.byMission"
+  },
+  "slots": [
+    {
+      "slotId": "beneficiary",
+      "type": "user",
+      "required": true,
+      "phase": "context",
+      "resolverRef": "resolve.user",
+      "promptHint": "Who needs the access badge?"
+    },
+    {
+      "slotId": "facility",
+      "type": "location",
+      "required": true,
+      "phase": "context",
+      "resolverRef": "resolve.location",
+      "dependsOn": ["beneficiary"],
+      "promptHint": "Which building or compound is the badge for?"
+    },
+    {
+      "slotId": "badgeType",
+      "type": "enum",
+      "required": true,
+      "phase": "detail",
+      "presentOptions": [
+        { "value": "permanent", "label": "Permanent staff badge" },
+        { "value": "temporary", "label": "Temporary / visitor badge" },
+        { "value": "contractor", "label": "Contractor badge" }
+      ],
+      "promptHint": "What kind of badge is required?"
+    },
+    {
+      "slotId": "validUntil",
+      "type": "date",
+      "required": true,
+      "phase": "detail",
+      "trefCondition": "slots.badgeType != 'permanent'",
+      "dependsOn": ["badgeType"],
+      "promptHint": "Until what date should the badge remain valid?"
+    },
+    {
+      "slotId": "accessAreas",
+      "type": "text",
+      "required": false,
+      "phase": "detail",
+      "dependsOn": ["badgeType"],
+      "promptHint": "Any specific restricted areas the holder needs access to?"
+    }
+  ]
+}

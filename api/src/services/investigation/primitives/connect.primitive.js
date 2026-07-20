@@ -103,18 +103,40 @@ async function execute(params, _context, services) {
     } catch { /* bonus, not a blocker */ }
   }
 
-  return {
-    content: {
-      fromEntityId,
-      toEntityId,
-      paths:             filteredPaths,
-      entities:          skeleton.entities          || [],
-      relationships:     skeleton.relationships     || [],
-      structuralAnalysis:skeleton.structuralAnalysis|| null,
-      interpretation:    interpretation             || null,
+  const {
+    createEnvelope, buildNode, buildEdge, PROJECTION_KIND,
+  } = require('../../../constants/canonical-graph.constants');
+
+  const envelope = createEnvelope({
+    roots:      [fromEntityId, toEntityId],
+    kind:       PROJECTION_KIND.PATHS,
+    hints: {
+      paths:    filteredPaths,
       bundles,
-      filters: { maxPaths, maxHops, minPathStrength, minEdgeConfidence },
+      pathCount: filteredPaths.length,
+      filters:  { maxPaths, maxHops, minPathStrength, minEdgeConfidence },
     },
+    producedBy: 'TOOL',
+    toolId:     'investigation.connect',
+  });
+
+  for (const e of (skeleton.entities      || [])) envelope.nodes.push(buildNode(e));
+  for (const r of (skeleton.relationships || [])) envelope.edges.push(buildEdge(r));
+
+  envelope.summary = {
+    headline:           filteredPaths.length > 0
+      ? `${filteredPaths.length} path${filteredPaths.length !== 1 ? 's' : ''} found`
+      : 'No paths found',
+    fromEntityId,
+    toEntityId,
+    pathCount:          filteredPaths.length,
+    shortestLength:     filteredPaths[0]?.hopCount ?? null,
+    structuralAnalysis: skeleton.structuralAnalysis || null,
+    interpretation:     interpretation              || null,
+  };
+
+  return {
+    content:     envelope,
     evidencedBy: Array.from(evidencedBy).filter(Boolean),
   };
 }

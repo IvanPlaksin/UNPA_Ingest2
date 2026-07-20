@@ -160,6 +160,16 @@ router.post('/items/:backlogId/cancel', async (req, res) => {
   }
 });
 
+// Manual/admin move to ANY category (bypasses the state-machine restriction)
+router.post('/items/:backlogId/move', async (req, res) => {
+  try {
+    const item = await backlogService.moveTo(req.params.backlogId, req.body.status, req.body.movedBy || 'admin');
+    res.json({ success: true, data: item });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
 // ============================================================
 // DEPENDENCIES
 // ============================================================

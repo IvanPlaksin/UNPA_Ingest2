@@ -1,0 +1,203 @@
+'use strict';
+
+/**
+ * Prompt-editor service (ADMIN P6) — the query/action layer behind the
+ * system-prompt graph editor. Graph persistence + versioning is delegated to the
+ * platform graph-catalog (namespace CHAT_PROMPT); this service adds the
+ * prompt-specific actions: compile, validate, sandbox-test, apply (materialize
+ * active), and a starter graph.
+ *
+ * @module instances/flowdesk/services/prompt-editor.service
+ */
+
+const { compilePromptGraph, PROMPT_NODES, CATEGORY_ORDER } = require('./prompt-graph-compiler');
+const { validatePromptGraph } = require('./prompt-graph-validator');
+const systemPrompt = require('./system-prompt.service');
+
+const NAMESPACE = 'CHAT_PROMPT';
+
+function catalog() { return require('../../../services/graphCatalog.service').graphCatalogService; }
+
+// ── graph-catalog CRUD (prompt-graphs only) ───────────────────────────────────
+
+async function listGraphs() {
+  const res = await catalog().listGraphs({ namespace: NAMESPACE, limit: 200 });
+  const items = res.data || res.items || res.graphs || res || [];
+  return Array.isArray(items) ? items : [];
+}
+
+async function getGraph(entryId, version) {
+  if (version != null) return catalog().getVersion(entryId, Number(version));
+  return catalog().getGraphById(entryId, false);
+}
+
+async function saveGraph({ entryId, name, description, nodes, edges, changelog, createdBy }) {
+  const payload = { nodes: nodes || [], edges: edges || [], requiredParams: [] };
+  if (entryId) {
+    // New version (bumps currentVersion + SUPERSEDES).
+    return catalog().createVersion(entryId, payload, changelog || 'Prompt graph update', { createdBy });
+  }
+  return catalog().createGraph({
+    name: name || 'Chat System Prompt', namespace: NAMESPACE, type: 'template',
+    description: description || 'FlowDesk Chat system-prompt rules graph',
+    tags: ['chat-prompt', 'system-prompt'], isPublic: true,
+    nodes: payload.nodes, edges: payload.edges, requiredParams: [], createdBy,
+  });
+}
+
+async function getVersions(entryId) { return catalog().getVersions(entryId); }
+async function promoteVersion(entryId, version) { return catalog().promoteVersion(entryId, Number(version)); }
+
+// ── prompt actions ────────────────────────────────────────────────────────────
+
+function compile(graph, opts = {}) { return compilePromptGraph(graph, opts); }
+function validate(graph) { return validatePromptGraph(graph); }
+
+// ── mutation-based editing (used by the AI assistant to edit graphs directly) ──
+
+let _mseq = 0;
+const _uid = (p = 'r') => `${p}-${Date.now().toString(36)}-${_mseq++}`;
+const RULE_DEFAULT = () => ({ kind: 'rule', key: _uid('r'), title: 'New rule', category: 'custom', text: '', appliesTo: ['all'], enabled: true, priority: 100 });
+
+/**
+ * Apply add/update/remove ops to a rules graph (pure). Mirrors the editor store's
+ * applyMutations so the assistant can edit a graph the same way a human does.
+ * @returns {{ graph:{nodes,edges}, result:{added,updated,removed} }}
+ */
+function applyMutations(graph, ops) {
+  const nodes = ((graph && graph.nodes) || []).map((n) => ({ ...n, data: { ...n.data } }));
+  const edges = ((graph && graph.edges) || []).slice();
+  const result = { added: 0, updated: 0, removed: 0 };
+  if (!Array.isArray(ops)) return { graph: { nodes, edges }, result };
+  const byKey = (k) => nodes.find((n) => n.data?.key === k || n.id === k || n.id === `rule-${k}`);
+  let y = 100 + nodes.length * 20;
+  let out = nodes;
+  for (const op of ops) {
+    if (op.op === 'add' && op.node) {
+      const data = { ...RULE_DEFAULT(), ...op.node };
+      out.push({ id: `rule-${data.key}`, type: 'ruleNode', position: { x: 420, y: (y += 90) }, data });
+      result.added += 1;
+    } else if (op.op === 'update' && op.key) {
+      const n = byKey(op.key);
+      if (n) { n.data = { ...n.data, ...(op.patch || {}) }; result.updated += 1; }
+    } else if (op.op === 'remove' && op.key) {
+      const n = byKey(op.key);
+      if (n) { out = out.filter((x) => x.id !== n.id); result.removed += 1; }
+    }
+  }
+  return { graph: { nodes: out, edges }, result };
+}
+
+/**
+ * The assistant's direct-edit primitive: load a graph (inline or from the catalog),
+ * apply mutations, validate, and OPTIONALLY persist as a new version. Returns the
+ * resulting graph so the caller/editor can reflect it.
+ * @param {object} p {graph?, entryId?, version?, mutations, save?, name?, createdBy?}
+ */
+async function mutateGraph(p) {
+  let base = p.graph;
+  let entryId = p.entryId || null;
+  let name = p.name;
+  if (!base && entryId) {
+    const loaded = await getGraph(entryId, p.version);
+    if (!loaded) throw Object.assign(new Error('graph not found'), { status: 404 });
+    base = { nodes: loaded.nodes || [], edges: loaded.edges || [] };
+    name = name || loaded.name;
+  }
+  if (!base) throw Object.assign(new Error('graph or entryId is required'), { status: 400 });
+  const { graph, result } = applyMutations(base, p.mutations);
+  const validation = validatePromptGraph(graph);
+  let saved = null;
+  if (p.save) {
+    saved = await saveGraph({ entryId, name: name || 'Chat System Prompt', nodes: graph.nodes, edges: graph.edges, changelog: `AI edit: +${result.added} ~${result.updated} -${result.removed}`, createdBy: p.createdBy });
+  }
+  return { graph, result, validation, saved };
+}
+
+async function sandbox(body) {
+  const { runSandbox } = require('./prompt-sandbox.service');
+  return runSandbox(body);
+}
+
+/**
+ * Apply a prompt graph as the active system prompt. Accepts either an inline
+ * graph (from the editor) or a catalog {entryId, version}. When a catalog entry
+ * is given, also promotes that version (marks it production).
+ */
+async function apply({ graph, entryId, version, label, updatedBy }) {
+  let g = graph;
+  let meta = { label, updatedBy };
+  if (!g && entryId) {
+    const loaded = await getGraph(entryId, version);
+    if (!loaded) throw Object.assign(new Error('graph version not found'), { status: 404 });
+    g = { nodes: loaded.nodes || [], edges: loaded.edges || [] };
+    meta.graphEntryId = entryId;
+    meta.graphVersion = loaded.versionNumber || version || loaded.currentVersion;
+    meta.title = loaded.name;
+    // Mark this the production version in the catalog too (best-effort).
+    if (meta.graphVersion != null) { try { await promoteVersion(entryId, meta.graphVersion); } catch { /* non-fatal */ } }
+  } else if (g && entryId) {
+    meta.graphEntryId = entryId;
+    meta.graphVersion = version;
+  }
+  if (!g) throw Object.assign(new Error('graph or entryId is required'), { status: 400 });
+  return systemPrompt.applyFromGraph(g, meta);
+}
+
+const getActive = () => systemPrompt.getActivePrompt();
+const listApplied = (opts) => systemPrompt.listApplied(opts);
+const clearActive = () => systemPrompt.clearActivePrompt();
+
+// ── starter graph ─────────────────────────────────────────────────────────────
+
+/**
+ * A sensible default rules graph for a fresh editor — encodes the current chat's
+ * de-facto identity/domain/routing/tone/safety as discrete rule nodes (one rule =
+ * one node), including the ADCC dialogue-conduct principles that today never reach
+ * the LLM. The operator edits from here.
+ */
+function defaultGraph() {
+  const R = [
+    ['identity-role', 'Identity', 'identity', 'You are FlowDesk, the AI intake assistant for a UN Executive Office service desk handling Human Resources and Finance requests.', ['all']],
+    ['identity-mission', 'Mission', 'identity', 'Your job is to understand what the user needs, resolve the right service, collect the required information one question at a time, and raise an accurate service request.', ['all']],
+    ['domain-scope', 'In-scope domains', 'domain', 'Handle HR and Finance service requests: separation, position management, dependency and personal-data changes, home leave and travel entitlements, recruitment, payroll and grants.', ['router', 'info_answer']],
+    ['routing-prefer-info', 'Prefer INFO over OUT_OF_SCOPE', 'routing', 'When unsure between answering a domain question and declining, prefer to answer — the knowledge base decides if it can help.', ['router']],
+    ['routing-new-vs-fill', 'New intent vs answering', 'routing', 'Treat a message as answering the current request unless it clearly raises a different service.', ['router']],
+    ['dialogue-one-question', 'One question per turn', 'dialogue', 'Ask exactly one question per turn; never batch multiple questions together.', ['question_planner']],
+    ['dialogue-ground', 'Ground before asking', 'dialogue', 'Briefly acknowledge what you understood from the user before asking the next question.', ['question_planner']],
+    ['dialogue-mirror-subject', 'Confirm the subject', 'dialogue', 'When the user first states their need, mirror the subject back for confirmation before diving into detail fields.', ['question_planner']],
+    ['tone-professional', 'Tone', 'tone', 'Be concise, professional and warm. Use plain language; avoid internal jargon and system field codes.', ['all']],
+    ['tone-language', 'Respond in the user language', 'tone', 'Always respond in the language the user is using.', ['all']],
+    ['safety-no-invent', 'No invented data', 'safety', 'Never invent values, options or policy. If something is unknown, ask or say you do not know.', ['slot_extract', 'info_answer', 'field_help']],
+    ['safety-no-pii-leak', 'Protect personal data', 'safety', 'Do not expose other people\'s personal data; only handle the current user\'s or an explicitly named beneficiary\'s request.', ['all']],
+    ['deflection-redirect', 'Out-of-scope redirect', 'deflection', 'For clearly non-workplace topics (weather, jokes, world facts), briefly decline and steer back to service requests.', ['router']],
+    ['formatting-brief', 'Brief answers', 'formatting', 'Keep answers short and actionable; prefer a direct answer plus, if useful, one next step.', ['info_answer', 'field_help']],
+  ];
+  const nodes = R.map(([key, title, category, text, appliesTo], i) => ({
+    id: `rule-${key}`,
+    type: 'ruleNode',
+    position: { x: 80 + (CATEGORY_ORDER.indexOf(category) * 40), y: 80 + i * 90 },
+    data: { kind: 'rule', key, title, category, text, appliesTo, enabled: true, priority: 100 },
+  }));
+  // Light chaining within each category for readable ordering (optional edges).
+  const edges = [];
+  const byCat = {};
+  for (const n of nodes) (byCat[n.data.category] ||= []).push(n);
+  for (const list of Object.values(byCat)) {
+    for (let i = 1; i < list.length; i++) {
+      edges.push({ id: `e-${list[i - 1].id}-${list[i].id}`, source: list[i - 1].id, target: list[i].id, type: 'default' });
+    }
+  }
+  return { nodes, edges };
+}
+
+function meta() {
+  return { promptNodes: PROMPT_NODES, categories: CATEGORY_ORDER, namespace: NAMESPACE };
+}
+
+module.exports = {
+  listGraphs, getGraph, saveGraph, getVersions, promoteVersion,
+  compile, validate, sandbox, apply, getActive, listApplied, clearActive,
+  applyMutations, mutateGraph,
+  defaultGraph, meta, NAMESPACE,
+};

@@ -848,6 +848,27 @@ class TensorService extends EventEmitter {
       }
     };
   }
+
+  /**
+   * Lightweight status for the always-mounted sidebar widget.
+   * Omits the expensive `active[]`, `causalGraph`, and `connections` payloads
+   * (the widget only reads summary/metrics/alerts), keeping the every-2s SSE
+   * frame small so the client doesn't parse a fat object on every tick.
+   */
+  getStreamStatus() {
+    return {
+      timestamp: Date.now(),
+      enabled: this._enabled,
+      summary: {
+        totalTensors: this.storage.tensors.size,
+        activeTensors: this.storage.getActive().length,
+        uniqueTypes: this.storage.byName.size,
+        alertCount: this._alerts.length
+      },
+      metrics: this.getAllMetrics(),
+      alerts: this.getAlerts(20)
+    };
+  }
 }
 
 // ────────────────────────────────────────────────────────────────────────────

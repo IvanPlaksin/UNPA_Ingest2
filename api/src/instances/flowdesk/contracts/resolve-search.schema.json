@@ -1,0 +1,82 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://flowdesk.un.org/contracts/resolve-search.schema.json",
+  "title": "ResolveSearch",
+  "description": "Contract 3 (FlowDesk Chat V2). Single retrieval entry point resolve.search(query, context) → ResolveResult[]. Returns a TYPED union (CODEX-RULE-074): type ∈ {SERVICE, ARTICLE, SR_STATUS}. Callers MUST branch on type. Fan-out over three backends; ranking puts exact SR_STATUS matches first, then by score; default limit 5.",
+  "definitions": {
+    "UserContext": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["userId", "lang"],
+      "properties": {
+        "userId": { "type": "string" },
+        "missionId": { "type": "string" },
+        "locationCode": { "type": "string" },
+        "roles": { "type": "array", "items": { "type": "string" } },
+        "lang": { "type": "string", "description": "One of the six UN official languages (en,fr,es,ar,ru,zh). Used for filter/boost." }
+      }
+    },
+    "confidence": { "enum": ["high", "medium", "low"] },
+    "ServiceHit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "serviceId", "title", "schemaRef", "score", "confidence"],
+      "properties": {
+        "type": { "const": "SERVICE" },
+        "serviceId": { "type": "string", "pattern": "^[A-Z]{2,4}(-[A-Z0-9]{2,6}){1,3}$" },
+        "title": { "type": "string" },
+        "domain": { "type": "string" },
+        "level": { "type": "integer" },
+        "schemaRef": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["serviceId", "version"],
+          "properties": {
+            "serviceId": { "type": "string" },
+            "version": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "score": { "type": "number", "minimum": 0, "maximum": 1 },
+        "confidence": { "$ref": "#/definitions/confidence" }
+      }
+    },
+    "ArticleHit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "articleId", "title", "score", "confidence"],
+      "properties": {
+        "type": { "const": "ARTICLE" },
+        "articleId": { "type": "string" },
+        "title": { "type": "string" },
+        "summary": { "type": "string" },
+        "sourceCollection": { "type": "string" },
+        "answerSnippet": { "type": "string", "description": "Deflection snippet — a direct answer for the Tier-0 KB branch." },
+        "score": { "type": "number", "minimum": 0, "maximum": 1 },
+        "confidence": { "$ref": "#/definitions/confidence" }
+      }
+    },
+    "SRStatusHit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "srNumber", "status", "score"],
+      "properties": {
+        "type": { "const": "SR_STATUS" },
+        "srNumber": { "type": "string" },
+        "status": { "type": "string" },
+        "title": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "score": { "type": "number", "description": "Exact-match boost = 1.0." }
+      }
+    },
+    "ResolveResult": {
+      "oneOf": [
+        { "$ref": "#/definitions/ServiceHit" },
+        { "$ref": "#/definitions/ArticleHit" },
+        { "$ref": "#/definitions/SRStatusHit" }
+      ]
+    }
+  },
+  "type": "array",
+  "items": { "$ref": "#/definitions/ResolveResult" }
+}

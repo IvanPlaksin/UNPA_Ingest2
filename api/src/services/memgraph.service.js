@@ -153,6 +153,19 @@ class MemgraphService {
      */
     static DEFAULT_QUERY_TIMEOUT_MS = 10000; // 10 seconds
 
+    // Memgraph uses optimistic concurrency: concurrent writes touching the same/
+    // adjacent nodes fail with "Cannot resolve conflicting transactions". These
+    // are TRANSIENT — the documented remedy is to retry. With the parallel
+    // document indexer this happens constantly, so we retry transparently with a
+    // short randomized backoff instead of surfacing thousands of console errors.
+    static SERIALIZATION_MAX_RETRIES = parseInt(process.env.MEMGRAPH_CONFLICT_RETRIES, 10) || 8;
+
+    /** True when an error is Memgraph's transient serialization conflict. */
+    static isTransientConflict(error) {
+        const m = (error && error.message || '').toLowerCase();
+        return /conflicting transaction|cannot resolve conflicting|serialization error|unable to commit due to serialization/.test(m);
+    }
+
     /**
      * Executes a Cypher query with optional timeout.
      * Uses Promise.race() for timeout since Memgraph doesn't support driver-level txConfig timeout.
@@ -208,70 +221,73 @@ class MemgraphService {
             queryPreview: cypher.substring(0, 100)
         });
 
-        const session = this.driver.session();
-        tensorService?.connectionAcquired(connectionId);
-
-        // Track query within connection
-        const queryTrackId = tensorService?.startQuery(connectionId, cypher, params);
-
-        // Timeout tracking
-        let timedOut = false;
-        let timeoutId = null;
+        // Retry transient serialization conflicts transparently (Memgraph
+        // optimistic concurrency under the parallel indexer). Each attempt uses a
+        // fresh session; a short randomized backoff de-correlates the retries.
+        const maxRetries = MemgraphService.SERIALIZATION_MAX_RETRIES;
+        let attempt = 0;
 
         try {
-            // Create query promise
-            const queryPromise = session.run(cypher, params);
+            // Track query within connection (once per logical query).
+            const queryTrackId = tensorService?.startQuery(connectionId, cypher, params);
 
-            // Execute with JavaScript-level timeout (Memgraph doesn't support driver txConfig timeout)
-            let result;
-            if (timeoutMs > 0) {
-                const timeoutPromise = new Promise((_, reject) => {
-                    timeoutId = setTimeout(() => {
-                        timedOut = true;
-                        reject(new Error(`Query timeout after ${timeoutMs}ms`));
-                    }, timeoutMs);
-                });
+            // eslint-disable-next-line no-constant-condition
+            while (true) {
+                const session = this.driver.session();
+                tensorService?.connectionAcquired(connectionId);
+                let timedOut = false;
+                let timeoutId = null;
+                try {
+                    const queryPromise = session.run(cypher, params);
+                    let result;
+                    if (timeoutMs > 0) {
+                        const timeoutPromise = new Promise((_, reject) => {
+                            timeoutId = setTimeout(() => {
+                                timedOut = true;
+                                reject(new Error(`Query timeout after ${timeoutMs}ms`));
+                            }, timeoutMs);
+                        });
+                        result = await Promise.race([queryPromise, timeoutPromise]);
+                        clearTimeout(timeoutId);
+                    } else {
+                        result = await queryPromise;
+                    }
 
-                result = await Promise.race([queryPromise, timeoutPromise]);
-                clearTimeout(timeoutId);
-            } else {
-                // No timeout - just run the query
-                result = await queryPromise;
+                    tensorService?.completeQuery(connectionId, queryTrackId, { rowCount: result.records?.length || 0 });
+                    tensorService?.complete(tensor?.id, { rowCount: result.records?.length || 0 });
+                    return result;
+                } catch (error) {
+                    if (timeoutId) clearTimeout(timeoutId);
+
+                    const isTimeout = timedOut || error.message?.includes('timeout') ||
+                                      error.code === 'Neo.TransientError.Transaction.TransactionTimedOut';
+
+                    // Transient conflict → retry with backoff (do NOT spam the console).
+                    if (!isTimeout && MemgraphService.isTransientConflict(error) && attempt < maxRetries) {
+                        attempt++;
+                        await new Promise(r => setTimeout(r, 15 * attempt + Math.floor(Math.random() * 30)));
+                        continue; // fresh session, retry
+                    }
+
+                    if (isTimeout) {
+                        console.warn(`[Query ${connectionId}] Timeout (${timeoutMs}ms):`, cypher.substring(0, 100));
+                    } else if (MemgraphService.isTransientConflict(error)) {
+                        console.warn(`[Query ${connectionId}] Serialization conflict unresolved after ${attempt} retries`);
+                    } else {
+                        console.error(`[Query ${connectionId}] Error:`, error.message);
+                        console.error(`[Query ${connectionId}] Cypher:`, cypher.substring(0, 150));
+                    }
+
+                    tensorService?.failQuery(connectionId, queryTrackId, error);
+                    tensorService?.fail(tensor?.id, error);
+                    throw error;
+                } finally {
+                    await session.close();
+                }
             }
-
-            // Complete tracking
-            tensorService?.completeQuery(connectionId, queryTrackId, {
-                rowCount: result.records?.length || 0
-            });
-            tensorService?.complete(tensor?.id, {
-                rowCount: result.records?.length || 0
-            });
-
-            return result;
-        } catch (error) {
-            // Clear timeout if still pending
-            if (timeoutId) clearTimeout(timeoutId);
-
-            // Check if this is a timeout error
-            const isTimeout = timedOut || error.message?.includes('timeout') ||
-                              error.code === 'Neo.TransientError.Transaction.TransactionTimedOut';
-
-            if (isTimeout) {
-                console.warn(`[Query ${connectionId}] Timeout (${timeoutMs}ms):`, cypher.substring(0, 100));
-            } else {
-                console.error(`[Query ${connectionId}] Error:`, error.message);
-                console.error(`[Query ${connectionId}] Cypher:`, cypher.substring(0, 150));
-            }
-
-            // Track failure
-            tensorService?.failQuery(connectionId, queryTrackId, error);
-            tensorService?.fail(tensor?.id, error);
-
-            throw error;
         } finally {
             this._activeQueries--;
             tensorService?.closeConnection(connectionId);
-            await session.close();
         }
     }
 

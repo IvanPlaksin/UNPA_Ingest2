@@ -15,14 +15,81 @@ class DialogueWatcher {
     ];
     this.debounceMs = options.debounceMs || 5000;
 
+    // Night-hours schedule: the chokidar watcher only runs during the
+    // configured nightly window. Outside it, the watcher stays stopped so no
+    // dialogue processing happens during working hours.
+    // Window wraps midnight when nightStartHour > nightEndHour (e.g. 22 → 6).
+    this.nightOnly = options.nightOnly !== undefined
+      ? options.nightOnly
+      : process.env.DIALOGUE_WATCHER_NIGHT_ONLY !== 'false';
+    this.nightStartHour = options.nightStartHour !== undefined
+      ? options.nightStartHour
+      : parseInt(process.env.DIALOGUE_WATCHER_NIGHT_START || '22', 10);
+    this.nightEndHour = options.nightEndHour !== undefined
+      ? options.nightEndHour
+      : parseInt(process.env.DIALOGUE_WATCHER_NIGHT_END || '6', 10);
+    this.scheduleCheckMs = options.scheduleCheckMs || 60 * 1000;
+
     this.watcher = null;
+    this.scheduleTimer = null;
     this.processing = new Set();
     this.debounceTimers = new Map();
     this._stats = { processed: 0, failed: 0, skipped: 0 };
   }
 
+  /**
+   * Returns true when the current local hour falls inside the nightly window.
+   * Handles windows that wrap past midnight (start > end).
+   */
+  _isNightNow(now = new Date()) {
+    if (!this.nightOnly) return true;
+    const h = now.getHours();
+    const start = this.nightStartHour;
+    const end = this.nightEndHour;
+    if (start === end) return true; // full-day window
+    return start < end
+      ? (h >= start && h < end)         // same-day window, e.g. 1 → 5
+      : (h >= start || h < end);        // wraps midnight, e.g. 22 → 6
+  }
+
+  /**
+   * Public entry point. When nightOnly is enabled, installs a periodic
+   * scheduler that starts/stops the underlying watcher on the night boundary.
+   * Otherwise starts the watcher immediately (legacy 24/7 behaviour).
+   */
   start() {
-    if (this.watcher) return;
+    if (!this.nightOnly) {
+      return this._startWatcher();
+    }
+
+    if (this.scheduleTimer) return this;
+
+    const window = `${String(this.nightStartHour).padStart(2, '0')}:00–${String(this.nightEndHour).padStart(2, '0')}:00`;
+    console.log(`[DialogueWatcher] Night-only mode — active window ${window} (local time)`);
+
+    this._applySchedule();
+    this.scheduleTimer = setInterval(() => this._applySchedule(), this.scheduleCheckMs);
+    // Don't keep the event loop alive solely for the scheduler tick.
+    this.scheduleTimer.unref?.();
+
+    return this;
+  }
+
+  /** Start or stop the underlying watcher to match the current night window. */
+  _applySchedule() {
+    if (this._isNightNow()) {
+      if (!this.watcher) {
+        console.log('[DialogueWatcher] Entering night window — starting watcher');
+        this._startWatcher();
+      }
+    } else if (this.watcher) {
+      console.log('[DialogueWatcher] Leaving night window — stopping watcher');
+      this._stopWatcher();
+    }
+  }
+
+  _startWatcher() {
+    if (this.watcher) return this;
 
     console.log('[DialogueWatcher] Starting — watching:', this.watchPaths.join(', '));
 
@@ -56,7 +123,16 @@ class DialogueWatcher {
     return this;
   }
 
+  /** Public stop — tears down the scheduler and the underlying watcher. */
   stop() {
+    if (this.scheduleTimer) {
+      clearInterval(this.scheduleTimer);
+      this.scheduleTimer = null;
+    }
+    this._stopWatcher();
+  }
+
+  _stopWatcher() {
     if (this.watcher) {
       this.watcher.close();
       this.watcher = null;

@@ -33,5 +33,6 @@ register(require('./resolve.primitive'));
 register(require('./text.primitive'));
 register(require('./profile.primitive'));
 register(require('./impact.primitive'));
+register(require('./search.primitive'));
 
 module.exports = { register, get, list };

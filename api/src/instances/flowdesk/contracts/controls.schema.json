@@ -1,0 +1,92 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://flowdesk.un.org/contracts/controls.schema.json",
+  "title": "Controls turn-contract",
+  "description": "The `controls[]` array a Chat V2 turn may carry alongside its prose, and the `controlAction` a client replies with. Generalizes the F9.1 resolveChoices/confirm-or-choose contract into typed, composable UI descriptors (I-3). Emitted in a deprecation window ALONGSIDE the legacy `resolveChoices`/`choices` (dual-emit) until the frontend migrates. Backend-authored and backend-consumed; the client renders controls and echoes a controlAction back, it never invents control ids.",
+  "definitions": {
+    "option": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "label"],
+      "properties": {
+        "value": { "type": "string", "description": "Stable identifier echoed back in controlAction.value (userId, duty-station code, or enum value)." },
+        "label": { "type": "string", "description": "Human-readable text to render." },
+        "description": { "type": "string", "description": "Optional secondary line (email, department, city)." }
+      }
+    },
+    "source": {
+      "type": "object",
+      "description": "Typeahead data source for an autocomplete control — the I-6 directory endpoint.",
+      "additionalProperties": false,
+      "required": ["directory", "endpoint"],
+      "properties": {
+        "directory": { "enum": ["user", "location"], "description": "Directory kind; selects the endpoint path segment and the resolver." },
+        "endpoint": { "type": "string", "description": "GET typeahead URL; the client appends `?q=` (and optional `&limit=`)." },
+        "minChars": { "type": "integer", "minimum": 1, "default": 2, "description": "Minimum query length before the client calls the endpoint." },
+        "placeholder": { "type": "string" }
+      }
+    },
+    "control": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "slotId"],
+      "properties": {
+        "id": { "type": "string", "description": "Unique within the turn. The client echoes it in controlAction.controlId." },
+        "type": {
+          "enum": ["confirm", "choice", "autocomplete"],
+          "description": "confirm = a resolved default to accept or override (with optional alternatives + search child); choice = pick one of a closed option set (enum slot); autocomplete = typeahead against a directory source. (type:'text' is deferred — free-text still arrives via the plain `message`.)"
+        },
+        "slotId": { "type": "string", "description": "DraftSR slot this control fills." },
+        "label": { "type": "string", "description": "Prompt/label to render." },
+        "defaultValue": {
+          "description": "For type=confirm: the pre-resolved value to accept on a bare confirm (object for user/location slots, scalar otherwise)."
+        },
+        "options": {
+          "type": "array",
+          "description": "Selectable options. Required for type=choice; the alternatives for type=confirm.",
+          "items": { "$ref": "#/definitions/option" }
+        },
+        "source": { "$ref": "#/definitions/source" },
+        "children": {
+          "type": "array",
+          "description": "Nested controls revealed when the parent's value equals showChildrenOn — e.g. an autocomplete revealed under a confirm's `_search`, or under a 'for someone else' choice.",
+          "items": { "$ref": "#/definitions/control" }
+        },
+        "showChildrenOn": {
+          "type": "string",
+          "description": "The parent value (an option value, or the sentinel `_search`) that reveals `children`. Advisory to the client; the backend still validates whatever controlAction comes back."
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "choice" } } },
+          "then": { "required": ["options"], "properties": { "options": { "minItems": 1 } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "autocomplete" } } },
+          "then": { "required": ["source"] }
+        }
+      ]
+    },
+    "controlAction": {
+      "type": "object",
+      "description": "A client's reply to a control. Rides the POST /chat body alongside (and taking precedence over) the legacy `choice`.",
+      "additionalProperties": false,
+      "required": ["slotId", "action"],
+      "properties": {
+        "controlId": { "type": "string", "description": "The control.id being answered (diagnostic; the backend keys on slotId)." },
+        "slotId": { "type": "string" },
+        "action": {
+          "enum": ["confirm", "select", "search", "submit"],
+          "description": "confirm = accept the control's defaultValue; select = pick options[].value; search = re-resolve with `value` as the query; submit = commit an autocomplete pick (treated as select)."
+        },
+        "value": { "description": "Option value / query string / picked item, per action. Omitted for a bare confirm." }
+      }
+    }
+  },
+  "type": "object",
+  "properties": {
+    "controls": { "type": "array", "items": { "$ref": "#/definitions/control" } },
+    "controlAction": { "$ref": "#/definitions/controlAction" }
+  }
+}

@@ -1,4 +1,8 @@
 'use strict';
+const {
+  ALL_EDGE_TYPES, createEnvelope, buildNode, buildEdge, PROJECTION_KIND,
+} = require('../../../constants/canonical-graph.constants');
+const _E = ALL_EDGE_TYPES.join('|');
 
 /**
  * PROFILE primitive — structured dossier on a single entity.
@@ -73,18 +77,18 @@ async function execute(params, _context, services) {
 
   // ── 2. Fetch outgoing relationships ─────────────────────────────────────────
   const outRows = await mg().runQuery(
-    `MATCH (e:ESEntity {id: $entityId})-[r:ES_RELATED_TO]->(t:ESEntity)
+    `MATCH (e:ESEntity {id: $entityId})-[r:${_E}]->(t:ESEntity)
      RETURN t.id AS targetId, t.name AS targetName, t.type AS targetType, t.namespace AS targetNamespace,
-            r.relType AS relType, r.context AS context, r.confidence AS confidence, r.documentId AS documentId
+            type(r) AS relType, r.context AS context, r.confidence AS confidence, r.documentId AS documentId
      ORDER BY r.confidence DESC`,
     { entityId }
   );
 
   // ── 3. Fetch incoming relationships ─────────────────────────────────────────
   const inRows = await mg().runQuery(
-    `MATCH (s:ESEntity)-[r:ES_RELATED_TO]->(e:ESEntity {id: $entityId})
+    `MATCH (s:ESEntity)-[r:${_E}]->(e:ESEntity {id: $entityId})
      RETURN s.id AS sourceId, s.name AS sourceName, s.type AS sourceType, s.namespace AS sourceNamespace,
-            r.relType AS relType, r.context AS context, r.confidence AS confidence, r.documentId AS documentId
+            type(r) AS relType, r.context AS context, r.confidence AS confidence, r.documentId AS documentId
      ORDER BY r.confidence DESC`,
     { entityId }
   );
@@ -174,24 +178,69 @@ async function execute(params, _context, services) {
     hasHierarchy:    !!(relationships.hierarchy?.length),
   };
 
-  return {
-    content: {
-      entity: {
-        id:             entity.id,
-        name:           entity.name,
-        type:           entity.type || null,
-        namespace:      entity.namespace || null,
-        description:    entity.description || null,
-        epistemicLayer: entity.epistemicLayer || null,
-        category:       entity.category || null,
-        provenanceDocTitle: entity.provenanceDocTitle || null,
-        createdAt:      entity.createdAt || null,
-        updatedAt:      entity.updatedAt || null,
-      },
-      relationships,
-      provenance,
-      summary,
+  // ── 7. Build CGE envelope ─────────────────────────────────────────────────────
+  const envelope = createEnvelope({
+    roots:      [entityId],
+    kind:       PROJECTION_KIND.DOSSIER,
+    hints: {
+      groups:        Object.keys(relationships),
+      relationships,          // categorized map for ProfileRenderer
+      normativeContext: null, // reserved for future normative context analysis
     },
+    producedBy: 'TOOL',
+    toolId:     'investigation.profile',
+  });
+
+  // Root entity node
+  envelope.nodes.push(buildNode({
+    id:             entity.id,
+    type:           entity.type,
+    name:           entity.name,
+    namespace:      entity.namespace,
+    description:    entity.description,
+    epistemicLayer: entity.epistemicLayer,
+    isInForce:      entity.isInForce,
+    provenanceDocId: provenance.sources?.[0]?.documentId || null,
+  }));
+
+  // Peer nodes (unique) + directed edges
+  const seenNodeIds = new Set([entity.id]);
+  for (const r of outRows) {
+    if (!seenNodeIds.has(r.targetId)) {
+      seenNodeIds.add(r.targetId);
+      envelope.nodes.push(buildNode({ id: r.targetId, type: r.targetType, name: r.targetName, namespace: r.targetNamespace }));
+    }
+    envelope.edges.push(buildEdge({ sourceId: entity.id, targetId: r.targetId, relType: r.relType, direction: 'forward', confidence: r.confidence, context: r.context, documentId: r.documentId }));
+  }
+  for (const r of inRows) {
+    if (!seenNodeIds.has(r.sourceId)) {
+      seenNodeIds.add(r.sourceId);
+      envelope.nodes.push(buildNode({ id: r.sourceId, type: r.sourceType, name: r.sourceName, namespace: r.sourceNamespace }));
+    }
+    envelope.edges.push(buildEdge({ sourceId: r.sourceId, targetId: entity.id, relType: r.relType, direction: 'backward', confidence: r.confidence, context: r.context, documentId: r.documentId }));
+  }
+
+  // Primitive-specific summary (includes raw entity for backward-compat rendering)
+  envelope.summary = {
+    headline:   `Profile: ${entity.name}`,
+    entity: {
+      id:             entity.id,
+      name:           entity.name,
+      type:           entity.type || null,
+      namespace:      entity.namespace || null,
+      description:    entity.description || null,
+      epistemicLayer: entity.epistemicLayer || null,
+      category:       entity.category || null,
+      provenanceDocTitle: entity.provenanceDocTitle || null,
+      createdAt:      entity.createdAt || null,
+      updatedAt:      entity.updatedAt || null,
+    },
+    statistics: summary,
+    provenance,
+  };
+
+  return {
+    content:     envelope,
     evidencedBy: [entityId],
   };
 }

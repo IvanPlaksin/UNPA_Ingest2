@@ -9,7 +9,7 @@
 
 const { v4: uuidv4 } = require('uuid');
 const EventEmitter = require('events');
-const { VALID_TRANSITIONS, TASK_TYPES, TARGET_TYPES } = require('../../validation/backlog-schemas');
+const { VALID_TRANSITIONS, STATUSES, TASK_TYPES, TARGET_TYPES } = require('../../validation/backlog-schemas');
 
 let _memgraph = null;
 function mg() {
@@ -217,13 +217,32 @@ class BackLogService extends EventEmitter {
     });
   }
 
-  async _transition(backlogId, newStatus, extra = {}) {
+  /**
+   * Manual/admin override — move an item to ANY status, bypassing the
+   * VALID_TRANSITIONS state machine. Used for direct Kanban recategorization.
+   */
+  async moveTo(backlogId, newStatus, movedBy = 'admin') {
+    if (!STATUSES.includes(newStatus)) {
+      throw new Error(`Unknown status: ${newStatus}. Valid: ${STATUSES.join(', ')}`);
+    }
+    const current = await this.getById(backlogId);
+    if (!current) throw new Error(`BackLogItem not found: ${backlogId}`);
+    if (current.status === newStatus) return current; // no-op
+    return this._transition(backlogId, newStatus, {
+      movedBy: movedBy || 'admin',
+      movedAt: new Date().toISOString()
+    }, { force: true });
+  }
+
+  async _transition(backlogId, newStatus, extra = {}, { force = false } = {}) {
     const current = await this.getById(backlogId);
     if (!current) throw new Error(`BackLogItem not found: ${backlogId}`);
 
-    const valid = VALID_TRANSITIONS[current.status] || [];
-    if (!valid.includes(newStatus)) {
-      throw new Error(`Invalid transition: ${current.status} -> ${newStatus}. Valid: ${valid.join(', ')}`);
+    if (!force) {
+      const valid = VALID_TRANSITIONS[current.status] || [];
+      if (!valid.includes(newStatus)) {
+        throw new Error(`Invalid transition: ${current.status} -> ${newStatus}. Valid: ${valid.join(', ')}`);
+      }
     }
 
     const setParts = [`b.status = $newStatus`, `b.updatedAt = $now`];

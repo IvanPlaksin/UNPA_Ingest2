@@ -181,7 +181,7 @@ class SourceCatalogService {
 
   async delete(id) {
     await mg().runQuery(
-      `MATCH (s:SourceCatalog {id: $id})-[:HAS_DOCUMENT]->(d:SourceDocument) DETACH DELETE d`,
+      `MATCH (d:SourceDocument {sourceId: $id}) DETACH DELETE d`,
       { id }
     ).catch(() => {});
     await mg().runQuery(`MATCH (s:SourceCatalog {id: $id}) DETACH DELETE s`, { id });
@@ -252,7 +252,7 @@ class SourceCatalogService {
     if (!urls.length) return items;
 
     const rows = await mg().runQuery(
-      `MATCH (s:SourceCatalog {id: $sourceId})-[:HAS_DOCUMENT]->(d:SourceDocument)
+      `MATCH (d:SourceDocument {sourceId: $sourceId})
        WHERE d.url IN $urls AND d.enrichStatus IS NOT NULL AND d.enrichStatus <> 'none'
        RETURN d.url as url,
               d.abstract as abstract, d.subjects as subjects,
@@ -289,57 +289,69 @@ class SourceCatalogService {
 
   async _saveSourceDocuments(sourceId, docs) {
     const now = new Date().toISOString();
+    // Build all rows, then persist the whole page in ONE UNWIND transaction.
+    // Previously this ran one MERGE per document, so a 50-doc page issued 50
+    // transactions each MERGEing an edge to the SAME SourceCatalog node — under
+    // the parallel indexer that produced constant "Cannot resolve conflicting
+    // transactions" errors. One transaction per page slashes that contention
+    // (and the memgraph layer retries any residual conflict).
+    const rows = [];
     for (const doc of docs) {
-      try {
-        const externalId = doc.url || doc.id;
-        if (!externalId) continue;
-        const docId = uuidv5(`${sourceId}::${externalId}`, SOURCE_DOC_NS);
-        const sc = _sourceDocSymbolComponents(doc.symbol);
-        await mg().runQuery(`
-          MERGE (d:SourceDocument {id: $id})
-          SET d.sourceId      = $sourceId,
-              d.externalId    = $externalId,
-              d.title         = $title,
-              d.symbol        = $symbol,
-              d.url           = $url,
-              d.pdfUrl        = $pdfUrl,
-              d.fileType      = $fileType,
-              d.date          = $date,
-              d.description   = $description,
-              d.metadata      = $metadata,
-              d.languages     = $languages,
-              d.organCode     = $organCode,
-              d.seriesCode    = $seriesCode,
-              d.subBody       = $subBody,
-              d.sessionNumber = $sessionNumber,
-              d.documentNumber = $documentNumber,
-              d.documentYear  = $documentYear,
-              d.baseSymbol    = $baseSymbol,
-              d.suffixType    = $suffixType,
-              d.suffixNumber  = $suffixNumber,
-              d.updatedAt     = $now,
-              d.discoveredAt  = coalesce(d.discoveredAt, $now)
-          WITH d
-          MATCH (s:SourceCatalog {id: $sourceId})
-          MERGE (s)-[:HAS_DOCUMENT]->(d)
-        `, {
-          id:          docId,
-          sourceId,
-          externalId,
-          title:       doc.title || '',
-          symbol:      doc.symbol || '',
-          url:         doc.url || '',
-          pdfUrl:      doc.pdfUrl || '',
-          fileType:    doc.fileType || '',
-          date:        doc.date || '',
-          description: doc.description || '',
-          metadata:    JSON.stringify(doc.metadata || {}),
-          languages:   JSON.stringify(doc.languages || []),
-          now,
-          ...sc,
-        });
-      } catch { /* non-critical: skip individual failures */ }
+      const externalId = doc.url || doc.id;
+      if (!externalId) continue;
+      const sc = _sourceDocSymbolComponents(doc.symbol);
+      rows.push({
+        id:            uuidv5(`${sourceId}::${externalId}`, SOURCE_DOC_NS),
+        externalId,
+        title:         doc.title || '',
+        symbol:        doc.symbol || '',
+        url:           doc.url || '',
+        pdfUrl:        doc.pdfUrl || '',
+        fileType:      doc.fileType || '',
+        date:          doc.date || '',
+        description:   doc.description || '',
+        metadata:      JSON.stringify(doc.metadata || {}),
+        languages:     JSON.stringify(doc.languages || []),
+        organCode:     sc.organCode ?? null,
+        seriesCode:    sc.seriesCode ?? null,
+        subBody:       sc.subBody ?? null,
+        sessionNumber: sc.sessionNumber ?? null,
+        documentNumber: sc.documentNumber ?? null,
+        documentYear:  sc.documentYear ?? null,
+        baseSymbol:    sc.baseSymbol ?? null,
+        suffixType:    sc.suffixType ?? null,
+        suffixNumber:  sc.suffixNumber ?? null,
+      });
     }
+    if (!rows.length) return;
+    try {
+      await mg().runQuery(`
+        UNWIND $rows AS row
+        MERGE (d:SourceDocument {id: row.id})
+        SET d.sourceId       = $sourceId,
+            d.externalId     = row.externalId,
+            d.title          = row.title,
+            d.symbol         = row.symbol,
+            d.url            = row.url,
+            d.pdfUrl         = row.pdfUrl,
+            d.fileType       = row.fileType,
+            d.date           = row.date,
+            d.description    = row.description,
+            d.metadata       = row.metadata,
+            d.languages      = row.languages,
+            d.organCode      = row.organCode,
+            d.seriesCode     = row.seriesCode,
+            d.subBody        = row.subBody,
+            d.sessionNumber  = row.sessionNumber,
+            d.documentNumber = row.documentNumber,
+            d.documentYear   = row.documentYear,
+            d.baseSymbol     = row.baseSymbol,
+            d.suffixType     = row.suffixType,
+            d.suffixNumber   = row.suffixNumber,
+            d.updatedAt      = $now,
+            d.discoveredAt   = coalesce(d.discoveredAt, $now)
+      `, { sourceId, rows, now });
+    } catch { /* non-critical: whole-page save is best-effort */ }
   }
 
   async getSourceDocuments(sourceId, { page = 1, limit = 20, importedOnly = false } = {}) {
@@ -351,7 +363,7 @@ class SourceCatalogService {
     const skip  = (page - 1) * limit;
 
     const rows = await mg().runQuery(
-      `MATCH (s:SourceCatalog {id: $sourceId})-[:HAS_DOCUMENT]->(d:SourceDocument)
+      `MATCH (d:SourceDocument {sourceId: $sourceId})
        ${where}
        RETURN d.id as id, d.title as title, d.symbol as symbol,
               d.url as url, d.pdfUrl as pdfUrl,
@@ -371,7 +383,7 @@ class SourceCatalogService {
     );
 
     const countRows = await mg().runQuery(
-      `MATCH (s:SourceCatalog {id: $sourceId})-[:HAS_DOCUMENT]->(d:SourceDocument)
+      `MATCH (d:SourceDocument {sourceId: $sourceId})
        ${where}
        RETURN count(d) as total`,
       params

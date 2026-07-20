@@ -2,20 +2,38 @@
 
 const { ClassifyIntentExecutor, SERVICE_CATEGORIES, LLM_SYSTEM_PROMPT } = require('../classify-intent.executor.js');
 
-// Mock template-store — returns a simple string
-jest.mock('../../../../../../services/flowdesk/template-store', () => ({
+// Mock template-store — returns a simple string. The path must resolve to the
+// same module the executor imports (../../services/template-store from the
+// executor dir); from this __tests__ dir that is ../../../services/…. The old
+// ../../../../../../services/flowdesk/… path predated a file move and no longer
+// existed, so the whole suite failed to load.
+jest.mock('../../../services/template-store', () => ({
   render: jest.fn(async (key, data) => `[${key}] ${JSON.stringify(data)}`),
 }));
 
 // Mock keyword-filter
-jest.mock('../../../../../../services/flowdesk/keyword-filter', () => ({
+jest.mock('../../../services/keyword-filter', () => ({
   keywordClassify: jest.fn(),
 }));
 
 // Mock semantic-search
-jest.mock('../../../../../../services/flowdesk/semantic-search', () => ({
+jest.mock('../../../services/semantic-search', () => ({
   init: jest.fn(),
   classifyUserIntent: jest.fn(),
+}));
+
+// Mock the KB config-loader. The executor lazily requires it, and the real one
+// opens live Memgraph + Redis connections (config-loader.service.js:280,282) that
+// have no close() and keep the jest process alive for minutes after the tests
+// pass. This was invisible while the suite failed to load at all. Returning a
+// stub whose getters resolve to undefined forces the executor's own hardcoded
+// fallbacks (SERVICE_CATEGORIES, default thresholds) — the same path its catch
+// branches already take — so the 19 assertions are unchanged.
+jest.mock('../../../services/config-loader.service', () => ({
+  getFlowDeskConfigLoader: jest.fn(() => ({
+    getServiceCategories: jest.fn(async () => undefined),
+    getConfidenceThresholds: jest.fn(async () => undefined),
+  })),
 }));
 
 const { keywordClassify } = require('../../../services/keyword-filter.js');

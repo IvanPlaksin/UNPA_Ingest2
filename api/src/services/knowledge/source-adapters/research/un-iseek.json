@@ -1,0 +1,29 @@
+{
+  "key": "un-iseek",
+  "name": "UN iSeek Intranet",
+  "family": "url-catalog",
+  "capabilities": ["search", "browseAll", "paginate", "download"],
+  "filterSchema": [
+    {
+      "type": "department",
+      "param": "dept",
+      "label": "Department / Office",
+      "options": ["DMSPC", "OLA", "OCHA", "DMSPC/OHR", "DMSPC/BTAD", "DSA", "ESCWA", "ICSC", "JIU", "OIOS"],
+      "notes": "Filter results to a specific UN Secretariat department path prefix."
+    }
+  ],
+  "config": {
+    "adapterKey": "un-iseek",
+    "politeDelay": 800,
+    "maxDepth": 1,
+    "azIndexUrl": "https://iseek.un.org/en/nyc/iseek-index-un-resources",
+    "_note": "Pass 1: public layer only. Crawl A-Z Index → 139 dept pages → sub-pages (depth=1). Harvest /sites/default/files/*.pdf. undocs.org links extracted as cross-reference metadata only (not independent source documents). Pass 2 (future): authenticated layer via stored session cookie."
+  },
+  "download": {
+    "mode": "direct-pdf",
+    "notes": "Direct GET on iseek.un.org/sites/default/files/*.pdf returns HTTP 200 with full PDF content. No redirect, no authentication required. Verified 2026-07-07."
+  },
+  "methodologyMarkdown": "## Overview\nThe UN iSeek Intranet (iseek.un.org) is the United Nations Headquarters intranet portal for New York staff. Despite being labeled an intranet, the site has a substantial **public layer** accessible without authentication: 139+ UN Secretariat department pages and all PDF files hosted at iseek.un.org/sites/default/files/.\n\n## Public Layer Structure\nEntry point: https://iseek.un.org/en/nyc. Navigation via the A-Z Site Index at /en/nyc/iseek-index-un-resources lists 139+ department and office pages. Department pages contain curated lists of policy documents, procedures, memoranda, and guidance materials with direct PDF download links.\n\n## Pass 1: PDF Harvesting\nThe adapter crawls the A-Z Index → dept pages → sub-pages (depth=1) and extracts all href links pointing to iseek.un.org/sites/default/files/*.pdf. These PDFs are directly downloadable without authentication. Content types: internal memoranda, guidance notes, procedures, delegation instruments, inter-agency agreements.\n\n## Cross-References\nDept pages also contain links to undocs.org/documents.un.org (ST/SGB, ST/AI, A/RES symbols). These are extracted as cross-reference metadata (undocsRefs array) but NOT harvested as independent source documents — they are already covered by the UN Policy Portal (S3) and ODS sources. A REFERENCES edge should be created from the iSeek source document to the existing ODS document when available.\n\n## Auth Layer\nAuthenticated content uses OpenID Connect (Drupal) with Microsoft Azure AD. Tenant ID: 0f9e35db-544f-4f60-bdcc-5ea416e6dc70. Login button: 'Log in with your un.org credentials'. The same tenant covers the UN Knowledge Gateway (SharePoint). A single authenticated session would unlock protected dept content and cross-portal documents.\n\n## Limitations\n- No sitemap.xml — enumeration relies on A-Z Index crawl.\n- No structured date fields on public pages — document dates embedded in free-text.\n- Crawl depth capped at 1 sub-level to avoid runaway crawl.\n- Some dept pages redirect internally or require group membership to view sub-content.",
+  "verified": true,
+  "probeNotes": "Probed 2026-07-07. GET /en/nyc → HTTP 200. A-Z Index: 139 dept links. Dept pages accessible (DMSPC, OLA, OCHA, etc.). 3 PDFs verified: unitar_statute.pdf (279KB), guidelines_on_non-reimbursable_loans.pdf (274KB), cost_plan_for_grants_...pdf (1.2MB) — all HTTP 200, no auth. Login mechanism: OpenID Connect (microsoft_aad_client) → Azure AD tenant 0f9e35db-544f-4f60-bdcc-5ea416e6dc70. Same tenant as SharePoint APP-Gateway (S2)."
+}

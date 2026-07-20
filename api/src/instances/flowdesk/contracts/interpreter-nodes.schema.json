@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://flowdesk.un.org/contracts/interpreter-nodes.schema.json",
+  "title": "InterpreterNodeRegistry",
+  "description": "Contract 4B (FlowDesk Chat V2). The universal interpreter's node registry. Each entry declares the node's execution kind, which LLM method(s) it may call (via LLMProvider only — CODEX-RULE-073), and the whitelisted tools it may invoke. The graph (not the prompt) defines the space of actions; tools not listed are forbidden for that node.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["nodes"],
+  "properties": {
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/node" }
+    }
+  },
+  "definitions": {
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "llmMethods", "tools"],
+      "properties": {
+        "id": {
+          "enum": [
+            "LOAD_DRAFT", "ROUTER", "RESOLVE", "SLOT_EXTRACT", "ACTIVE_SLOTS",
+            "RESOLVERS", "VALIDATE", "PATCH", "TERM_CHECK", "QUESTION_PLANNER",
+            "INFO_ANSWER", "CONFIRM", "SUBMIT"
+          ]
+        },
+        "kind": { "enum": ["deterministic", "hybrid", "llm", "human"] },
+        "llmMethods": {
+          "type": "array",
+          "description": "LLMProvider methods this node may call. Empty for deterministic/human nodes. A node with a non-empty list MUST have kind ∈ {hybrid, llm}.",
+          "items": { "enum": ["structuredOutput", "completion", "embedding"] },
+          "uniqueItems": true
+        },
+        "tools": {
+          "type": "array",
+          "description": "Whitelisted tool ids this node may invoke. Any other tool call from this node is a contract violation.",
+          "items": {
+            "enum": [
+              "draft.get", "draft.patch", "draft.submit",
+              "resolve.search", "catalog.resolvers", "inventory.check", "sr.create"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "readOnly": {
+          "type": "boolean",
+          "description": "True when the node may only use read-only tools (e.g. INFO_ANSWER). Guards against side effects in the KB/deflection branch."
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "enum": ["deterministic", "human"] } } },
+          "then": { "properties": { "llmMethods": { "maxItems": 0 } } }
+        }
+      ]
+    }
+  }
+}

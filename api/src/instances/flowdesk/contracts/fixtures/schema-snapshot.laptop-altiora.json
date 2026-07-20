@@ -1,0 +1,99 @@
+{
+  "serviceId": "IT-HW-LAPX",
+  "version": 1,
+  "phases": ["context", "detail"],
+  "metadata": {
+    "title": "Laptop Request (Altiora-materialized)",
+    "approvalRequired": true,
+    "altioraOusId": 42,
+    "contentHash": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+    "fieldIdMapping": {
+      "os": "os",
+      "storage": "storage",
+      "gpu": "gpu",
+      "delivery": "delivery",
+      "shippingAddress": "Shipping_Address",
+      "justification": "justification"
+    }
+  },
+  "slots": [
+    {
+      "slotId": "os",
+      "type": "enum",
+      "required": true,
+      "phase": "detail",
+      "altioraFieldId": "os",
+      "presentOptions": [
+        { "value": "Windows 11 Enterprise (LTSB)", "label": "Windows 11 Enterprise (LTSB)" },
+        { "value": "macOS Sonoma (v14.x)", "label": "macOS Sonoma (v14.x)" },
+        { "value": "Ubuntu Linux 22.04 LTS", "label": "Ubuntu Linux 22.04 LTS" }
+      ],
+      "promptHint": "Which operating system should the laptop run?"
+    },
+    {
+      "slotId": "storage",
+      "type": "enum",
+      "required": true,
+      "phase": "detail",
+      "altioraFieldId": "storage",
+      "presentOptions": [
+        { "value": "512GB NVMe SSD (Standard)", "label": "512GB NVMe SSD (Standard)" },
+        { "value": "1TB NVMe SSD (Power User)", "label": "1TB NVMe SSD (Power User)" },
+        { "value": "2TB NVMe SSD (Executive Approval Required)", "label": "2TB NVMe SSD (Executive Approval Required)" }
+      ],
+      "promptHint": "How much internal storage is needed?"
+    },
+    {
+      "slotId": "gpu",
+      "type": "enum",
+      "required": true,
+      "phase": "detail",
+      "altioraFieldId": "gpu",
+      "dependsOn": ["os"],
+      "presentOptions": [
+        { "value": "Integrated Internal Graphics", "label": "Integrated Internal Graphics" },
+        { "value": "NVIDIA RTX Discrete", "label": "NVIDIA RTX Discrete" }
+      ],
+      "optionFilters": [
+        {
+          "condition": "slots.os == 'macOS Sonoma (v14.x)'",
+          "include": ["Integrated Internal Graphics"]
+        }
+      ],
+      "promptHint": "Which graphics option is required?"
+    },
+    {
+      "slotId": "delivery",
+      "type": "enum",
+      "required": true,
+      "phase": "detail",
+      "altioraFieldId": "delivery",
+      "presentOptions": [
+        { "value": "IT Desk Pickup", "label": "IT Desk Pickup" },
+        { "value": "Desk Delivery", "label": "Desk Delivery" },
+        { "value": "Ship to Home Address", "label": "Ship to Home Address" }
+      ],
+      "promptHint": "How should the laptop be delivered?"
+    },
+    {
+      "slotId": "shippingAddress",
+      "type": "text",
+      "required": true,
+      "phase": "detail",
+      "altioraFieldId": "Shipping_Address",
+      "trefCondition": "slots.delivery == 'Ship to Home Address'",
+      "dependsOn": ["delivery"],
+      "promptHint": "What is the full shipping address?"
+    },
+    {
+      "slotId": "justification",
+      "type": "text",
+      "required": false,
+      "phase": "detail",
+      "altioraFieldId": "justification",
+      "requiredWhen": "slots.storage == '2TB NVMe SSD (Executive Approval Required)'",
+      "dependsOn": ["storage"],
+      "promptHint": "Why is this configuration needed?"
+    }
+  ]
+}

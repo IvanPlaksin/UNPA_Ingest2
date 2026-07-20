@@ -165,6 +165,15 @@ router.post('/sources/:id/reindex', async (req, res) => {
   }
 });
 
+// ── Recount ALL sources accurately + reset finished ones to re-harvest ──
+
+router.post('/recount-all', (req, res) => {
+  try {
+    const resetStatuses = Array.isArray(req.body?.resetStatuses) ? req.body.resetStatuses : ['complete', 'partial'];
+    res.json({ success: true, data: getDocumentIndexService().recountAndResetAll({ resetStatuses }) });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
 // ── Count probe (sequential paging → total; re-indexes if grown) ────
 
 router.post('/sources/:id/probe-count', async (req, res) => {
@@ -175,6 +184,84 @@ router.post('/sources/:id/probe-count', async (req, res) => {
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
+});
+
+// ── Enable / disable a source for indexing (instant, safe) ──────
+
+router.post('/sources/:id/enabled', async (req, res) => {
+  try {
+    const enabled = !!(req.body && req.body.enabled);
+    res.json({ success: true, data: await getDocumentIndexService().setSourceEnabled(req.params.id, enabled) });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// ── Source efficiency ratings + pool quotas ─────────────────────
+
+router.get('/ratings', (req, res) => {
+  try { res.json({ success: true, data: getDocumentIndexService().getRatings() }); }
+  catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// Pool-share quota allocation (real-time shares per active source + mode).
+const quota = require('../services/indexing/document-index.quota');
+
+router.get('/quota', (req, res) => {
+  try { res.json({ success: true, data: getDocumentIndexService().getQuotaSnapshot() }); }
+  catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// Switch auto/manual mode (+ optional guaranteed-floor fraction for auto).
+router.post('/quota/mode', (req, res) => {
+  try {
+    const mode = quota.setMode(req.body?.mode);
+    if (req.body?.guaranteedFraction != null) quota.setGuaranteedFraction(req.body.guaranteedFraction);
+    res.json({ success: true, data: getDocumentIndexService().getQuotaSnapshot() });
+  } catch (err) { res.status(400).json({ success: false, error: err.message }); }
+});
+
+// Set manual shares { shares: { sourceId: fraction, ... } } → switches to manual,
+// takes effect on the next dispatch cycle (immediate).
+router.post('/quota/shares', (req, res) => {
+  try {
+    quota.setManualShares(req.body?.shares || {});
+    res.json({ success: true, data: getDocumentIndexService().getQuotaSnapshot() });
+  } catch (err) { res.status(400).json({ success: false, error: err.message }); }
+});
+
+// ── Quarantine (durable) — sources & documents parked out of the pool ───
+
+const durableState = require('../services/indexing/document-index.state');
+
+// List quarantined sources: `needsIntervention` = non-transient (manual fix
+// required); `all` = every currently-parked source (auto/needs_fix/manual).
+router.get('/quarantine', (req, res) => {
+  try {
+    res.json({ success: true, data: {
+      needsIntervention: durableState.listQuarantined('needs_fix'),
+      all: durableState.listQuarantined(),
+    } });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// Manually quarantine a source (default 30 days — until fixed).
+router.post('/sources/:id/quarantine', (req, res) => {
+  try {
+    const ms = parseInt(req.body?.ms, 10) || (30 * 24 * 60 * 60 * 1000);
+    const reason = req.body?.reason || 'manual';
+    res.json({ success: true, data: getDocumentIndexService().pauseSource(req.params.id, ms, reason) });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// Lift a source quarantine/backoff (retry it).
+router.post('/sources/:id/unquarantine', (req, res) => {
+  try { res.json({ success: true, data: getDocumentIndexService().resumeSource(req.params.id) }); }
+  catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// Clear a source's per-document quarantine (retry all parked documents).
+router.post('/sources/:id/clear-doc-quarantine', (req, res) => {
+  try { res.json({ success: true, data: getDocumentIndexService().clearDocQuarantine(req.params.id) }); }
+  catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
 // ── Indexer config (worker count etc.) ──────────────────────────

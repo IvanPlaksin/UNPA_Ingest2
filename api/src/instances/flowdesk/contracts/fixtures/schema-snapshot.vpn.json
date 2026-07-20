@@ -1,0 +1,63 @@
+{
+  "serviceId": "IT-VPN",
+  "version": 1,
+  "phases": ["context", "detail"],
+  "metadata": {
+    "title": "VPN Access Request",
+    "slaHours": 24,
+    "approvalRequired": true,
+    "handlerRef": "resolver:routing.byMission"
+  },
+  "slots": [
+    {
+      "slotId": "beneficiary",
+      "type": "user",
+      "required": true,
+      "phase": "context",
+      "resolverRef": "resolve.user",
+      "promptHint": "Who needs VPN access?"
+    },
+    {
+      "slotId": "accessType",
+      "type": "enum",
+      "required": true,
+      "phase": "detail",
+      "presentOptions": [
+        { "value": "full_tunnel", "label": "Full tunnel (all traffic via UN network)" },
+        { "value": "split_tunnel", "label": "Split tunnel (only UN resources)" }
+      ],
+      "promptHint": "What type of VPN access is needed?"
+    },
+    {
+      "slotId": "duration",
+      "type": "enum",
+      "required": true,
+      "phase": "detail",
+      "dependsOn": ["accessType"],
+      "presentOptions": [
+        { "value": "days_30", "label": "30 days" },
+        { "value": "days_90", "label": "90 days" },
+        { "value": "permanent", "label": "Permanent (staff)" }
+      ],
+      "promptHint": "For how long is access required?"
+    },
+    {
+      "slotId": "justification",
+      "type": "text",
+      "required": true,
+      "phase": "detail",
+      "dependsOn": ["accessType"],
+      "promptHint": "Briefly, why is VPN access needed?"
+    },
+    {
+      "slotId": "approver",
+      "type": "user",
+      "required": true,
+      "phase": "detail",
+      "trefCondition": "service.approvalRequired == true",
+      "resolverRef": "resolve.approver",
+      "dependsOn": ["beneficiary"],
+      "promptHint": "Who approves this access? Defaults to the beneficiary's manager."
+    }
+  ]
+}

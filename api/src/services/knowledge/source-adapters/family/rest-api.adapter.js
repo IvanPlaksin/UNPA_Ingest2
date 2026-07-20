@@ -23,7 +23,7 @@ class RestApiAdapter extends SourceAdapter {
   static family = 'rest-api';
   static capabilities = ['search', 'browseAll', 'paginate'];
 
-  async search({ query = '', page = 1, limit = 20, filters = {}, sort = null } = {}) {
+  async search({ query = '', page = 1, limit = 20, filters = {}, sort = null, dateRange = null } = {}) {
     const cfg = this.config;
     if (!cfg.endpoint) throw new Error('API endpoint not configured');
 
@@ -43,6 +43,18 @@ class RestApiAdapter extends SourceAdapter {
       }
     }
     if (cfg.limitParam) params[cfg.limitParam] = limit;
+
+    // Date-range slice — narrows a query to a window small enough to page fully
+    // (past a deep-pagination clamp / to partition a huge corpus). The param
+    // NAMES are per-source via `config.dateRangeParams` (default = Invenio legacy
+    // d1/d2). WDS uses { from:'strdate', until:'enddate' }. `dateRange` values are
+    // already formatted by the caller for the source (dd/mm/yyyy or ISO).
+    if (dateRange && dateRange.from) {
+      const dp = cfg.dateRangeParams || { from: 'd1', until: 'd2', type: 'dt' };
+      params[dp.from] = dateRange.from;
+      if (dateRange.until && dp.until) params[dp.until] = dateRange.until;
+      if (dateRange.type && dp.type) params[dp.type] = dateRange.type;
+    }
 
     // Capability-driven filters + sort (only applied when declared).
     if (this.supports('filter') && filters && Object.keys(filters).length) {
@@ -81,6 +93,17 @@ class RestApiAdapter extends SourceAdapter {
     }
 
     return this._mapResponse(response.data, { page, limit });
+  }
+
+  /**
+   * Exact count for a query/date window, read from the response's mapped `total`
+   * field via a 1-row search. `opts` = { query?, dateRange? }. Returns null when
+   * the API exposes no total (Invenio overrides this with an of=hb reader).
+   */
+  async count(opts = {}) {
+    const r = await this.search({ query: opts.query || '', page: 1, limit: 1, dateRange: opts.dateRange || null });
+    if (!r) return null;
+    return { total: Number(r.total) || 0, exact: r.totalExact === true, method: r.totalExact ? 'api' : 'page' };
   }
 
   /**

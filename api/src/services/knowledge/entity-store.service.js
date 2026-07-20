@@ -1,5 +1,10 @@
 'use strict';
 const { v4: uuidv4 } = require('uuid');
+const { ALL_EDGE_TYPES, normalizeEdgeType } = require('../../constants/canonical-graph.constants');
+
+// Cypher multi-label pattern covering all 18 canonical entity relationship types.
+// Used in MATCH clauses after U2 migration (ES_RELATED_TO → typed labels).
+const _E = ALL_EDGE_TYPES.join('|');
 
 let _mg;
 function mg() { if (!_mg) _mg = require('../memgraph.service'); return _mg; }
@@ -130,7 +135,7 @@ class EntityStoreService {
           if (esId === docEsId) continue;
           await mg().runQuery(
             `MATCH (doc:ESEntity {id: $docEsId}), (e:ESEntity {id: $esId})
-             MERGE (doc)-[r:ES_RELATED_TO {relType: 'MENTIONS'}]->(e)
+             MERGE (doc)-[r:MENTIONS]->(e)
              SET r.documentId = $docId, r.extractedAt = $ts`,
             { docEsId, esId, docId, ts }
           ).catch(() => {});
@@ -170,15 +175,16 @@ class EntityStoreService {
         for (const rel of rels) {
           const srcId = esMap[rel.aId], tgtId = esMap[rel.bId];
           if (srcId && tgtId && srcId !== tgtId) {
+            const _label = normalizeEdgeType(rel.relType || 'RELATED_TO');
             await mg().runQuery(
               `MATCH (s:ESEntity {id: $s}), (t:ESEntity {id: $t})
-               MERGE (s)-[r:ES_RELATED_TO {relType: $rt}]->(t)
+               MERGE (s)-[r:${_label}]->(t)
                SET r.context     = $ctx,
                    r.confidence  = $conf,
                    r.documentId  = $docId,
                    r.extractedAt = $ts`,
               {
-                s: srcId, t: tgtId, rt: rel.relType || 'RELATED_TO',
+                s: srcId, t: tgtId,
                 ctx:  rel.context    || null,
                 conf: typeof rel.confidence === 'number' ? rel.confidence : (rel.confidence?.low ?? 0.8),
                 docId, ts,
@@ -277,9 +283,9 @@ class EntityStoreService {
       if (ref.id === docEntityId) continue;
       await mg().runQuery(
         `MATCH (src:ESEntity {id: $srcId}), (tgt:ESEntity {id: $tgtId})
-         MERGE (src)-[r:ES_RELATED_TO {relType: $rt}]->(tgt)
+         MERGE (src)-[r:REFERENCES]->(tgt)
          SET r.documentId = $docId, r.extractedAt = $ts`,
-        { srcId: ref.id, tgtId: docEntityId, rt: 'REFERENCES', docId, ts }
+        { srcId: ref.id, tgtId: docEntityId, docId, ts }
       ).catch(() => {});
       refsLinked++;
     }
@@ -293,11 +299,11 @@ class EntityStoreService {
   async _linkDocRefForward(docId, ts) {
     const rows = await mg().runQuery(
       `MATCH (dr:ESEntity {type: 'DOCUMENTREF', provenanceDocId: $docId})
-       WHERE NOT (dr)-[:ES_RELATED_TO {relType: 'REFERENCES'}]->(:ESEntity {type: 'DOCUMENT'})
+       WHERE NOT (dr)-[:REFERENCES]->(:ESEntity {type: 'DOCUMENT'})
        WITH dr
        MATCH (doc:ESEntity {type: 'DOCUMENT'})
        WHERE doc.name = dr.name OR toLower(doc.name) = toLower(dr.name)
-       MERGE (dr)-[r:ES_RELATED_TO {relType: 'REFERENCES'}]->(doc)
+       MERGE (dr)-[r:REFERENCES]->(doc)
        SET r.documentId = $docId, r.extractedAt = $ts
        RETURN count(r) AS cnt`,
       { docId, ts }
@@ -312,11 +318,11 @@ class EntityStoreService {
     const ts = now();
     const rows = await mg().runQuery(
       `MATCH (dr:ESEntity {type: 'DOCUMENTREF'})
-       WHERE NOT (dr)-[:ES_RELATED_TO {relType: 'REFERENCES'}]->(:ESEntity {type: 'DOCUMENT'})
+       WHERE NOT (dr)-[:REFERENCES]->(:ESEntity {type: 'DOCUMENT'})
        WITH dr
        MATCH (doc:ESEntity {type: 'DOCUMENT'})
        WHERE doc.name = dr.name OR toLower(doc.name) = toLower(dr.name)
-       MERGE (dr)-[r:ES_RELATED_TO {relType: 'REFERENCES'}]->(doc)
+       MERGE (dr)-[r:REFERENCES]->(doc)
        SET r.extractedAt = $ts
        RETURN count(r) AS linked`,
       { ts }
@@ -451,11 +457,11 @@ class EntityStoreService {
       ),
       mg().runQuery(
         namespace
-          ? `MATCH (a:ESEntity {namespace: $namespace})-[r:ES_RELATED_TO]->(b:ESEntity {namespace: $namespace})
-             RETURN a.id AS sourceId, b.id AS targetId, r.relType AS relType,
+          ? `MATCH (a:ESEntity {namespace: $namespace})-[r:${_E}]->(b:ESEntity {namespace: $namespace})
+             RETURN a.id AS sourceId, b.id AS targetId, type(r) AS relType,
                     r.context AS context, r.confidence AS confidence, r.documentId AS documentId`
-          : `MATCH (a:ESEntity)-[r:ES_RELATED_TO]->(b:ESEntity)
-             RETURN a.id AS sourceId, b.id AS targetId, r.relType AS relType,
+          : `MATCH (a:ESEntity)-[r:${_E}]->(b:ESEntity)
+             RETURN a.id AS sourceId, b.id AS targetId, type(r) AS relType,
                     r.context AS context, r.confidence AS confidence, r.documentId AS documentId`,
         p
       ),
@@ -570,7 +576,7 @@ class EntityStoreService {
 
     const rows = await mg().runQuery(
       `MATCH (e:ESEntity) ${where}
-       OPTIONAL MATCH (e)-[:ES_RELATED_TO]->(doc:ESEntity {type: 'DOCUMENT'})
+       OPTIONAL MATCH (e)-[:REFERENCES]->(doc:ESEntity {type: 'DOCUMENT'})
        OPTIONAL MATCH (extracted:ESEntity)
          WHERE extracted.type <> 'DOCUMENT' AND extracted.provenanceDocSymbol = e.name
        WITH e, doc, count(DISTINCT extracted) AS extractedCount
@@ -600,7 +606,7 @@ class EntityStoreService {
 
     // Load weighted undirected relationships (with materialized cost)
     const allRels = await mg().runQuery(
-      `MATCH (a:ESEntity)-[r:ES_RELATED_TO]->(b:ESEntity)
+      `MATCH (a:ESEntity)-[r:${_E}]->(b:ESEntity)
        RETURN a.id AS src, b.id AS tgt, COALESCE(r.cost, 1.0) AS cost`,
       {},
       null,
@@ -643,9 +649,9 @@ class EntityStoreService {
         { ids: allIds }
       ),
       mg().runQuery(
-        `MATCH (a:ESEntity)-[r:ES_RELATED_TO]->(b:ESEntity)
+        `MATCH (a:ESEntity)-[r:${_E}]->(b:ESEntity)
          WHERE a.id IN $ids AND b.id IN $ids
-         RETURN a.id AS sourceId, b.id AS targetId, r.relType AS relType,
+         RETURN a.id AS sourceId, b.id AS targetId, type(r) AS relType,
                 r.context AS context, r.confidence AS confidence,
                 r.documentId AS documentId, COALESCE(r.cost, 1.0) AS cost`,
         { ids: allIds }
@@ -738,7 +744,7 @@ class EntityStoreService {
     for (let hop = 0; hop < maxDepth; hop++) {
       if (!frontier.length) break;
       const neighbours = await mg().runQuery(
-        `MATCH (a:ESEntity)-[:ES_RELATED_TO]-(b:ESEntity)
+        `MATCH (a:ESEntity)-[:${_E}]-(b:ESEntity)
          WHERE a.id IN $ids
          RETURN DISTINCT b.id AS id`,
         { ids: frontier }
@@ -769,9 +775,9 @@ class EntityStoreService {
 
     // Batch-fetch all ES_RELATED_TO edges between the collected IDs
     const relRows = await mg().runQuery(
-      `MATCH (a:ESEntity)-[r:ES_RELATED_TO]->(b:ESEntity)
+      `MATCH (a:ESEntity)-[r:${_E}]->(b:ESEntity)
        WHERE a.id IN $ids AND b.id IN $ids
-       RETURN a.id AS sourceId, b.id AS targetId, r.relType AS relType,
+       RETURN a.id AS sourceId, b.id AS targetId, type(r) AS relType,
               r.context AS context, r.confidence AS confidence,
               r.documentId AS documentId`,
       { ids: allIds }
@@ -873,7 +879,7 @@ class EntityStoreService {
       for (const row of entities) {
         await mg().runQuery(
           `MATCH (doc:ESEntity {id: $docEsId}), (e:ESEntity {id: $esId})
-           MERGE (doc)-[r:ES_RELATED_TO {relType: 'MENTIONS'}]->(e)
+           MERGE (doc)-[r:MENTIONS]->(e)
            SET r.documentId = $docId, r.extractedAt = $ts`,
           { docEsId, esId: row.esId, docId: pair.docId, ts }
         ).catch(() => {});
@@ -938,13 +944,13 @@ class EntityStoreService {
 
   async getAllEdgesBetween(nodeAId, nodeBId) {
     const rows = await mg().runQuery(
-      `MATCH (a:ESEntity {id: $fromId})-[r:ES_RELATED_TO]->(b:ESEntity {id: $toId})
-       RETURN r.relType AS relType, 'forward' AS direction,
+      `MATCH (a:ESEntity {id: $fromId})-[r:${_E}]->(b:ESEntity {id: $toId})
+       RETURN type(r) AS relType, 'forward' AS direction,
               r.context AS context, r.confidence AS confidence,
               r.documentId AS documentId, COALESCE(r.cost, 1.0) AS cost
        UNION
-       MATCH (b:ESEntity {id: $toId})-[r:ES_RELATED_TO]->(a:ESEntity {id: $fromId})
-       RETURN r.relType AS relType, 'backward' AS direction,
+       MATCH (b:ESEntity {id: $toId})-[r:${_E}]->(a:ESEntity {id: $fromId})
+       RETURN type(r) AS relType, 'backward' AS direction,
               r.context AS context, r.confidence AS confidence,
               r.documentId AS documentId, COALESCE(r.cost, 1.0) AS cost`,
       { fromId: nodeAId, toId: nodeBId }

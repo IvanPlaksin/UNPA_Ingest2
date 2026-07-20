@@ -1,0 +1,52 @@
+{
+  "key": "un-policy-portal",
+  "name": "UN Secretariat Policy Portal",
+  "family": "url-catalog",
+  "capabilities": ["search", "browseAll", "paginate", "download"],
+  "filterSchema": [
+    {
+      "type": "documentType",
+      "param": "type",
+      "label": "Document type",
+      "options": ["SGB", "AI", "IC", "PG"],
+      "notes": "Filters to a single browse endpoint. Omit for full catalog."
+    }
+  ],
+  "config": {
+    "adapterKey": "un-policy-portal",
+    "politeDelay": 1000,
+    "language": "en",
+    "browseEndpoints": [
+      {
+        "url": "https://policy.un.org/en/browse-source/secretary-generals-bulletins-sgbs",
+        "docType": "SGB",
+        "notes": "Secretary-General's Bulletins. Verified 185+ documents, 6+ pages at 25/page."
+      },
+      {
+        "url": "https://policy.un.org/en/browse-source/administrative-instructions-ais",
+        "docType": "AI",
+        "notes": "Administrative Instructions. 150+ documents, 7 pages."
+      },
+      {
+        "url": "https://policy.un.org/en/browse-source/information-circulars-ics",
+        "docType": "IC",
+        "notes": "Information Circulars. 151 documents, 5 pages."
+      },
+      {
+        "url": "https://policy.un.org/en/browse-source/policy-guidelines",
+        "docType": "PG",
+        "notes": "Policy Guidelines (OHRM/PG). ~48 documents."
+      }
+    ],
+    "pdfApiTemplate": "https://documents.un.org/api/symbol/access?s={symbol}&l=en&t=pdf",
+    "_note": "Listing: Drupal views-view-table, 4 columns (Year|Symbol|Title|Date). Pagination via block_config_key token extracted from first page. PDF download: ODS symbol API → 302 → documents.un.org/doc/UNDOC/GEN/.../PDF/....PDF. Verified HTTP 200 public access on all endpoints 2026-07-07."
+  },
+  "download": {
+    "mode": "direct-pdf",
+    "apiTemplate": "https://documents.un.org/api/symbol/access?s={symbol}&l=en&t=pdf",
+    "notes": "GET request returns HTTP 302 redirect to the actual PDF at documents.un.org/doc/UNDOC/GEN/.../PDF/N*.PDF. No authentication required. Verified on ST/SGB/2024/3, ST/AI/2022/2, ST/SGB/2007/6."
+  },
+  "methodologyMarkdown": "## Overview\nThe UN Secretariat Policy Portal (policy.un.org) is the official public catalog of Secretariat administrative policy issuances: Secretary-General's Bulletins (ST/SGB), Administrative Instructions (ST/AI), Information Circulars (ST/IC), and Policy Guidelines. All content is publicly accessible without authentication.\n\n## Listing\nEach document type has a dedicated browse page rendered by Drupal Views as an HTML table with four columns: Year, Symbol, Title, Date Published. Pagination uses a `block_config_key` Drupal token embedded in the first page's HTML; subsequent pages are fetched as `?block_config_key={KEY}&page=N` (0-indexed). Items per page: 25. Total catalog: ~550+ documents across all four types.\n\n## Download\nDocuments are hosted in the UN Official Documents System (ODS). The ODS symbol access API at `https://documents.un.org/api/symbol/access?s={SYMBOL}&l={LANG}&t=pdf` returns HTTP 302 to the canonical PDF URL at `documents.un.org/doc/UNDOC/GEN/...`. No authentication is required. Language codes: en, fr, ar, zh, ru, es.\n\n## Symbol Patterns\n- `ST/SGB/YYYY/N[/Rev.N]` — Secretary-General's Bulletins\n- `ST/AI/YYYY/N[/Amend.N]` — Administrative Instructions\n- `ST/IC/YYYY/N` — Information Circulars\n- `[ORG]/PG/YYYY/N` — Policy Guidelines (e.g. OHRM/PG/2017/1)\n\n## Document Types Mapping\nAll issuances are authored by the UN Secretariat (issuingBody=SECRETARIAT) and map to the UN_REGULATORY_DOCUMENT schema. After download, ExtractUNSOPExecutor (ingestion.extract_un_sop) extracts structural data: sections, obligations (SHALL/MUST), role assignments, cross-references.\n\n## Limitations\nThe Drupal search endpoint (/en/search-portal) uses server-side rendering and complex block_config_key tokens — not suitable for keyword search at harvest time. Browse endpoints are the reliable harvest path. The block_config_key is stable per view configuration but may change after Drupal upgrades; the adapter re-extracts it from page 1 on each harvest run.",
+  "verified": true,
+  "probeNotes": "Probed 2026-07-07. GET /en/browse-source/secretary-generals-bulletins-sgbs → HTTP 200, Drupal HTML, 185 SGBs visible in facet select, 25 rows on page 1, pagination via block_config_key. GET documents.un.org/api/symbol/access?s=ST/SGB/2024/3&l=en&t=pdf → HTTP 302 → documents.un.org/doc/UNDOC/GEN/N24/069/80/PDF/N2406980.PDF (verified 200 application/pdf). Same verified for ST/AI/2022/2 and ST/SGB/2007/6. No WAF, no robots.txt restriction on content pages."
+}

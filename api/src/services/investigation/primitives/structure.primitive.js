@@ -1,4 +1,8 @@
 'use strict';
+const {
+  ALL_EDGE_TYPES, createEnvelope, buildNode, buildEdge, PROJECTION_KIND,
+} = require('../../../constants/canonical-graph.constants');
+const _E = ALL_EDGE_TYPES.join('|');
 
 /**
  * STRUCTURE primitive — structural / centrality analysis of an entity neighborhood.
@@ -45,7 +49,7 @@ async function execute(params, _context, _services) {
     // Expand the seed entity neighborhood
     const expanded = await mg().runQuery(
       `MATCH (seed:ESEntity) WHERE seed.id IN $ids
-       OPTIONAL MATCH p = (seed)-[:ES_RELATED_TO*1..${Math.min(depth, 3)}]-(neighbor:ESEntity)
+       OPTIONAL MATCH p = (seed)-[:${_E}*1..${Math.min(depth, 3)}]-(neighbor:ESEntity)
        WITH collect(DISTINCT seed) + collect(DISTINCT neighbor) AS allNodes
        UNWIND allNodes AS n
        RETURN DISTINCT n.id AS id, n.name AS name, n.type AS type, n.namespace AS ns`,
@@ -89,9 +93,9 @@ async function execute(params, _context, _services) {
 
   // Fetch all edges within the subgraph
   const edgeRows = await mg().runQuery(
-    `MATCH (a:ESEntity)-[r:ES_RELATED_TO]->(b:ESEntity)
+    `MATCH (a:ESEntity)-[r:${_E}]->(b:ESEntity)
      WHERE a.id IN $ids AND b.id IN $ids
-     RETURN a.id AS sourceId, b.id AS targetId, r.relType AS relType`,
+     RETURN a.id AS sourceId, b.id AS targetId, type(r) AS relType`,
     { ids: nodeIds }
   );
   subgraphEdges = edgeRows.map(r => ({ sourceId: r.sourceId, targetId: r.targetId, relType: r.relType || 'RELATED_TO' }));
@@ -144,21 +148,31 @@ async function execute(params, _context, _services) {
 
   const mostCentral = metrics[0] ? { entityId: metrics[0].entityId, name: metrics[0].name, degree: metrics[0].degree } : null;
 
-  return {
-    content: {
-      nodes,
-      edges: subgraphEdges,
-      metrics,
-      bridges,
-      summary: {
-        nodeCount:   nodes.length,
-        edgeCount:   subgraphEdges.length,
-        bridgeCount: bridges.length,
-        mostCentral,
-      },
-    },
-    evidencedBy: nodeIds,
+  const envelope = createEnvelope({
+    roots:      entityIds.length > 0 ? entityIds : nodeIds.slice(0, 5),
+    kind:       PROJECTION_KIND.GRAPH,
+    hints:      { metrics, bridges },
+    producedBy: 'TOOL',
+    toolId:     'investigation.structure',
+  });
+
+  for (const id of nodeIds) {
+    const meta = entityMap[id] || { id, name: id, type: 'UNKNOWN' };
+    envelope.nodes.push(buildNode({ id, type: meta.type, name: meta.name, namespace: meta.namespace }));
+  }
+  for (const e of subgraphEdges) {
+    envelope.edges.push(buildEdge({ sourceId: e.sourceId, targetId: e.targetId, relType: e.relType }));
+  }
+
+  envelope.summary = {
+    headline:    `Structure: ${nodeIds.length} nodes, ${bridges.length} bridge${bridges.length !== 1 ? 's' : ''}`,
+    nodeCount:   nodes.length,
+    edgeCount:   subgraphEdges.length,
+    bridgeCount: bridges.length,
+    mostCentral,
   };
+
+  return { content: envelope, evidencedBy: nodeIds };
 }
 
 module.exports = { PRIMITIVE_TYPE, inputSchema, execute };

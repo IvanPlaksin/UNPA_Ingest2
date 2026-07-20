@@ -129,6 +129,20 @@ function makeFetcher(adapter, pageSize, timeoutMs, politenessMs) {
 async function probeSourceTotal(source, opts = {}) {
   const pageSize = opts.pageSize || PROBE.pageSize;
   const adapter = resolveAdapter(source);
+
+  // Prefer an adapter-provided exact count (e.g. Invenio `of=hb` hit count) —
+  // one request, authoritative, and immune to APIs that don't paginate reliably.
+  // (Check the method directly: per-source subclasses may inherit count() without
+  // re-declaring the 'count' capability.)
+  if (typeof adapter.count === 'function') {
+    try {
+      const c = await adapter.count();
+      if (c && Number.isFinite(c.total) && c.total >= 0) {
+        return { total: c.total, method: c.method || 'api', exact: c.exact !== false, requests: 1, lastPage: null, exhausted: true };
+      }
+    } catch { /* fall through to page-walking probe */ }
+  }
+
   const fetchPage = makeFetcher(
     adapter, pageSize,
     opts.requestTimeoutMs || PROBE.requestTimeoutMs,

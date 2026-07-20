@@ -1,0 +1,47 @@
+{
+  "serviceId": "FAC-PARK",
+  "version": 1,
+  "phases": ["context", "detail"],
+  "metadata": {
+    "title": "Parking Pass Request",
+    "slaHours": 24,
+    "approvalRequired": false
+  },
+  "slots": [
+    {
+      "slotId": "beneficiary",
+      "type": "user",
+      "required": true,
+      "phase": "context",
+      "resolverRef": "resolve.user",
+      "promptHint": "Who needs the parking pass?"
+    },
+    {
+      "slotId": "vehiclePlate",
+      "type": "text",
+      "required": true,
+      "phase": "detail",
+      "promptHint": "What is the vehicle license plate number?"
+    },
+    {
+      "slotId": "passType",
+      "type": "enum",
+      "required": true,
+      "phase": "detail",
+      "presentOptions": [
+        { "value": "daily", "label": "Daily" },
+        { "value": "monthly", "label": "Monthly" },
+        { "value": "annual", "label": "Annual" }
+      ],
+      "promptHint": "What type of pass?"
+    },
+    {
+      "slotId": "validFrom",
+      "type": "date",
+      "required": true,
+      "phase": "detail",
+      "dependsOn": ["passType"],
+      "promptHint": "From what date should it be valid?"
+    }
+  ]
+}

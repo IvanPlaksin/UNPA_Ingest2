@@ -1,0 +1,205 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://flowdesk.un.org/contracts/schema-snapshot.schema.json",
+  "title": "SchemaSnapshot",
+  "description": "Contract 1 (FlowDesk Chat V2). Declarative, versioned specification of a service intake flow. Produced by the schema-graph compiler (C1) from a Memgraph flow definition, consumed by the interpreter graph (C4) and the DraftSR service (C2). Flow-as-data: this snapshot IS the program the universal interpreter executes; conditionality is expressed as tref conditions on slots, never as branch-merge topology (CODEX-RULE-076).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["serviceId", "version", "phases", "slots", "metadata"],
+  "properties": {
+    "serviceId": {
+      "type": "string",
+      "description": "ServiceCatalogItem.code this flow fulfils. Matches the serviceId resolve.search returns for type=SERVICE. Widened (I-4) to accept the REAL Altiora catalog: codes run to 6 segments and single-character segments occur (e.g. EO-HR-SA-SS-ISP, EO-HR-SP-G5WP-G4VR). The previous `(-[A-Z0-9]{2,6}){1,3}` rejected 75 of the 79 real requestable services; the legacy fixture codes (IT-HW-LAP, SEC-ACC-BADGE, …) still validate.",
+      "pattern": "^[A-Z]{2,4}(-[A-Z0-9]{1,6}){1,6}$"
+    },
+    "version": {
+      "type": "integer",
+      "description": "Monotonic snapshot version. Mirrors the GraphVersion of the source flow definition.",
+      "minimum": 1
+    },
+    "phases": {
+      "type": "array",
+      "description": "Ordered dialog phases. Slots are gathered phase-by-phase. Fixed vocabulary for V2.",
+      "minItems": 1,
+      "items": { "enum": ["context", "routing", "detail"] },
+      "uniqueItems": true
+    },
+    "slots": {
+      "type": "array",
+      "description": "Ordered slot list. A slot is one unit of information the flow must gather. Order within a phase is the ask order when no dependsOn overrides it.",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/slot" }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "approvalRequired"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1 },
+        "slaHours": { "type": "number", "minimum": 0 },
+        "approvalRequired": { "type": "boolean" },
+        "handlerRef": {
+          "type": "string",
+          "description": "OrganizationUnit.code of the default handler, or a resolverRef token. Optional — routing may resolve it at runtime."
+        },
+        "fieldIdMapping": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "slotId → the original Altiora FormField.id. Present only on snapshots materialized from an Altiora form (IP-1). slotId is sanitized to this contract's pattern, but a ticket's FormDataJson is keyed by Altiora's own field id, so submit (IP-3) needs the way back. Duplicates the per-slot altioraFieldId as a whole-snapshot lookup, keeping the snapshot self-sufficient."
+        },
+        "altioraOusId": {
+          "type": "integer",
+          "description": "Altiora OrganizationUnitServiceId this form was materialized from. The stable cache key: it never changes for a given service+provider+scope, unlike the schema row id."
+        },
+        "contentHash": {
+          "type": "string",
+          "description": "SHA256 of the source Altiora SchemaJson, as reported by GET /api/ServiceDistribution/{ousId}/schema/version. The cache-invalidation key."
+        }
+      }
+    }
+  },
+  "definitions": {
+    "slot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["slotId", "type", "required", "phase"],
+      "properties": {
+        "slotId": {
+          "type": "string",
+          "description": "Stable identifier, unique within the snapshot. Key used in DraftSR.slots.",
+          "pattern": "^[a-z][a-zA-Z0-9]*$"
+        },
+        "type": {
+          "enum": ["string", "text", "enum", "number", "boolean", "date", "location", "user"],
+          "description": "Value type. 'enum' requires presentOptions. 'location'/'user' are resolved via resolverRef. 'text' is free-form multi-line (e.g. justification)."
+        },
+        "required": {
+          "type": "boolean",
+          "description": "Whether the slot must be filled before SR submission. A required slot may still be skipped when its trefCondition evaluates false."
+        },
+        "phase": {
+          "enum": ["context", "routing", "detail"],
+          "description": "Phase this slot belongs to. MUST be present in the snapshot-level phases array."
+        },
+        "trefCondition": {
+          "type": "string",
+          "description": "Optional tref-filter expression over DraftSR state. When present and false, the slot is skipped (CODEX-RULE-076: conditionality via tref, never branch-merge). Example: 'service.approvalRequired == true'."
+        },
+        "requiredWhen": {
+          "type": "string",
+          "description": "Optional tref expression making `required` conditional. The slot is required-now when it is visible AND (required OR requiredWhen evaluates true) — visibility always dominates, so an invisible slot is never required. Separate from trefCondition because visibility and obligation are independent: Altiora's set_required rule can make a visible optional field mandatory without revealing anything."
+        },
+        "optionFilters": {
+          "type": "array",
+          "description": "Optional conditional narrowing of an enum's presentOptions (Altiora's filter_options rule). Filters are evaluated in order and the first matching one wins; when none match, the full presentOptions stand. Without this, the chat would offer choices the target system rejects on submit.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["condition"],
+            "properties": {
+              "condition": { "type": "string", "description": "tref expression; when true this filter applies." },
+              "include": {
+                "type": "array",
+                "description": "Whitelist — only these option values remain. Values must exist in presentOptions.",
+                "items": { "type": "string" }
+              },
+              "exclude": {
+                "type": "array",
+                "description": "Blacklist — these option values are removed. Values must exist in presentOptions.",
+                "items": { "type": "string" }
+              }
+            },
+            "anyOf": [{ "required": ["include"] }, { "required": ["exclude"] }]
+          }
+        },
+        "altioraFieldId": {
+          "type": "string",
+          "description": "The original Altiora FormField.id this slot was materialized from, when it differs from (or matches) the sanitized slotId. Carried so submit (IP-3) can key FormDataJson the way Altiora expects."
+        },
+        "resolverRef": {
+          "type": "string",
+          "description": "Optional resolve.search / directory resolver token for location/user/enum-from-catalog slots. Absent for plain scalar slots."
+        },
+        "presentOptions": {
+          "type": "array",
+          "description": "Closed set of choices for type=enum. Rendered as choices[] in the WAIT_FOR_INPUT prompt.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["value", "label"],
+            "properties": {
+              "value": { "type": "string" },
+              "label": { "type": "string" }
+            }
+          }
+        },
+        "lov": {
+          "type": "object",
+          "description": "List-of-values source for a dictionary-backed field (Altiora's dynamic `select`/`lookup`, whose options are NOT embedded in the schema — spec §6b). The materializer (I-4a) captures this durable descriptor; the LOV baker (I-4b) resolves it via POST /api/FormLookup/values and upgrades the slot to type=enum with the resolved presentOptions, stamping lovBakedAt. A slot may carry `lov` while still being type=string — that is the pre-baked / bake-failed state (resolved as free text until re-baked on TTL or ServiceFormChanged). Keeping the descriptor lets the hybrid model re-fetch without re-reading Altiora's schema.",
+          "additionalProperties": false,
+          "required": ["entityId", "displayFieldIds"],
+          "properties": {
+            "entityId": {
+              "type": "string",
+              "description": "Altiora BI dictionary entity id (`dictionaryEntityId`), e.g. 'entity-dbo-lk_dutystations' or an 'intg:<guid>' integration source."
+            },
+            "displayFieldIds": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "string" },
+              "description": "BI field ids concatenated into each option's label (`dictionaryDisplayFields`, falling back to the single `dictionaryFieldId`)."
+            },
+            "valueFieldId": {
+              "type": "string",
+              "description": "BI field id whose value becomes the stored option value (`dictionaryValueField`). When absent, the label doubles as the value."
+            },
+            "filters": {
+              "type": "array",
+              "description": "Static dictionary filters (`dictionaryFilters`) narrowing the option set, mapped to FormLookup's flat filter shape.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["fieldId", "value"],
+                "properties": {
+                  "fieldId": { "type": "string" },
+                  "operator": { "type": "string", "description": "FormLookup operator: eq | neq | contains | startswith. Defaults to eq." },
+                  "value": { "type": "string" }
+                }
+              }
+            },
+            "typeahead": {
+              "type": "boolean",
+              "description": "Hint that the dictionary is too large to present as a closed choice list and should be served via the typeahead directory endpoint (I-6) rather than baked options. Advisory; not yet consumed."
+            }
+          }
+        },
+        "lovBakedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp of the last successful LOV bake (I-4b). Drives TTL-based re-fetch in the hybrid model. Present only on slots whose `lov` was resolved into presentOptions."
+        },
+        "groupable": {
+          "type": "boolean",
+          "description": "Whether this slot may be asked together with adjacent groupable slots in one turn (batched question). Default false.",
+          "default": false
+        },
+        "dependsOn": {
+          "type": "array",
+          "description": "slotIds that must be filled before this slot is asked. Enforces intra-flow ordering without topology.",
+          "items": { "type": "string" },
+          "default": []
+        },
+        "promptHint": {
+          "type": "string",
+          "description": "Natural-language hint the QUESTION_PLANNER uses to phrase the ask. The planner may only ask for slots in this snapshot (CODEX-RULE-077)."
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "enum" } } },
+          "then": { "required": ["presentOptions"], "properties": { "presentOptions": { "minItems": 1 } } }
+        }
+      ]
+    }
+  }
+}

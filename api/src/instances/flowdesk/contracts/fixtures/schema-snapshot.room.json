@@ -1,0 +1,83 @@
+{
+  "serviceId": "FAC-ROOM",
+  "version": 1,
+  "phases": ["context", "routing", "detail"],
+  "metadata": {
+    "title": "Conference Room Booking",
+    "slaHours": 4,
+    "approvalRequired": false
+  },
+  "slots": [
+    {
+      "slotId": "organizer",
+      "type": "user",
+      "required": true,
+      "phase": "context",
+      "resolverRef": "resolve.user",
+      "promptHint": "Who is the meeting organizer?"
+    },
+    {
+      "slotId": "room",
+      "type": "enum",
+      "required": true,
+      "phase": "routing",
+      "presentOptions": [
+        { "value": "cr_a", "label": "Conference Room A (10 people)" },
+        { "value": "cr_b", "label": "Conference Room B (20 people)" },
+        { "value": "cr_c", "label": "Conference Room C (50 people)" },
+        { "value": "auditorium", "label": "Auditorium" }
+      ],
+      "promptHint": "Which room do you need?"
+    },
+    {
+      "slotId": "meetingDate",
+      "type": "date",
+      "required": true,
+      "phase": "detail",
+      "promptHint": "On what date?"
+    },
+    {
+      "slotId": "startTime",
+      "type": "string",
+      "required": true,
+      "phase": "detail",
+      "dependsOn": ["meetingDate"],
+      "promptHint": "What start time? (e.g. 14:00)"
+    },
+    {
+      "slotId": "duration",
+      "type": "enum",
+      "required": true,
+      "phase": "detail",
+      "dependsOn": ["meetingDate"],
+      "presentOptions": [
+        { "value": "30min", "label": "30 minutes" },
+        { "value": "1h", "label": "1 hour" },
+        { "value": "2h", "label": "2 hours" },
+        { "value": "4h", "label": "4 hours" },
+        { "value": "full_day", "label": "Full day" }
+      ],
+      "promptHint": "For how long?"
+    },
+    {
+      "slotId": "attendees",
+      "type": "number",
+      "required": true,
+      "phase": "detail",
+      "promptHint": "Roughly how many attendees?"
+    },
+    {
+      "slotId": "equipment",
+      "type": "enum",
+      "required": false,
+      "phase": "detail",
+      "presentOptions": [
+        { "value": "none", "label": "None" },
+        { "value": "projector", "label": "Projector" },
+        { "value": "video_conference", "label": "Video conference" },
+        { "value": "full_av", "label": "Full AV setup" }
+      ],
+      "promptHint": "Any AV equipment needed?"
+    }
+  ]
+}

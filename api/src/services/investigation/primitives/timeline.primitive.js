@@ -1,4 +1,8 @@
 'use strict';
+const {
+  ALL_EDGE_TYPES, createEnvelope, buildNode, buildEdge, PROJECTION_KIND,
+} = require('../../../constants/canonical-graph.constants');
+const _E = ALL_EDGE_TYPES.join('|');
 
 /**
  * TIMELINE primitive — temporal projection of entities and their relationships.
@@ -141,10 +145,10 @@ async function execute(params, _context, _services) {
   // Also surface relationship context that contains dates
   if (entityIds.length > 0 && entityIds.length <= 20) {
     const relRows = await mg().runQuery(
-      `MATCH (a:ESEntity)-[r:ES_RELATED_TO]->(b:ESEntity)
+      `MATCH (a:ESEntity)-[r:${_E}]->(b:ESEntity)
        WHERE (a.id IN $ids OR b.id IN $ids) AND r.context IS NOT NULL
        RETURN a.id AS fromId, a.name AS fromName, b.id AS toId, b.name AS toName,
-              r.relType AS relType, r.context AS context, r.documentId AS documentId`,
+              type(r) AS relType, r.context AS context, r.documentId AS documentId`,
       { ids: entityIds }
     );
 
@@ -187,19 +191,32 @@ async function execute(params, _context, _services) {
     ? Math.round((_parseDateSafe(latest) - _parseDateSafe(earliest)) / 86400000)
     : null;
 
-  return {
-    content: {
-      events: sliced,
-      span: { earliest, latest, durationDays },
+  const evidencedBy = entityRows.map(r => r.id).filter(Boolean);
+
+  const envelope = createEnvelope({
+    roots:      entityIds.length > 0 ? entityIds : [],
+    kind:       PROJECTION_KIND.TIMELINE,
+    hints: {
+      events:      sliced,
+      span:        { earliest, latest, durationDays },
       entityCount: entityRows.length,
-      summary: {
-        eventCount:          sliced.length,
-        sourcesWithDates,
-        sourcesWithoutDates,
-      },
     },
-    evidencedBy: entityRows.map(r => r.id).filter(Boolean),
+    producedBy: 'TOOL',
+    toolId:     'investigation.timeline',
+  });
+
+  for (const row of entityRows) {
+    envelope.nodes.push(buildNode({ id: row.id, type: row.type, name: row.name, namespace: row.ns }));
+  }
+
+  envelope.summary = {
+    headline:           `${sliced.length} event${sliced.length !== 1 ? 's' : ''} across ${entityRows.length} entities`,
+    eventCount:         sliced.length,
+    sourcesWithDates,
+    sourcesWithoutDates,
   };
+
+  return { content: envelope, evidencedBy };
 }
 
 function _eventTypeFromProperty(prop) {

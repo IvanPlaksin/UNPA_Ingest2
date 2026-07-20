@@ -1,5 +1,8 @@
 'use strict';
 
+const { ALL_EDGE_TYPES } = require('../../constants/canonical-graph.constants');
+const _E = ALL_EDGE_TYPES.join('|');
+
 let _mg;
 function mg() { if (!_mg) _mg = require('../memgraph.service'); return _mg; }
 
@@ -104,15 +107,15 @@ class ImpactAnalysisService {
   // Return quick counts without full analysis (for Profile badge)
   async quickSummary(entityId) {
     const directRows = await mg().runQuery(
-      `MATCH (dep:ESEntity)-[r:ES_RELATED_TO]->(t:ESEntity {id: $id})
-       WHERE r.relType IN $types
+      `MATCH (dep:ESEntity)-[r:${_E}]->(t:ESEntity {id: $id})
+       WHERE type(r) IN $types
        RETURN count(dep) AS cnt`,
       { id: entityId, types: DEPENDENCY_TYPES }
     );
     const directCount = toNum(directRows[0]?.cnt) || 0;
 
     const transitiveRows = await mg().runQuery(
-      `MATCH (dep:ESEntity)-[:ES_RELATED_TO*2..4]->(t:ESEntity {id: $id})
+      `MATCH (dep:ESEntity)-[:${_E}*2..4]->(t:ESEntity {id: $id})
        WHERE dep.id <> $id
        RETURN count(DISTINCT dep) AS cnt`,
       { id: entityId }
@@ -129,11 +132,11 @@ class ImpactAnalysisService {
 
   async _getDirectDependents(entityId) {
     const rows = await mg().runQuery(
-      `MATCH (dep:ESEntity)-[r:ES_RELATED_TO]->(t:ESEntity {id: $id})
-       WHERE r.relType IN $types
+      `MATCH (dep:ESEntity)-[r:${_E}]->(t:ESEntity {id: $id})
+       WHERE type(r) IN $types
        RETURN dep.id AS entityId, dep.name AS name, dep.type AS type,
-              r.relType AS relType, r.context AS context, r.confidence AS confidence
-       ORDER BY r.relType, dep.name`,
+              type(r) AS relType, r.context AS context, r.confidence AS confidence
+       ORDER BY type(r), dep.name`,
       { id: entityId, types: DEPENDENCY_TYPES }
     );
     return rows.map(r => ({
@@ -149,9 +152,9 @@ class ImpactAnalysisService {
 
   async _getTransitiveDependents(entityId, maxDepth) {
     const rows = await mg().runQuery(
-      `MATCH (dep:ESEntity)-[rels:ES_RELATED_TO*2..${maxDepth}]->(t:ESEntity {id: $id})
+      `MATCH (dep:ESEntity)-[rels:${_E}*2..${maxDepth}]->(t:ESEntity {id: $id})
        WHERE dep.id <> $id
-       AND ALL(r IN rels WHERE r.relType IN $types)
+       AND ALL(r IN rels WHERE type(r) IN $types)
        WITH dep.id AS entityId, dep.name AS name, dep.type AS type,
             min(size(rels)) AS distance
        RETURN entityId, name, type, distance
@@ -172,8 +175,8 @@ class ImpactAnalysisService {
     // Degree counts
     const degRows = await mg().runQuery(
       `MATCH (e:ESEntity {id: $id})
-       OPTIONAL MATCH (in_dep:ESEntity)-[r1:ES_RELATED_TO]->(e)
-       OPTIONAL MATCH (e)-[r2:ES_RELATED_TO]->(out_dep:ESEntity)
+       OPTIONAL MATCH (in_dep:ESEntity)-[r1:${_E}]->(e)
+       OPTIONAL MATCH (e)-[r2:${_E}]->(out_dep:ESEntity)
        RETURN count(DISTINCT r1) AS inDegree, count(DISTINCT r2) AS outDegree`,
       { id: entityId }
     );
@@ -186,9 +189,9 @@ class ImpactAnalysisService {
     for (let i = 0; i + 1 < deps.length; i++) {
       try {
         const altRows = await mg().runQuery(
-          `OPTIONAL MATCH altPath = shortestPath((a:ESEntity {id: $aId})-[:ES_RELATED_TO*1..6]-(b:ESEntity {id: $bId}))
-           WHERE NONE(n IN nodes(altPath) WHERE n.id = $tid)
-           RETURN altPath IS NOT NULL AS hasAlt`,
+          `MATCH path = (a:ESEntity {id: $aId})-[*1..4]-(b:ESEntity {id: $bId})
+           WHERE NONE(n IN nodes(path) WHERE n.id = $tid)
+           RETURN true AS hasAlt LIMIT 1`,
           { aId: deps[i].entityId, bId: deps[i + 1].entityId, tid: entityId }
         );
         if (!altRows[0]?.hasAlt) criticalPairCount++;
@@ -217,9 +220,8 @@ class ImpactAnalysisService {
     for (const dep of deps) {
       try {
         const altRows = await mg().runQuery(
-          `OPTIONAL MATCH altPath = shortestPath((dep:ESEntity {id: $depId})-[:ES_RELATED_TO*2..6]-(other:ESEntity {id: $tid}))
-           WHERE NONE(n IN nodes(altPath) WHERE n.id = $depId OR n.id = $tid)
-           RETURN altPath IS NOT NULL AS hasAlt`,
+          `MATCH path = (a:ESEntity {id: $depId})-[*2..4]-(b:ESEntity {id: $tid})
+           RETURN true AS hasAlt LIMIT 1`,
           { depId: dep.entityId, tid: entityId }
         );
         if (!altRows[0]?.hasAlt) {

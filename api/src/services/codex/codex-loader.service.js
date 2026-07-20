@@ -202,6 +202,18 @@ class CodexLoaderService {
     });
   }
 
+  /**
+   * Load Codex rules for the FlowDesk/Altiora chat agent (F9.4c/N2). Filters to
+   * the 'altiora' scope so the agent only sees governance for its own domain.
+   */
+  async loadForAltiora() {
+    return this.loadForScope(['altiora'], {
+      includePrinciples: true,
+      includeAntiPatterns: true,
+      format: 'prompt'
+    });
+  }
+
   async loadForKnowledgeGraph() {
     return this.loadForScope(['crud', 'namespace', 'versioning'], {
       includePrinciples: true,

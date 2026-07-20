@@ -1,0 +1,80 @@
+{
+  "serviceId": "IT-HW-LAP",
+  "version": 2,
+  "phases": ["context", "routing", "detail"],
+  "metadata": {
+    "title": "Laptop / Hardware Provisioning",
+    "slaHours": 72,
+    "approvalRequired": true,
+    "handlerRef": "resolver:routing.byMission"
+  },
+  "slots": [
+    {
+      "slotId": "author",
+      "type": "user",
+      "required": true,
+      "phase": "context",
+      "resolverRef": "resolver:author",
+      "promptHint": "Кто оформляет заявку? По умолчанию — вы."
+    },
+    {
+      "slotId": "beneficiary",
+      "type": "user",
+      "required": true,
+      "phase": "context",
+      "resolverRef": "resolver:user",
+      "dependsOn": ["author"],
+      "promptHint": "Для кого этот ноутбук?"
+    },
+    {
+      "slotId": "location",
+      "type": "location",
+      "required": true,
+      "phase": "context",
+      "resolverRef": "resolver:location",
+      "dependsOn": ["beneficiary"],
+      "promptHint": "В какой офис доставить оборудование?"
+    },
+    {
+      "slotId": "assetType",
+      "type": "enum",
+      "required": true,
+      "phase": "detail",
+      "presentOptions": [
+        { "value": "laptop_standard", "label": "Standard laptop" },
+        { "value": "laptop_engineering", "label": "Engineering / high-spec laptop" },
+        { "value": "desktop", "label": "Desktop workstation" },
+        { "value": "monitor", "label": "External monitor" }
+      ],
+      "groupable": true,
+      "promptHint": "Какое устройство вам нужно?"
+    },
+    {
+      "slotId": "justification",
+      "type": "text",
+      "required": true,
+      "phase": "detail",
+      "dependsOn": ["assetType"],
+      "promptHint": "Кратко — зачем нужно устройство?"
+    },
+    {
+      "slotId": "approver",
+      "type": "user",
+      "required": true,
+      "phase": "detail",
+      "trefCondition": "service.approvalRequired == true",
+      "resolverRef": "resolver:approver",
+      "dependsOn": ["beneficiary"],
+      "promptHint": "Кто согласует заявку? По умолчанию — руководитель получателя."
+    },
+    {
+      "slotId": "approverComment",
+      "type": "text",
+      "required": true,
+      "phase": "detail",
+      "trefCondition": "service.approvalRequired == true",
+      "dependsOn": ["approver"],
+      "promptHint": "Заявка требует согласования — добавьте записку для согласующего."
+    }
+  ]
+}

@@ -12,6 +12,9 @@ require('dotenv').config({ path: path.join(__dirname, '../..', '.env') });
 const routing = require('../services/graph-routing.js');
 const search = require('../services/semantic-search.js');
 const { keywordClassify } = require('../services/keyword-filter.js');
+const directory = require('../services/directory');
+const { typeahead, UnknownDirectoryTypeError } = require('../services/directory/directory-typeahead');
+const { DirectoryUnavailableError } = require('../services/directory/adapter.interface');
 
 let initialized = false;
 
@@ -211,6 +214,33 @@ async function getServices(req, res) {
 }
 
 /**
+ * GET /api/v1/flowdesk/directory/:type?q=&limit=
+ *
+ * Directory typeahead (I-6) for autocomplete controls: `type` is `user`
+ * (beneficiary/requester) or `location` (duty station). Runs under the active
+ * DirectoryAdapter (mock or Altiora), so no direct backend knowledge lives here.
+ * A too-short query returns an empty list, not an error, per typeahead convention.
+ */
+async function directoryTypeahead(req, res) {
+  try {
+    const { type } = req.params;
+    const { q, limit } = req.query;
+    const out = await typeahead(directory, type, q, { limit });
+    res.json({ ...out, count: out.results.length });
+  } catch (err) {
+    if (err instanceof UnknownDirectoryTypeError || err.code === 'BAD_DIRECTORY_TYPE') {
+      return res.status(400).json({ error: err.message, validTypes: ['user', 'location'] });
+    }
+    if (err instanceof DirectoryUnavailableError || err.code === 'DIRECTORY_UNAVAILABLE') {
+      // Graceful degradation: the control shows "type it manually", not a hard error.
+      return res.status(503).json({ error: 'Directory temporarily unavailable', detail: err.message, results: [] });
+    }
+    console.error('[FlowDesk] directoryTypeahead error:', err.message);
+    res.status(500).json({ error: 'Directory lookup failed', detail: err.message });
+  }
+}
+
+/**
  * GET /api/v1/flowdesk/services/:code
  */
 async function getServiceByCode(req, res) {
@@ -346,6 +376,30 @@ async function getRequest(req, res) {
  */
 async function chat(req, res) {
   try {
+    const { sessionId: sid0, userId: uid0, message: msg0, choice: choice0, controlAction: ctrlAction0, lang: lang0, userContext: bodyUserCtx } = req.body;
+    // The acting identity: the proxy-injected user (trusted) ALWAYS wins; the
+    // body-provided profile is the fallback for the standalone UI (no proxy). The
+    // body value never carries a bearer token, so it cannot escalate privilege —
+    // outbound Altiora calls without a forwarded token act as the service account.
+    const actingUser = req.flowdeskUser || bodyUserCtx || null;
+    const uid = actingUser?.userId || uid0;
+
+    // Feature flag: FlowDesk Chat V2 (flow-as-data interpreter). Default off for
+    // safe rollout; flag off = instant rollback to the legacy contour.
+    if (String(process.env.FLOWDESK_CHAT_V2 || 'false') === 'true') {
+      if (!sid0) return res.status(400).json({ error: 'sessionId is required' });
+      if (!uid) return res.status(400).json({ error: 'userId is required' });
+      if (!msg0 && !choice0 && !ctrlAction0) return res.status(400).json({ error: 'message, choice, or controlAction is required' });
+      try {
+        const chatV2 = require('../interpreter/chat-v2.service.js');
+        const result = await chatV2.processMessage(sid0, uid, msg0, actingUser, choice0 || null, lang0 || 'en', ctrlAction0 || null);
+        return res.json({ sessionId: sid0, ...result });
+      } catch (v2Err) {
+        console.error(`[FlowDesk v2] error: ${v2Err.message}`);
+        return res.status(500).json({ error: 'Chat V2 failed', detail: v2Err.message });
+      }
+    }
+
     // Try RuntimeEngine-based chat first, fallback to dialog-session
     let runtimeChat;
     try {
@@ -653,6 +707,134 @@ async function laptopChat(req, res) {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// DraftSR (C2) — live draft service request (Redis + Memgraph)
+// ═══════════════════════════════════════════════════════════════════
+
+function draftSvc() {
+  return require('../services/draft-sr.service.js').getDraftSRService();
+}
+
+/**
+ * GET /api/v1/flowdesk/chat/:sessionId/stream — SSE node-progress (Chat V2).
+ * Long-lived per-session channel. Emits turn:start / node:start / node:done /
+ * turn:done as the interpreter runs; the final answer still comes on the POST.
+ */
+function streamChat(req, res) {
+  const { sessionId } = req.params;
+  if (!sessionId) return res.status(400).json({ error: 'sessionId is required' });
+
+  res.set({
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache, no-transform',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no', // disable proxy buffering (nginx)
+  });
+  res.flushHeaders?.();
+
+  const send = (event, data) => {
+    res.write(`event: ${event}\n`);
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+  };
+
+  send('connected', { sessionId, ts: Date.now() });
+
+  const progressBus = require('../interpreter/progress-bus');
+  const unsubscribe = progressBus.subscribe(sessionId, (ev) => {
+    // ev.type is like 'node:start' | 'node:done' | 'turn:start' | 'turn:done'
+    send(ev.type, ev);
+  });
+
+  const heartbeat = setInterval(() => { res.write(': heartbeat\n\n'); }, 15000);
+
+  const cleanup = () => { clearInterval(heartbeat); unsubscribe(); };
+  req.on('close', cleanup);
+  req.on('error', cleanup);
+}
+
+/** POST /api/v1/flowdesk/draft  { sessionId, serviceId, schemaVersion, beneficiary? } */
+async function createDraft(req, res) {
+  try {
+    const { sessionId, serviceId, schemaVersion, beneficiary } = req.body;
+    if (!sessionId || !serviceId || !schemaVersion) {
+      return res.status(400).json({ error: 'sessionId, serviceId and schemaVersion are required' });
+    }
+    const draft = await draftSvc().create(sessionId, serviceId, schemaVersion, beneficiary);
+    res.status(201).json(draft);
+  } catch (err) {
+    console.error('[FlowDesk] createDraft error:', err.message);
+    res.status(500).json({ error: 'Failed to create draft', detail: err.message });
+  }
+}
+
+/** GET /api/v1/flowdesk/schema/:serviceId — compiled SchemaSnapshot (Chat V2 DraftPanel). */
+async function getSchema(req, res) {
+  try {
+    const { compile } = require('../schema-graph/schema-compiler');
+    const snap = await compile(req.params.serviceId);
+    if (!snap) return res.status(404).json({ error: 'Schema not found', serviceId: req.params.serviceId });
+    res.json(snap);
+  } catch (err) {
+    console.error('[FlowDesk] getSchema error:', err.message);
+    res.status(500).json({ error: 'Failed to load schema', detail: err.message });
+  }
+}
+
+/** GET /api/v1/flowdesk/draft/:sessionId */
+async function getDraft(req, res) {
+  try {
+    const draft = await draftSvc().get(req.params.sessionId);
+    if (!draft) return res.status(404).json({ error: 'Draft not found' });
+    res.json(draft);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+/** PATCH /api/v1/flowdesk/draft/:sessionId  { patches: [...] } */
+async function patchDraft(req, res) {
+  try {
+    const patches = req.body?.patches;
+    if (!Array.isArray(patches)) return res.status(400).json({ error: 'patches[] is required' });
+    const draft = await draftSvc().patch(req.params.sessionId, patches);
+    res.json(draft);
+  } catch (err) {
+    console.error('[FlowDesk] patchDraft error:', err.message);
+    res.status(500).json({ error: 'Failed to patch draft', detail: err.message });
+  }
+}
+
+/** POST /api/v1/flowdesk/draft/:sessionId/submit */
+async function submitDraft(req, res) {
+  const telemetry = require('../services/chat-telemetry.service');
+  try {
+    const result = await draftSvc().submit(req.params.sessionId);
+    if (result.error) return res.status(409).json(result); // INCOMPLETE (missing/stale)
+    // ADMIN P0: the REST submit path bypasses the chat loop — stamp the outcome here.
+    telemetry.stampOutcome(req.params.sessionId, 'completed', { srNumber: result.srNumber, ticketId: result.ticketId });
+    res.json(result);
+  } catch (err) {
+    console.error('[FlowDesk] submitDraft error:', err.message);
+    telemetry.stampOutcome(req.params.sessionId, 'submit_failed', { error: err.message });
+    res.status(500).json({ error: 'Failed to submit draft', detail: err.message });
+  }
+}
+
+/** POST /api/v1/flowdesk/draft/:sessionId/escalate  { reason, transcriptRef } */
+async function escalateDraft(req, res) {
+  try {
+    const { reason, transcriptRef } = req.body || {};
+    const result = await draftSvc().escalate(req.params.sessionId, reason, transcriptRef);
+    // ADMIN P0: REST escalate bypasses the chat loop — stamp the outcome here.
+    require('../services/chat-telemetry.service')
+      .stampOutcome(req.params.sessionId, 'escalated', { escalationId: result.escalationId });
+    res.json(result);
+  } catch (err) {
+    console.error('[FlowDesk] escalateDraft error:', err.message);
+    res.status(500).json({ error: 'Failed to escalate draft', detail: err.message });
+  }
+}
+
 /**
  * GET /api/v1/flowdesk/laptop/session/:sessionId
  */
@@ -673,4 +855,6 @@ module.exports = {
   createTicket, listTickets, getTicket, updateTicket, escalateTicket, closeTicket,
   checkSLA, getBreachedTickets,
   laptopChat, getLaptopSession,
+  createDraft, getDraft, patchDraft, submitDraft, escalateDraft, streamChat, getSchema,
+  directoryTypeahead,
 };

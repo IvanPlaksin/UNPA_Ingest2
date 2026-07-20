@@ -1,0 +1,60 @@
+{
+  "serviceId": "FAC-WS-DESK",
+  "version": 1,
+  "phases": ["context", "routing", "detail"],
+  "metadata": {
+    "title": "Workspace / Desk Assignment",
+    "slaHours": 48,
+    "approvalRequired": false,
+    "handlerRef": "resolver:routing.byMission"
+  },
+  "slots": [
+    {
+      "slotId": "beneficiary",
+      "type": "user",
+      "required": true,
+      "phase": "context",
+      "resolverRef": "resolve.user",
+      "promptHint": "Who is the workspace for?"
+    },
+    {
+      "slotId": "dutyStation",
+      "type": "location",
+      "required": true,
+      "phase": "context",
+      "resolverRef": "resolve.location",
+      "dependsOn": ["beneficiary"],
+      "promptHint": "At which duty station is the workspace needed?"
+    },
+    {
+      "slotId": "workspaceType",
+      "type": "enum",
+      "required": true,
+      "phase": "detail",
+      "presentOptions": [
+        { "value": "shared_desk", "label": "Shared / hot desk" },
+        { "value": "dedicated_desk", "label": "Dedicated desk" },
+        { "value": "private_office", "label": "Private office" }
+      ],
+      "groupable": true,
+      "promptHint": "What kind of workspace do you need?"
+    },
+    {
+      "slotId": "startDate",
+      "type": "date",
+      "required": true,
+      "phase": "detail",
+      "groupable": true,
+      "dependsOn": ["workspaceType"],
+      "promptHint": "When should the workspace be available from?"
+    },
+    {
+      "slotId": "durationMonths",
+      "type": "number",
+      "required": false,
+      "phase": "detail",
+      "dependsOn": ["startDate"],
+      "promptHint": "For how many months? Leave blank if indefinite."
+    }
+  ]
+}

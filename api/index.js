@@ -69,6 +69,9 @@ const connectorsRoutes = require('./src/routes/connectors.routes');
 const visualizationRoutes = require('./src/routes/visualization.routes');
 const dashboardRoutes = require('./src/routes/dashboard.routes');
 const exportRoutes = require('./src/routes/export.routes');
+const graphTransferRoutes = require('./src/routes/graph-transfer.routes');
+const knowledgeDashboardRoutes = require('./src/routes/knowledge-dashboard.routes');
+const exportAssistantRoutes = require('./src/routes/export-assistant.routes');
 const reportRoutes = require('./src/routes/report.routes');
 const subgraphRoutes = require('./src/routes/subgraph.route');
 const domainRoutes = require('./src/routes/domain.route');
@@ -84,6 +87,7 @@ const approvalRoutes = require('./src/routes/approval.route');
 const assistantRoutes = require('./src/routes/assistant.route');
 const flowdeskRoutes = require('./src/instances/flowdesk/routes/flowdesk.route');
 const flowdeskConfigRoutes = require('./src/instances/flowdesk/routes/flowdesk-config.route');
+const flowdeskAdminRoutes = require('./src/instances/flowdesk/routes/flowdesk-admin.route');
 const codexRoutes = require('./src/routes/codex.route');
 const backlogRoutes = require('./src/routes/backlog.route');
 const backlogExecutionRoutes = require('./src/routes/backlog-execution.route');
@@ -203,6 +207,9 @@ app.use('/api/v1/connectors', connectorsRoutes);
 app.use('/api/v1/visualization', visualizationRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/export', exportRoutes);
+app.use('/api/v1/graph-transfer', graphTransferRoutes);
+app.use('/api/v1/knowledge-dashboard', knowledgeDashboardRoutes);
+app.use('/api/v1/export-assistant', exportAssistantRoutes);
 app.use('/api/v1/reports', reportRoutes);
 app.use('/api/v1/subgraph', subgraphRoutes);
 app.use('/api/v1/domains', domainRoutes);
@@ -215,6 +222,7 @@ app.use('/api/v1/tool-catalog', toolCatalogRoutes);
 app.use('/api/v1/approval', approvalRoutes);
 app.use('/api/v1/assistant', assistantRoutes);
 app.use('/api/v1/flowdesk/config', flowdeskConfigRoutes);
+app.use('/api/v1/flowdesk/admin', flowdeskAdminRoutes);
 app.use('/api/v1/flowdesk', flowdeskRoutes);
 app.use('/api/v1/codex', codexRoutes);
 app.use('/api/v1/backlog', backlogRoutes);
@@ -312,6 +320,17 @@ async function startServer() {
       logger.info('WebSocket initialized');
     }
 
+    // Voice Live server-side WebSocket proxy (browser ⇄ backend ⇄ Azure). Installs
+    // a central `upgrade` router so it coexists with the /ws service above. Safe
+    // no-op unless the voice endpoints are used.
+    try {
+      const { initVoiceProxy } = require('./src/instances/flowdesk/voice/voice-proxy');
+      initVoiceProxy(server, websocketService.wss);
+      logger.info('Voice Live proxy initialized');
+    } catch (err) {
+      logger.warn('Voice Live proxy init failed', { error: err.message });
+    }
+
     // Start dialogue file watcher (incremental processing of new Claude Code sessions)
     let dialogueWatcher = null;
     if (process.env.DIALOGUE_WATCHER_ENABLED !== 'false') {
@@ -325,9 +344,41 @@ async function startServer() {
       }
     }
 
+    // Start the Altiora schema-sync poller (IP-1e) only when schema materialization
+    // is enabled. Off by default → no background poller and no Altiora calls; the
+    // service degrades to polling-only when @microsoft/signalr is absent.
+    let schemaSync = null;
+    if (process.env.FLOWDESK_SCHEMA_PROVIDER === 'altiora') {
+      try {
+        const { createDefaultSchemaSyncService } = require('./src/instances/flowdesk/services/altiora-schema-sync');
+        schemaSync = createDefaultSchemaSyncService();
+        schemaSync.start().catch(err => logger.warn('SchemaSyncService start failed', { error: err.message }));
+        logger.info('SchemaSyncService started (Altiora schema invalidation)');
+      } catch (err) {
+        logger.warn('SchemaSyncService start failed', { error: err.message });
+      }
+    }
+
+    // Start the chat-session sweeper (ADMIN P0): stamps abandonment outcomes
+    // (ratified 2h window) and enforces telemetry retention (ratified 90d).
+    // Runs whenever Chat V2 telemetry is on (default) — without it, walked-away
+    // sessions leave no record at all.
+    let chatSweeper = null;
+    if (process.env.FLOWDESK_CHAT_V2 === 'true' && String(process.env.FLOWDESK_CHAT_TELEMETRY || 'true') !== 'false') {
+      try {
+        chatSweeper = require('./src/instances/flowdesk/services/chat-session-sweeper.service').getChatSessionSweeper();
+        chatSweeper.start();
+        logger.info('Chat session sweeper started (abandonment + retention)');
+      } catch (err) {
+        logger.warn('Chat session sweeper start failed', { error: err.message });
+      }
+    }
+
     // Graceful shutdown — close all services holding the event loop open
     createShutdownHandler(server, [
       () => startupManager.shutdown(),
+      () => schemaSync?.stop?.(),
+      () => chatSweeper?.stop?.(),
       () => websocketService.close?.(),
       () => jobQueueService.close?.(),
       () => memgraphService.close?.(),
@@ -337,6 +388,7 @@ async function startServer() {
       () => getQueryCache()?.shutdown?.(),
       () => dialogueWatcher?.stop?.(),
       () => { try { require('./src/services/indexing/document-index.service').getDocumentIndexService().stop(); } catch {} },
+      () => { try { return require('./src/services/graph-transfer').shutdownQueue(); } catch {} },
     ]);
 
     server.listen(port, envConfig.server.host, () => {

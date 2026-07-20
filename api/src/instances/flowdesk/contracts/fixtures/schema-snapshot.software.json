@@ -1,0 +1,74 @@
+{
+  "serviceId": "IT-SW",
+  "version": 1,
+  "phases": ["context", "routing", "detail"],
+  "metadata": {
+    "title": "Software Request",
+    "slaHours": 48,
+    "approvalRequired": true,
+    "handlerRef": "resolver:routing.byMission"
+  },
+  "slots": [
+    {
+      "slotId": "beneficiary",
+      "type": "user",
+      "required": true,
+      "phase": "context",
+      "resolverRef": "resolve.user",
+      "promptHint": "Who needs the software?"
+    },
+    {
+      "slotId": "softwareType",
+      "type": "enum",
+      "required": true,
+      "phase": "routing",
+      "presentOptions": [
+        { "value": "productivity", "label": "Productivity (office, collaboration)" },
+        { "value": "development", "label": "Development / engineering" },
+        { "value": "design", "label": "Design / creative" },
+        { "value": "security", "label": "Security / analysis" },
+        { "value": "other", "label": "Other" }
+      ],
+      "promptHint": "What kind of software is it?"
+    },
+    {
+      "slotId": "softwareName",
+      "type": "text",
+      "required": true,
+      "phase": "detail",
+      "dependsOn": ["softwareType"],
+      "promptHint": "Which software specifically? (e.g. Adobe Photoshop, VS Code)"
+    },
+    {
+      "slotId": "licenseType",
+      "type": "enum",
+      "required": true,
+      "phase": "detail",
+      "dependsOn": ["softwareType"],
+      "presentOptions": [
+        { "value": "individual", "label": "Individual" },
+        { "value": "team", "label": "Team" },
+        { "value": "enterprise", "label": "Enterprise" }
+      ],
+      "promptHint": "What license is needed?"
+    },
+    {
+      "slotId": "justification",
+      "type": "text",
+      "required": true,
+      "phase": "detail",
+      "dependsOn": ["softwareType"],
+      "promptHint": "Briefly, why is this software needed?"
+    },
+    {
+      "slotId": "approver",
+      "type": "user",
+      "required": true,
+      "phase": "detail",
+      "trefCondition": "slots.licenseType != 'individual'",
+      "resolverRef": "resolve.approver",
+      "dependsOn": ["beneficiary"],
+      "promptHint": "Who approves this? Defaults to the beneficiary's manager."
+    }
+  ]
+}

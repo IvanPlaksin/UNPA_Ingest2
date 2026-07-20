@@ -162,14 +162,22 @@ async function loadDomainPlugins() {
     const { workflowPlugin } = require('./workflow');
     const { notificationPlugin } = require('./notification');
     const { SqlExtractionPlugin } = require('./sql-extraction/sql-extraction.plugin');
-    const { plugin: flowdeskPlugin } = require('../../../../instances/flowdesk');
     const { validationPlugin } = require('./validation');
     const { extractionPlugin } = require('./extraction');
     const { dialoguePlugin } = require('./dialogue');
+    const { investigationPlugin } = require('./investigation');
 
     const sqlExtractionPlugin = new SqlExtractionPlugin();
 
-    await pluginLoader.loadAll([
+    // FlowDesk is a client-specific plugin — optional, may not be present
+    let flowdeskPlugin = null;
+    try {
+      flowdeskPlugin = require('../../../../instances/flowdesk').plugin;
+    } catch {
+      console.log('[PluginLoader] FlowDesk plugin not available — skipping');
+    }
+
+    const plugins = [
       commonPlugin,
       ingestionPlugin,
       ragPlugin,
@@ -177,11 +185,14 @@ async function loadDomainPlugins() {
       workflowPlugin,
       notificationPlugin,
       sqlExtractionPlugin,
-      flowdeskPlugin,
       validationPlugin,
       extractionPlugin,
       dialoguePlugin,
-    ]);
+      investigationPlugin,
+    ];
+    if (flowdeskPlugin) plugins.splice(6, 0, flowdeskPlugin);
+
+    await pluginLoader.loadAll(plugins);
 
     console.log('[PluginLoader] Domain plugins loaded');
   } catch (error) {

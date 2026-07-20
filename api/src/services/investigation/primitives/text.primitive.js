@@ -1,21 +1,9 @@
 'use strict';
+const { createEnvelope, PROJECTION_KIND } = require('../../../constants/canonical-graph.constants');
 
 /**
  * TEXT primitive — manual text note / annotation created by the investigator.
- *
- * Does NOT acquire new KB evidence. Does NOT trigger evidentiary versioning.
- * A logical version checkpoint is cut at commit time.
- *
- * Input params:
- *   title       {string} required — short title for the note
- *   body        {string} required — note body (markdown supported)
- *   evidencedBy {string[]} optional — explicit KB entity IDs this note references
- *
- * Output (artifact content):
- *   title:      string
- *   body:       string
- *   wordCount:  number
- *   hasEvidence: boolean
+ * Output: CGE envelope (projection.kind = 'text'), no nodes/edges.
  */
 
 const PRIMITIVE_TYPE = 'TEXT';
@@ -33,15 +21,22 @@ async function execute(params, _context, _services) {
 
   const wordCount = body.trim().split(/\s+/).length;
 
-  return {
-    content: {
-      title: title.trim(),
-      body: body.trim(),
-      wordCount,
-      hasEvidence: evidencedBy.length > 0,
-    },
-    evidencedBy,
+  const envelope = createEnvelope({
+    roots:      evidencedBy,
+    kind:       PROJECTION_KIND.TEXT,
+    hints:      {},
+    producedBy: 'TOOL',
+    toolId:     'investigation.text',
+  });
+
+  envelope.summary = {
+    title:       title.trim(),
+    body:        body.trim(),
+    wordCount,
+    hasEvidence: evidencedBy.length > 0,
   };
+
+  return { content: envelope, evidencedBy };
 }
 
 module.exports = { PRIMITIVE_TYPE, inputSchema, execute };

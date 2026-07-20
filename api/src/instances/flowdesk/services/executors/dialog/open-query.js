@@ -52,7 +52,7 @@ module.exports = {
     }
 
     return {
-      response: 'I still couldn\'t determine the service you need. Could you be more specific? You can also browse services by category: IT, HR, Facilities, Security, Finance, Logistics.',
+      response: 'I still couldn\'t determine the service you need. Could you be more specific? I handle HR and Finance requests — for example separation, position changes, dependency and personal-data updates, home leave and travel entitlements, recruitment, payroll and grants.',
       state_updates: {},
       condition: 'default',
     };

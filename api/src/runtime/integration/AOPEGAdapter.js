@@ -209,7 +209,8 @@ class AOPEGAdapter {
 
         // DEBUG: log what result looks like before success check
         if (result && !result.success && !result.status) {
-          console.log('[AOPEGAdapter:inner]', executorType, 'result has no success/status. Keys:', Object.keys(result).join(','), '__type:', result.__type);
+          const errMsgs = result.errors?.map(e => e.message).join('; ') || '(none)';
+          console.log('[AOPEGAdapter:inner]', executorType, 'failed. errors:', errMsgs, '| Keys:', Object.keys(result).join(','));
         }
 
         // 4b. Map AOPEG result → Runtime result

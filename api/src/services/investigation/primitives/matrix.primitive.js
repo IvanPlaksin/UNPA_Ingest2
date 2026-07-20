@@ -1,4 +1,8 @@
 'use strict';
+const {
+  ALL_EDGE_TYPES, createEnvelope, buildNode, buildEdge, PROJECTION_KIND,
+} = require('../../../constants/canonical-graph.constants');
+const _E = ALL_EDGE_TYPES.join('|');
 
 /**
  * MATRIX primitive — cross-tabulation of relationships between entity sets.
@@ -52,26 +56,26 @@ async function execute(params, _context, _services) {
 
   // Build rel-type filter clause
   const relFilter = relTypes.length
-    ? `WHERE r.relType IN $relTypes`
+    ? `WHERE type(r) IN $relTypes`
     : '';
   const relParams = relTypes.length ? { relTypes } : {};
 
   // Fetch all direct edges between row × col sets
   const directRows = await mg().runQuery(
-    `MATCH (a:ESEntity)-[r:ES_RELATED_TO]->(b:ESEntity)
+    `MATCH (a:ESEntity)-[r:${_E}]->(b:ESEntity)
      WHERE a.id IN $rowIds AND b.id IN $colIds
      ${relFilter}
-     RETURN a.id AS fromId, b.id AS toId, r.relType AS relType,
+     RETURN a.id AS fromId, b.id AS toId, type(r) AS relType,
             r.context AS context, r.confidence AS confidence`,
     { rowIds: rowEntityIds, colIds, ...relParams }
   );
 
   // Also check reverse direction (undirected semantics for matrix)
   const reverseRows = await mg().runQuery(
-    `MATCH (b:ESEntity)-[r:ES_RELATED_TO]->(a:ESEntity)
+    `MATCH (b:ESEntity)-[r:${_E}]->(a:ESEntity)
      WHERE b.id IN $colIds AND a.id IN $rowIds
      ${relFilter}
-     RETURN b.id AS fromId, a.id AS toId, r.relType AS relType,
+     RETURN b.id AS fromId, a.id AS toId, type(r) AS relType,
             r.context AS context, r.confidence AS confidence`,
     { rowIds: rowEntityIds, colIds, ...relParams }
   );
@@ -101,7 +105,7 @@ async function execute(params, _context, _services) {
   if (unconnectedPairs.length && unconnectedPairs.length <= 50) {
     for (const { rowId, colId } of unconnectedPairs) {
       const pathCheck = await mg().runQuery(
-        `MATCH (a:ESEntity {id: $from})-[:ES_RELATED_TO*1..2]-(b:ESEntity {id: $to})
+        `MATCH (a:ESEntity {id: $from})-[:${_E}*1..2]-(b:ESEntity {id: $to})
          RETURN count(*) AS cnt LIMIT 1`,
         { from: rowId, to: colId }
       );
@@ -137,22 +141,36 @@ async function execute(params, _context, _services) {
 
   const rowEntities = rowEntityIds.map(id => entityMap[id] || { entityId: id, name: id, type: 'UNKNOWN' });
   const colEntities = colIds.map(id => entityMap[id] || { entityId: id, name: id, type: 'UNKNOWN' });
+  const activRelTypes = relTypes.length ? relTypes : ['all'];
+  const noConnection = cells.filter(c => !c.directRel && !c.indirectPath && !c.self).length;
 
-  return {
-    content: {
-      rowEntities,
-      colEntities,
-      cells,
-      relTypes: relTypes.length ? relTypes : ['all'],
-      summary: {
-        totalCells: cells.length,
-        directConnections,
-        indirectConnections,
-        noConnection: cells.filter(c => !c.directRel && !c.indirectPath && !c.self).length,
-      },
-    },
-    evidencedBy: allIds,
+  const envelope = createEnvelope({
+    roots:      rowEntityIds,
+    kind:       PROJECTION_KIND.MATRIX,
+    hints:      { rowEntities, colEntities, cells, relTypes: activRelTypes },
+    producedBy: 'TOOL',
+    toolId:     'investigation.matrix',
+  });
+
+  for (const id of allIds) {
+    const meta = entityMap[id];
+    if (meta) envelope.nodes.push(buildNode({ id, type: meta.type, name: meta.name, namespace: meta.namespace }));
+  }
+  for (const c of cells) {
+    if (c.directRel && c.relType) {
+      envelope.edges.push(buildEdge({ sourceId: c.rowEntityId, targetId: c.colEntityId, relType: c.relType, direction: 'forward' }));
+    }
+  }
+
+  envelope.summary = {
+    headline:         `${rowEntityIds.length}×${colIds.length} matrix — ${directConnections} direct`,
+    totalCells:       cells.length,
+    directConnections,
+    indirectConnections,
+    noConnection,
   };
+
+  return { content: envelope, evidencedBy: allIds };
 }
 
 module.exports = { PRIMITIVE_TYPE, inputSchema, execute };

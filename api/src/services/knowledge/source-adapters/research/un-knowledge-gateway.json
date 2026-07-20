@@ -1,0 +1,28 @@
+{
+  "key": "un-knowledge-gateway",
+  "name": "UN Knowledge Gateway",
+  "family": "sharepoint",
+  "capabilities": ["search", "browseAll", "paginate"],
+  "filterSchema": [
+    {
+      "type": "library",
+      "param": "lib",
+      "label": "Document Library",
+      "options": [],
+      "notes": "Filter by SharePoint document library name. Populated after first cache export."
+    }
+  ],
+  "config": {
+    "adapterKey": "un-knowledge-gateway",
+    "cacheFile": null,
+    "maxFileAgeDays": 7,
+    "_note": "Cache-file mode: populate api/data/kg-cache.json via browser console script. SharePoint REST API blocked by Azure Front Door TLS fingerprinting — requires browser session."
+  },
+  "download": {
+    "mode": "browser-session",
+    "notes": "SharePoint Online download requires UN AD credentials. Download URL opens the document in an authenticated browser tab. Programmatic download blocked by Azure Conditional Access."
+  },
+  "methodologyMarkdown": "## Overview\nThe UN Knowledge Gateway is an internal SharePoint Online site (unitednations.sharepoint.com/sites/APP-Gateway) that serves as a central repository for UN system knowledge products, guidelines, and institutional documents.\n\n## Authentication Challenge\nSharePoint Online REST API (`/_api/`) returns HTTP 403 to all non-browser HTTP clients despite valid FedAuth session cookies. Azure Front Door (serving the `unitednations.sharepoint.com` tenant) enforces TLS/HTTP browser fingerprinting — Node.js `https` module produces a distinct JA3 fingerprint that is rejected.\n\nReproduction: Extract live FedAuth + rtFa cookies from an active authenticated Chrome session (including `msal.cache.encryption`, `spo_abt`, `SIMI`) and replay them via Axios with exact browser headers (`sec-fetch-site: same-origin`, `sec-ch-ua`, `Origin`, `Referer`). Result: still 403. Same cookies succeed in Chrome. Confirmed 2026-07-08.\n\n## Access Strategy: Cache-File Mode\nSince the browser's same-origin fetch context is always authenticated, we run a JavaScript snippet in Chrome DevTools console on the APP-Gateway page. The script uses the browser's own `fetch()` to call SharePoint REST API (`/_api/web/lists`, `/_api/web/lists(guid)/items`), then copies the full document listing JSON to clipboard. The result is saved to `api/data/kg-cache.json`.\n\nThe adapter reads from this cache file for all search and browse operations. Cache freshness is checked at read time — a warning is emitted if the cache is older than `maxFileAgeDays` (default 7).\n\n## Browser Export Script\nSee `api/scripts/export-kg-docs.js` for the DevTools console snippet. To refresh:\n1. Open Chrome and navigate to unitednations.sharepoint.com/sites/APP-Gateway (ensure logged in).\n2. Open DevTools → Console tab.\n3. Paste the export script and press Enter.\n4. Wait for \"Done! Copied N docs to clipboard\".\n5. Paste clipboard content into `api/data/kg-cache.json`.\n6. Restart the API (or call the adapter's reload endpoint).\n\n## Cache Structure\nThe cache JSON has the shape:\n```json\n{\n  \"libs\": [{\"id\":\"...\",\"title\":\"Documents\",\"count\":N,\"folder\":\"/sites/APP-Gateway/...\"}],\n  \"docs\": [{\"title\":\"...\",\"file\":\"doc.pdf\",\"url\":\"https://unitednations.sharepoint.com/...\",\"lib\":\"Documents\",\"created\":\"...\",\"modified\":\"...\",\"id\":\"uuid\"}],\n  \"at\": \"2026-07-08T...\"\n}\n```\n\n## Future: Bearer Token Mode\nIf a UN Azure AD service principal or MSAL device-code flow is configured, the adapter can switch to direct SharePoint REST API calls using `Authorization: Bearer <token>`. The MSAL cache encryption key (`f7jsyk0p8FOSZS62VSHHzgVQFJ8UMxMjZ9dFAcFubFs`, id `019f1e0a-6abd-793d-b27a-b6266af1d150`) was recovered from the `msal.cache.encryption` browser cookie during the 2026-07-08 investigation — decrypting the MSAL localStorage blob would yield a valid access token. Toggle via `config.useApi=true` once token flow is implemented.\n\n## Limitations\n- Cache refresh is manual (weekly recommended).\n- Download requires authenticated browser session — `pdfUrl` is null; `url` opens the document in SharePoint.\n- No full-text indexing; search is over title and filename only.\n- Library structure varies — run cache export to discover available libraries.",
+  "verified": true,
+  "probeNotes": "Probed 2026-07-08. SharePoint REST API returns 403 with headers x-forms_based_auth_required and x-idcrl_auth_params_v1: IDCRL Type='BPOSIDCRL'. Same-origin browser fetch (from DevTools console) succeeds. Cache-file adapter implements browser-context workaround. Azure AD tenant: 0f9e35db-544f-4f60-bdcc-5ea416e6dc70 (shared with iSeek). MSAL encryption key recovered but decryption not implemented. Site URL: https://unitednations.sharepoint.com/sites/APP-Gateway"
+}

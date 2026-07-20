@@ -94,16 +94,17 @@ async function keywordSearch(opts = {}) {
   const { where, params } = buildWhere(opts);
 
   const rows = await mg.runQuery(
-    `MATCH (s:SourceCatalog)-[:HAS_DOCUMENT]->(d:SourceDocument)
+    `MATCH (d:SourceDocument)
      ${where}
-     RETURN ${RETURN_FIELDS}, s.name as sourceName
-     ORDER BY d.date DESC, d.discoveredAt DESC
-     SKIP ${skip} LIMIT ${limit}`,
+     WITH d ORDER BY d.date DESC, d.discoveredAt DESC
+     SKIP ${skip} LIMIT ${limit}
+     OPTIONAL MATCH (s:SourceCatalog {id: d.sourceId})
+     RETURN ${RETURN_FIELDS}, s.name as sourceName`,
     params
   );
 
   const countRows = await mg.runQuery(
-    `MATCH (s:SourceCatalog)-[:HAS_DOCUMENT]->(d:SourceDocument)
+    `MATCH (d:SourceDocument)
      ${where}
      RETURN count(d) as total`,
     params
@@ -139,8 +140,9 @@ async function semanticSearch(opts = {}) {
 
   const ids = hits.map(h => h.id);
   const rows = await mg.runQuery(
-    `MATCH (s:SourceCatalog)-[:HAS_DOCUMENT]->(d:SourceDocument)
+    `MATCH (d:SourceDocument)
      WHERE d.id IN $ids
+     OPTIONAL MATCH (s:SourceCatalog {id: d.sourceId})
      RETURN ${RETURN_FIELDS}, s.name as sourceName`,
     { ids }
   );
@@ -168,21 +170,23 @@ async function facets(opts = {}) {
   const { where, params } = buildWhere(opts);
 
   const bySource = await mg.runQuery(
-    `MATCH (s:SourceCatalog)-[:HAS_DOCUMENT]->(d:SourceDocument)
+    `MATCH (d:SourceDocument)
      ${where}
-     RETURN s.id as id, s.name as name, count(d) as count
+     WITH d.sourceId as id, count(d) as count
+     OPTIONAL MATCH (s:SourceCatalog {id: id})
+     RETURN id, s.name as name, count
      ORDER BY count DESC`,
     params
   );
   const byType = await mg.runQuery(
-    `MATCH (s:SourceCatalog)-[:HAS_DOCUMENT]->(d:SourceDocument)
+    `MATCH (d:SourceDocument)
      ${where}
      RETURN coalesce(d.fileType,'unknown') as value, count(d) as count
      ORDER BY count DESC`,
     params
   );
   const byEnrich = await mg.runQuery(
-    `MATCH (s:SourceCatalog)-[:HAS_DOCUMENT]->(d:SourceDocument)
+    `MATCH (d:SourceDocument)
      ${where}
      RETURN coalesce(d.enrichStatus,'none') as value, count(d) as count
      ORDER BY count DESC`,
@@ -208,7 +212,7 @@ async function stats() {
   );
   const perSource = await mg.runQuery(
     `MATCH (s:SourceCatalog)
-     OPTIONAL MATCH (s)-[:HAS_DOCUMENT]->(d:SourceDocument)
+     OPTIONAL MATCH (d:SourceDocument {sourceId: s.id})
      RETURN s.id as id, s.name as name, s.type as type,
             s.namespace as namespace, s.enabled as enabled,
             s.indexStatus as indexStatus, s.indexCursor as indexCursor,
@@ -249,7 +253,8 @@ async function stats() {
 
 async function getById(id) {
   const rows = await mg.runQuery(
-    `MATCH (s:SourceCatalog)-[:HAS_DOCUMENT]->(d:SourceDocument {id: $id})
+    `MATCH (d:SourceDocument {id: $id})
+     OPTIONAL MATCH (s:SourceCatalog {id: d.sourceId})
      RETURN ${RETURN_FIELDS}, s.name as sourceName
      LIMIT 1`,
     { id }

@@ -56,6 +56,18 @@ const CATEGORIES = {
       'happens on page 1 (broken endpoint).',
     defaultAction: 'mark_complete',
   },
+  PAGINATION_END: {
+    id: 'PAGINATION_END',
+    label: 'Pagination limit reached (400/416)',
+    severity: 'low',
+    transient: false,
+    methodology:
+      'The remote rejects requests past its maximum offset/result window (HTTP ' +
+      '400/416 deep into paging, e.g. World Bank WDS ~100k, OpenDataSoft 10k). ' +
+      'Treat as the end of reachable pagination (mark complete). To harvest ' +
+      'beyond the ceiling the adapter must slice the corpus by date/facet.',
+    defaultAction: 'mark_complete',
+  },
   NETWORK: {
     id: 'NETWORK',
     label: 'Network / timeout',
@@ -110,6 +122,9 @@ function classify(entry = {}) {
   if (status === 401 || status === 403 || /forbidden|unauthorized|waf|challenge|access denied|captcha/.test(m)) return 'ACCESS_BLOCKED';
   if (status === 429 || status === 503 || status === 202 || /rate.?limit|too many requests|throttl/.test(m)) return 'RATE_LIMITED';
   if (status === 404 || /\bnot found\b|404/.test(m)) return 'NOT_FOUND';
+  // 400/416 deep in paging = the remote's max offset/result window (end of
+  // reachable pagination). A page-1 400 is handled distinctly at the call site.
+  if (status === 400 || status === 416 || /\brange not satisfiable\b/.test(m)) return 'PAGINATION_END';
   if (status === 500 || status === 502 || status === 504 || /internal server error|bad gateway|gateway timeout/.test(m)) return 'SERVER_ERROR';
   if (/timeout|etimedout|econnreset|econnrefused|enotfound|eai_again|socket hang up|network|dns/.test(m)) return 'NETWORK';
   if (/unexpected token|json|parse|cheerio|invalid xml|malformed|cannot read propert/.test(m)) return 'PARSE_ERROR';

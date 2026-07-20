@@ -1,4 +1,8 @@
 'use strict';
+const {
+  ALL_EDGE_TYPES, createEnvelope, buildNode, PROJECTION_KIND,
+} = require('../../../constants/canonical-graph.constants');
+const _E = ALL_EDGE_TYPES.join('|');
 
 /**
  * RESOLVE primitive — entity resolution: find candidate duplicates or near-matches.
@@ -104,7 +108,7 @@ async function execute(params, _context, _services) {
 
   // Fetch anchor's direct neighbors for relationship-overlap scoring
   const anchorNeighbors = await mg().runQuery(
-    `MATCH (a:ESEntity {id: $id})-[:ES_RELATED_TO]-(n:ESEntity)
+    `MATCH (a:ESEntity {id: $id})-[:${_E}]-(n:ESEntity)
      RETURN DISTINCT n.id AS nid`,
     { id: entityId }
   );
@@ -142,7 +146,7 @@ async function execute(params, _context, _services) {
     // Relationship neighborhood overlap
     if (anchorNeighborSet.size > 0) {
       const candNeighbors = await mg().runQuery(
-        `MATCH (c:ESEntity {id: $cid})-[:ES_RELATED_TO]-(n:ESEntity)
+        `MATCH (c:ESEntity {id: $cid})-[:${_E}]-(n:ESEntity)
          RETURN DISTINCT n.id AS nid`,
         { cid: cand.id }
       );
@@ -184,16 +188,28 @@ async function execute(params, _context, _services) {
       confidence: c.similarity,
     }));
 
+  const anchorObj = { entityId: anchor.id, name: anchor.name, type: anchor.type, namespace: anchor.ns };
+
+  const envelope = createEnvelope({
+    roots:      [entityId],
+    kind:       PROJECTION_KIND.LIST,
+    hints:      { candidates, suggestedMerges },
+    producedBy: 'TOOL',
+    toolId:     'investigation.resolve',
+  });
+
+  envelope.nodes.push(buildNode({ id: anchor.id, type: anchor.type, name: anchor.name, namespace: anchor.ns }));
+  for (const c of candidates) envelope.nodes.push(buildNode({ id: c.entityId, type: c.type, name: c.name, namespace: c.namespace }));
+
+  envelope.summary = {
+    headline:             `${candidates.length} duplicate candidate${candidates.length !== 1 ? 's' : ''} for "${anchor.name}"`,
+    anchor:               anchorObj,
+    totalCandidates:      candidates.length,
+    highConfidenceMerges: suggestedMerges.length,
+  };
+
   return {
-    content: {
-      anchor: { entityId: anchor.id, name: anchor.name, type: anchor.type, namespace: anchor.ns },
-      candidates,
-      suggestedMerges,
-      summary: {
-        candidateCount:      candidates.length,
-        highConfidenceMerges: suggestedMerges.length,
-      },
-    },
+    content:     envelope,
     evidencedBy: [entityId, ...candidates.map(c => c.entityId)],
   };
 }

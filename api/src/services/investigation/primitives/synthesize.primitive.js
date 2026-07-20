@@ -1,16 +1,9 @@
 'use strict';
+const { createEnvelope, PROJECTION_KIND } = require('../../../constants/canonical-graph.constants');
 
 /**
  * SYNTHESIZE primitive — generate a grounded narrative over existing session evidence.
- *
- * SPECIAL: does NOT acquire new evidence from KB. It operates ONLY on already-retrieved
- * evidence in the session. Does NOT trigger an evidentiary version.
- *
- * Input params:
- *   focus     {string}  optional — what aspect to focus the narrative on
- *   format    {string}  'summary' | 'report' | 'bullets', default 'summary'
- *
- * The context.artifactsSummary provides the evidence corpus for synthesis.
+ * Output: CGE envelope (projection.kind = 'text'), no nodes/edges.
  */
 
 const PRIMITIVE_TYPE = 'SYNTHESIZE';
@@ -19,6 +12,12 @@ const inputSchema = {
   focus: { type: 'string' },
   format: { type: 'string', default: 'summary' },
 };
+
+function _makeEnvelope(roots, summary) {
+  const envelope = createEnvelope({ roots, kind: PROJECTION_KIND.TEXT, hints: {}, producedBy: 'TOOL', toolId: 'investigation.synthesize' });
+  envelope.summary = summary;
+  return envelope;
+}
 
 async function execute(params, context, services) {
   const { anthropicClient } = services;
@@ -29,12 +28,10 @@ async function execute(params, context, services) {
 
   if (!corpus.evidencedBy.length) {
     return {
-      content: {
+      content: _makeEnvelope([], {
         narrative: 'No evidence has been collected yet. Run a LOCATE, CONNECT, or EXPAND query first.',
-        claimsWithEvidence: [],
-        focus,
-        format,
-      },
+        claimsWithEvidence: [], focus, format, evidenceCount: 0,
+      }),
       evidencedBy: [],
     };
   }
@@ -47,14 +44,13 @@ async function execute(params, context, services) {
   }
 
   return {
-    content: {
-      narrative: narrative.text,
+    content: _makeEnvelope(corpus.evidencedBy, {
+      narrative:          narrative.text,
       claimsWithEvidence: narrative.claims,
       focus,
       format,
-      evidenceCount: corpus.evidencedBy.length,
-    },
-    // Provenance: same entity IDs as all prior artifacts in the session
+      evidenceCount:      corpus.evidencedBy.length,
+    }),
     evidencedBy: corpus.evidencedBy,
   };
 }

@@ -2,6 +2,9 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
+  // Load api/.env so Memgraph-backed suites (schema-graph, draft-sr) get the real
+  // connection creds — the hardcoded defaults in import-config.js are stale (F13.1).
+  setupFiles: ['dotenv/config'],
   roots: ['<rootDir>/src'],
   testMatch: [
     '**/__tests__/**/*.test.ts',

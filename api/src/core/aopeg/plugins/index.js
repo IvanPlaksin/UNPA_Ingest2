@@ -27,6 +27,7 @@ const {
 const { IngestionPlugin, ingestionPlugin } = require('./ingestion');
 const { RAGPlugin, ragPlugin } = require('./rag');
 const { DialoguePlugin, dialoguePlugin } = require('./dialogue');
+const { InvestigationPlugin, investigationPlugin } = require('./investigation');
 
 module.exports = {
   // Plugin infrastructure
@@ -51,4 +52,6 @@ module.exports = {
   ragPlugin,
   DialoguePlugin,
   dialoguePlugin,
+  InvestigationPlugin,
+  investigationPlugin,
 };

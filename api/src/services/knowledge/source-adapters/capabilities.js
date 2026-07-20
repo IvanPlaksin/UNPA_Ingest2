@@ -19,6 +19,7 @@ const CAPABILITIES = Object.freeze({
   DOWNLOAD:  'download',   // resolve a downloadable file for import
   ENRICH:    'enrich',     // fetch full per-record metadata
   FULLTEXT:  'fulltext',   // search covers document body text, not just metadata
+  RESUMPTION_PAGING: 'resumptionPaging', // opaque token-based paging (OAI-PMH resumptionToken)
 });
 
 const ALL_CAPABILITIES = Object.freeze(Object.values(CAPABILITIES));

@@ -1,4 +1,7 @@
 'use strict';
+const {
+  createEnvelope, buildNode, buildEdge, PROJECTION_KIND,
+} = require('../../../constants/canonical-graph.constants');
 
 const PRIMITIVE_TYPE = 'IMPACT';
 
@@ -18,13 +21,65 @@ async function execute(params, _context, services) {
     includeStructural: includeStructural !== false,
   });
 
+  const {
+    directDependents = [], transitiveDependents = [], totalTransitive,
+    impactByCategory = {}, structuralAnalysis, criticalPaths = [],
+    riskAssessment, recommendations = [], summary: analysisSummary,
+  } = result;
+
+  const envelope = createEnvelope({
+    roots:      [entityId],
+    kind:       PROJECTION_KIND.TREE,
+    hints: {
+      directDependents,
+      transitiveDependents,
+      totalTransitive,
+      impactByCategory,
+      structuralAnalysis,
+      criticalPaths,
+      recommendations,
+    },
+    producedBy: 'TOOL',
+    toolId:     'investigation.impact',
+  });
+
+  // Root entity node
+  envelope.nodes.push(buildNode({ id: entityId, type: 'ENTITY', name: entityId }));
+
+  // Dependent nodes + dependency edges
+  const seen = new Set([entityId]);
+  for (const dep of directDependents) {
+    if (!seen.has(dep.entityId)) {
+      seen.add(dep.entityId);
+      envelope.nodes.push(buildNode({ id: dep.entityId, type: dep.type, name: dep.name }));
+    }
+    if (dep.relType) {
+      envelope.edges.push(buildEdge({ sourceId: dep.entityId, targetId: entityId, relType: dep.relType, direction: 'backward' }));
+    }
+  }
+  for (const dep of transitiveDependents.slice(0, 50)) {
+    if (!seen.has(dep.entityId)) {
+      seen.add(dep.entityId);
+      envelope.nodes.push(buildNode({ id: dep.entityId, type: dep.type, name: dep.name }));
+    }
+  }
+
+  envelope.summary = {
+    headline:      analysisSummary?.headline || `Impact: ${entityId}`,
+    entityId,
+    riskAssessment,
+    totalEntities: analysisSummary?.totalEntities || (directDependents.length + (totalTransitive || 0)),
+    direct:        analysisSummary?.direct        || directDependents.length,
+    transitive:    analysisSummary?.transitive     || (totalTransitive || 0),
+  };
+
   const evidencedBy = [
     entityId,
-    ...result.directDependents.slice(0, 30).map(d => d.entityId),
-    ...result.transitiveDependents.slice(0, 20).map(d => d.entityId),
+    ...directDependents.slice(0, 30).map(d => d.entityId),
+    ...transitiveDependents.slice(0, 20).map(d => d.entityId),
   ].filter(Boolean);
 
-  return { content: result, evidencedBy };
+  return { content: envelope, evidencedBy };
 }
 
 const triggersEvidentiaryVersion = true;

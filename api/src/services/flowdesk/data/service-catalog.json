@@ -1,0 +1,712 @@
+[
+  {
+    "code": "COM-CRE-DES",
+    "name": "Graphic Design Request",
+    "description": "Request graphic design services",
+    "category": "Creative Services",
+    "domain": "Communications & External Relations",
+    "domain_code": "COM",
+    "sla_hours": 120,
+    "approval_required": false
+  },
+  {
+    "code": "COM-CRE-PHT",
+    "name": "Photography Request",
+    "description": "Request professional photography services",
+    "category": "Creative Services",
+    "domain": "Communications & External Relations",
+    "domain_code": "COM",
+    "sla_hours": 72,
+    "approval_required": false
+  },
+  {
+    "code": "COM-CRE-VID",
+    "name": "Video Production Request",
+    "description": "Request video recording or production",
+    "category": "Creative Services",
+    "domain": "Communications & External Relations",
+    "domain_code": "COM",
+    "sla_hours": 240,
+    "approval_required": true
+  },
+  {
+    "code": "COM-INT-ANN",
+    "name": "Organization Announcement",
+    "description": "Request organization-wide announcement",
+    "category": "Internal Communications",
+    "domain": "Communications & External Relations",
+    "domain_code": "COM",
+    "sla_hours": 24,
+    "approval_required": true
+  },
+  {
+    "code": "COM-INT-WEB",
+    "name": "Intranet Update Request",
+    "description": "Request intranet content updates",
+    "category": "Internal Communications",
+    "domain": "Communications & External Relations",
+    "domain_code": "COM",
+    "sla_hours": 48,
+    "approval_required": true
+  },
+  {
+    "code": "FAC-BLD-CLN",
+    "name": "Cleaning Request",
+    "description": "Request special cleaning services",
+    "category": "Building Services",
+    "domain": "Facilities & Administration",
+    "domain_code": "FAC",
+    "sla_hours": 24,
+    "approval_required": false
+  },
+  {
+    "code": "FAC-BLD-FRN",
+    "name": "Furniture Request",
+    "description": "Request new or replacement furniture",
+    "category": "Building Services",
+    "domain": "Facilities & Administration",
+    "domain_code": "FAC",
+    "sla_hours": 120,
+    "approval_required": true
+  },
+  {
+    "code": "FAC-BLD-HVAC",
+    "name": "HVAC Issue",
+    "description": "Report heating, cooling, or ventilation problems",
+    "category": "Building Services",
+    "domain": "Facilities & Administration",
+    "domain_code": "FAC",
+    "sla_hours": 24,
+    "approval_required": false
+  },
+  {
+    "code": "FAC-BLD-LGT",
+    "name": "Lighting Issue",
+    "description": "Report lighting problems or requests",
+    "category": "Building Services",
+    "domain": "Facilities & Administration",
+    "domain_code": "FAC",
+    "sla_hours": 24,
+    "approval_required": false
+  },
+  {
+    "code": "FAC-BLD-MNT",
+    "name": "Maintenance Request",
+    "description": "Report facility maintenance needs",
+    "category": "Building Services",
+    "domain": "Facilities & Administration",
+    "domain_code": "FAC",
+    "sla_hours": 48,
+    "approval_required": false
+  },
+  {
+    "code": "FAC-CNF-AV",
+    "name": "AV Equipment Request",
+    "description": "Request audio-visual equipment for events",
+    "category": "Conference & Meeting Rooms",
+    "domain": "Facilities & Administration",
+    "domain_code": "FAC",
+    "sla_hours": 24,
+    "approval_required": false
+  },
+  {
+    "code": "FAC-CNF-EVT",
+    "name": "Event Space Booking",
+    "description": "Reserve space for large events or ceremonies",
+    "category": "Conference & Meeting Rooms",
+    "domain": "Facilities & Administration",
+    "domain_code": "FAC",
+    "sla_hours": 168,
+    "approval_required": true
+  },
+  {
+    "code": "FAC-CNF-RM",
+    "name": "Meeting Room Booking",
+    "description": "Reserve a meeting or conference room",
+    "category": "Conference & Meeting Rooms",
+    "domain": "Facilities & Administration",
+    "domain_code": "FAC",
+    "sla_hours": 4,
+    "approval_required": false
+  },
+  {
+    "code": "FAC-TRV-AUTH",
+    "name": "Travel Authorization",
+    "description": "Request authorization for official travel",
+    "category": "Travel Services",
+    "domain": "Facilities & Administration",
+    "domain_code": "FAC",
+    "sla_hours": 72,
+    "approval_required": true
+  },
+  {
+    "code": "FAC-TRV-EXP",
+    "name": "Travel Expense Claim",
+    "description": "Submit travel expense reimbursement",
+    "category": "Travel Services",
+    "domain": "Facilities & Administration",
+    "domain_code": "FAC",
+    "sla_hours": 120,
+    "approval_required": true
+  },
+  {
+    "code": "FAC-TRV-FLT",
+    "name": "Flight Booking Request",
+    "description": "Request flight reservations",
+    "category": "Travel Services",
+    "domain": "Facilities & Administration",
+    "domain_code": "FAC",
+    "sla_hours": 48,
+    "approval_required": false
+  },
+  {
+    "code": "FAC-TRV-HTL",
+    "name": "Hotel Booking Request",
+    "description": "Request hotel accommodations",
+    "category": "Travel Services",
+    "domain": "Facilities & Administration",
+    "domain_code": "FAC",
+    "sla_hours": 48,
+    "approval_required": false
+  },
+  {
+    "code": "FAC-TRV-VIS",
+    "name": "Visa Support",
+    "description": "Request visa processing assistance",
+    "category": "Travel Services",
+    "domain": "Facilities & Administration",
+    "domain_code": "FAC",
+    "sla_hours": 240,
+    "approval_required": false
+  },
+  {
+    "code": "FAC-WS-HOT",
+    "name": "Hot Desk Booking",
+    "description": "Reserve a hot desk workspace",
+    "category": "Workspace Management",
+    "domain": "Facilities & Administration",
+    "domain_code": "FAC",
+    "sla_hours": 4,
+    "approval_required": false
+  },
+  {
+    "code": "FAC-WS-OFC",
+    "name": "Office Allocation Request",
+    "description": "Request office space assignment or change",
+    "category": "Workspace Management",
+    "domain": "Facilities & Administration",
+    "domain_code": "FAC",
+    "sla_hours": 168,
+    "approval_required": true
+  },
+  {
+    "code": "FAC-WS-STR",
+    "name": "Storage Request",
+    "description": "Request storage space or lockers",
+    "category": "Workspace Management",
+    "domain": "Facilities & Administration",
+    "domain_code": "FAC",
+    "sla_hours": 72,
+    "approval_required": true
+  },
+  {
+    "code": "FIN-AP-EXP",
+    "name": "Expense Reimbursement",
+    "description": "Submit personal expense reimbursement",
+    "category": "Accounts Payable",
+    "domain": "Finance & Procurement",
+    "domain_code": "FIN",
+    "sla_hours": 72,
+    "approval_required": true
+  },
+  {
+    "code": "FIN-AP-INV",
+    "name": "Invoice Submission",
+    "description": "Submit vendor invoice for payment",
+    "category": "Accounts Payable",
+    "domain": "Finance & Procurement",
+    "domain_code": "FIN",
+    "sla_hours": 48,
+    "approval_required": true
+  },
+  {
+    "code": "FIN-AP-STS",
+    "name": "Payment Status Inquiry",
+    "description": "Check status of vendor payments",
+    "category": "Accounts Payable",
+    "domain": "Finance & Procurement",
+    "domain_code": "FIN",
+    "sla_hours": 24,
+    "approval_required": false
+  },
+  {
+    "code": "FIN-PR-CTR",
+    "name": "Procurement Contract Request",
+    "description": "Request new procurement contract",
+    "category": "Procurement Services",
+    "domain": "Finance & Procurement",
+    "domain_code": "FIN",
+    "sla_hours": 240,
+    "approval_required": true
+  },
+  {
+    "code": "FIN-PR-REQ",
+    "name": "Purchase Request",
+    "description": "Submit a new purchase request",
+    "category": "Procurement Services",
+    "domain": "Finance & Procurement",
+    "domain_code": "FIN",
+    "sla_hours": 72,
+    "approval_required": true
+  },
+  {
+    "code": "FIN-PR-VND",
+    "name": "Vendor Registration",
+    "description": "Request new vendor registration",
+    "category": "Procurement Services",
+    "domain": "Finance & Procurement",
+    "domain_code": "FIN",
+    "sla_hours": 120,
+    "approval_required": true
+  },
+  {
+    "code": "HR-BEN-CLM",
+    "name": "Insurance Claim Assistance",
+    "description": "Help with insurance claim submissions",
+    "category": "Benefits Administration",
+    "domain": "Human Resources Services",
+    "domain_code": "HR",
+    "sla_hours": 72,
+    "approval_required": false
+  },
+  {
+    "code": "HR-BEN-ENR",
+    "name": "Benefits Enrollment",
+    "description": "Enroll in or modify benefit plans",
+    "category": "Benefits Administration",
+    "domain": "Human Resources Services",
+    "domain_code": "HR",
+    "sla_hours": 72,
+    "approval_required": false
+  },
+  {
+    "code": "HR-BEN-INQ",
+    "name": "Benefits Inquiry",
+    "description": "General questions about benefits and entitlements",
+    "category": "Benefits Administration",
+    "domain": "Human Resources Services",
+    "domain_code": "HR",
+    "sla_hours": 48,
+    "approval_required": false
+  },
+  {
+    "code": "HR-BEN-LEV",
+    "name": "Leave Request",
+    "description": "Submit leave requests and inquiries",
+    "category": "Benefits Administration",
+    "domain": "Human Resources Services",
+    "domain_code": "HR",
+    "sla_hours": 24,
+    "approval_required": true
+  },
+  {
+    "code": "HR-LD-CNF",
+    "name": "Conference Attendance",
+    "description": "Request approval for conference participation",
+    "category": "Learning & Development",
+    "domain": "Human Resources Services",
+    "domain_code": "HR",
+    "sla_hours": 168,
+    "approval_required": true
+  },
+  {
+    "code": "HR-LD-CRT",
+    "name": "Certification Support",
+    "description": "Request support for professional certifications",
+    "category": "Learning & Development",
+    "domain": "Human Resources Services",
+    "domain_code": "HR",
+    "sla_hours": 120,
+    "approval_required": true
+  },
+  {
+    "code": "HR-LD-TRN",
+    "name": "Training Request",
+    "description": "Request enrollment in training programs",
+    "category": "Learning & Development",
+    "domain": "Human Resources Services",
+    "domain_code": "HR",
+    "sla_hours": 72,
+    "approval_required": true
+  },
+  {
+    "code": "HR-ONB-CON",
+    "name": "Contractor Onboarding",
+    "description": "Set up access for contractors and consultants",
+    "category": "Onboarding & Offboarding",
+    "domain": "Human Resources Services",
+    "domain_code": "HR",
+    "sla_hours": 48,
+    "approval_required": true
+  },
+  {
+    "code": "HR-ONB-NEW",
+    "name": "New Employee Setup",
+    "description": "Initiate onboarding for new staff member",
+    "category": "Onboarding & Offboarding",
+    "domain": "Human Resources Services",
+    "domain_code": "HR",
+    "sla_hours": 72,
+    "approval_required": true
+  },
+  {
+    "code": "HR-ONB-OFF",
+    "name": "Employee Offboarding",
+    "description": "Initiate separation process for departing employee",
+    "category": "Onboarding & Offboarding",
+    "domain": "Human Resources Services",
+    "domain_code": "HR",
+    "sla_hours": 48,
+    "approval_required": true
+  },
+  {
+    "code": "HR-ONB-TRF",
+    "name": "Internal Transfer",
+    "description": "Process internal department or location transfer",
+    "category": "Onboarding & Offboarding",
+    "domain": "Human Resources Services",
+    "domain_code": "HR",
+    "sla_hours": 72,
+    "approval_required": true
+  },
+  {
+    "code": "IT-COL-DL",
+    "name": "Distribution List Request",
+    "description": "Create or modify email distribution lists",
+    "category": "Collaboration & Communication",
+    "domain": "Information Technology Services",
+    "domain_code": "IT",
+    "sla_hours": 24,
+    "approval_required": true
+  },
+  {
+    "code": "IT-COL-SMB",
+    "name": "Shared Mailbox Request",
+    "description": "Request a shared mailbox for team use",
+    "category": "Collaboration & Communication",
+    "domain": "Information Technology Services",
+    "domain_code": "IT",
+    "sla_hours": 48,
+    "approval_required": true
+  },
+  {
+    "code": "IT-COL-SP",
+    "name": "SharePoint Site Request",
+    "description": "Request a new SharePoint site or modifications",
+    "category": "Collaboration & Communication",
+    "domain": "Information Technology Services",
+    "domain_code": "IT",
+    "sla_hours": 72,
+    "approval_required": true
+  },
+  {
+    "code": "IT-COL-TMS",
+    "name": "MS Teams Request",
+    "description": "Create new Teams team or channels",
+    "category": "Collaboration & Communication",
+    "domain": "Information Technology Services",
+    "domain_code": "IT",
+    "sla_hours": 24,
+    "approval_required": true
+  },
+  {
+    "code": "IT-COL-VID",
+    "name": "Video Conference Support",
+    "description": "Request video conferencing assistance",
+    "category": "Collaboration & Communication",
+    "domain": "Information Technology Services",
+    "domain_code": "IT",
+    "sla_hours": 4,
+    "approval_required": false
+  },
+  {
+    "code": "IT-HW-DSK",
+    "name": "Desktop Request",
+    "description": "Request a new or replacement desktop computer",
+    "category": "Hardware Support",
+    "domain": "Information Technology Services",
+    "domain_code": "IT",
+    "sla_hours": 72,
+    "approval_required": true
+  },
+  {
+    "code": "IT-HW-LAP",
+    "name": "Laptop Request",
+    "description": "Request a new or replacement laptop",
+    "category": "Hardware Support",
+    "domain": "Information Technology Services",
+    "domain_code": "IT",
+    "sla_hours": 72,
+    "approval_required": true
+  },
+  {
+    "code": "IT-HW-MON",
+    "name": "Monitor Request",
+    "description": "Request additional or replacement monitor",
+    "category": "Hardware Support",
+    "domain": "Information Technology Services",
+    "domain_code": "IT",
+    "sla_hours": 48,
+    "approval_required": true
+  },
+  {
+    "code": "IT-HW-PER",
+    "name": "Peripheral Request",
+    "description": "Request keyboard, mouse, headset, or accessories",
+    "category": "Hardware Support",
+    "domain": "Information Technology Services",
+    "domain_code": "IT",
+    "sla_hours": 24,
+    "approval_required": false
+  },
+  {
+    "code": "IT-HW-PRT",
+    "name": "Printer Request",
+    "description": "Request printer installation or repair",
+    "category": "Hardware Support",
+    "domain": "Information Technology Services",
+    "domain_code": "IT",
+    "sla_hours": 48,
+    "approval_required": false
+  },
+  {
+    "code": "IT-HW-REP",
+    "name": "Hardware Repair",
+    "description": "Report hardware issues or malfunction",
+    "category": "Hardware Support",
+    "domain": "Information Technology Services",
+    "domain_code": "IT",
+    "sla_hours": 24,
+    "approval_required": false
+  },
+  {
+    "code": "IT-NET-DRV",
+    "name": "Shared Drive Access",
+    "description": "Request access to shared network drives",
+    "category": "Network & Infrastructure",
+    "domain": "Information Technology Services",
+    "domain_code": "IT",
+    "sla_hours": 24,
+    "approval_required": true
+  },
+  {
+    "code": "IT-NET-ISS",
+    "name": "Network Connectivity Issue",
+    "description": "Report network or internet connectivity problems",
+    "category": "Network & Infrastructure",
+    "domain": "Information Technology Services",
+    "domain_code": "IT",
+    "sla_hours": 8,
+    "approval_required": false
+  },
+  {
+    "code": "IT-NET-VPN",
+    "name": "VPN Access Request",
+    "description": "Request VPN access for remote connectivity",
+    "category": "Network & Infrastructure",
+    "domain": "Information Technology Services",
+    "domain_code": "IT",
+    "sla_hours": 24,
+    "approval_required": true
+  },
+  {
+    "code": "IT-NET-WIFI",
+    "name": "WiFi Access Request",
+    "description": "Request WiFi access for devices or guests",
+    "category": "Network & Infrastructure",
+    "domain": "Information Technology Services",
+    "domain_code": "IT",
+    "sla_hours": 8,
+    "approval_required": false
+  },
+  {
+    "code": "IT-SEC-INC",
+    "name": "Security Incident Report",
+    "description": "Report a security incident or suspicious activity",
+    "category": "IT Security Services",
+    "domain": "Information Technology Services",
+    "domain_code": "IT",
+    "sla_hours": 4,
+    "approval_required": false
+  },
+  {
+    "code": "IT-SEC-MFA",
+    "name": "MFA Setup/Reset",
+    "description": "Set up or reset multi-factor authentication",
+    "category": "IT Security Services",
+    "domain": "Information Technology Services",
+    "domain_code": "IT",
+    "sla_hours": 8,
+    "approval_required": false
+  },
+  {
+    "code": "IT-SEC-PWD",
+    "name": "Password Reset",
+    "description": "Reset your network or application password",
+    "category": "IT Security Services",
+    "domain": "Information Technology Services",
+    "domain_code": "IT",
+    "sla_hours": 4,
+    "approval_required": false
+  },
+  {
+    "code": "IT-SEC-SYS",
+    "name": "System Access Request",
+    "description": "Request access to specific systems or applications",
+    "category": "IT Security Services",
+    "domain": "Information Technology Services",
+    "domain_code": "IT",
+    "sla_hours": 48,
+    "approval_required": true
+  },
+  {
+    "code": "IT-SEC-UNL",
+    "name": "Account Unlock",
+    "description": "Unlock a locked user account",
+    "category": "IT Security Services",
+    "domain": "Information Technology Services",
+    "domain_code": "IT",
+    "sla_hours": 2,
+    "approval_required": false
+  },
+  {
+    "code": "IT-SW-INS",
+    "name": "Software Installation",
+    "description": "Request installation of approved software",
+    "category": "Software Support",
+    "domain": "Information Technology Services",
+    "domain_code": "IT",
+    "sla_hours": 24,
+    "approval_required": false
+  },
+  {
+    "code": "IT-SW-ISS",
+    "name": "Software Issue",
+    "description": "Report software bugs or malfunctions",
+    "category": "Software Support",
+    "domain": "Information Technology Services",
+    "domain_code": "IT",
+    "sla_hours": 16,
+    "approval_required": false
+  },
+  {
+    "code": "IT-SW-LIC",
+    "name": "Software License Request",
+    "description": "Request new software license or renewal",
+    "category": "Software Support",
+    "domain": "Information Technology Services",
+    "domain_code": "IT",
+    "sla_hours": 72,
+    "approval_required": true
+  },
+  {
+    "code": "IT-SW-NEW",
+    "name": "New Software Request",
+    "description": "Request evaluation of new software for organization",
+    "category": "Software Support",
+    "domain": "Information Technology Services",
+    "domain_code": "IT",
+    "sla_hours": 120,
+    "approval_required": true
+  },
+  {
+    "code": "LOG-INV-SUP",
+    "name": "Office Supply Request",
+    "description": "Request office supplies and materials",
+    "category": "Inventory Management",
+    "domain": "Logistics & Supply Chain",
+    "domain_code": "LOG",
+    "sla_hours": 48,
+    "approval_required": false
+  },
+  {
+    "code": "LOG-SHP-COR",
+    "name": "Courier Request",
+    "description": "Request courier or express delivery",
+    "category": "Shipping & Receiving",
+    "domain": "Logistics & Supply Chain",
+    "domain_code": "LOG",
+    "sla_hours": 8,
+    "approval_required": false
+  },
+  {
+    "code": "LOG-SHP-INT",
+    "name": "International Shipping",
+    "description": "Request international package shipping",
+    "category": "Shipping & Receiving",
+    "domain": "Logistics & Supply Chain",
+    "domain_code": "LOG",
+    "sla_hours": 48,
+    "approval_required": true
+  },
+  {
+    "code": "LOG-WH-ARC",
+    "name": "Document Archive Request",
+    "description": "Request document archiving or retrieval",
+    "category": "Warehouse Services",
+    "domain": "Logistics & Supply Chain",
+    "domain_code": "LOG",
+    "sla_hours": 48,
+    "approval_required": false
+  },
+  {
+    "code": "LOG-WH-STR",
+    "name": "Warehouse Storage Request",
+    "description": "Request warehouse storage space",
+    "category": "Warehouse Services",
+    "domain": "Logistics & Supply Chain",
+    "domain_code": "LOG",
+    "sla_hours": 72,
+    "approval_required": true
+  },
+  {
+    "code": "SEC-ACC-AFT",
+    "name": "After-Hours Access",
+    "description": "Request access outside normal business hours",
+    "category": "Access Control",
+    "domain": "Security Services",
+    "domain_code": "SEC",
+    "sla_hours": 24,
+    "approval_required": true
+  },
+  {
+    "code": "SEC-ACC-BDG",
+    "name": "Badge Request",
+    "description": "Request new or replacement access badge",
+    "category": "Access Control",
+    "domain": "Security Services",
+    "domain_code": "SEC",
+    "sla_hours": 24,
+    "approval_required": false
+  },
+  {
+    "code": "SEC-ACC-PRM",
+    "name": "Access Permission Request",
+    "description": "Request access to restricted areas",
+    "category": "Access Control",
+    "domain": "Security Services",
+    "domain_code": "SEC",
+    "sla_hours": 48,
+    "approval_required": true
+  },
+  {
+    "code": "SEC-ACC-VIS",
+    "name": "Visitor Registration",
+    "description": "Register visitors or external guests",
+    "category": "Access Control",
+    "domain": "Security Services",
+    "domain_code": "SEC",
+    "sla_hours": 24,
+    "approval_required": false
+  }
+]

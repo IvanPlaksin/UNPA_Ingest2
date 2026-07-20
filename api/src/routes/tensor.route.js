@@ -206,18 +206,27 @@ router.get('/stream', (req, res) => {
 
   const tensorService = getTensorService();
 
+  // The always-mounted sidebar widget requests ?scope=summary for a lightweight
+  // payload; the full dashboard omits it and gets active/causalGraph/connections.
+  const summaryOnly = req.query.scope === 'summary';
+  const buildStatus = () => {
+    const status = summaryOnly
+      ? tensorService.getStreamStatus()
+      : tensorService.getStatus();
+    status.database = {
+      ...memgraphService.getConnectionInfo(),
+      stats: memgraphService.getStats()
+    };
+    return status;
+  };
+
   // Send initial status
-  res.write(`data: ${JSON.stringify(tensorService.getStatus())}\n\n`);
+  res.write(`data: ${JSON.stringify(buildStatus())}\n\n`);
 
   // Send updates every 2 seconds
   const interval = setInterval(() => {
     try {
-      const status = tensorService.getStatus();
-      status.database = {
-        ...memgraphService.getConnectionInfo(),
-        stats: memgraphService.getStats()
-      };
-      res.write(`data: ${JSON.stringify(status)}\n\n`);
+      res.write(`data: ${JSON.stringify(buildStatus())}\n\n`);
     } catch (error) {
       res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
     }
