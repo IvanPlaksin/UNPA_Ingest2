@@ -144,7 +144,7 @@ services:
     volumes: ["etl_rawdata:/app/indexing-pipeline/raw_data"]
     # The worker exits immediately when ADO creds are absent; idle instead of
     # crash-looping so the container stays up (runs normally once creds are set).
-    command: sh -c "node src/run.js || { echo 'etl idle: ADO_ORG_URL/ADO_PAT not set'; tail -f /dev/null; }"
+    command: ["sh", "-c", "node src/run.js || { echo 'etl idle - ADO creds not set'; tail -f /dev/null; }"]
     networks: [projectadvisor-network]
 
   sync:
