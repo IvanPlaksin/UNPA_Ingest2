@@ -18,7 +18,8 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_PREFIX: ghcr.io/${{ github.repository }}   # ghcr.io/ivanplaksin/unpa_ingest2
+  # GHCR requires a lowercase path; github.repository is mixed-case (IvanPlaksin/UNPA_Ingest2)
+  IMAGE_PREFIX: ghcr.io/ivanplaksin/unpa_ingest2
 
 jobs:
   # ─────────────────────────────────────────────────────────────
@@ -169,7 +170,7 @@ jobs:
             umask 077
             cat > .env <<EOF
             IMAGE_TAG=${IMAGE_TAG}
-            GHCR=ghcr.io/${GHCR_USER}/unpa_ingest2
+            GHCR=ghcr.io/ivanplaksin/unpa_ingest2
             MEMGRAPH_PASSWORD=${MEMGRAPH_PASSWORD}
             GEMINI_API_KEY=${GEMINI_API_KEY}
             ADO_ORG_URL=${ADO_ORG_URL}
