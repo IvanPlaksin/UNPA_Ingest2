@@ -166,7 +166,7 @@ jobs:
           host: ${{ vars.VM_HOST }}
           username: ${{ vars.VM_USER }}
           key: ${{ secrets.VM_SSH_PRIVATE_KEY }}
-          envs: IMAGE_TAG,GHCR_TOKEN,GHCR_USER,MEMGRAPH_PASSWORD,GEMINI_API_KEY,ADO_ORG_URL,ADO_PAT,CLAUDE_SESSION_KEY,CLAUDE_ORGANIZATION_ID,CLAUDE_PROJECT_ID
+          envs: IMAGE_TAG,GHCR_TOKEN,GHCR_USER,MEMGRAPH_PASSWORD,GEMINI_API_KEY,ANTHROPIC_API_KEY,ADO_ORG_URL,ADO_PAT,CLAUDE_SESSION_KEY,CLAUDE_ORGANIZATION_ID,CLAUDE_PROJECT_ID
           script: |
             set -e
             # One-time cutover: stop the old manual stack if present (O-7)
@@ -182,6 +182,7 @@ jobs:
             GHCR=ghcr.io/ivanplaksin/unpa_ingest2
             MEMGRAPH_PASSWORD=${MEMGRAPH_PASSWORD}
             GEMINI_API_KEY=${GEMINI_API_KEY}
+            ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
             ADO_ORG_URL=${ADO_ORG_URL}
             ADO_PAT=${ADO_PAT}
             CLAUDE_SESSION_KEY=${CLAUDE_SESSION_KEY}
@@ -198,6 +199,7 @@ jobs:
           GHCR_USER: ${{ github.actor }}
           MEMGRAPH_PASSWORD: ${{ secrets.MEMGRAPH_PASSWORD }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           ADO_ORG_URL: ${{ secrets.ADO_ORG_URL }}
           ADO_PAT: ${{ secrets.ADO_PAT }}
           CLAUDE_SESSION_KEY: ${{ secrets.CLAUDE_SESSION_KEY }}
