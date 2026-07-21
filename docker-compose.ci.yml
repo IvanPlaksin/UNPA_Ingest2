@@ -97,14 +97,12 @@ services:
       - QDRANT_URL=http://qdrant:6333
       - TEI_URL=http://tei:80
       - GLINER_URL=http://gliner:5100
-      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      # StartupManager requires ANTHROPIC_API_KEY (default LLM provider); placeholder boots it
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-placeholder}
       - CORS_ORIGINS=${CORS_ORIGINS:-*}
-      # ado.service.js throws at load if these are empty; api catches connect
-      # failures at runtime, so non-empty placeholders let it boot (ADO disabled).
-      - ADO_ORG_URL=${ADO_ORG_URL:-https://ado.invalid/placeholder}
-      - ADO_PAT=${ADO_PAT:-placeholder}
+    # App/feature config + secrets (ANTHROPIC_API_KEY, FLOWDESK_*, ALTIORA_*, VOICE_*,
+    # CLAUDE_*, ADO_*, GEMINI). Written on the VM by the deploy job from the
+    # FLOWDESK_ENV GitHub secret. Infra vars above override any endpoints here.
+    env_file:
+      - api.env
     depends_on:
       redis: {condition: service_healthy}
       memgraph: {condition: service_started}
