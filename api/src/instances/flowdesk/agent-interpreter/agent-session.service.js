@@ -75,7 +75,12 @@ function createAgentSession(p = {}, deps = {}) {
   // every HTTP request. The arena has no such constraint and gets a fresh id.
   const sessionId = p.sessionId || `agent-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
   const defaultLang = p.lang || 'en';
-  const toolSession = createToolSession();
+  // Injectable, and exposed below, for ONE caller: the hybrid interpreter answers
+  // most turns from a template and hands the rest to this session, so both must be
+  // writing to the same session object. Two sessions would mean a Skip recorded by
+  // the template path being invisible to the model path — the queue would disagree
+  // with itself. Default unchanged: the agent creates its own.
+  const toolSession = deps.toolSession || createToolSession();
   let history = [];
 
   const actingUser = deps.actingUser || p.actingUser
@@ -88,11 +93,22 @@ function createAgentSession(p = {}, deps = {}) {
    */
   async function sendTurn(message, { lang, controlAction, choice } = {}) {
     const t0 = Date.now();
-    const doTurn = () => loop.runTurn({
+    const runLoop = () => loop.runTurn({
       sessionId, history, userMessage: message, lang: lang || defaultLang,
       userContext: p.userContext, controlAction: controlAction || choice || null,
       session: toolSession,
     });
+    // WHERE the request is for, for the whole turn. The form is chosen by the
+    // beneficiary's duty station, and about two dozen places in the turn load the
+    // form — so the answer is opened once here and read wherever it is needed
+    // (schema-context). Seeded from what the request already knows: the draft, or
+    // the opening answers the session is still holding before the draft exists.
+    const doTurn = async () => {
+      const { runWithSchemaContext, schemaContextFrom } = require('../services/schema-context');
+      const draft0 = await draftService.get(sessionId).catch(() => null);
+      const seed = schemaContextFrom(draft0, toolSession.pendingContext);
+      return runWithSchemaContext(seed, runLoop);
+    };
     try {
       const out = actingUser ? await runWithActingUser(actingUser, doTurn) : await doTurn();
       history = out.history;
@@ -132,6 +148,11 @@ function createAgentSession(p = {}, deps = {}) {
     sideEffects: effects,
     sandboxed,
     interpreterMode: 'agent',
+    // The pieces the hybrid interpreter shares rather than rebuilds (see above).
+    tools,
+    toolSession,
+    draftService,
+    loadSnapshot,
   };
 }
 

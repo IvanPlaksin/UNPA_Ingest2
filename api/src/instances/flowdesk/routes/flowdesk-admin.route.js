@@ -70,6 +70,9 @@ router.get('/prompt/graphs/:entryId', c.promptGetGraph);
 router.post('/prompt/graphs', c.promptSaveGraph);
 router.post('/prompt/graphs/mutate', c.promptMutateGraph); // AI direct-edit: apply mutations (+ optional save version)
 router.get('/prompt/graphs/:entryId/versions', c.promptGetVersions);
+// For the AGENT graph this is what "make it live" means: it compiles whatever
+// version is current, so there is nothing to materialise (see prompt-editor.service).
+router.post('/prompt/graphs/:entryId/promote', c.promptPromoteVersion);
 router.post('/prompt/compile', c.promptCompile);
 router.post('/prompt/validate', c.promptValidate);
 router.post('/prompt/sandbox', c.promptSandbox);

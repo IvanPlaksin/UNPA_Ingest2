@@ -577,6 +577,31 @@ describe('the catalogue is searched by code, not when the model feels like it', 
   });
 });
 
+describe('the brief explains a re-ask the user did not cause', () => {
+  // The duty station decides which office serves the request, and each office has
+  // its own form. When it changes, answers with no field on the new form are gone
+  // (reducer.reconcileToSchema) — the next question is chosen by code either way,
+  // but only the model can tell the user WHY it is asking again.
+  test('a form swap is stated once, with what was lost', async () => {
+    const h = harness();
+    await start(h);
+    h.draft.schemaSwitch = { at: 'now', from: 1, to: 2, dropped: ['gvaBadgeReturn'] };
+
+    const brief = await h.tools.turnBrief(h.ctx, 'Nairobi');
+
+    expect(brief).toContain('duty station changed');
+    expect(brief).toContain('gvaBadgeReturn');
+    expect(brief).toContain('Say so once');
+  });
+
+  test('an ordinary turn carries no such note', async () => {
+    const h = harness();
+    await start(h);
+    const brief = await h.tools.turnBrief(h.ctx, 'hello');
+    expect(brief).not.toContain('duty station changed');
+  });
+});
+
 describe('the opening questions wait for a settled service', () => {
   // Live: after a hand-off the user asked "what is the status of the request we
   // were just filling?". The reply was right — and carried a "who is this request

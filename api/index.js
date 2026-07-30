@@ -176,6 +176,7 @@ app.get('/test', (_req, res) => res.send('TEST OK'));
 // ═══════════════════════════════════════════════════════════════════
 // API Routes
 // ═══════════════════════════════════════════════════════════════════
+app.use('/api/v1/auth', require('./src/routes/auth.route'));
 app.use('/api/v1/health/kb', kbHealthRoutes);
 app.use('/api/v1/health', healthRoutes);
 app.get('/api/v1/health-test', (_req, res) => res.json({ status: 'inline-ok' }));

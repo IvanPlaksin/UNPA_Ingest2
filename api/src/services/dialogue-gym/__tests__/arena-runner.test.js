@@ -74,6 +74,28 @@ function fakeSandboxFactory(agentScript, sink = {}) {
   };
 }
 
+/**
+ * The prompt loader, faked — and this is not decoration.
+ *
+ * The header of this file promises "no live LLM, no DB", and every collaborator was
+ * injected except this one. Left real, `resolvePrompt` reaches prompt-editor.service
+ * → the graph catalog → Memgraph on the very first test, which initialises the
+ * catalog schema against a database other suites are using at the same time. In
+ * isolation that costs 2.1s and passes; in a parallel run it contends
+ * ("Cannot get read only access to the storage") and blows the 5s timeout — a
+ * failure that reads like a behavioural regression and is nothing of the kind.
+ *
+ * Returning null is what the runner documents as "no active prompt": the engine
+ * uses its base prompt. That is exactly the condition these orchestration tests
+ * want, since none of them is about prompt provenance.
+ */
+const fakePromptLoader = () => ({
+  async loadProduction() { return null; },
+  async loadVersion(entryId, versionNumber) {
+    return { nodes: [], edges: [], metadata: { entryId, versionNumber: versionNumber ?? 1, source: 'version' } };
+  },
+});
+
 function makeRunner({ agentScript, simScript, store = fakeStore() }) {
   const sink = {};
   return {
@@ -84,6 +106,7 @@ function makeRunner({ agentScript, simScript, store = fakeStore() }) {
       simulator: fakeSimulator(simScript),
       store,
       sandboxFactory: fakeSandboxFactory(agentScript, sink),
+      promptLoader: fakePromptLoader(),
     }),
   };
 }

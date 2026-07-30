@@ -454,7 +454,11 @@ function materializeSchema(p) {
       phase,
       altioraFieldId: f.id,
     };
-    if (f.label) slot.promptHint = String(f.label).trim();
+    // A label is what the field is ASKED by, so a field without one costs a model
+    // call every time it comes up (turn-router condition 6). Altiora leaves it empty
+    // on a handful of fields out of hundreds; the slotId is a poor question and a
+    // much better one than none. Takes effect on re-materialisation, not retroactively.
+    slot.promptHint = f.label ? String(f.label).trim() : String(slot.slotId || '').trim() || undefined;
     // Section grouping — only when sectionId points at an actual section field.
     // (A sectionId pointing at a CHOICE field is the conditional link, handled in 2b.)
     const sec = f.sectionId ? sectionById.get(f.sectionId) : null;

@@ -90,6 +90,9 @@ function createSchemaLoader(deps) {
   const {
     detectProviders, getSchema, getSchemaVersion, materialize,
     registry, graphLoad, catalogLookup, locationPathOf, onWarn = () => {},
+    // The beneficiary's org-unit path, when the turn knows one. Defaulted so every
+    // existing caller (and every test fake) is unaffected.
+    beneficiaryOrgUnitPathOf = defaultBeneficiaryOrgUnitPathOf,
     // I-4b: resolve dictionary-backed LOV slots into concrete options after
     // materialize and before storeSchema, so baked options persist in the graph.
     // Defaults to identity so callers without an Altiora LOV source (fakes/tests)
@@ -101,13 +104,24 @@ function createSchemaLoader(deps) {
     indexKnowledge = async () => {},
   } = deps;
 
-  async function loadSnapshot(serviceId) {
+  /**
+   * @param {string} serviceId
+   * @param {{locationPath?:string, beneficiaryOrgUnitPath?:string}} [where]
+   *   Where the request is FOR. Omitted, it comes from the ambient turn context
+   *   (schema-context) and, failing that, from the acting user — which is what
+   *   this did before the beneficiary's location had a say.
+   */
+  async function loadSnapshot(serviceId, where = {}) {
     // Non-Altiora services (golden fixtures, platform flows) have no catalog GUID.
     const catalog = await catalogLookup(serviceId);
     if (!catalog || !catalog.guid) return graphLoad(serviceId);
 
-    const locationPath = locationPathOf();
-    const providers = await detectProviders(catalog.guid, { locationPath });
+    const locationPath = where.locationPath || locationPathOf();
+    // detect scopes on the beneficiary's ORG UNIT as well as their location; a
+    // provider can be configured for one department and not another. It was never
+    // sent, so those scopes could not match.
+    const beneficiaryOrgUnitPath = where.beneficiaryOrgUnitPath || beneficiaryOrgUnitPathOf();
+    const providers = await detectProviders(catalog.guid, { locationPath, beneficiaryOrgUnitPath });
     if (!providers || providers.length === 0) {
       throw new ServiceNotAvailableError(serviceId, locationPath);
     }
@@ -200,12 +214,31 @@ async function qdrantCatalogLookup(serviceCode) {
  * station we pass that, and the composed path is an I-track directory concern.
  */
 function defaultLocationPathOf() {
+  // The location the REQUEST is for wins, when the turn established one: the
+  // beneficiary's duty station decides which provider serves it, and a Geneva
+  // officer raising a Nairobi request must be shown Nairobi's form (schema-context).
+  try {
+    const { getSchemaContext } = require('./schema-context');
+    const ctx = getSchemaContext();
+    if (ctx && ctx.locationPath) return String(ctx.locationPath);
+  } catch { /* no turn in flight — fall through to the acting user */ }
   try {
     const { getActingUser } = require('./acting-user.context');
     const u = getActingUser();
     if (u && u.location && u.location.dutyStation) return String(u.location.dutyStation);
     if (u && u.orgUnit && u.orgUnit.path) return String(u.orgUnit.path);
     return null;
+  } catch {
+    return null;
+  }
+}
+
+/** The beneficiary's org-unit path from the turn context, when there is one. */
+function defaultBeneficiaryOrgUnitPathOf() {
+  try {
+    const { getSchemaContext } = require('./schema-context');
+    const ctx = getSchemaContext();
+    return (ctx && ctx.beneficiaryOrgUnitPath) || null;
   } catch {
     return null;
   }
@@ -247,6 +280,7 @@ module.exports = {
   // memoise a snapshot key on the same value the loader used, rather than a
   // second, quietly-diverging definition of it.
   defaultLocationPathOf,
+  defaultBeneficiaryOrgUnitPathOf,
   qdrantCatalogLookup,
   ServiceNotAvailableError,
   RESERVED,

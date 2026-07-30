@@ -4,7 +4,7 @@
 import React from 'react';
 import {
   Box, TextField, MenuItem, Stack, Typography, Switch, FormControlLabel,
-  Button, Chip, Autocomplete,
+  Button, Chip, Autocomplete, Alert,
 } from '@mui/material';
 import { Trash2 } from 'lucide-react';
 import { useRulesStore, CATEGORIES, APPLIES_TO } from './rulesStore';
@@ -29,6 +29,26 @@ export default function RulePropertiesPanel() {
         <Typography variant="subtitle2">Edit rule</Typography>
         <TextField size="small" label="Key" value={d.key || ''} onChange={(e) => set({ key: e.target.value })} onBlur={commitHistory} />
         <TextField size="small" label="Title" value={d.title || ''} onChange={(e) => set({ title: e.target.value })} onBlur={commitHistory} />
+        {/* HYB-011b: on the agent's graph the node's TYPE decides which field the
+            compiler reads (a Thesis compiles `assertion`, a Constraint `rule`), and
+            an immutable constraint may not be edited casually — SUADA-COMPILE-001
+            re-checks that every immutable constraint survived into the compiled
+            prompt, so removing one breaks the compile rather than the wording. */}
+        {d.nodeType && (
+          <Stack direction="row" spacing={0.5} alignItems="center" sx={{ flexWrap: 'wrap', gap: 0.5 }}>
+            <Chip size="small" label={d.nodeType} />
+            <Chip size="small" variant="outlined" label={`compiles: ${d.contentField || 'assertion'}`} />
+            {d.status && d.status !== 'ACTIVE' && <Chip size="small" color="warning" variant="outlined" label={d.status} />}
+            {d.immutable && <Chip size="small" color="error" label="immutable" />}
+          </Stack>
+        )}
+        {d.immutable && (
+          <Alert severity="warning" sx={{ py: 0 }}>
+            An immutable constraint. The compiler verifies each of these reached the
+            final prompt (SUADA-COMPILE-001) — editing it changes what the assistant
+            may never do, and removing it fails the compile.
+          </Alert>
+        )}
         <TextField size="small" label="Rule text (the instruction)" multiline minRows={3} value={d.text || ''}
           onChange={(e) => set({ text: e.target.value })} onBlur={commitHistory}
           placeholder="e.g. Ask exactly one question per turn." />

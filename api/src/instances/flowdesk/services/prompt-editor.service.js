@@ -3,9 +3,35 @@
 /**
  * Prompt-editor service (ADMIN P6) — the query/action layer behind the
  * system-prompt graph editor. Graph persistence + versioning is delegated to the
- * platform graph-catalog (namespace CHAT_PROMPT); this service adds the
- * prompt-specific actions: compile, validate, sandbox-test, apply (materialize
- * active), and a starter graph.
+ * platform graph-catalog; this service adds the prompt-specific actions: compile,
+ * validate, sandbox-test, apply, and a starter graph.
+ *
+ * TWO GRAPHS, AND ONLY ONE OF THEM IS LIVE (HYB-011a).
+ *
+ * `CHAT_PROMPT` is the state machine's prompt: rule nodes with `data.text`,
+ * compiled per chat node (router / question_planner / …) and materialised into an
+ * active prompt record. `EVOLUTIO:PROMPT` is the AGENT's — typed nodes
+ * (Narrative / Thesis / Persona / Constraint), compiled whole, read straight from
+ * the catalog by `agent-prompt.service` through FLOWDESK_AGENT_PROMPT_ENTRY.
+ *
+ * The live chat is the agent. Until now this service spoke only CHAT_PROMPT, so
+ * the editor — and the admin MCP tools — tuned a graph the running interpreter
+ * never loads. Nothing failed: the rule was saved, a version appeared, `active`
+ * reported the new text, and the conversation kept using the old wording. That
+ * cost a full round of "why did my prompt change do nothing" before the diff of
+ * the COMPILED prefix gave it away.
+ *
+ * So the graph is now chosen explicitly, per call, and the caller must say which:
+ *   source 'agent' → EVOLUTIO:PROMPT, what the live chat compiles
+ *   source 'fsm'   → CHAT_PROMPT, the state machine's
+ * The default stays 'fsm' so no existing caller changes behaviour; the editor and
+ * the MCP tools pass 'agent'.
+ *
+ * ONE ASYMMETRY IS REAL AND MUST NOT BE PAPERED OVER: `apply` materialises an
+ * ACTIVE PROMPT RECORD, which only the state machine reads. The agent has no such
+ * record — it compiles whatever version of its graph is current — so for the agent
+ * "make this live" means PROMOTE A VERSION, not apply. The two verbs are kept
+ * distinct for that reason.
  *
  * @module instances/flowdesk/services/prompt-editor.service
  */
@@ -16,22 +42,74 @@ const systemPrompt = require('./system-prompt.service');
 
 const NAMESPACE = 'CHAT_PROMPT';
 
+/** The agent's own prompt graph service (EVOLUTIO:PROMPT). */
+function evolutio() { return require('../../../services/evolutio/evolutio-prompt.service'); }
+
+/**
+ * Which graph a call is about. 'agent' is the one the live chat compiles; 'fsm' is
+ * the state machine's. Anything unrecognised is 'fsm', because that is what every
+ * caller meant before this parameter existed.
+ */
+const isAgent = (source) => String(source || '').toLowerCase() === 'agent';
+
+/** The entry the running agent actually reads, for the editor to open by default. */
+const agentEntryId = () => process.env.FLOWDESK_AGENT_PROMPT_ENTRY || null;
+
 function catalog() { return require('../../../services/graphCatalog.service').graphCatalogService; }
 
 // ── graph-catalog CRUD (prompt-graphs only) ───────────────────────────────────
 
-async function listGraphs() {
+async function listGraphs(source) {
+  if (isAgent(source)) {
+    const items = await evolutio().listGraphs();
+    const live = agentEntryId();
+    // The one the runtime reads is marked and sorted first: an operator opening the
+    // editor should not have to know an entry id to find the graph that matters.
+    return (Array.isArray(items) ? items : [])
+      .map((g) => ({ ...g, isLiveForAgent: (g.id || g.entryId) === live }))
+      .sort((a, b) => Number(b.isLiveForAgent) - Number(a.isLiveForAgent));
+  }
   const res = await catalog().listGraphs({ namespace: NAMESPACE, limit: 200 });
   const items = res.data || res.items || res.graphs || res || [];
   return Array.isArray(items) ? items : [];
 }
 
-async function getGraph(entryId, version) {
+async function getGraph(entryId, version, source) {
+  if (isAgent(source)) {
+    const loaded = await evolutio().getGraph(entryId || agentEntryId(), version != null ? Number(version) : undefined);
+    if (!loaded) return null;
+    // Flattened the way the editor consumes a graph, with the provenance it needs
+    // to say WHICH graph is on screen.
+    return {
+      id: entryId || agentEntryId(),
+      entryId: entryId || agentEntryId(),
+      name: (loaded.meta && loaded.meta.name) || 'Agent prompt (EVOLUTIO)',
+      namespace: evolutio().NAMESPACE,
+      nodes: loaded.graph.nodes || [],
+      edges: loaded.graph.edges || [],
+      currentVersion: (loaded.meta && loaded.meta.versionNumber) || null,
+      versionNumber: (loaded.meta && loaded.meta.versionNumber) || null,
+      source: 'agent',
+      isLiveForAgent: (entryId || agentEntryId()) === agentEntryId(),
+    };
+  }
   if (version != null) return catalog().getVersion(entryId, Number(version));
   return catalog().getGraphById(entryId, false);
 }
 
-async function saveGraph({ entryId, name, description, nodes, edges, changelog, createdBy }) {
+async function saveGraph({ entryId, name, description, nodes, edges, changelog, createdBy, source }) {
+  if (isAgent(source)) {
+    // The agent's graph has its own writer: it validates against the EVOLUTIO
+    // ontology (typed nodes, immutable constraints) before it saves, and that
+    // validation is the whole reason not to write the catalog directly from here.
+    const { saved, validation } = await evolutio().saveGraph({
+      entryId: entryId || agentEntryId(),
+      graph: { nodes: nodes || [], edges: edges || [] },
+      changelog: changelog || 'prompt graph update (editor)',
+      createdBy,
+    });
+    return { ...saved, validation, source: 'agent' };
+  }
   const payload = { nodes: nodes || [], edges: edges || [], requiredParams: [] };
   if (entryId) {
     // New version (bumps currentVersion + SUPERSEDES).
@@ -45,13 +123,40 @@ async function saveGraph({ entryId, name, description, nodes, edges, changelog, 
   });
 }
 
-async function getVersions(entryId) { return catalog().getVersions(entryId); }
-async function promoteVersion(entryId, version) { return catalog().promoteVersion(entryId, Number(version)); }
+async function getVersions(entryId, source) {
+  if (isAgent(source)) return evolutio().getVersions(entryId || agentEntryId());
+  return catalog().getVersions(entryId);
+}
+async function promoteVersion(entryId, version, source) {
+  // For the AGENT this is what "make it live" means — there is no materialised
+  // active-prompt record on that path (see the header).
+  if (isAgent(source)) return evolutio().promoteVersion(entryId || agentEntryId(), Number(version));
+  return catalog().promoteVersion(entryId, Number(version));
+}
 
 // ── prompt actions ────────────────────────────────────────────────────────────
 
-function compile(graph, opts = {}) { return compilePromptGraph(graph, opts); }
-function validate(graph) { return validatePromptGraph(graph); }
+function compile(graph, opts = {}) {
+  // Two ontologies, two compilers. Compiling an EVOLUTIO graph with the rule-node
+  // compiler yields an empty prompt and no error at all — the fields it reads
+  // (`data.text`) simply are not there — so the source has to decide.
+  if (isAgent(opts.source)) {
+    const { compile: compileEvolutio } = require('../../../services/evolutio/evolutio-prompt.compiler');
+    return compileEvolutio(graph, { language: opts.language || 'en' }, {
+      graphEntryId: opts.entryId || null,
+      graphVersion: opts.version ?? null,
+      title: opts.title || 'FlowDesk Assistant',
+    });
+  }
+  return compilePromptGraph(graph, opts);
+}
+
+function validate(graph, opts = {}) {
+  if (isAgent(opts.source)) {
+    return require('../../../services/evolutio/evolutio-prompt.validator').validateGraph(graph);
+  }
+  return validatePromptGraph(graph);
+}
 
 // ── mutation-based editing (used by the AI assistant to edit graphs directly) ──
 
@@ -95,6 +200,22 @@ function applyMutations(graph, ops) {
  * @param {object} p {graph?, entryId?, version?, mutations, save?, name?, createdBy?}
  */
 async function mutateGraph(p) {
+  // The agent's graph has its own mutator, its own ontology and its own validator —
+  // and this is the entry point an AI assistant uses to edit a prompt, so getting it
+  // wrong is silent and expensive: mutations applied with the rule-node ops would
+  // write `text` on a Thesis, save cleanly, and compile the OLD sentence. That is
+  // exactly the mistake this parameter exists to prevent (see the header).
+  if (isAgent(p.source)) {
+    return evolutio().mutateGraph({
+      entryId: p.entryId || agentEntryId(),
+      graph: p.graph,
+      version: p.version,
+      mutations: p.mutations,
+      save: p.save,
+      changelog: p.changelog,
+      createdBy: p.createdBy,
+    });
+  }
   let base = p.graph;
   let entryId = p.entryId || null;
   let name = p.name;

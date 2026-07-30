@@ -32,6 +32,12 @@ const MODES = String(args.modes || 'fsm,agent').split(',').map((s) => s.trim()).
 const PAIRS = args.pairs ? parseInt(args.pairs, 10) : 4;
 const MAX_TURNS = args['max-turns'] ? parseInt(args['max-turns'], 10) : 6;
 const PROMPT_ENTRY = args['prompt-entry'] || process.env.FLOWDESK_AGENT_PROMPT_ENTRY || null;
+// HYB-006: by default a run ENDS the moment the expected service is identified —
+// which happens on turn 2 or 3, before a single field is asked. That is the right
+// terminal for measuring intent resolution and the wrong one for measuring form
+// filling: it is why the arena could not see the hybrid's template path even after
+// the persona learned to click. --walk-form keeps the dialogue going into the form.
+const WALK_FORM = !!args['walk-form'];
 
 const pct = (v) => (v == null ? 'n/a' : `${(100 * v).toFixed(1)}%`);
 
@@ -51,9 +57,26 @@ async function main() {
   if (!scenarios.length || !personas.length) throw new Error('no enabled scenarios/personas');
 
   // Deterministic pairing so both modes face exactly the same dialogues.
+  //
+  // HYB-007 added the targeted form: --persona / --scenario pin ONE pair, because a
+  // question like "what does a long form cost per turn in each interpreter" is
+  // answered by one dialogue walked to the end, not by three sampled openings.
   const pairs = [];
-  for (let i = 0; i < PAIRS; i += 1) {
-    pairs.push({ scenario: scenarios[i % scenarios.length], persona: personas[i % personas.length] });
+  if (args.persona || args.scenario) {
+    const pick = (list, id, key, what) => {
+      if (!id) return list[0];
+      const found = list.find((x) => x[key] === id || x.name === id);
+      if (!found) throw new Error(`no enabled ${what} matching "${id}"`);
+      return found;
+    };
+    pairs.push({
+      scenario: pick(scenarios, args.scenario, 'scenarioId', 'scenario'),
+      persona: pick(personas, args.persona, 'personaId', 'persona'),
+    });
+  } else {
+    for (let i = 0; i < PAIRS; i += 1) {
+      pairs.push({ scenario: scenarios[i % scenarios.length], persona: personas[i % personas.length] });
+    }
   }
 
   console.log('='.repeat(72));
@@ -77,6 +100,7 @@ async function main() {
         const { run } = await arena.runArena(persona.personaId, scenario.scenarioId, {
           maxTurns: MAX_TURNS,
           interpreterMode: mode,
+          ...(WALK_FORM ? { stopOnServiceMatch: false } : {}),
           ...(mode === 'agent' && PROMPT_ENTRY ? { agentPromptEntryId: PROMPT_ENTRY } : {}),
           ...(args.model ? { agentModel: args.model } : {}),
         });
@@ -87,7 +111,7 @@ async function main() {
         // is the same source the baseline was computed from.
         const turns = await metricsSvc.turnsForRun(run.runId);
         turnsAll.push(...turns);
-        runs.push({ run, turns: turns.length, terminal: run.terminalCondition, correct: !!run.serviceIdentified });
+        runs.push({ run, turns: turns.length, terminal: run.terminalCondition, correct: !!run.serviceIdentified, turnNodes: turns });
         console.log(`${run.terminalCondition} (${turns.length} turns, ${((Date.now() - t0) / 1000).toFixed(0)}s)`);
       } catch (e) {
         failed += 1;
@@ -111,7 +135,38 @@ async function main() {
     ['maxConsecutiveTemplate', (m) => String(m.metrics.maxConsecutiveTemplate)],
     ['service identified', (m) => `${m.runs.filter((r) => r.correct).length}/${m.runs.length}`],
     ['runs failed', (m) => String(m.failed)],
+    // HYB-1: what the hybrid was built to move. Null on fsm/agent turns, which is
+    // why these read as 0%/n-a there rather than as a comparison.
+    ['template turns', (m) => shareOf(m, (t) => t.turnAuthor === 'template')],
+    ['model calls / turn', (m) => avgOf(m, (t) => t.modelCalls)],
+    ['avg agent latency', (m) => `${avgOf(m, (t) => t.agentLatencyMs)} ms`],
+    ['router reasons', (m) => reasonsOf(m)],
   ];
+  // Small helpers for the HYB-1 rows. All three read the turns the store recorded,
+  // so they measure what happened rather than what the code intended.
+  function allTurns(m) { return (m.runs || []).flatMap((r) => r.turnNodes || []); }
+  function shareOf(m, pred) {
+    const t = allTurns(m);
+    if (!t.length) return 'n/a';
+    return `${Math.round((100 * t.filter(pred).length) / t.length)}%`;
+  }
+  function avgOf(m, pick) {
+    // Memgraph hands integers back as {low, high} through the driver often enough
+    // that reading them as numbers only would silently report "n/a" for a metric
+    // that was recorded perfectly well.
+    const num = (v) => (v && typeof v === 'object' && 'low' in v ? v.low : v);
+    const vals = allTurns(m).map((t) => num(pick(t))).filter((v) => typeof v === 'number');
+    if (!vals.length) return 'n/a';
+    const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+    return avg >= 10 ? String(Math.round(avg)) : avg.toFixed(2);
+  }
+  function reasonsOf(m) {
+    const counts = {};
+    for (const t of allTurns(m)) if (t.routerReason) counts[t.routerReason] = (counts[t.routerReason] || 0) + 1;
+    const pairs = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    return pairs.length ? pairs.map(([k, n]) => `${k}:${n}`).join(' ') : 'n/a';
+  }
+
   const w = Math.max(...rows.map((r) => r[0].length)) + 2;
   console.log(`${'metric'.padEnd(w)}${MODES.map((x) => x.padEnd(14)).join('')}`);
   for (const [label, fn] of rows) {

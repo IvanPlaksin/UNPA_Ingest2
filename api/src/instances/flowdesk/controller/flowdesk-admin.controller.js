@@ -107,13 +107,29 @@ const setOverlayActive = h((req) => require('../services/prompt-overlay.service'
 const pe = () => require('../services/prompt-editor.service');
 const promptMeta = h(() => pe().meta());
 const promptDefaultGraph = h(() => pe().defaultGraph());
-const promptListGraphs = h(() => pe().listGraphs());
-const promptGetGraph = h((req) => pe().getGraph(req.params.entryId, req.query.version));
+// HYB-011a: WHICH graph — 'agent' (EVOLUTIO:PROMPT, what the live chat compiles)
+// or 'fsm' (CHAT_PROMPT, the state machine's). Read from the query for GETs and the
+// body for POSTs; absent means 'fsm', which is what every caller meant before the
+// parameter existed. See prompt-editor.service for why this had to become explicit.
+const src = (req) => req.query?.source || req.body?.source || null;
+const promptListGraphs = h((req) => pe().listGraphs(src(req)));
+const promptGetGraph = h((req) => pe().getGraph(req.params.entryId, req.query.version, src(req)));
 const promptSaveGraph = h((req) => pe().saveGraph({ ...req.body, createdBy: req.flowdeskUser?.email || 'admin' }));
 const promptMutateGraph = h((req) => pe().mutateGraph({ ...req.body, createdBy: req.flowdeskUser?.email || 'ai-assistant' }));
-const promptGetVersions = h((req) => pe().getVersions(req.params.entryId));
-const promptCompile = h((req) => pe().compile(req.body?.graph || req.body, { title: req.body?.title }));
-const promptValidate = h((req) => pe().validate(req.body?.graph || req.body));
+const promptGetVersions = h((req) => pe().getVersions(req.params.entryId, src(req)));
+const promptPromoteVersion = h((req) => pe().promoteVersion(req.params.entryId, req.body?.version, src(req)));
+// HYB-011c: the compile preview carries the one number that matters about a prompt
+// — its length in tokens — and says whether that number is exact (the provider's own
+// tokenizer) or estimated. The cache floor is a cliff, so a guess presented as a
+// fact would get someone to trim a prompt to just under it.
+const promptCompile = h(async (req) => {
+  const compiled = pe().compile(req.body?.graph || req.body, {
+    title: req.body?.title, source: src(req), language: req.body?.language, entryId: req.body?.entryId, version: req.body?.version,
+  });
+  const tokens = await require('../services/prompt-tokens.service').countPromptTokens(compiled && compiled.text);
+  return { ...compiled, tokens };
+});
+const promptValidate = h((req) => pe().validate(req.body?.graph || req.body, { source: src(req) }));
 const promptSandbox = h((req) => pe().sandbox(req.body));
 const promptApply = h((req) => pe().apply({ ...req.body, updatedBy: req.flowdeskUser?.email || 'admin' }));
 const promptActive = h(() => pe().getActive());
@@ -177,7 +193,7 @@ module.exports = {
   schemaEnrichGenerate, schemaEnrichApply, schemaEnrich, schemaEnrichStored, schemaExport,
   syncStatus, listSyncEvents, syncPollNow,
   analyzeSession, listOverlays, applyOverlay, setOverlayActive,
-  promptMeta, promptDefaultGraph, promptListGraphs, promptGetGraph, promptSaveGraph, promptMutateGraph,
+  promptMeta, promptDefaultGraph, promptListGraphs, promptGetGraph, promptSaveGraph, promptMutateGraph, promptPromoteVersion,
   promptGetVersions, promptCompile, promptValidate, promptSandbox, promptApply,
   promptActive, promptApplied, promptClear, promptAssistantChat,
   listTickets, getTicketLive, llmStats, adminHealth,

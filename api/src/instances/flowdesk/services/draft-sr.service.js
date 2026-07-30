@@ -79,13 +79,53 @@ function createDraftSRService(deps = {}) {
     return persist(draft);
   }
 
+  /**
+   * Every slot write in either interpreter comes through here, which makes it the
+   * one place that can keep the FORM and the LOCATION in step.
+   *
+   * Two things happen around the write, in this order:
+   *
+   *   1. The draft is reconciled to the schema it is being validated against. The
+   *      provider — and therefore the form — is chosen by the beneficiary's duty
+   *      station (schema-context), so confirming a different location swaps the
+   *      schema under a half-filled draft. Reconciling first means the patch is
+   *      applied to a draft that matches the form, instead of one still carrying
+   *      fields the new provider never defined.
+   *
+   *   2. AFTER the write, the ambient schema context is refreshed. The location or
+   *      the beneficiary may be what was just answered, and the rest of this turn —
+   *      choosing the next question, building its control — must load the form for
+   *      the location now on the draft, not the one this turn opened with.
+   *
+   * Both are best-effort in the sense that matters: neither can prevent the user's
+   * answer from being recorded.
+   */
   async function patch(sessionId, patches) {
     const draft = await get(sessionId);
     if (!draft) throw new Error(`[draft-sr] no draft for session ${sessionId}`);
     const snapshot = await loadSnapshot(draft.serviceId);
     if (!snapshot) throw new Error(`[draft-sr] no SchemaSnapshot for ${draft.serviceId}`);
-    const next = reducer.applyPatches(draft, patches, snapshot, now(), ttlMs);
-    return persist(next);
+    const base = reducer.reconcileToSchema(draft, snapshot, now(), ttlMs);
+    const next = reducer.applyPatches(base, patches, snapshot, now(), ttlMs);
+    const saved = await persist(next);
+    refreshSchemaContext(saved, patches);
+    return saved;
+  }
+
+  /**
+   * Tell the turn where the request is now for, when this write changed it.
+   *
+   * Narrow on purpose — only the two slots detect scopes on. A refresh on every
+   * write would be harmless but would say, on every field, that something about the
+   * request's location might have moved.
+   */
+  function refreshSchemaContext(draft, patches) {
+    const touched = (patches || []).some((pt) => pt && (pt.slotId === 'location' || pt.slotId === 'beneficiary'));
+    if (!touched) return;
+    try {
+      const { updateSchemaContext, schemaContextFrom } = require('./schema-context');
+      updateSchemaContext(schemaContextFrom(draft, null));
+    } catch { /* no turn in flight, or the module is absent in a bare unit test */ }
   }
 
   // ── DialogueStack ops (F10b) — read-modify-write through the reducer. ───────

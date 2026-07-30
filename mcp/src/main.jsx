@@ -1,3 +1,4 @@
+import './auth/authGlobal' // MUST be first: patches axios.create + fetch before any service module loads
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'

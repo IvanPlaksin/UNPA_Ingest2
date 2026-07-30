@@ -58,6 +58,7 @@ import EntitySingularityPage from './pages/EntitySingularityPage';
 import MethodologyLibraryPage from './components/Methodology/MethodologyLibraryPage';
 import MethodologyEditorPage from './components/Methodology/MethodologyEditorPage';
 import MethodologyRunnerPage from './components/Methodology/MethodologyRunnerPage';
+import AuthGate from './auth/AuthGate';
 
 // import './index.css'; // Removing in favor of CssBaseline and MUI styles
 
@@ -157,6 +158,7 @@ function App() {
             <CssBaseline />
             <ChatProvider>
                 <Router>
+                  <AuthGate>
                     <Box sx={{ display: 'flex', height: '100vh', width: '100vw', bgcolor: 'background.default', color: 'text.primary' }}>
                         <Sidebar />
                         <Box component="main" sx={{ flex: 1, overflow: 'hidden', position: 'relative', display: 'flex', flexDirection: 'column' }}>
@@ -280,6 +282,7 @@ function App() {
                             </Routes>
                         </Box>
                     </Box>
+                  </AuthGate>
                 </Router>
             </ChatProvider>
         </ThemeProvider>

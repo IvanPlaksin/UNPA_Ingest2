@@ -77,6 +77,66 @@ function createDraft({ sessionId, serviceId, schemaVersion, beneficiary, userId,
   };
 }
 
+/**
+ * The form under a draft has been replaced — carry over what still fits.
+ *
+ * A service is not one form. The provider that serves it is chosen by LOCATION, so
+ * confirming a duty station in Nairobi for a request opened in Geneva can swap the
+ * whole schema underneath a half-filled draft (see schema-context). What was true
+ * of the old form is not automatically true of the new one: fields disappear,
+ * arrive, and change type.
+ *
+ * Three rules, and each one is a value judgement worth stating:
+ *   - A slot the new form does not define is DROPPED. Keeping it would file an
+ *     answer against a field the provider has no place for.
+ *   - A slot whose TYPE changed is dropped too: 'temp' as an enum option and 'temp'
+ *     as free text are not the same answer, and the options behind an enum belong
+ *     to the old provider.
+ *   - Everything else is kept. Re-asking a name or a date the user already gave
+ *     because the office changed would be a worse answer than reusing it.
+ *
+ * What was dropped is RECORDED on the draft rather than discarded silently: the
+ * next question is chosen by code, but the user is owed an explanation for why
+ * something they already answered is being asked again.
+ *
+ * Pure, and a no-op when the schema is the same one.
+ *
+ * @param {object} draft
+ * @param {object} snapshot  the newly resolved SchemaSnapshot
+ * @param {number} now
+ * @param {number} [ttlMs]
+ * @returns {object} the draft (unchanged when nothing had to move)
+ */
+function reconcileToSchema(draft, snapshot, now, ttlMs = DEFAULT_TTL_MS) {
+  if (!draft || !snapshot || !Array.isArray(snapshot.slots)) return draft;
+  const sameSchema = snapshot.version != null && draft.schemaVersion != null
+    && String(snapshot.version) === String(draft.schemaVersion);
+  if (sameSchema) return draft;
+
+  const defs = new Map(snapshot.slots.map((sl) => [sl.slotId, sl]));
+  const slots = {};
+  const dropped = [];
+  for (const [slotId, value] of Object.entries(draft.slots || {})) {
+    const def = defs.get(slotId);
+    if (!def) { dropped.push(slotId); continue; }
+    if (value && value.type && def.type && value.type !== def.type) { dropped.push(slotId); continue; }
+    slots[slotId] = value;
+  }
+
+  return {
+    ...draft,
+    schemaVersion: snapshot.version != null ? snapshot.version : draft.schemaVersion,
+    slots,
+    // Read by the interpreters to explain the re-ask; overwritten by the next
+    // switch, because only the most recent one is still being explained.
+    ...(dropped.length
+      ? { schemaSwitch: { at: iso(now), from: draft.schemaVersion ?? null, to: snapshot.version ?? null, dropped } }
+      : {}),
+    updatedAt: iso(now),
+    expiresAt: iso(now + ttlMs),
+  };
+}
+
 function buildTrefContext(draft, snapshot) {
   const slotValues = {};
   for (const [id, sv] of Object.entries(draft.slots)) slotValues[id] = sv.value;
@@ -412,6 +472,7 @@ module.exports = {
   TrefParseError,
   createDraft,
   applyPatches,
+  reconcileToSchema,
   validateForSubmit,
   submit,
   escalate,

@@ -159,12 +159,17 @@ function isDirectoryUnavailableTurn(turn) {
   return /employee directory is temporarily unavailable|directory source unavailable/i.test(String(turn.response || ''));
 }
 
+const { clickFor } = require('./persona-click');
+
 function createArenaRunner(deps = {}) {
   const gym = deps.gym || require('./dialogue-gym.service');
   const simulator = deps.simulator || require('./persona-simulator');
   const store = deps.store || require('./arena-store').memgraphArenaStore();
   // target-agent adapter seam: builds an interactive session with sendTurn()
   const sandboxFactory = deps.sandboxFactory || ((p, d) => {
+    if (p && p.interpreterMode === 'hybrid') {
+      return require('../../instances/flowdesk/hybrid-interpreter/hybrid-session.service').createHybridSession(p, d);
+    }
     if (p && p.interpreterMode === 'agent') {
       return require('../../instances/flowdesk/agent-interpreter/agent-session.service').createAgentSession(p, d);
     }
@@ -288,6 +293,11 @@ function createArenaRunner(deps = {}) {
     const opening = await simulator.generateInitialMessage(persona, scenario, { vary: opts.vary, debug: opts.debug });
     let userMessage = opening.userMessage;
     let pendingControlAction = null; // set when the persona picks an offered choice
+    // Why a turn could NOT be delivered as a click, when it could not (HYB-006):
+    // a directory pick that cannot be faked, an unparseable date, an unclear yes.
+    // Kept so the arena's remaining blind spots are reported rather than assumed away.
+    let lastNoClick = null;
+    const noClickReasons = {};
     personaTokens += (opening.tokens?.input || 0) + (opening.tokens?.output || 0);
     personaCostUsd += opening.tokens?.costUsd || 0;
 
@@ -368,9 +378,24 @@ function createArenaRunner(deps = {}) {
         personaLatencyMs: personaResult?.latencyMs || 0,
         agentTokens: 0, // sandbox bypasses usage metering; agent-side cost not measured in P1
         personaTokens: (personaResult?.tokens?.input || 0) + (personaResult?.tokens?.output || 0),
+        // HYB-1: who wrote this turn and which condition decided it. Present only in
+        // hybrid mode; null elsewhere, which is how a reader tells the modes apart —
+        // and without it run C could not be measured at all.
+        turnAuthor: turn.turnAuthor || null,
+        routerReason: turn.routerReason || null,
+        modelCalls: (turn.agentMeta && turn.agentMeta.iterations) || (turn.turnAuthor === 'template' ? 0 : null),
       });
 
-      // 5. Decide the next user input: a picked choice → controlAction; else free text.
+      // 5. Decide the next user input: what a person would have DONE with the widget
+      //    in front of them, and only free text when no widget could carry it.
+      //
+      //    A picked option first — that is an explicit choice. Otherwise the answer
+      //    is applied to the FIELD control on screen (HYB-006): a date box takes a
+      //    date, a number box a number, a text box the prose itself, a confirm a
+      //    yes. Before this, only `choice` controls were clickable and every other
+      //    widget was answered in prose, so the arena measured an input distribution
+      //    the real client never produces — and could not see the hybrid's template
+      //    path at all.
       pendingControlAction = null;
       if (personaResult) {
         const idx = personaResult.choiceIndex;
@@ -380,6 +405,12 @@ function createArenaRunner(deps = {}) {
           userMessage = opt.label; // human-readable message for transcript
         } else {
           userMessage = personaResult.userMessage;
+          const clicked = clickFor(internals.controlsRaw, userMessage);
+          if (clicked.controlAction) pendingControlAction = clicked.controlAction;
+          else {
+          lastNoClick = clicked.why; // recorded, so the blind spots stay visible
+          noClickReasons[clicked.why] = (noClickReasons[clicked.why] || 0) + 1;
+        }
         }
       }
       turnIndex++;
@@ -399,6 +430,8 @@ function createArenaRunner(deps = {}) {
       identifiedServiceCode: lastIdentified,
       slotsCollected: uniq(allSlots),
       controlsShown: uniq(allControls),
+      // HYB-006: how often a turn had to stay free text, and why.
+      noClickReasonsJson: Object.keys(noClickReasons).length ? JSON.stringify(noClickReasons) : null,
       totalTokens: personaTokens,
       llmCostUsd: personaCostUsd,
     };

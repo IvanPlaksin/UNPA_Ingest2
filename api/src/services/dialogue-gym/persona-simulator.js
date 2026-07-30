@@ -29,10 +29,25 @@ const SIMULATOR_SCHEMA = {
     signal: { type: 'string', enum: SIGNALS, description: 'goal_achieved when the agent has clearly resolved the need; gave_up when patience is exhausted; confused when lost but still trying; otherwise continue.' },
     currentPatience: { type: 'number', description: 'Your remaining patience, 0..10.' },
   },
-  // Only `signal` is required — when the persona picks an offered choice it may
-  // return just choiceIndex, so userMessage must be optional (the arena uses the
-  // chosen option's label as the message). Requiring it caused hard failures.
-  required: ['signal'],
+  // NOTHING is required, and that is a considered position rather than laziness.
+  //
+  // `userMessage` was made optional first, for a real reason: when the persona picks
+  // an offered choice it may return only `choiceIndex`, and the arena uses the
+  // option's label as the message. Requiring it caused hard failures.
+  //
+  // `signal` followed it for the same reason, after watching two multi-run batches
+  // each lose a whole dialogue to "structuredOutput schema invalid: / must have
+  // required property 'signal'". The code below ALREADY handles an absent signal —
+  // `SIGNALS.includes(data.signal) ? data.signal : 'continue'` — so the strict
+  // schema made that branch unreachable in precisely the case it was written for,
+  // and turned a recoverable omission into a lost fourteen-turn run. An absent
+  // signal means nothing terminal happened, which is exactly `continue`.
+  //
+  // What must NOT be tolerated is a genuinely empty answer: a turn with no message
+  // and no choice is not a user acting, and feeding it to the interpreter would
+  // record a dialogue that never happened. That is checked after the call, where the
+  // choices are in scope, and it fails loudly.
+  required: [],
 };
 
 const KNOWLEDGE_RULES = {
@@ -151,6 +166,12 @@ async function generateNextMessage(persona, scenario, history, opts = {}) {
   const signal = SIGNALS.includes(data.signal) ? data.signal : 'continue';
   let choiceIndex = typeof data.choiceIndex === 'number' ? Math.round(data.choiceIndex) : 0;
   if (!(choiceIndex >= 1 && choiceIndex <= choices.length)) choiceIndex = 0; // guard hallucinated picks
+  // The one thing a missing field cannot be defaulted into: silence. Neither a
+  // message nor a choice means the simulated user did nothing, and a dialogue built
+  // on that is a record of something that did not happen.
+  if (!String(data.userMessage || '').trim() && !choiceIndex) {
+    throw new Error('[persona] the simulator returned neither a message nor a choice — nothing the user could have done');
+  }
   return {
     userMessage: String(data.userMessage || '').trim(),
     signal,

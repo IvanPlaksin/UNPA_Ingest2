@@ -172,10 +172,30 @@ function isReferenceSlot(slot) {
   return !!(slot.resolverRef || slot.dictRef || (slot.lov && slot.type !== 'enum'));
 }
 
+/**
+ * The fields still worth asking, in the form's own order, minus the optional ones
+ * the user has already waved away.
+ *
+ * `activeAskableSlots` answers "what could be asked"; this answers "what is left to
+ * ask THIS session", and the difference is one Set. It lives here because both the
+ * agent and the hybrid interpreter need the same answer, and a queue defined twice
+ * is two chats disagreeing about which question comes next.
+ *
+ * @param {object} draft
+ * @param {object} snapshot
+ * @param {Set<string>|{skippedSlotIds?:Set<string>}|null} skipped  a Set, or the
+ *   tool session that holds one — callers have one or the other.
+ */
+function askableQueue(draft, snapshot, skipped) {
+  const set = (skipped && (skipped.skippedSlotIds || skipped)) || new Set();
+  const has = typeof set.has === 'function' ? (id) => set.has(id) : () => false;
+  return activeAskableSlots(draft, snapshot).filter((s) => !has(s.slotId));
+}
+
 module.exports = {
   trefContext, isUnfilled, isFilled,
   activeRequiredSlots, activeAskableSlots, activeSlotIds, chooseNextSlot, orderAskable,
   isRequiredNow, evalTref,
   LARGE_FORM_THRESHOLD, isLargeForm,
-  validatePatches, isReferenceSlot,
+  validatePatches, isReferenceSlot, askableQueue,
 };

@@ -83,7 +83,10 @@ function PromptEditorInner() {
         const list = await promptListGraphs();
         if (Array.isArray(list) && list.length) {
           const g = await promptGetGraph(list[0].id || list[0].entryId);
-          store.loadGraph({ nodes: g.nodes, edges: g.edges, entryId: g.id || g.entryId || list[0].id, name: g.name, version: g.currentVersion || g.versionNumber });
+          store.loadGraph({
+            nodes: g.nodes, edges: g.edges, entryId: g.id || g.entryId || list[0].id, name: g.name,
+            version: g.currentVersion || g.versionNumber, namespace: g.namespace, isLiveForAgent: g.isLiveForAgent,
+          });
         } else {
           const d = await promptDefaultGraph();
           store.loadGraph({ nodes: d.nodes, edges: d.edges, name: 'Chat System Prompt (starter)' });
@@ -116,7 +119,10 @@ function PromptEditorInner() {
   const loadGraph = async (item) => {
     setGraphsAnchor(null);
     const g = await promptGetGraph(item.id || item.entryId);
-    store.loadGraph({ nodes: g.nodes, edges: g.edges, entryId: item.id || item.entryId, name: g.name, version: g.currentVersion });
+    store.loadGraph({
+      nodes: g.nodes, edges: g.edges, entryId: item.id || item.entryId, name: g.name,
+      version: g.currentVersion, namespace: g.namespace, isLiveForAgent: g.isLiveForAgent,
+    });
   };
   const loadDefault = async () => { const d = await promptDefaultGraph(); store.loadGraph({ nodes: d.nodes, edges: d.edges, entryId: null, name: 'Chat System Prompt (starter)' }); };
 
@@ -127,12 +133,31 @@ function PromptEditorInner() {
       {/* Toolbar */}
       <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1, flexWrap: 'wrap', gap: 1 }}>
         <TextField size="small" value={store.graphName} onChange={(e) => store.setName(e.target.value)} sx={{ width: 220 }} />
+        {/* WHICH graph. There are two with near-identical names, and only one of them
+            is compiled by the running chat — an editor that does not say which it has
+            open is how the wrong graph gets tuned for a week (HYB-011a). */}
+        <Tooltip title={store.isEvolutio
+          ? 'EVOLUTIO:PROMPT — the graph the live chat (agent / hybrid) compiles'
+          : 'CHAT_PROMPT — the state machine\'s prompt. The live chat does NOT read this.'}>
+          <Chip
+            size="small"
+            color={store.isLiveForAgent ? 'success' : 'default'}
+            variant={store.isLiveForAgent ? 'filled' : 'outlined'}
+            label={store.isLiveForAgent ? 'live · agent prompt' : (store.graphNamespace || 'unknown graph')}
+          />
+        </Tooltip>
+        {store.version != null && <Chip size="small" variant="outlined" label={`v${store.version}`} />}
         {store.dirty && <Chip size="small" color="warning" variant="outlined" label="unsaved" />}
         <Button size="small" variant="contained" startIcon={saving ? <CircularProgress size={13} /> : <Save size={14} />} onClick={save}>Save version</Button>
         <Button size="small" variant="outlined" startIcon={<History size={14} />} onClick={openVersions} disabled={!store.entryId}>Versions</Button>
         <Button size="small" variant="text" onClick={openGraphs}>Open…</Button>
         <Button size="small" variant="text" startIcon={<RotateCcw size={13} />} onClick={loadDefault}>Load starter</Button>
         <Box sx={{ flex: 1 }} />
+        {store.isEvolutio && (
+          <Tooltip title="Re-arrange by type and priority — this graph has no edges, so that is the only order it has">
+            <Button size="small" variant="text" onClick={store.relayout}>Tidy</Button>
+          </Tooltip>
+        )}
         <Tooltip title="Undo"><span><IconButton size="small" onClick={store.undo}><Undo2 size={16} /></IconButton></span></Tooltip>
         <Tooltip title="Redo"><span><IconButton size="small" onClick={store.redo}><Redo2 size={16} /></IconButton></span></Tooltip>
       </Stack>

@@ -110,6 +110,21 @@ const AGENT_SESSIONS = new Map();
 const AGENT_SESSION_LIMIT = 500;
 const agentEnabled = () => String(process.env.FLOWDESK_AGENT_INTERPRETER || '') === '1';
 
+/**
+ * HYB-1 — the hybrid interpreter, as a THIRD mode.
+ *
+ * `FLOWDESK_INTERPRETER=hybrid` (or FLOWDESK_HYBRID_INTERPRETER=1) answers a click
+ * in the middle of a form from a template and hands every other turn to the agent.
+ * Off, neither of the two existing paths changes by a line: the flag is read here
+ * and nowhere else, and the hybrid session is only constructed when it is on.
+ *
+ * Modes are mutually exclusive and hybrid wins, because it CONTAINS the agent —
+ * turning it on without turning the agent off is what an operator will do, and the
+ * sensible reading of that is "hybrid".
+ */
+const hybridEnabled = () => String(process.env.FLOWDESK_INTERPRETER || '').toLowerCase() === 'hybrid'
+  || String(process.env.FLOWDESK_HYBRID_INTERPRETER || '') === '1';
+
 function getAgentSession(sessionId, userContext, lang) {
   let s = AGENT_SESSIONS.get(sessionId);
   if (!s) {
@@ -117,8 +132,12 @@ function getAgentSession(sessionId, userContext, lang) {
       // Oldest first — Map preserves insertion order.
       AGENT_SESSIONS.delete(AGENT_SESSIONS.keys().next().value);
     }
-    const { createAgentSession } = require('../agent-interpreter/agent-session.service');
-    s = createAgentSession(
+    // Whichever mode is on. Both factories take the same arguments and return the
+    // same session shape, so nothing downstream in this file knows the difference.
+    const create = hybridEnabled()
+      ? require('../hybrid-interpreter/hybrid-session.service').createHybridSession
+      : require('../agent-interpreter/agent-session.service').createAgentSession;
+    s = create(
       {
         sessionId, lang, userContext,
         promptEntryId: process.env.FLOWDESK_AGENT_PROMPT_ENTRY || undefined,
@@ -160,7 +179,7 @@ async function endSessionAfterHandoff(sessionId) {
 }
 
 async function processMessage(sessionId, userId, message, userContext, choice, lang, controlAction, anchor, formEvent) {
-  if (agentEnabled()) {
+  if (agentEnabled() || hybridEnabled()) {
     return processMessageWithAgent(sessionId, userId, message, userContext, choice, lang, controlAction);
   }
   const engine = getEngine();
@@ -168,8 +187,14 @@ async function processMessage(sessionId, userId, message, userContext, choice, l
   const t0 = Date.now();
   // ADMIN P0: run the turn inside a capture scope so the wrapped LLM provider and
   // the progress bus land their measurements on this turn's record.
+  // The same per-turn "where is this request for" scope the agent path opens: the
+  // provider — and so the form — is chosen by the beneficiary's duty station, and
+  // the engine loads the form in a dozen branches (schema-context).
+  const { runWithSchemaContext, schemaContextFrom } = require('../services/schema-context');
+  const draft0 = await require('../services/draft-sr.service').getDraftSRService().get(sessionId).catch(() => null);
   const { result: r, capture } = await telemetry.withTurnCapture(() =>
-    engine.runTurn({ sessionId, userId, message, userContext, choice, controlAction, anchor, formEvent, lang: lang || 'en' }));
+    runWithSchemaContext(schemaContextFrom(draft0, null), () =>
+      engine.runTurn({ sessionId, userId, message, userContext, choice, controlAction, anchor, formEvent, lang: lang || 'en' })));
 
   // Fire-and-forget persistence — a telemetry failure never delays the reply.
   telemetry.recordTurn({
@@ -261,15 +286,23 @@ async function processMessageWithAgent(sessionId, userId, message, userContext, 
   const turn = r.turn;
   // Same telemetry as the state-machine path, so provenance (PREREQ-001) and the
   // Phase 6 metrics cover agent turns too. Fire-and-forget, as there.
+  // A TEMPLATE turn has no agentMeta, because it never called a model — and that is
+  // the point of it. Reading the meta unconditionally is what broke the first live
+  // hybrid turn that a template actually answered ("Cannot read properties of
+  // undefined (reading 'costUsd')"): the reply was built correctly and then lost in
+  // the telemetry that describes it. So the record is shaped from what the turn
+  // really did: no model call to price, one deterministic node.
+  const meta = turn.agentMeta || null;
   telemetry.recordTurn({
     sessionId, userId, userContext, message: userText,
     result: turn, durationMs: Date.now() - t0,
     capture: {
-      llmCalls: [{
-        method: 'agentLoop', model: null,
-        latencyMs: r.ms, costUsd: turn.agentMeta.costUsd, tokens: turn.agentMeta.tokens, error: null,
-      }],
-      nodeEvents: turn.agentMeta.toolCalls.map((c) => ({ node: c.name, status: c.ok ? 'success' : 'error', durationMs: c.ms, ts: Date.now() })),
+      llmCalls: meta
+        ? [{ method: 'agentLoop', model: null, latencyMs: r.ms, costUsd: meta.costUsd, tokens: meta.tokens, error: null }]
+        : [],
+      nodeEvents: meta
+        ? meta.toolCalls.map((c) => ({ node: c.name, status: c.ok ? 'success' : 'error', durationMs: c.ms, ts: Date.now() }))
+        : [{ node: 'TEMPLATE_FILL', status: 'success', durationMs: r.ms || 0, ts: Date.now() }],
       // Whatever the layers recorded for themselves during the turn.
       spans: scoped.spans,
     },
@@ -299,15 +332,18 @@ async function processMessageWithAgent(sessionId, userId, message, userContext, 
     },
     currentNode: 'AGENT',
     // The tool calls ARE the honest trace of what the agent did this turn.
-    executionLog: turn.agentMeta.toolCalls.map((c) => ({ node: c.name, status: c.ok ? 'success' : 'error' })),
+    executionLog: meta
+      ? meta.toolCalls.map((c) => ({ node: c.name, status: c.ok ? 'success' : 'error' }))
+      : (turn.executionLog || [{ node: 'TEMPLATE_FILL', status: 'COMPLETED' }]),
     spawnResult: turn.srNumber ? { requestId: turn.srNumber } : null,
     isComplete: !!turn.isComplete,
     engineStatus: turn.isComplete ? 'COMPLETED' : 'WAITING_FOR_INPUT',
     version: 'v2',
+    ...(turn.turnAuthor ? { turnAuthor: turn.turnAuthor, routerReason: turn.routerReason || null } : {}),
   };
 }
 
 /** Test seam. */
 function _reset() { _engine = null; AGENT_SESSIONS.clear(); }
 
-module.exports = { processMessage, processMessageWithAgent, getEngine, _reset, agentEnabled };
+module.exports = { processMessage, processMessageWithAgent, getEngine, _reset, agentEnabled, hybridEnabled };

@@ -35,6 +35,41 @@ const UI_STRINGS = {
     switchConfirm: '您有一个进行中的“{current}”请求。要改为开始新的“{next}”请求吗？我会保存当前请求。（切换 / 继续）', resumeOffer: '您有一个未完成的“{title}”请求。要继续它还是开始新的？（继续 / 新建）', submitted: '完成——已创建您的请求 {ref}。您可以用该编号跟踪。', submitCancelled: '好的，暂不提交。请告诉我您想修改什么。', internalError: '抱歉——我这边出现了内部错误。您的请求已保存；我们继续吧。', directoryUnavailable: '员工目录暂时不可用。您可以重试，或手动输入姓名/邮箱。（重试 / 输入姓名）', directoryManual: '请输入姓名和邮箱。', dateInvalid: '这看起来不是有效的日期。请选择一个日期。', cascadeReview: '我找到了以下信息：', cascadeAsk: '是否正确？', cascadeWarn: '修改“{field}”将重置这些已填写的字段：{deps}。要继续吗？（是 / 否）', cascadeCancelled: '好的，我将保持“{field}”不变。', editWhichValue: '您想将“{field}”设置为什么？', editNotDirect: '“{field}”的值来自参照列表，无法直接编辑——请修改其所依据的字段。', cascadeEditNote: '注意：更改此项后需要重新填写：{deps}。', optionalMark: '（可选）', skipLabel: '跳过', manualApprover: '审批人', shareWith: '要将此请求（只读）分享给同事吗？请说出他们的名字，或跳过。', shareNotFound: '我在目录中找不到该人员。请换一个名字，或跳过。', fillingComplete: '所有信息已收集完毕。', intentAsk: '我找到了“{title}”请求。您想和我一起填写，还是先查看表单及其字段？', intentFill: '与助手一起填写', intentInfo: '查看表单和字段', largeForm: '“{title}”表单有 {count} 个字段——相当多。直接在表单中填写可能更快。您想如何继续？', largeFormWizard: '填写表单', largeFormAssistant: '继续使用助手', largeFormInfo: '查看表单和字段', thanks: '您的请求已创建——很高兴能帮到您。需要再提交请求时随时找我。', proceedToForm: '打开表单后，助手辅助填写即结束：之后我将无法再为您修改。现在打开吗？', stayInChat: '好的，我们可以继续在这里沟通。请告诉我需要修改什么，或在准备好时让我打开表单。', requestCreated: '您的请求已创建。您可以在此打开：{link}', openFormLabel: '打开表单', stayHereLabel: '继续在此沟通', anythingElse: '还有什么可以帮您？', services: { newRequest: '创建请求', findInfo: '查找信息', myRequests: '我的请求', catalog: '服务目录', approvals: '审批' } },
 };
 
+/**
+ * HYB-1 — what a TEMPLATE turn says before its question.
+ *
+ * The hybrid interpreter answers a click without calling the model (see
+ * hybrid-interpreter/turn-router): the value is already written by code, the next
+ * field is chosen by code, and the question text is the field's own `promptHint`.
+ * What is missing is the half-sentence in front of it, and this is it.
+ *
+ * SHORT ON PURPOSE. On a click turn the acknowledgement IS the click — the user
+ * picked "Maria Ivanova" and knows they did. "I have noted that Maria Ivanova from
+ * the HR Department will be the beneficiary of this request" is padding; the value
+ * of the template path is that the answer arrives in 150 ms instead of 3 seconds.
+ *
+ * Declared apart from UI_STRINGS and merged in below: the per-language entries
+ * there are single enormous lines, and a nested six-by-six block inside them would
+ * be unreadable. Access is unchanged — `ui(lang).controlAck`.
+ *
+ * All six languages are present even though the template path currently runs only
+ * for English sessions (`promptHint` is the Altiora field label, and mixing "Понял."
+ * with an English question is worse than a slower answer). If a translated label
+ * ever reaches the snapshot, the strings are already here.
+ */
+const CONTROL_ACK = {
+  en: { confirm: 'Got it.', choice: 'Noted.', autocomplete: 'Thanks.', date: 'Recorded.', number: 'Got it.', text: 'Got it.', textarea: 'Got it.', toggle: 'Noted.', multichoice: 'Noted.', skip: 'Skipped.' },
+  ru: { confirm: 'Понял.', choice: 'Отмечено.', autocomplete: 'Спасибо.', date: 'Записано.', number: 'Понял.', text: 'Понял.', textarea: 'Понял.', toggle: 'Отмечено.', multichoice: 'Отмечено.', skip: 'Пропущено.' },
+  fr: { confirm: 'Compris.', choice: 'Noté.', autocomplete: 'Merci.', date: 'Enregistré.', number: 'Compris.', text: 'Compris.', textarea: 'Compris.', toggle: 'Noté.', multichoice: 'Noté.', skip: 'Ignoré.' },
+  es: { confirm: 'Entendido.', choice: 'Anotado.', autocomplete: 'Gracias.', date: 'Registrado.', number: 'Entendido.', text: 'Entendido.', textarea: 'Entendido.', toggle: 'Anotado.', multichoice: 'Anotado.', skip: 'Omitido.' },
+  ar: { confirm: 'فهمت.', choice: 'تم التسجيل.', autocomplete: 'شكراً.', date: 'تم التسجيل.', number: 'فهمت.', text: 'فهمت.', textarea: 'فهمت.', toggle: 'تم التسجيل.', multichoice: 'تم التسجيل.', skip: 'تم التخطي.' },
+  zh: { confirm: '明白了。', choice: '已记录。', autocomplete: '谢谢。', date: '已记录。', number: '明白了。', text: '明白了。', textarea: '明白了。', toggle: '已记录。', multichoice: '已记录。', skip: '已跳过。' },
+};
+
+for (const [lang, ack] of Object.entries(CONTROL_ACK)) {
+  if (UI_STRINGS[lang]) UI_STRINGS[lang].controlAck = ack;
+}
+
 function ui(lang) { return UI_STRINGS[lang] || UI_STRINGS.en; }
 
 /**
@@ -47,4 +82,4 @@ function langInstruction(lang) {
   return `\n\nAlways reply in ${name}, regardless of the language the user writes in. Never switch languages.`;
 }
 
-module.exports = { UI_STRINGS, ui, langInstruction };
+module.exports = { UI_STRINGS, ui, langInstruction, CONTROL_ACK };

@@ -175,9 +175,58 @@ function buildCascadeConfirmControl(fields, { label } = {}) {
   }];
 }
 
+/**
+ * Build the control a slot deserves, from the slot itself: a date field gets a
+ * date picker, a directory-backed field an autocomplete pointed at the RIGHT
+ * directory (people vs duty stations) — the part a model cannot infer.
+ *
+ * SHARED. The agent interpreter had this privately; the hybrid interpreter needs
+ * exactly the same widget for exactly the same slot, and two copies of this
+ * mapping is how two chats start showing the user different forms. It lives here,
+ * next to the builders it dispatches to, and both interpreters call it.
+ */
+function buildControlFromSlot(slotDef, { label, options, defaultValue, searchHint, alternatives } = {}) {
+  const opts = { label };
+  const directory = directoryOf(slotDef);
+  if (directory) {
+    // allowSearch attaches the autocomplete child carrying source.directory and
+    // the matching endpoint. Emitting a bare autocomplete is what produced a
+    // person picker for a location question.
+    //
+    // defaultValue is what the confirm button CONFIRMS. Without it the control
+    // renders a "Yes" that agrees to nothing: the recipient question is meant to
+    // read "is this for you?" — one click to accept yourself, or search for a
+    // colleague — and with no default it degrades into "type your own name".
+    const [c] = buildConfirmControl(slotDef, defaultValue, alternatives || [], { ...opts, allowSearch: true });
+    // What the user said about the person or place opens the search already typed
+    // in, so "it is for Maria Ivanova" costs one click rather than a re-typing.
+    // A hint is a QUERY, never a value — the committed value is always the record
+    // the user picks.
+    if (searchHint && c.children && c.children[0]) c.children[0].prefill = String(searchHint);
+    return c;
+  }
+  const present = Array.isArray(slotDef.presentOptions) && slotDef.presentOptions.length
+    ? slotDef.presentOptions
+    : (Array.isArray(options) ? options : null);
+  switch (slotDef.type) {
+    case 'date': return buildDateControl(slotDef, opts)[0];
+    case 'number': return buildNumberControl(slotDef, opts)[0];
+    case 'boolean': case 'toggle': return buildToggleControl(slotDef, opts)[0];
+    case 'multiselect': case 'multichoice':
+      return present ? buildMultichoiceControl(slotDef, present, opts)[0] : null;
+    case 'enum': case 'select':
+      return present ? buildChoiceControl(slotDef, present, opts)[0] : null;
+    case 'text': return buildTextareaControl(slotDef, opts)[0];
+    default:
+      // An enum-like slot that carries options is still a choice, whatever it calls itself.
+      return present ? buildChoiceControl(slotDef, present, opts)[0] : buildTextControl(slotDef, opts)[0];
+  }
+}
+
 module.exports = {
   buildConfirmControl, buildChoiceControl, buildDateControl, buildMultichoiceControl,
   buildCascadeConfirmControl,
   buildTextControl, buildTextareaControl, buildNumberControl, buildToggleControl,
   directoryOf, toOption,
+  buildControlFromSlot,
 };

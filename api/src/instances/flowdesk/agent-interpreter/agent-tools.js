@@ -121,10 +121,7 @@ const telemetry = () => require('../services/chat-telemetry.service');
  * a condition had hidden, re-asked fields the user had skipped, and interrogated
  * the user for values the form autofills.
  */
-function askableQueue(draft, snapshot, session) {
-  const skipped = (session && session.skippedSlotIds) || new Set();
-  return policy.activeAskableSlots(draft, snapshot).filter((s) => !skipped.has(s.slotId));
-}
+const askableQueue = (draft, snapshot, session) => policy.askableQueue(draft, snapshot, session);
 
 /** Is this slot required GIVEN the values collected so far (trefCondition + requiredWhen)? */
 const requiredNow = (slotDef, draft, snapshot) =>
@@ -183,48 +180,15 @@ function formState(draft, snapshot, session) {
 }
 
 /**
- * Build the control a slot deserves, from the slot itself — the same mapping the
- * state machine uses, so a date field gets a date picker and a directory-backed
- * field gets an autocomplete pointed at the RIGHT directory (people vs duty
- * stations), which is the part a model cannot infer.
+ * Build the control a slot deserves — now shared with the hybrid interpreter.
+ *
+ * The mapping (a date field gets a date picker, a directory-backed field gets an
+ * autocomplete pointed at the RIGHT directory) lives in interpreter/controls.js so
+ * that every interpreter builds the same widget from the same slot. It was moved
+ * there the moment a second caller needed it: a copy is how two chats start
+ * disagreeing about what a form looks like.
  */
-function buildControlFromSlot(slotDef, { label, options, defaultValue, searchHint, alternatives } = {}) {
-  const opts = { label };
-  const directory = ctrl.directoryOf(slotDef);
-  if (directory) {
-    // allowSearch attaches the autocomplete child carrying source.directory and
-    // the matching endpoint. Emitting a bare autocomplete is what produced a
-    // person picker for a location question.
-    //
-    // defaultValue is what the confirm button CONFIRMS. Without it the control
-    // renders a "Yes" that agrees to nothing: the recipient question is meant to
-    // read "is this for you?" — one click to accept yourself, or search for a
-    // colleague — and with no default it degrades into "type your own name".
-    const [c] = ctrl.buildConfirmControl(slotDef, defaultValue, alternatives || [], { ...opts, allowSearch: true });
-    // What the user said about the person or place opens the search already typed
-    // in, so "it is for Maria Ivanova" costs one click rather than a re-typing.
-    // A hint is a QUERY, never a value — the committed value is always the record
-    // the user picks.
-    if (searchHint && c.children && c.children[0]) c.children[0].prefill = String(searchHint);
-    return c;
-  }
-  const present = Array.isArray(slotDef.presentOptions) && slotDef.presentOptions.length
-    ? slotDef.presentOptions
-    : (Array.isArray(options) ? options : null);
-  switch (slotDef.type) {
-    case 'date': return ctrl.buildDateControl(slotDef, opts)[0];
-    case 'number': return ctrl.buildNumberControl(slotDef, opts)[0];
-    case 'boolean': case 'toggle': return ctrl.buildToggleControl(slotDef, opts)[0];
-    case 'multiselect': case 'multichoice':
-      return present ? ctrl.buildMultichoiceControl(slotDef, present, opts)[0] : null;
-    case 'enum': case 'select':
-      return present ? ctrl.buildChoiceControl(slotDef, present, opts)[0] : null;
-    case 'text': return ctrl.buildTextareaControl(slotDef, opts)[0];
-    default:
-      // An enum-like slot that carries options is still a choice, whatever it calls itself.
-      return present ? ctrl.buildChoiceControl(slotDef, present, opts)[0] : ctrl.buildTextControl(slotDef, opts)[0];
-  }
-}
+const buildControlFromSlot = ctrl.buildControlFromSlot;
 
 /**
  * The long-form fork, or nothing.
@@ -379,6 +343,17 @@ function createToolSession() {
     largeFormOffered: false,         // the wizard choice is offered once, not every turn
     finalGateShown: false,           // the form hand-off that ends a completed request
     openForm: null,                  // set by open_form; rides the turn like the FSM's
+    // HYB-1: the two facts the hybrid interpreter cannot derive from the draft.
+    // How many fields THIS form has already asked — the first one gets a model turn
+    // for context, every later one may be a template (turn-router condition 7).
+    fieldsAskedThisForm: 0,
+    // What the user last acted on, which decides the acknowledgement: a date field
+    // shown as a confirm deserves "Got it.", not "Recorded.".
+    lastControlType: null,
+    // The controls the LAST reply carried. The agent path reads them from the loop;
+    // the template path has no loop, so the session remembers them — a click is
+    // resolved against the control that was actually shown.
+    lastControls: [],
   };
 }
 
@@ -1198,8 +1173,18 @@ function createAgentTools(deps = {}) {
       const open = `[request open: ${(snapshot.metadata && snapshot.metadata.title) || draft.serviceId} `
         + `(serviceCode ${draft.serviceId}) — it is already created, do NOT call draft_create again.]`;
 
+      // The form was replaced because the duty station changed, and some answers
+      // went with it (schema-context, reducer.reconcileToSchema). The next field is
+      // chosen by code either way — but the user is owed the reason for being asked
+      // something they already answered, and only the model can say it.
+      const switched = draft.schemaSwitch && draft.schemaSwitch.dropped && draft.schemaSwitch.dropped.length
+        ? `\n[the duty station changed, so this service is now served by a different office with its own form. `
+          + `These answers do not exist on it and are gone: ${draft.schemaSwitch.dropped.join(', ')}. `
+          + `Say so once, briefly, before your next question — do not apologise at length and do not list the fields again.]`
+        : '';
+
       if (!st.nextField) {
-        return `${open}\n[form: everything askable is collected (${collected.join(', ') || 'none'}). Summarise the request and show a confirm control.]`;
+        return `${open}${switched}\n[form: everything askable is collected (${collected.join(', ') || 'none'}). Summarise the request and show a confirm control.]`;
       }
       // The field due comes FIRST and alone.
       //
@@ -1209,7 +1194,7 @@ function createAgentTools(deps = {}) {
       // so the prose and the control disagreed on every turn. The order is not
       // negotiable, so the brief must not read as though it were.
       const rest = st.askable.length - 1;
-      return `${open}
+      return `${open}${switched}
 [form — ask ONLY this now: "${st.nextField.label}" (slotId ${st.nextField.slotId})`
         + `${st.nextField.required ? ', required' : ', optional — offer a way to skip it'}. `
         + `A control for any other field is refused. `
@@ -1293,6 +1278,16 @@ function createAgentTools(deps = {}) {
       : value;
     if (resolved === undefined || resolved === null || resolved === '') return false;
     ctx.session.pendingContext = { ...(ctx.session.pendingContext || {}), [slotId]: resolved };
+    // The duty station is confirmed BEFORE the form exists — which is exactly when
+    // the form is chosen. Without this, a location answered in the same turn as
+    // draft_create would be recorded and then ignored by the provider lookup that
+    // followed it. (After the draft exists, draft-sr.service.patch does this.)
+    if (slotId === 'location' || slotId === 'beneficiary') {
+      try {
+        const { updateSchemaContext, schemaContextFrom } = require('../services/schema-context');
+        updateSchemaContext(schemaContextFrom(null, ctx.session.pendingContext));
+      } catch { /* outside a turn — nothing to revise */ }
+    }
     return true;
   }
 
@@ -1542,7 +1537,7 @@ function createAgentTools(deps = {}) {
     }
   }
 
-  return { execute, TOOLS, TOOL_SCHEMAS, createToolSession, CONTROL_TYPES, autoControlFor, recordSkip, missingRequired, turnBrief, recordPreDraftAnswer, recordControlAnswer, recordTypedAnswer, prefetchCatalog,
+  return { execute, TOOLS, TOOL_SCHEMAS, createToolSession, CONTROL_TYPES, autoControlFor, recordSkip, missingRequired, turnBrief, recordPreDraftAnswer, recordControlAnswer, recordTypedAnswer, resolveForControl, prefetchCatalog, loadSnapshot,
     beginTurn };
 }
 

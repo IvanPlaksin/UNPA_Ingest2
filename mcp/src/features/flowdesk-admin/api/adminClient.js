@@ -47,12 +47,18 @@ export const setPromptOverlayActive = (overlayId, active) => request(`/prompt-ov
 // System-prompt graph editor (P6)
 export const promptMeta = () => request('/prompt/meta');
 export const promptDefaultGraph = () => request('/prompt/default-graph');
-export const promptListGraphs = () => request('/prompt/graphs');
-export const promptGetGraph = (entryId, version) => request(`/prompt/graphs/${encodeURIComponent(entryId)}${version != null ? `?version=${version}` : ''}`);
-export const promptSaveGraph = (body) => request('/prompt/graphs', { method: 'POST', body });
-export const promptGetVersions = (entryId) => request(`/prompt/graphs/${encodeURIComponent(entryId)}/versions`);
-export const promptCompile = (graph) => request('/prompt/compile', { method: 'POST', body: { graph } });
-export const promptValidate = (graph) => request('/prompt/validate', { method: 'POST', body: { graph } });
+// HYB-011a: WHICH graph. 'agent' is EVOLUTIO:PROMPT — the one the live chat
+// compiles; 'fsm' is CHAT_PROMPT, the state machine's. The editor asks for the
+// agent graph, because that is the prompt an operator is actually tuning.
+const GRAPH_SOURCE = 'agent';
+const withSource = (qs = '') => `${qs ? `${qs}&` : '?'}source=${GRAPH_SOURCE}`;
+export const promptListGraphs = () => request(`/prompt/graphs${withSource()}`);
+export const promptGetGraph = (entryId, version) => request(`/prompt/graphs/${encodeURIComponent(entryId)}${withSource(version != null ? `?version=${version}` : '')}`);
+export const promptSaveGraph = (body) => request('/prompt/graphs', { method: 'POST', body: { ...body, source: GRAPH_SOURCE } });
+export const promptGetVersions = (entryId) => request(`/prompt/graphs/${encodeURIComponent(entryId)}/versions${withSource()}`);
+export const promptPromoteVersion = (entryId, version) => request(`/prompt/graphs/${encodeURIComponent(entryId)}/promote`, { method: 'POST', body: { version, source: GRAPH_SOURCE } });
+export const promptCompile = (graph, opts = {}) => request('/prompt/compile', { method: 'POST', body: { graph, source: GRAPH_SOURCE, ...opts } });
+export const promptValidate = (graph) => request('/prompt/validate', { method: 'POST', body: { graph, source: GRAPH_SOURCE } });
 export const promptSandbox = (body) => request('/prompt/sandbox', { method: 'POST', body });
 export const promptApply = (body) => request('/prompt/apply', { method: 'POST', body });
 export const promptActive = () => request('/prompt/active');

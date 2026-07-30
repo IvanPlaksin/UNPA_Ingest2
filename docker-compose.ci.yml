@@ -19,7 +19,8 @@ services:
     environment:
       - MEMGRAPH_USER=memgraph
       - MEMGRAPH_PASSWORD=${MEMGRAPH_PASSWORD:-secret_password_123}
-    command: ["--log-level=WARNING", "--memory-limit=1024", "--also-log-to-stderr"]
+    # 5120 MiB: the VM now holds the full local dataset (~1.36M nodes / 1.24M rels, ~2.9 GiB resident)
+    command: ["--log-level=WARNING", "--memory-limit=5120", "--also-log-to-stderr"]
     volumes: ["memgraph_data:/var/lib/memgraph"]
     networks: [projectadvisor-network]
 

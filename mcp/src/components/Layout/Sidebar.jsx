@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { MessageSquare, Database, GitGraph, Settings, Search, LayoutDashboard, ListTodo, FolderTree, Bot, FlaskConical, Layers, Microscope, Workflow, Brain, Network, Globe, DatabaseZap, Activity, Cpu, ClipboardList, BookOpen, BarChart3, FolderKanban, PenTool, FormInput, ChevronDown, ChevronRight, Headphones, FileText, Triangle, AlertTriangle, HeartPulse, Archive, Boxes, Map, LineChart, ShieldAlert, ScanSearch, ShieldCheck, Sparkles, ArrowLeftRight, Gauge, Dumbbell, RefreshCw } from 'lucide-react';
+import { MessageSquare, Database, GitGraph, Settings, Search, LayoutDashboard, ListTodo, FolderTree, Bot, FlaskConical, Layers, Microscope, Workflow, Brain, Network, Globe, DatabaseZap, Activity, Cpu, ClipboardList, BookOpen, BarChart3, FolderKanban, PenTool, FormInput, ChevronDown, ChevronRight, Headphones, FileText, Triangle, AlertTriangle, HeartPulse, Archive, Boxes, Map, LineChart, ShieldAlert, ScanSearch, ShieldCheck, Sparkles, ArrowLeftRight, Gauge, Dumbbell, RefreshCw, LogOut } from 'lucide-react';
 import {
     Box,
     Drawer,
@@ -19,11 +19,13 @@ import ServiceStatusWidget from './ServiceStatusWidget';
 import AIUsageWidget from './AIUsageWidget';
 import TensorMonitorWidget from './TensorMonitorWidget';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { useAuth } from '../../auth/AuthGate';
 
 const DRAWER_WIDTH = 240;
 
 const Sidebar = () => {
     const location = useLocation();
+    const { user, logout } = useAuth();
 
     const workspaces = useWorkspaceStore(s => s.workspaces);
     const fetchWorkspaces = useWorkspaceStore(s => s.fetchWorkspaces);
@@ -265,6 +267,17 @@ const Sidebar = () => {
                         <Settings size={20} />
                     </ListItemIcon>
                     <ListItemText primary="Settings" primaryTypographyProps={{ fontSize: '0.875rem' }} />
+                </ListItemButton>
+                <ListItemButton onClick={() => logout()} sx={{ mt: 0.5, borderRadius: 2, color: 'text.secondary' }}>
+                    <ListItemIcon sx={{ minWidth: 40, color: 'text.secondary' }}>
+                        <LogOut size={20} />
+                    </ListItemIcon>
+                    <ListItemText
+                        primary="Sign out"
+                        secondary={user?.username}
+                        primaryTypographyProps={{ fontSize: '0.875rem' }}
+                        secondaryTypographyProps={{ fontSize: '0.72rem' }}
+                    />
                 </ListItemButton>
             </Box>
         </Drawer>
