@@ -72,22 +72,24 @@ export async function patchDraft(sessionId, patches) {
  * POST a chat turn. Returns the final turn result plus the refreshed draft.
  * @returns {Promise<{response, choices, state, executionLog, spawnResult, isComplete, version, draft}>}
  */
-export async function sendMessage(sessionId, userId, message, { signal, choice, controlAction, lang, userContext } = {}) {
+export async function sendMessage(sessionId, userId, message, { signal, choice, controlAction, anchor, lang, userContext } = {}) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), SEND_TIMEOUT_MS);
   // Chain an external cancel signal (e.g. Composer "stop") into ours.
   if (signal) signal.addEventListener('abort', () => ctrl.abort(), { once: true });
 
-  // Exactly one of controlAction (I-3 controls[]) / choice (legacy confirm-or-choose) /
-  // message is sent; controlAction takes precedence during the deprecation window.
+  // Exactly one of anchor (Phase 4 zero-query explain) / controlAction (I-3 controls[]) /
+  // choice (legacy confirm-or-choose) / message is sent; anchor takes precedence.
   // userContext (the user profile) is the acting identity when there is no proxy —
   // the backend prefers its proxy-injected req.flowdeskUser over this body value.
   const base = { sessionId, userId, lang, ...(userContext ? { userContext } : {}) };
-  const body = controlAction
-    ? { ...base, controlAction }
-    : choice
-      ? { ...base, choice }
-      : { ...base, message };
+  const body = anchor
+    ? { ...base, anchor }
+    : controlAction
+      ? { ...base, controlAction }
+      : choice
+        ? { ...base, choice }
+        : { ...base, message };
 
   let res;
   try {
@@ -165,5 +167,22 @@ export function subscribeProgress(sessionId, handlers = {}, opts = {}) {
   };
 }
 
-export const chatClient = { sendMessage, getDraft, patchDraft, subscribeProgress, getSchema };
+/**
+ * VF1-005: GET the persisted voice transcript for a session (voice+text share one
+ * session). Returns [] when there is none.
+ */
+export async function getVoiceTranscript(sessionId) {
+  let res;
+  try {
+    res = await fetch(url(`/flowdesk/voice/transcript/${encodeURIComponent(sessionId)}`));
+  } catch (e) {
+    throw new ChatError('NETWORK', e.message);
+  }
+  if (res.status === 404) return [];
+  if (!res.ok) throw new ChatError('SERVER', `getVoiceTranscript HTTP ${res.status}`);
+  const data = await res.json();
+  return Array.isArray(data.messages) ? data.messages : [];
+}
+
+export const chatClient = { sendMessage, getDraft, patchDraft, subscribeProgress, getSchema, getVoiceTranscript };
 export { SSE_EVENTS };

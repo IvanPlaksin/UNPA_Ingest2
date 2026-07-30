@@ -376,7 +376,7 @@ async function getRequest(req, res) {
  */
 async function chat(req, res) {
   try {
-    const { sessionId: sid0, userId: uid0, message: msg0, choice: choice0, controlAction: ctrlAction0, lang: lang0, userContext: bodyUserCtx } = req.body;
+    const { sessionId: sid0, userId: uid0, message: msg0, choice: choice0, controlAction: ctrlAction0, anchor: anchor0, formEvent: formEvent0, lang: lang0, userContext: bodyUserCtx } = req.body;
     // The acting identity: the proxy-injected user (trusted) ALWAYS wins; the
     // body-provided profile is the fallback for the standalone UI (no proxy). The
     // body value never carries a bearer token, so it cannot escalate privilege —
@@ -389,10 +389,16 @@ async function chat(req, res) {
     if (String(process.env.FLOWDESK_CHAT_V2 || 'false') === 'true') {
       if (!sid0) return res.status(400).json({ error: 'sessionId is required' });
       if (!uid) return res.status(400).json({ error: 'userId is required' });
-      if (!msg0 && !choice0 && !ctrlAction0) return res.status(400).json({ error: 'message, choice, or controlAction is required' });
+      // Phase 4: an anchor click is a valid zero-query turn (no message needed).
+      if (anchor0 != null && (typeof anchor0 !== 'object' || typeof anchor0.id !== 'string' || !anchor0.id)) {
+        return res.status(400).json({ error: 'anchor.id must be a non-empty string' });
+      }
+      // A formEvent (e.g. the form reporting a created request) is a valid zero-input
+      // turn — the host signals it, there is nothing for the user to have typed.
+      if (!msg0 && !choice0 && !ctrlAction0 && !anchor0 && !formEvent0) return res.status(400).json({ error: 'message, choice, controlAction, anchor, or formEvent is required' });
       try {
         const chatV2 = require('../interpreter/chat-v2.service.js');
-        const result = await chatV2.processMessage(sid0, uid, msg0, actingUser, choice0 || null, lang0 || 'en', ctrlAction0 || null);
+        const result = await chatV2.processMessage(sid0, uid, msg0, actingUser, choice0 || null, lang0 || 'en', ctrlAction0 || null, anchor0 || null, formEvent0 || null);
         return res.json({ sessionId: sid0, ...result });
       } catch (v2Err) {
         console.error(`[FlowDesk v2] error: ${v2Err.message}`);

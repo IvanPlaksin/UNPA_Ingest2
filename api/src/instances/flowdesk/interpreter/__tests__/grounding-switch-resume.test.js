@@ -91,10 +91,12 @@ describe('F10d: explicit closure on submit (ADCC-091)', () => {
     let r = await engine.runTurn({ sessionId: sid, message: 'I need a laptop', lang: 'en' }); // assetType auto-filled → asks pickupDate
     expect(r.askingSlot).toBe('pickupDate');
     r = await engine.runTurn({ sessionId: sid, message: 'deliver on 2026-07-20', lang: 'en' }); // fills date → review
-    r = await engine.runTurn({ sessionId: sid, message: 'yes', lang: 'en' }); // submit
-    expect(r.isComplete).toBe(true);
-    expect(r.closer).toBe(r.srNumber);
-    expect(r.response).toMatch(/SR-77/);
+    // Confirming now hands the collected values to Altiora's form instead of
+    // submitting here, so there is no SR number to close the conversation with yet.
+    r = await engine.runTurn({ sessionId: sid, message: 'yes', lang: 'en' });
+    expect(r.route).toBe('confirm_form');
+    expect(r.openForm.prefill.dynamicData).toBeDefined();
+    expect(r.srNumber).toBeUndefined();
   });
 });
 

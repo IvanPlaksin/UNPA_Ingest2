@@ -7,7 +7,7 @@ import {
   Box, Stack, Button, Typography, Paper, Chip, TextField, Alert, CircularProgress,
   Divider, Accordion, AccordionSummary, AccordionDetails, IconButton,
 } from '@mui/material';
-import { ShieldCheck, FlaskConical, Rocket, FileText, ChevronDown, Plus, X } from 'lucide-react';
+import { ShieldCheck, FlaskConical, Rocket, FileText, ChevronDown, Plus, X, Dumbbell } from 'lucide-react';
 import {
   promptValidate, promptCompile, promptSandbox, promptApply, promptActive, promptClear,
 } from '../api/adminClient';
@@ -59,6 +59,12 @@ export default function TestApplyPanel() {
           <Button size="small" variant="outlined" startIcon={busy === 'validate' ? <CircularProgress size={13} /> : <ShieldCheck size={14} />} onClick={doValidate}>Validate</Button>
           <Button size="small" variant="outlined" startIcon={busy === 'compile' ? <CircularProgress size={13} /> : <FileText size={14} />} onClick={doCompile}>Preview prompt</Button>
           <Button size="small" variant="contained" color="success" startIcon={busy === 'apply' ? <CircularProgress size={13} /> : <Rocket size={14} />} onClick={doApply}>Apply live</Button>
+          <Button size="small" variant="outlined" startIcon={<Dumbbell size={14} />}
+            href={entryId ? `/dialogue-gym/arena?promptEntry=${entryId}${version ? `&promptVersion=${version}` : ''}` : '/dialogue-gym/arena'}
+            target="_blank" rel="noopener"
+            title={entryId ? 'Evaluate this prompt version with simulated users in Dialogue Gym' : 'Save the graph first to test a specific version'}>
+            Test in Dialogue Gym
+          </Button>
         </Stack>
 
         {validation && (

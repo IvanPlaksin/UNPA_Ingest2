@@ -103,6 +103,6 @@ describe('F9.1a+d+F9.2: engine asks one slot per turn in ratified order', () => 
     // approverComment → CONFIRM
     r = await engine.runTurn({ sessionId: sid, message: 'бюджет одобрен' });
     expect(r.askingSlot).toBeUndefined();
-    expect(r.response).toMatch(/Проверьте заявку/i);
+    expect(r.response).toMatch(/Please review your/i); // default lang is 'en'
   });
 });

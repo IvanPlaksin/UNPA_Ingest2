@@ -15,12 +15,20 @@
  *   3. RETENTION (ratified: 90 days): ChatTurn/ChatSession older than
  *      FLOWDESK_CHAT_LOG_RETENTION_DAYS are deleted; FlowdeskSyncEvent and
  *      FlowdeskCatalogSyncRun likewise.
+ *   4. JSONL RETENTION: the logs/chat/chat-turns-*.jsonl firehose is aged out on
+ *      the same horizon. Until this pass existed, retention deleted the graph
+ *      copy while the JSONL kept the same personal data (user names, free-text
+ *      utterances, the final draft) on disk forever — so the stated 90 days was
+ *      only true of one of the two stores.
  *
  * All work is idempotent and best-effort — a sweep failure logs and waits for
  * the next tick.
  *
  * @module instances/flowdesk/services/chat-session-sweeper.service
  */
+
+const fsDefault = require('fs');
+const pathDefault = require('path');
 
 const DEFAULTS = {
   intervalMinutes: 15,
@@ -41,6 +49,9 @@ function createChatSessionSweeper(deps = {}) {
   const now = deps.now || (() => Date.now());
   const timers = deps.timers || { setInterval, clearInterval };
   const log = deps.log || ((...a) => console.log('[chat-sweeper]', ...a));
+  const fs = deps.fs || fsDefault;
+  // Must match where chat-telemetry appends the firehose, or the pass sweeps nothing.
+  const logDir = deps.logDir || pathDefault.join(process.cwd(), 'logs', 'chat');
 
   let timer = null;
   let running = false;
@@ -52,8 +63,9 @@ function createChatSessionSweeper(deps = {}) {
     const t = now();
     const abandonCutoff = iso(t - envNum('FLOWDESK_CHAT_ABANDON_MINUTES', DEFAULTS.abandonMinutes) * 60 * 1000);
     const parkedCutoff = iso(t - envNum('FLOWDESK_CHAT_PARKED_TTL_HOURS', DEFAULTS.parkedTtlHours) * 3600 * 1000);
-    const retentionCutoff = iso(t - envNum('FLOWDESK_CHAT_LOG_RETENTION_DAYS', DEFAULTS.retentionDays) * 86400 * 1000);
-    const summary = { abandoned: 0, parkedAbandoned: 0, turnsDeleted: 0, sessionsDeleted: 0, errors: 0 };
+    const retentionDays = envNum('FLOWDESK_CHAT_LOG_RETENTION_DAYS', DEFAULTS.retentionDays);
+    const retentionCutoff = iso(t - retentionDays * 86400 * 1000);
+    const summary = { abandoned: 0, parkedAbandoned: 0, turnsDeleted: 0, sessionsDeleted: 0, jsonlDeleted: 0, errors: 0 };
 
     // 1. Abandonment — snapshot the draft (still in Redis) BEFORE stamping.
     try {
@@ -106,8 +118,33 @@ function createChatSessionSweeper(deps = {}) {
       await write(`MATCH (r:FlowdeskCatalogSyncRun) WHERE r.startedAt < $cutoff WITH r LIMIT 1000 DETACH DELETE r`, { cutoff: retentionCutoff });
     } catch (err) { summary.errors += 1; log('retention pass failed:', err.message); }
 
+    // 4. JSONL retention — the firehose ages out with the graph, so "90 days"
+    // means 90 days in BOTH stores. FLOWDESK_CHAT_JSONL_RETENTION_DAYS can only
+    // SHORTEN the window (clamped below): letting it run longer would quietly
+    // reinstate the very gap this pass closes, and disk copies of personal data
+    // are exactly what a retention policy is for.
+    try {
+      const jsonlDays = Math.min(
+        envNum('FLOWDESK_CHAT_JSONL_RETENTION_DAYS', retentionDays),
+        retentionDays
+      );
+      // The filename carries the day the turns belong to; mtime would instead
+      // report the last append, which is the same day — but the name is the
+      // record's own claim about itself, so trust it.
+      const cutoffDay = iso(t - jsonlDays * 86400 * 1000).slice(0, 10);
+      let names = [];
+      try { names = fs.readdirSync(logDir); }
+      catch { names = []; } // no log dir yet (nothing written, or a fresh deploy)
+      for (const name of names) {
+        const m = /^chat-turns-(\d{4}-\d{2}-\d{2})\.jsonl$/.exec(name);
+        if (!m || m[1] >= cutoffDay) continue;
+        try { fs.unlinkSync(pathDefault.join(logDir, name)); summary.jsonlDeleted += 1; }
+        catch (err) { summary.errors += 1; log(`could not delete ${name}:`, err.message); }
+      }
+    } catch (err) { summary.errors += 1; log('jsonl retention pass failed:', err.message); }
+
     lastRun = { at: iso(t), ...summary };
-    if (summary.abandoned || summary.parkedAbandoned || summary.turnsDeleted || summary.errors) {
+    if (summary.abandoned || summary.parkedAbandoned || summary.turnsDeleted || summary.jsonlDeleted || summary.errors) {
       log(JSON.stringify(lastRun));
     }
     return summary;

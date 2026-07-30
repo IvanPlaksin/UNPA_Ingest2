@@ -19,10 +19,22 @@
  * @module instances/flowdesk/services/system-prompt.service
  */
 
+const crypto = require('crypto');
+
 const { compilePromptGraph, PROMPT_NODES } = require('./prompt-graph-compiler');
 
 const CACHE_MS = 30 * 1000;
 const MAX_TEXT = 16000; // system prompt can be large; guard against runaway graphs
+
+/**
+ * Stable identity of a compiled prompt (SUADA-PREREQ-001). Mirrors the
+ * graph-catalog's contentHash convention (sha256 hex) so provenance recorded on
+ * a chat turn can be joined against catalog artifacts by the same kind of key.
+ * Hashing the COMPILED TEXT (not the graph) is deliberate: two graph versions
+ * that compile to the same prompt are behaviorally identical, and attribution
+ * should treat them as one.
+ */
+const textHashOf = (text) => (text ? crypto.createHash('sha256').update(String(text)).digest('hex') : null);
 
 let _write = null;
 let _read = null;
@@ -45,6 +57,7 @@ async function applyActivePrompt(p) {
   const record = {
     promptId: `FSP-${Date.now().toString(36)}`,
     text,
+    textHash: textHashOf(text),
     byNodeJson: p.byNodeJson || null,
     graphEntryId: p.graphEntryId || null,
     graphVersion: p.graphVersion != null ? Number(p.graphVersion) : null,
@@ -56,7 +69,8 @@ async function applyActivePrompt(p) {
   // Deactivate all, then create the new active one (last-writer-wins, one active).
   await w()('MATCH (s:FlowdeskSystemPrompt {active:true}) SET s.active=false', {});
   await w()(
-    `CREATE (s:FlowdeskSystemPrompt {promptId:$promptId, active:true, text:$text, byNodeJson:$byNodeJson,
+    `CREATE (s:FlowdeskSystemPrompt {promptId:$promptId, active:true, text:$text, textHash:$textHash,
+       byNodeJson:$byNodeJson,
        graphEntryId:$graphEntryId, graphVersion:$graphVersion, ruleCount:$ruleCount,
        label:$label, updatedBy:$updatedBy, appliedAt:$appliedAt})`,
     record
@@ -113,26 +127,52 @@ async function clearActivePrompt() {
 
 /**
  * Per-turn read path for the engine. Returns per-node guidance from the active
- * system prompt. NEVER throws — a store failure yields empty guidance so the
- * chat degrades to base prompts. Cached 30s.
- * @returns {Promise<{text:string|null, byNode:Object<string,string>}>}
+ * system prompt, plus its provenance (SUADA-PREREQ-001). NEVER throws — a store
+ * failure yields empty guidance so the chat degrades to base prompts. Cached 30s.
+ * @returns {Promise<{text:string|null, byNode:Object<string,string>,
+ *                    entryId:string|null, version:number|null, textHash:string|null}>}
  */
 async function getSystemPromptGuidance() {
   const now = Date.now();
   if (_cache.value !== undefined && now - _cache.at < CACHE_MS) return _cache.value;
-  let value = { text: null, byNode: {} };
+  let value = { text: null, byNode: {}, entryId: null, version: null, textHash: null };
   try {
     const active = await getActivePrompt();
     if (active) {
       let byNode = {};
       try { byNode = active.byNodeJson ? JSON.parse(active.byNodeJson) : {}; } catch { byNode = {}; }
-      value = { text: active.text || null, byNode };
+      const text = active.text || null;
+      value = {
+        text,
+        byNode,
+        entryId: active.graphEntryId || null,
+        // Memgraph returns integers as neo4j Integer objects; normalize to Number.
+        version: active.graphVersion != null ? Number(active.graphVersion) : null,
+        // Prompts applied before this field existed carry no stored hash — derive
+        // it from the text so historical turns are still attributable.
+        textHash: active.textHash || textHashOf(text),
+      };
     }
   } catch (err) {
     console.warn('[system-prompt] getSystemPromptGuidance failed:', err.message);
   }
   _cache = { at: now, value };
   return value;
+}
+
+/**
+ * Provenance of the prompt currently governing the chat — the join key between a
+ * recorded turn and the prompt-graph version that produced its behavior
+ * (SUADA-PREREQ-001). Never throws; all-null when no prompt is applied.
+ * @returns {Promise<{promptGraphEntryId:string|null, promptGraphVersion:number|null, promptTextHash:string|null}>}
+ */
+async function getProvenance() {
+  const g = await getSystemPromptGuidance();
+  return {
+    promptGraphEntryId: (g && g.entryId) || null,
+    promptGraphVersion: (g && g.version != null) ? g.version : null,
+    promptTextHash: (g && g.textHash) || null,
+  };
 }
 
 /** Convenience for the engine: the text scoped to one chat LLM node (falls back to full text). */
@@ -147,5 +187,6 @@ function _setDeps({ write, read } = {}) { _write = write || null; _read = read |
 
 module.exports = {
   applyActivePrompt, applyFromGraph, getActivePrompt, listApplied, clearActivePrompt,
-  getSystemPromptGuidance, guidanceForNode, invalidateCache, PROMPT_NODES, MAX_TEXT, _setDeps,
+  getSystemPromptGuidance, guidanceForNode, getProvenance, textHashOf,
+  invalidateCache, PROMPT_NODES, MAX_TEXT, _setDeps,
 };

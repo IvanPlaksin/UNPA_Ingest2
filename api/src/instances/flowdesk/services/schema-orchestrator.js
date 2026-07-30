@@ -95,6 +95,10 @@ function createSchemaLoader(deps) {
     // Defaults to identity so callers without an Altiora LOV source (fakes/tests)
     // are unaffected.
     bakeLov = async (snapshot) => ({ snapshot, report: null }),
+    // IP-KB: after a fresh materialize is stored, index it into the schema
+    // knowledge base (vector + graph linkage). Best-effort and injectable; defaults
+    // to a no-op so fakes/tests are unaffected.
+    indexKnowledge = async () => {},
   } = deps;
 
   async function loadSnapshot(serviceId) {
@@ -135,6 +139,14 @@ function createSchemaLoader(deps) {
       const { replaced } = await registry.storeSchema(ousId, materialized);
       if (replaced) onWarn({ event: 'multi_provider_replace', serviceId, ousId, oldOusId: replaced.oldOusId });
       snapshot = await registry.getSchema(ousId);
+      // IP-KB: index the freshly stored schema into the knowledge base (vector +
+      // graph linkage). Best-effort — a KB failure must never break materialization
+      // or the dialogue; the chat degrades to the pure-vector search path.
+      try {
+        await indexKnowledge(snapshot || materialized);
+      } catch (err) {
+        onWarn({ event: 'schema_kb_index_failed', serviceId, ousId, error: err.message });
+      }
     }
 
     return injectContextSlots(snapshot, catalog.approvalRequired);
@@ -222,6 +234,7 @@ function createDefaultAltioraLoader() {
     graphLoad: compile,
     catalogLookup: qdrantCatalogLookup,
     locationPathOf: defaultLocationPathOf,
+    indexKnowledge: (snapshot) => require('./schema-knowledge.service').indexSchemaKnowledge(snapshot),
     onWarn: (w) => console.warn('[schema-orchestrator]', JSON.stringify(w)),
   });
 }
@@ -230,6 +243,10 @@ module.exports = {
   createSchemaLoader,
   createDefaultAltioraLoader,
   injectContextSlots,
+  // The duty station provider detection is keyed on. Exported so callers that
+  // memoise a snapshot key on the same value the loader used, rather than a
+  // second, quietly-diverging definition of it.
+  defaultLocationPathOf,
   qdrantCatalogLookup,
   ServiceNotAvailableError,
   RESERVED,

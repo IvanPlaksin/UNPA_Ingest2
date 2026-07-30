@@ -11,7 +11,7 @@ import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { Box, Tabs, Tab, Typography, Chip, Stack, Tooltip } from '@mui/material';
 import {
   LayoutDashboard, MessagesSquare, HeartPulse, BookOpenText,
-  FileJson2, RefreshCcw, Ticket, Cpu, Workflow,
+  FileJson2, RefreshCcw, Ticket, Cpu, Workflow, ShieldCheck,
 } from 'lucide-react';
 
 import { getAdminHealth } from './api/adminClient';
@@ -23,6 +23,7 @@ import SchemasTab from './tabs/SchemasTab';
 import SyncTab from './tabs/SyncTab';
 import TicketsTab from './tabs/TicketsTab';
 import LlmTab from './tabs/LlmTab';
+import PermissionsTab from './tabs/PermissionsTab';
 import PromptEditorTab from './prompt-editor/PromptEditorTab';
 
 const TABS = [
@@ -35,6 +36,7 @@ const TABS = [
   { key: 'sync',     label: 'Sync',     icon: RefreshCcw,      el: <SyncTab /> },
   { key: 'tickets',  label: 'Tickets',  icon: Ticket,          el: <TicketsTab /> },
   { key: 'llm',      label: 'LLM',      icon: Cpu,             el: <LlmTab /> },
+  { key: 'permissions', label: 'Permissions', icon: ShieldCheck, el: <PermissionsTab /> },
 ];
 
 function HealthChips() {
@@ -113,6 +115,7 @@ function Shell() {
           <Route path="sync" element={<SyncTab />} />
           <Route path="tickets" element={<TicketsTab />} />
           <Route path="llm" element={<LlmTab />} />
+          <Route path="permissions" element={<PermissionsTab />} />
         </Routes>
       </Box>
     </Box>

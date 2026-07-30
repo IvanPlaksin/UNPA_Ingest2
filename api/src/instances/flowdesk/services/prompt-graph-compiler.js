@@ -23,8 +23,23 @@
  * @module instances/flowdesk/services/prompt-graph-compiler
  */
 
-/** The chat LLM nodes a rule can be scoped to (mirrors interpreter-engine prompt builders). */
-const PROMPT_NODES = ['router', 'info_answer', 'question_planner', 'slot_extract', 'field_help', 'my_requests'];
+/**
+ * The chat LLM nodes a rule can be scoped to. This list is a PROMISE: every name
+ * here must be read by interpreter-engine, or the editor accepts rules that
+ * silently do nothing.
+ *
+ * It deliberately covers only the calls that generate PROSE for the user
+ * (router classifies, but has carried operator guidance since ADMIN P5). The
+ * engine's other LLM calls — intake decomposition, navigation targets, and the
+ * request/task/mail filter extractors — are strict schema-bound extractors; prose
+ * rules about tone or identity cannot help them and can corrupt their output
+ * shape, which is why they are not offered as scopes.
+ *
+ * `slot_extract` and `my_requests` were listed here until TASK-FLOWDESK-BUG-001
+ * and read by nothing; they were removed rather than wired, because both are
+ * extraction calls (see above), not prose.
+ */
+const PROMPT_NODES = ['router', 'info_answer', 'question_planner', 'field_help'];
 
 /** Categories in emission order, each a labelled section of the system prompt. */
 const CATEGORY_ORDER = ['identity', 'domain', 'routing', 'dialogue', 'tone', 'safety', 'deflection', 'formatting', 'custom'];
@@ -82,16 +97,25 @@ function edgeOrder(nodeIds, edges) {
 function compilePromptGraph(graph, opts = {}) {
   const nodes = (graph && graph.nodes) || [];
   const edges = (graph && graph.edges) || [];
-  const rules = nodes.filter(isRule).map((n) => ({
-    id: n.id,
-    key: slug(n.data.key) || slug(n.data.title) || n.id,
-    title: slug(n.data.title),
-    text: slug(n.data.text),
-    category: CATEGORY_ORDER.includes(n.data.category) ? n.data.category : 'custom',
-    appliesTo: Array.isArray(n.data.appliesTo) ? n.data.appliesTo.filter((x) => x === 'all' || PROMPT_NODES.includes(x)) : [],
-    enabled: n.data.enabled !== false,
-    priority: Number.isFinite(n.data.priority) ? n.data.priority : 100,
-  })).filter((r) => r.enabled && r.text);
+  const rules = nodes.filter(isRule).map((n) => {
+    const declared = Array.isArray(n.data.appliesTo) ? n.data.appliesTo : [];
+    const appliesTo = declared.filter((x) => x === 'all' || PROMPT_NODES.includes(x));
+    return {
+      id: n.id,
+      key: slug(n.data.key) || slug(n.data.title) || n.id,
+      title: slug(n.data.title),
+      text: slug(n.data.text),
+      category: CATEGORY_ORDER.includes(n.data.category) ? n.data.category : 'custom',
+      appliesTo,
+      // A rule scoped ONLY to names this build no longer knows reaches no node.
+      // Without this flag the filter above would empty appliesTo, and an empty
+      // appliesTo means "every node" — so a rule aimed at one retired scope would
+      // quietly start governing the whole chat. It must reach nothing instead.
+      scopedToNothing: declared.length > 0 && appliesTo.length === 0,
+      enabled: n.data.enabled !== false,
+      priority: Number.isFinite(n.data.priority) ? n.data.priority : 100,
+    };
+  }).filter((r) => r.enabled && r.text);
 
   const ordered = edgeOrder(rules.map((r) => r.id), edges);
   const orderIdx = new Map(ordered.map((id, i) => [id, i]));
@@ -123,6 +147,7 @@ function compilePromptGraph(graph, opts = {}) {
     const scoped = [];
     for (const cat of CATEGORY_ORDER) {
       for (const r of byCat.get(cat)) {
+        if (r.scopedToNothing) continue;
         const applies = !r.appliesTo.length || r.appliesTo.includes('all') || r.appliesTo.includes(node);
         if (applies) scoped.push(`- ${r.text}`);
       }

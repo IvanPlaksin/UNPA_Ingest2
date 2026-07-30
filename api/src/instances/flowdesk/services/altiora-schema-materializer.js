@@ -63,8 +63,17 @@ const TYPE_MAP = {
   select: 'enum',
   dropdown: 'enum',
   multiselect: 'enum',
+  checklist: 'enum',
   lookup: 'enum', // LOV — options resolved at runtime via /FormLookup (I-4b)
 };
+
+/**
+ * Altiora field types that accept MORE THAN ONE value (P1-13). They map to `enum`
+ * like their single-valued siblings — same presentOptions, same validation domain —
+ * and are distinguished by the `multi` flag rather than a separate slot type, so
+ * every existing enum consumer keeps working unchanged.
+ */
+const MULTI_TYPES = new Set(['checklist', 'multiselect']);
 
 /** Altiora rule operator → tref comparison operator. */
 const OP_MAP = {
@@ -139,6 +148,66 @@ function mapDictFilter(f) {
 }
 
 /**
+ * P1-12 — CASCADE dictionary. Altiora binds some fields to a dictionary filtered by
+ * ANOTHER field's value (`dictionaryFilterTree` with a `form_field` valueSource): the
+ * user types an index number and the staff member's name / grade / duty station resolve
+ * from it. For the text-ish types this is AUTOFILL rather than option-picking
+ * (DynamicForm.tsx `DICT_AUTOFILL_FIELD_TYPES`), so it can only be resolved during the
+ * conversation — unlike `lov`, which is baked once at materialization.
+ *
+ * FAIL-CLOSED by design: any filter we cannot reproduce faithfully — a source or
+ * operator we do not implement, an OR group, a reference to a field we did not
+ * materialize — drops the whole descriptor. The slot then degrades to honest manual
+ * entry instead of querying the dictionary with a silently weakened filter, which would
+ * hand back someone else's record.
+ */
+const CASCADE_SOURCE = 'form_field';
+const CASCADE_OPERATOR = 'eq';
+
+/** dictionaryFilterTree → flat cascade filters, or null when not faithfully expressible. */
+function parseFilterTree(node) {
+  if (!node || typeof node !== 'object') return null;
+  if (node.type === 'group') {
+    // Only AND is expressible: an OR of cascade filters has no single-row semantics.
+    if (String(node.logic || 'AND').toUpperCase() !== 'AND') return null;
+    const out = [];
+    for (const item of Array.isArray(node.items) ? node.items : []) {
+      const part = parseFilterTree(item);
+      if (!part) return null;
+      out.push(...part);
+    }
+    return out;
+  }
+  if (node.type !== 'filter') return null;
+  const vs = node.valueSource || {};
+  if (String(vs.type) !== CASCADE_SOURCE) return null;             // static / current_user: not implemented
+  if (String(node.operator || CASCADE_OPERATOR) !== CASCADE_OPERATOR) return null;
+  if (!node.dictionaryFieldId || !vs.fieldId) return null;
+  return [{ fieldId: String(node.dictionaryFieldId), operator: CASCADE_OPERATOR, fieldRef: String(vs.fieldId) }];
+}
+
+/**
+ * A cascade-dictionary field → runtime `dictRef`, or undefined when it is not one.
+ * `filters[].fieldRef` holds the raw Altiora field id; it is translated to a slotId
+ * once every slot is known (see materializeSchema).
+ */
+function dictRefOf(f) {
+  const entityId = f && (f.dictionaryEntityId || f.DictionaryEntityId);
+  if (!entityId) return undefined;
+  const filters = parseFilterTree(f.dictionaryFilterTree);
+  // A dependency on another FIELD is what makes this a cascade. A static or unfiltered
+  // dictionary stays the existing baked-`lov` case and is left alone.
+  if (!filters || !filters.length) return undefined;
+  const rawDisplay = Array.isArray(f.dictionaryDisplayFields) ? f.dictionaryDisplayFields.filter(Boolean) : [];
+  const display = rawDisplay.length ? rawDisplay : (f.dictionaryFieldId ? [f.dictionaryFieldId] : []);
+  if (!display.length) return undefined;
+  const ref = { entityId: String(entityId), displayFieldIds: display.map(String), filters };
+  const valueField = f.dictionaryValueField || f.DictionaryValueField;
+  if (valueField) ref.valueFieldId = String(valueField);
+  return ref;
+}
+
+/**
  * A dictionary-backed field (Altiora dynamic `select`/`lookup`) → durable LOV
  * descriptor, or null when the field carries no resolvable dictionary reference.
  *
@@ -198,6 +267,43 @@ const negate = (expr) => `!(${expr})`;
 /** OR-combine repeat rules on the same target (either rule revealing it suffices). */
 const orJoin = (a, b) => (a ? `(${a}) || (${b})` : b);
 
+/** Option label/value that marks an "Other (please specify)"-style choice. */
+const OTHER_RE = /other|please specify|specify/i;
+
+/** Altiora choice field types (single- or multi-valued). */
+const CHOICE_TYPES = new Set(['options_group', 'radio', 'select', 'dropdown', 'multiselect', 'checklist']);
+const isChoiceField = (f) =>
+  CHOICE_TYPES.has(String(f && f.type || '').toLowerCase()) || (Array.isArray(f && f.options) && f.options.length > 0);
+
+/** The VALUE of a choice field's "Other"-like option, or null when it has none. */
+function otherOptionValueOf(field) {
+  const opts = Array.isArray(field && field.options) ? field.options.map(mapOption) : [];
+  const m = opts.find((o) => OTHER_RE.test(o.label) || OTHER_RE.test(o.value));
+  return m ? m.value : null;
+}
+
+/**
+ * Gate `targetSlot` on a reference slot's value: visible + required-when-visible
+ * only when the condition holds (Altiora "Other → please specify" semantics).
+ *   - otherValue set  → `slots.ref == 'Other…'`  (single) / `slots.ref contains 'Other…'` (multi)
+ *   - otherValue null → `slots.ref is not empty`  (plain belonging: ask once the parent is answered)
+ * Returns false (and gates nothing) when the value cannot be represented as a tref literal.
+ */
+function gateOnReference(targetSlot, refSlotId, otherValue, multi) {
+  let cond;
+  if (otherValue != null) {
+    const lit = quoteLiteral(otherValue);
+    if (lit === null) return false;
+    cond = multi ? `slots.${refSlotId} contains ${lit}` : `slots.${refSlotId} == ${lit}`;
+  } else {
+    cond = `slots.${refSlotId} is not empty`;
+  }
+  targetSlot.trefCondition = orJoin(targetSlot.trefCondition, cond);
+  targetSlot.requiredWhen = orJoin(targetSlot.requiredWhen, cond);
+  targetSlot.required = false; // conditional, not unconditional
+  return true;
+}
+
 /** slotIds referenced inside a tref expression. */
 function refsIn(expr, known) {
   const out = new Set();
@@ -231,6 +337,10 @@ function orderSlots(slots) {
     for (const r of refsIn(s.trefCondition, known)) refs.add(r);
     for (const r of refsIn(s.requiredWhen, known)) refs.add(r);
     for (const f of s.optionFilters || []) for (const r of refsIn(f.condition, known)) refs.add(r);
+    // P1-12: a cascade slot cannot be resolved until the slot its dictionary filters on
+    // is filled — that is an ordering dependency, and it also gives the interpreter the
+    // "blocked" semantics Altiora's own resolveFilters() expresses by returning null.
+    for (const f of (s.dictRef && s.dictRef.filters) || []) if (known.has(f.slotId)) refs.add(f.slotId);
     refs.delete(s.slotId); // a self-reference is not an ordering dependency
     if (refs.size) s.dependsOn = [...refs];
   }
@@ -275,11 +385,58 @@ function orderSlots(slots) {
  * @param {string} [p.phase='detail']   - ratified: single phase, order = fields[] index
  * @returns {{snapshot:Object, warnings:string[]}}
  */
+/**
+ * Machine artifacts Altiora's form builder writes into `description` that are NOT
+ * user-facing help (e.g. "Auto-generated field for LK_DutyStations.Name"). Letting
+ * these reach the LLM prompt pollutes questions and can leak into the reply.
+ */
+const HELP_NOISE_PATTERNS = [
+  /^Auto-generated field for /i,
+];
+
+/** Trim, drop empties, and reject machine artifacts. Returns null when unusable. */
+function cleanHelpText(text) {
+  if (text == null) return null;
+  const trimmed = String(text).trim();
+  if (!trimmed) return null;
+  if (HELP_NOISE_PATTERNS.some((re) => re.test(trimmed))) return null;
+  return trimmed;
+}
+
+/**
+ * TASK-PROMPT-005 — the only "constraint-like" attributes Altiora actually authors
+ * are `description` (what the field is for / rules that apply) and `placeholder`
+ * (an example input). Neither was carried before. They serve different purposes, so
+ * when both are present they are merged with the example labelled.
+ * @returns {string|undefined} helpText, or undefined when nothing usable remains
+ */
+function helpTextOf(f) {
+  const desc = cleanHelpText(f && f.description);
+  const example = cleanHelpText(f && f.placeholder);
+  if (desc && example) return `${desc}\n\nExample: ${example}`;
+  return desc || example || undefined;
+}
+
 function materializeSchema(p) {
   const warnings = [];
   const raw = typeof p.schemaJson === 'string' ? JSON.parse(p.schemaJson) : (p.schemaJson || {});
   const fields = Array.isArray(raw.fields) ? raw.fields : [];
   const phase = p.phase || 'detail';
+
+  // Raw field lookup — needed to resolve sectionId references (grouping + the
+  // conditional "Other → please specify" belonging link, step 2b).
+  const byId = new Map(fields.filter((f) => f && f.id).map((f) => [f.id, f]));
+
+  // Section grouping: every `type:section` field → a stable slug + its label. An
+  // input's sectionId points here (the Altiora author's semantic grouping).
+  const usedSections = new Set();
+  const sectionById = new Map();
+  for (const f of fields) {
+    if (String(f && f.type || '').toLowerCase() === 'section' && f.id) {
+      const slug = camelSlotId(f.label || 'section', f.id, usedSections);
+      sectionById.set(f.id, { slug, label: f.label ? String(f.label).trim() : null });
+    }
+  }
 
   // 1. Inputs only, in author order (= ask order).
   const inputs = fields.filter((f) => f && f.id && !LAYOUT_TYPES.has(String(f.type || '').toLowerCase()));
@@ -298,6 +455,12 @@ function materializeSchema(p) {
       altioraFieldId: f.id,
     };
     if (f.label) slot.promptHint = String(f.label).trim();
+    // Section grouping — only when sectionId points at an actual section field.
+    // (A sectionId pointing at a CHOICE field is the conditional link, handled in 2b.)
+    const sec = f.sectionId ? sectionById.get(f.sectionId) : null;
+    if (sec) { slot.section = sec.slug; if (sec.label) slot.sectionLabel = sec.label; }
+    const help = helpTextOf(f);
+    if (help) slot.helpText = help;
     if (type === 'enum') {
       const opts = (Array.isArray(f.options) ? f.options : []).map(mapOption).filter((o) => o.value !== '');
       if (opts.length) {
@@ -318,9 +481,40 @@ function materializeSchema(p) {
         }
       }
     }
+    // P1-13: a checklist/multiselect keeps enum's option domain but accepts an ARRAY
+    // of those options. Only meaningful once the slot really is an enum (a LOV that
+    // degraded to free text has no option domain to multi-select from).
+    // `checklistMultiple:false` configures a checklist as SINGLE-select — Altiora then
+    // renders radios and stores a plain scalar (DynamicForm.tsx), so it is NOT multi.
+    if (slot.type === 'enum'
+      && MULTI_TYPES.has(String(f.type || '').toLowerCase())
+      && f.checklistMultiple !== false) slot.multi = true;
+    // P1-12: cascade dictionary applies to ANY field type — these are predominantly
+    // `text`/`date` autofill fields, which never reach the enum-only `lov` path above.
+    const dictRef = dictRefOf(f);
+    if (dictRef) slot.dictRef = dictRef;
     return slot;
   });
   const bySlotId = new Map(slots.map((s) => [s.slotId, s]));
+
+  // P1-12: cascade filters reference Altiora FIELD ids; now that every slot is known,
+  // translate them to slotIds. An unresolvable reference drops the descriptor
+  // (fail-closed) so the slot simply becomes ordinary manual entry.
+  for (const s of slots) {
+    if (!s.dictRef) continue;
+    const translated = [];
+    for (const flt of s.dictRef.filters) {
+      const depSlotId = fieldToSlot.get(flt.fieldRef);
+      if (!depSlotId || depSlotId === s.slotId) { translated.length = 0; break; }
+      translated.push({ fieldId: flt.fieldId, operator: flt.operator, slotId: depSlotId });
+    }
+    if (translated.length) {
+      s.dictRef.filters = translated;
+    } else {
+      delete s.dictRef;
+      warnings.push(`${s.slotId}: cascade dictionary filter is not expressible — falling back to manual entry`);
+    }
+  }
 
   // 2. rules[] → declarative conditionality on the target slots.
   for (const rule of Array.isArray(raw.rules) ? raw.rules : []) {
@@ -360,6 +554,56 @@ function materializeSchema(p) {
         default:
           warnings.push(`rule ${rule.id || rule.name}: unsupported action '${action.type}' — ignored`);
       }
+    }
+  }
+
+  // 2b. Conditional "Other (please specify)" belonging. Two triggers, both express
+  //     the specify field as visible + required-only-when the parent choice selected
+  //     an "Other"-like value — via trefCondition/requiredWhen, not topology. Runs
+  //     BEFORE the hidden-no-reveal pass (3) so a specify field authored `hidden`
+  //     gets its reveal condition instead of ALWAYS_FALSE.
+  //
+  //  Trigger 1 — explicit: an input whose `sectionId` points at a NON-section CHOICE
+  //  field (the author's convention: sectionId as a belonging attribute). The slot is
+  //  gated by that choice's "Other" value (or, when it has none, by "parent answered").
+  for (const f of inputs) {
+    if (!f.sectionId) continue;
+    const ref = byId.get(f.sectionId);
+    if (!ref || String(ref.type || '').toLowerCase() === 'section' || !isChoiceField(ref)) continue;
+    const refSlotId = fieldToSlot.get(ref.id);
+    const target = bySlotId.get(fieldToSlot.get(f.id));
+    if (!refSlotId || !target || refSlotId === target.slotId) continue;
+    const refSlot = bySlotId.get(refSlotId);
+    const ok = gateOnReference(target, refSlotId, otherOptionValueOf(ref), refSlot && refSlot.multi === true);
+    if (ok) {
+      // The specify field belongs to the choice's group, not a section of its own.
+      if (refSlot && refSlot.section && !target.section) {
+        target.section = refSlot.section;
+        if (refSlot.sectionLabel) target.sectionLabel = refSlot.sectionLabel;
+      }
+      warnings.push(`${target.slotId}: conditional on ${refSlotId} (sectionId belonging link)`);
+    }
+  }
+
+  //  Trigger 2 — heuristic (current forms encode no structured link): an enum slot
+  //  carrying an "Other"-like option, paired with a FREE-TEXT sibling in the SAME
+  //  section whose label reads like a specify field. Conservative on purpose (strong
+  //  label match only, same section, not already conditional) to avoid false gating;
+  //  when no such sibling exists nothing is asked and nothing is synthesized. Toggle
+  //  off with FLOWDESK_OTHER_SPECIFY_HEURISTIC=0.
+  if (process.env.FLOWDESK_OTHER_SPECIFY_HEURISTIC !== '0') {
+    for (const slot of slots) {
+      if (slot.type !== 'enum' || !Array.isArray(slot.presentOptions) || !slot.section) continue;
+      const otherOpt = slot.presentOptions.find((o) => OTHER_RE.test(o.label) || OTHER_RE.test(o.value));
+      if (!otherOpt) continue;
+      const target = slots.find((s) => s !== slot
+        && s.section === slot.section
+        && (s.type === 'string' || s.type === 'text')
+        && !s.trefCondition
+        && OTHER_RE.test(s.promptHint || ''));
+      if (!target) continue;
+      const ok = gateOnReference(target, slot.slotId, otherOpt.value, slot.multi === true);
+      if (ok) warnings.push(`${target.slotId}: conditional-specify on ${slot.slotId}=="${otherOpt.value}" (heuristic)`);
     }
   }
 
@@ -420,4 +664,8 @@ module.exports = {
   LAYOUT_TYPES,
   TYPE_MAP,
   OP_MAP,
+  OTHER_RE,
+  isChoiceField,
+  otherOptionValueOf,
+  gateOnReference,
 };

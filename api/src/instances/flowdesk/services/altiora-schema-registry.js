@@ -115,10 +115,13 @@ async function getSchema(ousId) {
  *
  * @param {number} ousId  must equal snapshot.metadata.altioraOusId
  * @param {object} snapshot  a SchemaSnapshot (from the transformer)
+ * @param {{namespace?: string}} [opts]  registry tag; defaults to the production
+ *   'Altiora' namespace. Tests MUST pass an isolated namespace (e.g. 'AltioraTest')
+ *   so `invalidateAll` on that tag can never reach real materialized schemas.
  * @returns {Promise<{replaced: {oldOusId: number}|null}>}
  * @throws {SchemaContractError|SchemaLintError|SchemaStoreError}
  */
-async function storeSchema(ousId, snapshot) {
+async function storeSchema(ousId, snapshot, { namespace = NAMESPACE } = {}) {
   assertOusId(ousId);
   if (!snapshot || typeof snapshot !== 'object') {
     throw new SchemaStoreError('snapshot is required');
@@ -150,9 +153,9 @@ async function storeSchema(ousId, snapshot) {
 
   await ensureIndexes();
   await seedService(snapshot); // purges the prior graph for this serviceId, then writes
-  // Tag it as registry-managed so invalidateAll can scope to it without reaching
-  // golden fixtures that merely carry an altioraOusId.
-  await write('MATCH (s:ServiceDef {serviceId:$sid}) SET s.namespace=$ns', { sid: snapshot.serviceId, ns: NAMESPACE });
+  // Tag it with the caller's namespace so invalidateAll can scope to it without
+  // reaching golden fixtures (untagged) or — for a test namespace — real schemas.
+  await write('MATCH (s:ServiceDef {serviceId:$sid}) SET s.namespace=$ns', { sid: snapshot.serviceId, ns: namespace });
   return { replaced };
 }
 
@@ -185,6 +188,11 @@ async function invalidate(ousId) {
   const serviceId = await serviceIdForOus(ousId);
   if (!serviceId) return false;
   await purge(serviceId);
+  // IP-KB: drop the service's schema-knowledge (vector + graph node) alongside the
+  // purged schema graph. Best-effort and lazy-required (avoid a require cycle) — a
+  // stale KB point is preferable to a failed invalidate.
+  try { await require('./schema-knowledge.service').removeSchemaKnowledge(serviceId); }
+  catch (err) { console.warn('[altiora-schema-registry] schema-kb remove failed:', err.message); }
   return true;
 }
 
@@ -205,14 +213,33 @@ async function markStale(ousId) {
 }
 
 /**
- * Drop every registry-managed schema (namespace='Altiora'). Golden fixtures are
- * never tagged, so they survive even when they carry an altioraOusId.
+ * Drop every registry-managed schema under a namespace (default 'Altiora'). Golden
+ * fixtures are never tagged, so they survive even when they carry an altioraOusId.
+ *
+ * SAFETY (INCIDENT 2026-07-23): this is a mass delete. The FlowDesk test suite runs
+ * against the SHARED live Memgraph, so a test calling `invalidateAll()` once wiped
+ * all ~76 real materialized schemas. Guard: under NODE_ENV=test, wiping the
+ * production namespace is blocked — a test must target an isolated namespace (e.g.
+ * 'AltioraTest'). The escape hatch `FLOWDESK_ALLOW_SCHEMA_WIPE=1` is for a deliberate,
+ * operator-run reset only. Outside tests, behaviour is unchanged.
+ *
+ * @param {string} [namespace='Altiora'] the registry tag to purge
  * @returns {Promise<number>} count removed
  */
-async function invalidateAll() {
+async function invalidateAll(namespace = NAMESPACE) {
+  if (process.env.NODE_ENV === 'test'
+      && namespace === NAMESPACE
+      && process.env.FLOWDESK_ALLOW_SCHEMA_WIPE !== '1') {
+    throw new Error(
+      `invalidateAll('${NAMESPACE}') is blocked under NODE_ENV=test to protect real `
+      + 'materialized schemas on the shared Memgraph. Use an isolated test namespace '
+      + "(e.g. invalidateAll('AltioraTest')) or set FLOWDESK_ALLOW_SCHEMA_WIPE=1 for a "
+      + 'deliberate operator reset.',
+    );
+  }
   const recs = await read(
     'MATCH (s:ServiceDef {namespace:$ns}) RETURN s.serviceId AS serviceId',
-    { ns: NAMESPACE },
+    { ns: namespace },
   );
   const serviceIds = recs.map((r) => r.get('serviceId'));
   for (const sid of serviceIds) await purge(sid);
@@ -224,10 +251,10 @@ async function invalidateAll() {
  * sync service's polling pass (IP-1e) to compare against Altiora's `/schema/version`.
  * @returns {Promise<Array<{ousId:number, serviceId:string, contentHash:string|null}>>}
  */
-async function listCached() {
+async function listCached(namespace = NAMESPACE) {
   const recs = await read(
     'MATCH (s:ServiceDef {namespace:$ns}) WHERE s.altioraOusId IS NOT NULL RETURN s.altioraOusId AS ousId, s.serviceId AS serviceId, s.contentHash AS contentHash',
-    { ns: NAMESPACE },
+    { ns: namespace },
   );
   return recs.map((r) => ({ ousId: r.get('ousId'), serviceId: r.get('serviceId'), contentHash: r.get('contentHash') }));
 }

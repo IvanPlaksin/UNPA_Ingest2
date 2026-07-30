@@ -16,6 +16,7 @@ const REGISTRY = {
     { id: 'LOAD_DRAFT',       kind: 'deterministic', llmMethods: [],                            tools: ['draft.get'] },
     { id: 'ROUTER',           kind: 'hybrid',        llmMethods: ['embedding', 'structuredOutput'], tools: [] },
     { id: 'RESOLVE',          kind: 'deterministic', llmMethods: [],                            tools: ['resolve.search'] },
+    { id: 'INTAKE_DECOMPOSE', kind: 'llm',           llmMethods: ['structuredOutput'],          tools: [] },
     { id: 'SLOT_EXTRACT',     kind: 'llm',           llmMethods: ['structuredOutput'],          tools: [] },
     { id: 'ACTIVE_SLOTS',     kind: 'deterministic', llmMethods: [],                            tools: [] },
     { id: 'RESOLVERS',        kind: 'deterministic', llmMethods: [],                            tools: ['catalog.resolvers', 'inventory.check'] },

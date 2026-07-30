@@ -47,3 +47,12 @@ docker-compose.yml
 # HTTP test files (dev only)
 api/ADO_req.http
 api.env
+
+# Volume backups produced by DockerScripts/backup.ps1 — hundreds of MB of
+# Memgraph/Qdrant dumps. The scripts themselves are tracked; the dumps are not.
+DockerScripts/backup/
+
+# Harvested source documents (binary, tens of MB). The recon/report markdown
+# next to them IS tracked.
+Artefacts/Documents/
+api/Artefacts/Documents/

@@ -21,7 +21,7 @@
       "properties": {
         "id": {
           "enum": [
-            "LOAD_DRAFT", "ROUTER", "RESOLVE", "SLOT_EXTRACT", "ACTIVE_SLOTS",
+            "LOAD_DRAFT", "ROUTER", "RESOLVE", "INTAKE_DECOMPOSE", "SLOT_EXTRACT", "ACTIVE_SLOTS",
             "RESOLVERS", "VALIDATE", "PATCH", "TERM_CHECK", "QUESTION_PLANNER",
             "INFO_ANSWER", "CONFIRM", "SUBMIT"
           ]

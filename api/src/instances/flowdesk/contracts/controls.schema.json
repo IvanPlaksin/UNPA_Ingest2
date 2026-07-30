@@ -33,13 +33,45 @@
       "properties": {
         "id": { "type": "string", "description": "Unique within the turn. The client echoes it in controlAction.controlId." },
         "type": {
-          "enum": ["confirm", "choice", "autocomplete"],
-          "description": "confirm = a resolved default to accept or override (with optional alternatives + search child); choice = pick one of a closed option set (enum slot); autocomplete = typeahead against a directory source. (type:'text' is deferred — free-text still arrives via the plain `message`.)"
+          "enum": ["confirm", "choice", "autocomplete", "date", "multichoice", "text", "textarea", "number", "toggle", "cascade_confirm"],
+          "description": "confirm = a resolved default to accept or override (with optional alternatives + search child); choice = pick one of a closed option set (enum slot); autocomplete = typeahead against a directory source; date = a calendar picker for a date slot, the client returns an ISO 8601 date via a `date_select` action (TASK-PROMPT-001); multichoice = pick ANY NUMBER of a closed option set (an enum slot with `multi`, i.e. an Altiora checklist), committed as an array via `multichoice_select` (P1-13). (type:'text' is deferred — free-text still arrives via the plain `message`.)"
         },
         "slotId": { "type": "string", "description": "DraftSR slot this control fills." },
         "label": { "type": "string", "description": "Prompt/label to render." },
         "defaultValue": {
           "description": "For type=confirm: the pre-resolved value to accept on a bare confirm (object for user/location slots, scalar otherwise)."
+        },
+        "selected": {
+          "type": "array",
+          "description": "For type=multichoice: option values already chosen, pre-checked in the client.",
+          "items": { "type": "string" },
+          "default": []
+        },
+        "prefill": {
+          "description": "An optional value the client pre-fills. Convenience only — the committed value is always what the user submits. For type=date it must be ISO 8601 (YYYY-MM-DD); for text/textarea/number a string; for toggle a boolean."
+        },
+        "placeholder": {
+          "type": "string",
+          "description": "For the free-input controls (text/textarea/number): hint text shown inside the empty input."
+        },
+        "rows": {
+          "type": "integer",
+          "minimum": 2,
+          "description": "For type=textarea: initial visible row count."
+        },
+        "fields": {
+          "type": "array",
+          "description": "For type=cascade_confirm: the whole cluster of values one answer resolved (e.g. name/grade/duty station from an index number), shown as a single review. Display only — accepting re-resolves server-side rather than trusting these values back.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["slotId", "label", "display"],
+            "properties": {
+              "slotId": { "type": "string" },
+              "label": { "type": "string", "description": "Field label to show." },
+              "display": { "type": "string", "description": "Resolved value as shown to the user." }
+            }
+          }
         },
         "options": {
           "type": "array",
@@ -65,6 +97,18 @@
         {
           "if": { "properties": { "type": { "const": "autocomplete" } } },
           "then": { "required": ["source"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "multichoice" } } },
+          "then": { "required": ["options"], "properties": { "options": { "minItems": 1 } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "date" } }, "required": ["type"] },
+          "then": { "properties": { "prefill": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "toggle" } }, "required": ["type"] },
+          "then": { "properties": { "prefill": { "type": "boolean" } } }
         }
       ]
     },
@@ -77,10 +121,15 @@
         "controlId": { "type": "string", "description": "The control.id being answered (diagnostic; the backend keys on slotId)." },
         "slotId": { "type": "string" },
         "action": {
-          "enum": ["confirm", "select", "search", "submit"],
-          "description": "confirm = accept the control's defaultValue; select = pick options[].value; search = re-resolve with `value` as the query; submit = commit an autocomplete pick (treated as select)."
+          "enum": ["confirm", "select", "search", "submit", "date_select", "multichoice_select", "text_input", "number_input", "toggle_input", "cascade_accept", "cascade_edit", "edit"],
+          "description": "confirm = accept the control's defaultValue; select = pick options[].value; search = re-resolve with `value` as the query; submit = commit an autocomplete pick (treated as select); date_select = commit a date control's picked ISO 8601 value (validated then treated as select); multichoice_select = commit a multichoice control's chosen option values, carried in `values` (P1-13); text_input = commit a text/textarea control's string (one action for both — they differ only in how they are rendered); number_input = commit a number control's numeric value; toggle_input = commit a toggle control's boolean (TASK-003/004); cascade_accept = accept a cascade_confirm cluster (the backend RE-RESOLVES and patches — the echoed values are never trusted); cascade_edit = decline the cluster and fill those fields by hand instead (P1-12); edit = the user clicked the ✎ button on a row of the confirm-form review to change that field — the backend steers the next turn onto `slotId` and asks for a new value (warning first if the field has filled cascade dependents). Not offered for reference-derived (directory/dictionary/LOV) values."
         },
-        "value": { "description": "Option value / query string / picked item, per action. Omitted for a bare confirm." }
+        "value": { "description": "Option value / query string / picked item, per action. Omitted for a bare confirm." },
+        "values": {
+          "type": "array",
+          "description": "For action=multichoice_select: the chosen option values. Every entry must be one of the control's options; the backend re-validates against the slot's presentOptions.",
+          "items": { "type": "string" }
+        }
       }
     }
   },

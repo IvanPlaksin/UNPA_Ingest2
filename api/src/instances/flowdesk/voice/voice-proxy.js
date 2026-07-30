@@ -176,6 +176,9 @@ function initVoiceProxy(server, existingWss) {
       // interpretation and TTS, so the agent never auto-switches languages.
       const lang = params.get('lang');
       if (lang) ctx.lang = lang;
+      // CS-2: the user-selected AI voice (Azure Neural name) → orchestrator TTS.
+      const voice = params.get('voice');
+      if (voice) ctx.voice = voice;
       voiceWss.handleUpgrade(req, socket, head, (ws) => {
         req._voiceCtx = ctx;
         voiceWss.emit('connection', ws, req);

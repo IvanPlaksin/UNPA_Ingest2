@@ -120,3 +120,33 @@ describe('I-7: createTicket', () => {
     expect(await s.createTicket(FILLED, SNAPSHOT)).toMatchObject({ srNumber: 'SR-7', ticketId: 7 });
   });
 });
+
+// ── P1-13c: multi-select serialization matches Altiora's own wire format ──────
+// Altiora's DynamicForm writes a checklist as `JSON.stringify(values)` and reads it
+// back with `parseChecklistValue` (JSON.parse → array). Our existing `scalar()` already
+// produces exactly that for an array, so no serializer change is needed — this test
+// pins the behaviour so a future refactor cannot silently break the contract.
+describe('P1-13c: checklist (multi) serialization', () => {
+  const { buildFormData } = require('../altiora-ticket.service');
+  const snapshot = {
+    serviceId: 'S', version: 1,
+    metadata: { fieldIdMapping: { docs: 'field_1', subject: 'field_2' } },
+    slots: [{ slotId: 'docs', type: 'enum', multi: true }, { slotId: 'subject', type: 'string' }],
+  };
+
+  test('an array is emitted as a JSON-array string Altiora can parse', () => {
+    const fd = buildFormData({ slots: { docs: { value: ['tor', 'budget'] } } }, snapshot);
+    expect(fd.field_1).toBe('["tor","budget"]');
+    expect(JSON.parse(fd.field_1)).toEqual(['tor', 'budget']); // parseChecklistValue equivalent
+  });
+
+  test('a single-element selection is still an array (not a bare scalar)', () => {
+    const fd = buildFormData({ slots: { docs: { value: ['tor'] } } }, snapshot);
+    expect(JSON.parse(fd.field_1)).toEqual(['tor']);
+  });
+
+  test('scalar slots are unaffected', () => {
+    const fd = buildFormData({ slots: { subject: { value: 'Hello' } } }, snapshot);
+    expect(fd.field_2).toBe('Hello');
+  });
+});

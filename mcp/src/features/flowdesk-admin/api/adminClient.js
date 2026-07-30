@@ -28,6 +28,9 @@ export const getSessions = (f) => request(`/sessions${qs(f)}`);
 export const getSessionStats = (days = 7) => request(`/sessions/stats${qs({ days })}`);
 export const getSession = (id) => request(`/sessions/${encodeURIComponent(id)}`);
 export const getSessionTurns = (id) => request(`/sessions/${encodeURIComponent(id)}/turns`);
+// One recorded model call — the exact prompt and reply, kept for an hour by the
+// agent loop. A miss is ordinary (the hour passed), not an error.
+export const getLlmCall = (key) => request(`/llm-call?key=${encodeURIComponent(key)}`);
 
 // Quality (P2)
 export const getQualityMeta = () => request('/quality/meta');
@@ -133,3 +136,11 @@ export const getTickets = (f) => request(`/tickets${qs(f)}`);
 export const getTicketLive = (ticketId) => request(`/tickets/${ticketId}/live`);
 export const getLlmStats = (days = 7) => request(`/llm/stats${qs({ days })}`);
 export const getAdminHealth = () => request('/health');
+
+// ACT permissions (Phase 9 management)
+export const getActUsers = () => request('/act-users');
+export const addActUser = (body) => request('/act-users', { method: 'POST', body });
+export const setActUserEnabled = (key, enabled) => request(`/act-users/${encodeURIComponent(key)}`, { method: 'PATCH', body: { enabled } });
+export const removeActUser = (key) => request(`/act-users/${encodeURIComponent(key)}`, { method: 'DELETE' });
+export const checkActUser = (params) => request(`/act-users/check${qs(params)}`);
+export const setActPermissionDefault = (permission, enabledForAll) => request(`/act-users/permissions/${encodeURIComponent(permission)}`, { method: 'PATCH', body: { enabledForAll } });

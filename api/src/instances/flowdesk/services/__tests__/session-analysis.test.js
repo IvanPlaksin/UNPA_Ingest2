@@ -103,7 +103,8 @@ describe('prompt-overlay service (fake graph)', () => {
       let list = nodes.filter((n) => !params.scope || n.scope === params.scope);
       if (params.serviceId) list = list.filter((n) => n.serviceId === params.serviceId);
       if (cypher.includes('o.active = true')) list = list.filter((n) => n.active);
-      if (cypher.includes('RETURN o.text AS text')) return list.map((n) => ({ get: () => n.text }));
+      // The per-turn read path projects columns (overlayId, text), not whole nodes.
+      if (cypher.includes('AS text')) return list.map((n) => ({ get: (k) => (k === 'overlayId' ? n.overlayId : n.text) }));
       return list.map((n) => ({ get: () => ({ properties: n }) }));
     },
   };

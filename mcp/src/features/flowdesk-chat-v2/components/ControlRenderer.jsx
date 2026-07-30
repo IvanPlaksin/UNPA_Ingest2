@@ -2,6 +2,13 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUI, useChatActions } from '../store/chat-store';
 import AutocompleteControl from './AutocompleteControl.jsx';
+import DateControl from './DateControl.jsx';
+import MultichoiceControl from './MultichoiceControl.jsx';
+import FreeInputControl from './FreeInputControl.jsx';
+import ToggleControl from './ToggleControl.jsx';
+import CascadeConfirmControl from './CascadeConfirmControl.jsx';
+
+const FREE_INPUT_TYPES = ['text', 'textarea', 'number'];
 
 /**
  * ControlRenderer (I-3 / FE-001) — renders the `controls[]` turn-contract and emits
@@ -51,7 +58,7 @@ function Control({ control }) {
 
   return (
     <div className="fdv2-control">
-      {label && type === 'choice' && <div className="fdv2-control-label">{label}</div>}
+      {label && type !== 'confirm' && type !== 'autocomplete' && <div className="fdv2-control-label">{label}</div>}
       <div className="fdv2-choice-row">
         {type === 'confirm' && (
           <button type="button" className="fdv2-choice-btn fdv2-choice-confirm" disabled={loading} onClick={() => send('confirm', undefined, t('choice.yes'))}>
@@ -87,6 +94,31 @@ function Control({ control }) {
 
       {type === 'autocomplete' && (
         <AutocompleteControl control={control} onPick={(r) => send('submit', pickToValue(control.source?.directory, r), r.label)} />
+      )}
+      {type === 'date' && (
+        <DateControl control={control} onSelect={(v) => send('date_select', v, v)} />
+      )}
+      {type === 'multichoice' && (
+        <MultichoiceControl
+          control={control}
+          onCommit={(values) => actions.sendControlAction({ controlId: id, slotId, action: 'multichoice_select', values }, values.join(', '))}
+        />
+      )}
+      {FREE_INPUT_TYPES.includes(type) && (
+        <FreeInputControl
+          control={control}
+          onCommit={(v) => send(type === 'number' ? 'number_input' : 'text_input', v, String(v))}
+        />
+      )}
+      {type === 'cascade_confirm' && (
+        <CascadeConfirmControl
+          control={control}
+          onAccept={() => send('cascade_accept', undefined, t('cascade.accept'))}
+          onEdit={() => send('cascade_edit', undefined, t('cascade.edit'))}
+        />
+      )}
+      {type === 'toggle' && (
+        <ToggleControl control={control} onCommit={(v) => send('toggle_input', v, t(v ? 'toggle.on' : 'toggle.off'))} />
       )}
       {activeChildren.map(renderChild)}
     </div>

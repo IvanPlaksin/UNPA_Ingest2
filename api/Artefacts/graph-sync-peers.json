@@ -1,0 +1,21 @@
+[
+  {
+    "id": "3f6b82c3-7f60-4261-b585-ef59b8060d20",
+    "name": "AZ1",
+    "baseUrl": "https://vm-ai-devr1.swedencentral.cloudapp.azure.com",
+    "keyEnv": "GRAPH_SYNC_KEY",
+    "sourceInstanceId": "unpa",
+    "createdAt": "2026-07-27T13:35:33.765Z",
+    "updatedAt": "2026-07-27T13:35:33.765Z"
+  },
+  {
+    "id": "c0c098f8-bb09-4d9b-9c39-44034fdf0be2",
+    "name": "Azure",
+    "baseUrl": "https://vm-ai-devr1.swedencentral.cloudapp.azure.com",
+    "keyEnv": "GRAPH_SYNC_KEY",
+    "sourceInstanceId": "local-dev",
+    "createdAt": "2026-07-27T13:44:32.606Z",
+    "updatedAt": "2026-07-27T13:44:32.606Z",
+    "key": "9946f8a92671f94e65e0cc4618dda875a59d829a8f8330dbb412741c549c3d0c"
+  }
+]

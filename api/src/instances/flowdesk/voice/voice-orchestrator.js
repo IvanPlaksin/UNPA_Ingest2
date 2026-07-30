@@ -69,6 +69,20 @@ class VoiceOrchestratorSession {
     this.closed = false;
   }
 
+  /**
+   * VF1-001: persist one voice turn to the shared session transcript so the text
+   * window can render the voice dialogue. Best-effort — never blocks or breaks a
+   * turn (a Redis hiccup must not interrupt the conversation).
+   */
+  _persist(role, text) {
+    if (!text || !this.ctx || !this.ctx.sessionId) return;
+    try {
+      require('./voice-transcript.store')
+        .append(this.ctx.sessionId, [{ role, content: text }])
+        .catch(() => {});
+    } catch { /* best-effort */ }
+  }
+
   start() {
     try {
       this._startRecognizer();
@@ -89,19 +103,16 @@ class VoiceOrchestratorSession {
     this.pushStream = sdk.AudioInputStream.createPushStream(fmt);
     const audioCfg = sdk.AudioConfig.fromStreamInput(this.pushStream);
 
-    const forcedLocale = this.ctx && this.ctx.lang ? LOCALE_BY_LANG[this.ctx.lang] : null;
-    if (forcedLocale) {
-      // Selected-language mode: recognize in the chosen language ONLY, so Azure's
-      // per-utterance language ID can't misclassify (e.g. English → Chinese) and
-      // the agent never auto-switches away from the user's selection.
-      cfg.speechRecognitionLanguage = forcedLocale;
-      this.recognizer = new sdk.SpeechRecognizer(cfg, audioCfg);
-    } else {
-      // No selection → continuous language identification across the 6 UN locales.
-      cfg.setProperty(sdk.PropertyId.SpeechServiceConnection_LanguageIdMode, 'Continuous');
-      const autoDetect = sdk.AutoDetectSourceLanguageConfig.fromLanguages(UN_LOCALES);
-      this.recognizer = sdk.SpeechRecognizer.FromConfig(cfg, autoDetect, audioCfg);
-    }
+    // CS-1 (PO): the user's SELECTED language is authoritative — recognition is
+    // FORCED to that single locale. Auto-detect is deliberately DISABLED: in the
+    // UN's multilingual setting, non-native pronunciation makes per-utterance
+    // language ID unreliable, and a misclassification corrupts the whole turn.
+    // `ctx.lang` is always set by the client (AI-Settings pref); default to en only
+    // as a defensive last resort (should never happen).
+    const shortLang = (this.ctx && this.ctx.lang) || 'en';
+    if (!(this.ctx && this.ctx.lang)) console.warn('[voice-orchestrator] no lang provided — defaulting to en (client should always send the AI-Settings language)');
+    cfg.speechRecognitionLanguage = LOCALE_BY_LANG[shortLang] || DEFAULT_LOCALE;
+    this.recognizer = new sdk.SpeechRecognizer(cfg, audioCfg);
 
     this.recognizer.recognized = (_s, e) => {
       if (e.result.reason !== sdk.ResultReason.RecognizedSpeech) return;
@@ -133,14 +144,24 @@ class VoiceOrchestratorSession {
       // utterance interrupts. Quiet frames are dropped entirely while speaking, so
       // the agent's own voice is never fed back into the recognizer either.
       if (this.speaking) {
-        if (this._frameHasSpeech(buf)) this._stopSpeaking();
-        else return;
+        if (this._frameHasSpeech(buf)) {
+          // Real user speech over the agent → tell the client to flush its
+          // buffered TTS at once. This is the ONLY barge-in signal; a normal
+          // end-of-turn transition (speaking → listening) must NOT flush, or the
+          // response — streamed ahead faster than realtime — gets cut off.
+          send(this.ws, { type: 'barge_in' });
+          this._stopSpeaking();
+        } else return;
       }
       // The Speech SDK push stream requires an ArrayBuffer, not a Node Buffer.
       try {
         const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
         this.pushStream && this.pushStream.write(ab);
       } catch (_) {}
+    } else if (msg.type === 'explain' && msg.anchor && msg.anchor.id) {
+      // V2: "Get help with this" over voice — explain a UI anchor and speak it,
+      // WITHOUT the user speaking first (reuses the ANCHOR_EXPLAIN interpreter path).
+      this._onExplain(msg.anchor);
     } else if (msg.type === 'stop') {
       this.close();
     }
@@ -170,6 +191,7 @@ class VoiceOrchestratorSession {
     const shortLang = (this.ctx && this.ctx.lang) || (detectedLang || 'en').split('-')[0];
     const ttsLocale = LOCALE_BY_LANG[shortLang] || DEFAULT_LOCALE;
     send(this.ws, { type: 'transcript', role: 'user', text, lang: shortLang });
+    this._persist('user', text); // VF1-001: record the voice turn for the shared text window
     send(this.ws, { type: 'state', status: 'processing' });
 
     let result;
@@ -196,17 +218,65 @@ class VoiceOrchestratorSession {
       preamble: result.preamble || null,
     };
     send(this.ws, { type: 'transcript', role: 'assistant', text: reply, meta });
+    this._persist('assistant', reply); // VF1-001
     if (Array.isArray(result.choices) && result.choices.length) {
       send(this.ws, { type: 'choices', items: result.choices });
     }
 
     // Speak the reply (+ a spoken hint of the choices, so the flow is audible).
-    let toSpeak = reply;
-    if (Array.isArray(result.choices) && result.choices.length) {
-      const labels = result.choices.map((c) => c.label || c.value).filter(Boolean);
+    // Prefer an explicit voice-friendly `speech` (V3/VF formatters emit clean,
+    // markup-free sentences that ALREADY enumerate the options) over the markdown
+    // `response` shown in the text card. Only when there is NO such `speech` do we
+    // append the choice labels, so the options are still read aloud — and choices
+    // may be plain strings (catalog/section intents) OR {label,value} objects.
+    let toSpeak = (result.speech || reply);
+    if (!result.speech && Array.isArray(result.choices) && result.choices.length) {
+      const labels = result.choices
+        .map((c) => (typeof c === 'string' ? c : (c && (c.label || c.value))))
+        .filter(Boolean);
       if (labels.length) toSpeak += ` ${labels.join(', ')}?`;
     }
     await this._speak(toSpeak, ttsLocale);
+
+    this.processing = false;
+    if (!this.closed) send(this.ws, { type: 'state', status: 'listening' });
+  }
+
+  /**
+   * V2: zero-query anchor explain over voice. Runs the ANCHOR_EXPLAIN interpreter
+   * path (no typed/spoken message) and speaks the reply, then returns to listening
+   * so the user can follow up (the client's 15s idle rule then applies).
+   */
+  async _onExplain(anchor) {
+    if (this.processing) return;
+    this.processing = true;
+    const shortLang = (this.ctx && this.ctx.lang) || 'en';
+    const ttsLocale = LOCALE_BY_LANG[shortLang] || DEFAULT_LOCALE;
+    send(this.ws, { type: 'state', status: 'processing' });
+
+    let result;
+    try {
+      const chatV2 = require('../interpreter/chat-v2.service.js');
+      // processMessage(sessionId, userId, message, userContext, choice, lang, controlAction, anchor)
+      result = await chatV2.processMessage(this.ctx.sessionId, this.ctx.userId, '', null, null, shortLang, null, { id: anchor.id, title: anchor.title });
+    } catch (err) {
+      send(this.ws, { type: 'error', message: `interpreter failed: ${err.message}` });
+      this.processing = false;
+      if (!this.closed) send(this.ws, { type: 'state', status: 'listening' });
+      return;
+    }
+
+    const reply = (result.response || '').trim();
+    const meta = {
+      controls: Array.isArray(result.controls) ? result.controls : null,
+      choices: result.choices || null,
+      resolveChoices: result.resolveChoices || null,
+      responseType: result.responseType || 'text',
+      preamble: result.preamble || null,
+    };
+    send(this.ws, { type: 'transcript', role: 'assistant', text: reply, meta });
+    this._persist('assistant', reply); // VF1-001
+    await this._speak(reply, ttsLocale);
 
     this.processing = false;
     if (!this.closed) send(this.ws, { type: 'state', status: 'listening' });
@@ -216,7 +286,8 @@ class VoiceOrchestratorSession {
     return new Promise((resolve) => {
       if (this.closed || !text) return resolve();
       const cfg = sdk.SpeechConfig.fromSubscription(this.speech.key, this.speech.region);
-      cfg.speechSynthesisVoiceName = VOICE_BY_LANG[lang] || DEFAULT_VOICE;
+      // CS-2: the user's chosen voice (AI Settings) wins; else the per-language default.
+      cfg.speechSynthesisVoiceName = (this.ctx && this.ctx.voice) || VOICE_BY_LANG[lang] || DEFAULT_VOICE;
       cfg.speechSynthesisOutputFormat = sdk.SpeechSynthesisOutputFormat.Raw24Khz16BitMonoPcm;
 
       // Stream TTS chunks to the client as they are produced.

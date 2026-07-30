@@ -35,6 +35,10 @@ const ALLOWLIST = new Set([
   'sr.status',
   'sr.list',
   'sr.metadata',
+  // V3 section queries (acting-user scoped): tasks / requests-detail / mail
+  'tasks.list', 'tasks.get', 'tasks.metadata',
+  'requests.get',
+  'mail.list', 'mail.get', 'mail.counts',
   // Directory (resolvers)
   'directory.resolveUser', 'directory.getUser', 'directory.listLocations',
   'directory.resolveLocation', 'directory.resolveApprover', 'directory.getCurrentUser',
@@ -61,6 +65,8 @@ function createAltioraTools(deps = {}) {
   const serviceBackend = () => (lazy.service || (lazy.service = deps.serviceBackend || require('./backends/service.backend').makeServiceBackend()));
   const srBackend = () => (lazy.sr || (lazy.sr = deps.srBackend || require('./backends/sr-status.backend').makeSRStatusBackend()));
   const ticketListBackend = () => (lazy.ticketList || (lazy.ticketList = deps.ticketListBackend || require('./backends/ticket-list.backend').makeTicketListBackend()));
+  const tasksBackend = () => (lazy.tasks || (lazy.tasks = deps.tasksBackend || require('./backends/tasks.backend').makeTasksBackend()));
+  const mailBackend = () => (lazy.mail || (lazy.mail = deps.mailBackend || require('./backends/mail.backend').makeMailBackend()));
   const catalogBrowseBackend = () => (lazy.catalogBrowse || (lazy.catalogBrowse = deps.catalogBrowseBackend || require('./backends/catalog-browse.backend').makeCatalogBrowseBackend()));
   const directory = () => (lazy.dir || (lazy.dir = deps.directory || require('./directory')));
   const compile = () => (deps.compile || require('../schema-graph/schema-compiler').compile);
@@ -92,6 +98,24 @@ function createAltioraTools(deps = {}) {
       case 'sr.metadata':
         return ticketListBackend().metadata();
 
+      // V3 — /tasks: list + filter (acting-user scoped) + detail + filter options.
+      case 'tasks.list':
+        return tasksBackend().listTasks(params.filters || params);
+      case 'tasks.get':
+        return tasksBackend().getTask(params.taskId || params.id);
+      case 'tasks.metadata':
+        return tasksBackend().metadata();
+      // V3 — /requests: detail by number (list stays on sr.list).
+      case 'requests.get':
+        return ticketListBackend().getTicketByNumber(params.requestNumber || params.number);
+      // V3 — /mail: list + filter, detail, unread/stats summary.
+      case 'mail.list':
+        return mailBackend().listMail(params.filters || params);
+      case 'mail.get':
+        return mailBackend().getMail(params.messageId || params.id);
+      case 'mail.counts':
+        return mailBackend().counts();
+
       case 'directory.resolveUser': return directory().resolveUser(params.query);
       case 'directory.getUser': return directory().getUser(params.userId);
       case 'directory.getCurrentUser': return directory().getCurrentUser();
@@ -118,6 +142,13 @@ function createAltioraTools(deps = {}) {
     listMyTickets: (filters) => call('sr.list', { filters }),
     ticketMetadata: () => call('sr.metadata', {}),
     browseCatalog: (parentId) => call('catalog.browse', { parentId }),
+    // V3 section queries.
+    listMyTasks: (filters) => call('tasks.list', { filters }),
+    getMyTask: (taskId) => call('tasks.get', { taskId }),
+    getMyRequest: (requestNumber) => call('requests.get', { requestNumber }),
+    listMyMail: (filters) => call('mail.list', { filters }),
+    getMyMail: (messageId) => call('mail.get', { messageId }),
+    mailCounts: () => call('mail.counts', {}),
   };
 }
 

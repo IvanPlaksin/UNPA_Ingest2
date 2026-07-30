@@ -122,14 +122,16 @@ describe('C4.5: Hardware happy path', () => {
     r = await confirm(r); expect(r.askingSlot).toBe('approverComment');
 
     r = await engine.runTurn({ sessionId: sid, message: 'budget approved by manager' });
-    expect(r.response).toMatch(/Проверьте заявку/i); // all filled → CONFIRM
+    expect(r.response).toMatch(/Please review your/i); // all filled → CONFIRM (default lang 'en')
     expect(r.trace).toContain('CONFIRM');
 
+    // The chat no longer submits: "yes" at the gate hands the collected data to
+    // Altiora's own form, which is where the request is actually raised.
     r = await engine.runTurn({ sessionId: sid, message: 'yes' });
-    expect(r.route).toBe('CONFIRM_YES');
-    expect(r.isComplete).toBe(true);
-    expect(r.srNumber).toMatch(/^SR-\d+$/);
-    expect(r.trace).toContain('SUBMIT');
+    expect(r.route).toBe('confirm_form');
+    expect(r.openForm).toBeDefined();
+    expect(r.openForm.prefill.dynamicData).toBeDefined();
+    expect(r.srNumber).toBeUndefined();
   });
 });
 
@@ -161,7 +163,10 @@ describe('C4.5: info question mid-flow', () => {
     const engine = makeEngine(resolveHardware);
     const sid = 'e2e-info';
     await engine.runTurn({ sessionId: sid, message: 'I need a laptop' });
-    const r = await engine.runTurn({ sessionId: sid, message: 'what laptops are available?' });
+    // "monitors" hits the KB ARTICLE branch of resolveHardware (a grounded answer);
+    // "laptops" would resolve to a SERVICE (0 articles) → FIX-D3-001 refusal, which
+    // is a separate scenario covered in kb-grounding.test.js.
+    const r = await engine.runTurn({ sessionId: sid, message: 'what monitors are available?' });
     expect(r.route).toBe('INFO_QUESTION');
     expect(r.trace).toContain('INFO_ANSWER');
     expect(r.response).toMatch(/found/i);
@@ -193,12 +198,16 @@ describe('C4.5: correction at confirm re-validates', () => {
     // now at approver — confirm it, then approverComment
     r = await engine.runTurn({ sessionId: sid, choice: { slotId: 'approver', action: 'confirm', value: null } });
     r = await engine.runTurn({ sessionId: sid, message: 'budget approved by manager' });
-    expect(r.response).toMatch(/Проверьте заявку/i); // at CONFIRM
+    expect(r.response).toMatch(/Please review your/i); // at CONFIRM (default lang 'en')
 
-    // correction
+    // correction — editing assetType (a cascade source with the FILLED dependent
+    // justification) now WARNS before resetting, then resets on confirmation.
     r = await engine.runTurn({ sessionId: sid, message: 'actually make it engineering' });
+    expect(r.responseType).toBe('confirm_cascade_edit');
+    expect(r.isComplete).not.toBe(true);
+    // confirm the cascade edit → the dependent is reset and re-asked.
+    r = await engine.runTurn({ sessionId: sid, message: 'да' });
     expect(r.route).toBe('CONFIRM_EDIT');
-    // justification depends on assetType → stale → back to a question, not submit
     expect(r.isComplete).not.toBe(true);
     const hw = SNAP['IT-HW-LAP'];
     const remaining = activeRequiredSlots(r.draft, hw).map((s) => s.slotId);

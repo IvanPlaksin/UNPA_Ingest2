@@ -57,12 +57,18 @@ describe('C3: orchestration + mapping (injected backends)', () => {
     expect(await resolveSearch('   ', CTX)).toEqual([]);
   });
 
-  test('graceful degradation: a throwing SERVICE backend yields []', async () => {
-    // makeServiceBackend wraps classify errors → []
+  test('graceful degradation: a throwing classifier costs results, never the turn', async () => {
+    // This used to assert []. It no longer holds, and the reason is an
+    // improvement rather than a regression: service search stopped going through
+    // the classifier alone (hybrid vector/graph, FLOWDESK_HYBRID_SERVICE_SEARCH),
+    // so a classifier that throws is one source down, not the search. What must
+    // still hold is what the caller depends on — it does not throw, and whatever
+    // comes back is a valid union.
     const backend = makeServiceBackend({ classify: async () => { throw new Error('qdrant down'); } });
     const rs = createResolveSearch({ serviceBackend: backend, articleBackend: async () => [], srStatusBackend: async () => null });
     const res = await rs('laptop', CTX);
-    expect(res).toEqual([]);
+    expect(Array.isArray(res)).toBe(true);
+    expect(validate(res)).toBe(true);
   });
 });
 

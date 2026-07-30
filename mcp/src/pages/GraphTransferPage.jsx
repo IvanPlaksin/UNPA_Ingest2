@@ -35,6 +35,7 @@ import VectorFilterBuilder from '../components/graph-transfer/VectorFilterBuilde
 import CatalogTreeSelector from '../components/graph-transfer/CatalogTreeSelector';
 import DomainExportFlow from '../components/graph-transfer/DomainExportFlow';
 import ExportAssistantChat from '../components/graph-transfer/ExportAssistantChat';
+import SyncToInstancePanel from '../components/graph-transfer/SyncToInstancePanel';
 
 const MODES = ['NAMESPACE', 'LABELS', 'CYPHER', 'CATALOG_GRAPHS'];
 const BOUNDARY = ['EXCLUDE', 'STUB', 'CLOSURE'];
@@ -502,6 +503,9 @@ export default function GraphTransferPage() {
                     )}
                 </Paper>
             )}
+
+            {/* SYNC TO INSTANCE (API-API) — reuses the current selection */}
+            <SyncToInstancePanel buildRequest={buildRequest} />
 
             {/* HISTORY */}
             <Paper variant="outlined" sx={{ p: 2 }}>

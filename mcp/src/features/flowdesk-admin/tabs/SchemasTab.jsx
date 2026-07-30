@@ -8,10 +8,13 @@ import {
   Box, Paper, Stack, Table, TableHead, TableRow, TableCell, TableBody,
   Typography, Chip, Button, Drawer, IconButton, Tabs, Tab, Alert,
   CircularProgress, Tooltip, Divider, Checkbox, TableSortLabel, TablePagination,
-  TextField, InputAdornment, LinearProgress, ToggleButton, ToggleButtonGroup,
+  TextField, InputAdornment, LinearProgress, ToggleButton, ToggleButtonGroup, useTheme,
 } from '@mui/material';
-import { X, RefreshCcw, Trash2, Eye, Sparkles, Check, Search, Ban, AlertCircle, Download } from 'lucide-react';
-import { getSchemas, getSchemaDetail, invalidateSchema, rematerializeSchema, enrichSchema, exportSchemas } from '../api/adminClient';
+import {
+  AreaChart, Area, XAxis, YAxis, Tooltip as RTooltip, ResponsiveContainer, LabelList,
+} from 'recharts';
+import { X, RefreshCcw, Trash2, Eye, Sparkles, Check, Search, Ban, AlertCircle, Download, DownloadCloud } from 'lucide-react';
+import { getSchemas, getSchemaDetail, invalidateSchema, rematerializeSchema, enrichSchema, exportSchemas, runCatalogSync, getCatalog, materializeService } from '../api/adminClient';
 import { Loading, ErrorNote, useAutoRefresh, Kpi, fmtTs } from '../components/common';
 
 const TYPE_COLORS = { enum: 'info', user: 'secondary', location: 'secondary', date: 'warning', number: 'warning', boolean: 'warning', text: 'default', string: 'default' };
@@ -228,10 +231,97 @@ const SORT_COLS = [
   { id: 'ousId', label: 'ousId', numeric: true },
   { id: 'serviceId', label: 'Service' },
   { id: 'title', label: 'Title' },
+  { id: 'slotCount', label: 'Slots', numeric: true },
   { id: 'state', label: 'State' },
   { id: 'hasDescription', label: 'AI desc', bool: true },
   { id: 'approvalRequired', label: 'Approval', bool: true },
 ];
+
+// Buckets for the slot-count distribution (schema complexity). Fixed edges cover
+// typical intake-form sizes; anything larger folds into the open-ended top bucket.
+const SLOT_BUCKETS = [
+  { label: '1–3', lo: 1, hi: 3 },
+  { label: '4–6', lo: 4, hi: 6 },
+  { label: '7–9', lo: 7, hi: 9 },
+  { label: '10–14', lo: 10, hi: 14 },
+  { label: '15–19', lo: 15, hi: 19 },
+  { label: '20+', lo: 20, hi: Infinity },
+];
+
+/**
+ * Distribution of schemas across slot-count buckets, with each bucket's share of
+ * the total (percentage). Returns bins even when empty so the curve keeps its shape.
+ */
+function slotHistogram(items) {
+  const bins = SLOT_BUCKETS.map((b) => ({ bucket: b.label, count: 0 }));
+  let total = 0;
+  for (const s of items || []) {
+    const n = Number(s.slotCount);
+    if (!Number.isFinite(n) || n <= 0) continue;
+    const idx = SLOT_BUCKETS.findIndex((b) => n >= b.lo && n <= b.hi);
+    if (idx >= 0) { bins[idx].count += 1; total += 1; }
+  }
+  return { bins: bins.map((b) => ({ ...b, pct: total ? (b.count / total) * 100 : 0 })), total };
+}
+
+/** "12%", ">0%" for a tiny non-zero share, "0%" for none. */
+const fmtPctLabel = (v) => {
+  const n = Number(v) || 0;
+  if (n === 0) return '0%';
+  const r = Math.round(n);
+  return r === 0 ? '<1%' : `${r}%`;
+};
+
+/**
+ * Smooth (density-style) single-series area chart of the slot-count distribution,
+ * as a share of all schemas — reads as schema-complexity spread. Monotone spline
+ * over the buckets (not discrete bars), per-point % labels, theme-hued.
+ */
+function SlotDistributionCard({ items }) {
+  const theme = useTheme();
+  const { data, total } = useMemo(() => {
+    const { bins, total: t } = slotHistogram(items);
+    return { data: bins, total: t };
+  }, [items]);
+  const axisColor = theme.palette.text.secondary;
+  const hue = theme.palette.primary.main;
+  const gid = 'slotDistGradient';
+  return (
+    <Paper variant="outlined" sx={{ p: 1.5, flex: '2 1 300px', minWidth: 260 }}>
+      <Typography variant="overline" color="text.secondary" sx={{ display: 'block', lineHeight: 1.2 }}>
+        Slot-count distribution
+      </Typography>
+      {total === 0 ? (
+        <Typography variant="h6" sx={{ lineHeight: 1.3 }}>—</Typography>
+      ) : (
+        <Box sx={{ width: '100%', height: 92, mt: 0.5 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={data} margin={{ top: 12, right: 8, left: -24, bottom: 0 }}>
+              <defs>
+                <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={hue} stopOpacity={0.35} />
+                  <stop offset="100%" stopColor={hue} stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
+              <XAxis dataKey="bucket" tick={{ fontSize: 10, fill: axisColor }} tickLine={false} axisLine={{ stroke: theme.palette.divider }} interval={0} />
+              <YAxis width={30} tick={{ fontSize: 10, fill: axisColor }} tickLine={false} axisLine={false} tickFormatter={(v) => `${Math.round(v)}%`} />
+              <RTooltip
+                cursor={{ stroke: theme.palette.divider }}
+                contentStyle={{ fontSize: 12, padding: '4px 8px', borderRadius: 6, border: `1px solid ${theme.palette.divider}`, background: theme.palette.background.paper }}
+                labelFormatter={(l) => `${l} slots`}
+                formatter={(v, _n, p) => [`${p?.payload?.count ?? 0} schema${(p?.payload?.count ?? 0) === 1 ? '' : 's'} · ${fmtPctLabel(v)}`, 'share']}
+              />
+              <Area type="monotone" dataKey="pct" stroke={hue} strokeWidth={2} fill={`url(#${gid})`} dot={{ r: 2, fill: hue, strokeWidth: 0 }} activeDot={{ r: 3 }} isAnimationActive={false}>
+                <LabelList dataKey="pct" position="top" formatter={fmtPctLabel} style={{ fontSize: 9, fill: axisColor }} />
+              </Area>
+            </AreaChart>
+          </ResponsiveContainer>
+        </Box>
+      )}
+      <Typography variant="caption" color="text.secondary">form complexity · {total} schema{total === 1 ? '' : 's'} · % of total</Typography>
+    </Paper>
+  );
+}
 
 function compareBy(a, b, col) {
   const meta = SORT_COLS.find((c) => c.id === col) || {};
@@ -273,11 +363,17 @@ export default function SchemasTab() {
   const [bulkSummary, setBulkSummary] = useState(null);          // { total, done, ok, failed }
   const cancelRef = useRef(false);
 
+  // import (catalog sync + materialize-all) — declared before useAutoRefresh so the
+  // hook can pause on importBusy without a temporal-dead-zone reference.
+  const [importBusy, setImportBusy] = useState(false);
+  const [importProgress, setImportProgress] = useState(null); // { phase, total, done, ok, skipped, failed }
+  const importCancelRef = useRef(false);
+
   // Pause the 20s auto-refresh while a bulk run is in flight (avoids churn); the
   // status/selection maps are keyed by ousId so they survive any reload anyway.
   const { loading, error, reload } = useAutoRefresh(async () => {
     setItems(await getSchemas());
-  }, bulkRunning ? 0 : 20000, [bulkRunning]);
+  }, (bulkRunning || importBusy) ? 0 : 20000, [bulkRunning, importBusy]);
 
   const stale = (items || []).filter((s) => s.state === 'stale').length;
   const described = (items || []).filter((s) => s.hasDescription).length;
@@ -354,6 +450,59 @@ export default function SchemasTab() {
 
   const selCount = selectedIds.size;
 
+  // Full import from the Altiora project. Two phases, because the schema list on
+  // THIS tab reads materialized ServiceDefs from Memgraph, whereas a catalog sync
+  // only refreshes the Qdrant catalog — syncing alone never adds a row here:
+  //   1) sync the requestable catalog from live Altiora (POST /catalog/sync);
+  //   2) materialize every not-yet-cached service (POST /catalog/:code/materialize),
+  //      which is what writes the (:ServiceDef {namespace:'Altiora'}) the list shows.
+  // Materialization is browser-orchestrated with the same BULK_CONCURRENCY pool as
+  // AI-enrichment; each materialize is a live Altiora round-trip, so it is paced.
+  const runImport = async () => {
+    if (importBusy || bulkRunning) return;
+    importCancelRef.current = false;
+    setImportBusy(true); setRowMsg(null);
+    setImportProgress({ phase: 'sync' });
+    try {
+      // Phase 1 — sync the catalog (Qdrant) from live Altiora.
+      const sync = await runCatalogSync(false);
+
+      // Phase 2 — materialize services into the schema-graph (Memgraph). Skip the
+      // ones already cached so a repeat import is cheap and only fills the gaps.
+      const catalog = await getCatalog();
+      const targets = (catalog || [])
+        .filter((s) => s.materialization?.state !== 'cached')
+        .map((s) => s.service_code);
+      let done = 0; let ok = 0; let skipped = 0; let failed = 0;
+      setImportProgress({ phase: 'materialize', total: targets.length, done, ok, skipped, failed });
+      const queue = [...targets];
+      const worker = async () => {
+        while (queue.length) {
+          if (importCancelRef.current) return;
+          const code = queue.shift();
+          try { const r = await materializeService(code); if (r?.skipped) skipped += 1; else ok += 1; }
+          catch (e) { if (/skipped|not in .*catalog/i.test(e.message)) skipped += 1; else failed += 1; }
+          done += 1;
+          setImportProgress({ phase: 'materialize', total: targets.length, done, ok, skipped, failed });
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(BULK_CONCURRENCY, targets.length) }, worker));
+      setImportProgress((p) => (p ? { ...p, phase: 'done' } : null));
+      const stopped = importCancelRef.current;
+      setRowMsg({
+        sev: failed ? 'warning' : 'success',
+        text: `Import ${stopped ? 'stopped' : 'complete'}: catalog synced (fetched ${sync.fetched}, upserted ${sync.upserted}). `
+          + `Materialized ${ok}, skipped ${skipped}${failed ? `, failed ${failed}` : ''}`
+          + `${targets.length === 0 ? ' — every catalog service was already cached.' : '.'}`,
+      });
+      reload();
+    } catch (e) {
+      setImportProgress(null);
+      setRowMsg({ sev: 'error', text: `Import failed: ${e.message}` });
+    } finally { setImportBusy(false); }
+  };
+  const cancelImport = () => { importCancelRef.current = true; };
+
   const [exporting, setExporting] = useState(false);
   const runExport = async () => {
     if (!selCount) return;
@@ -370,6 +519,7 @@ export default function SchemasTab() {
         <Kpi label="Cached schemas" value={items?.length ?? '—'} sub="registry (namespace Altiora)" />
         <Kpi label="Stale" value={stale} color={stale ? 'warning.main' : 'success.main'} sub="needsRefresh flagged" />
         <Kpi label="AI-described" value={described} color={described ? 'success.main' : 'text.primary'} sub="in intent vector store" />
+        <SlotDistributionCard items={items} />
       </Stack>
 
       {/* Toolbar: filter / bulk actions */}
@@ -392,6 +542,20 @@ export default function SchemasTab() {
           <ToggleButton value="undescribed">No AI</ToggleButton>
         </ToggleButtonGroup>
         <Box sx={{ flex: 1 }} />
+        {!importBusy ? (
+          <Tooltip title="Import from the Altiora project: sync the requestable catalog, then materialize every not-yet-cached service into the schema-graph so it appears in this list.">
+            <span>
+              <Button size="small" variant="outlined" startIcon={<DownloadCloud size={15} />}
+                disabled={bulkRunning} onClick={runImport}>
+                Import from Altiora
+              </Button>
+            </span>
+          </Tooltip>
+        ) : (
+          <Button size="small" variant="outlined" color="warning" startIcon={<Ban size={15} />} onClick={cancelImport}>
+            Stop import
+          </Button>
+        )}
         {selCount > 0 && !bulkRunning && (
           <Button size="small" variant="text" color="inherit" onClick={clearSelection}>Clear ({selCount})</Button>
         )}
@@ -417,6 +581,33 @@ export default function SchemasTab() {
           </Button>
         )}
       </Stack>
+
+      {/* Import progress (sync + materialize-all) */}
+      {importProgress && (
+        <Paper variant="outlined" sx={{ p: 1, mb: 1 }}>
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
+            <DownloadCloud size={14} />
+            {importProgress.phase === 'sync' && <Typography variant="body2" fontWeight={600}>Syncing catalog from Altiora…</Typography>}
+            {importProgress.phase !== 'sync' && (
+              <>
+                <Typography variant="body2" fontWeight={600}>
+                  {importProgress.phase === 'done' ? 'Import finished' : 'Materializing'} {importProgress.done}/{importProgress.total}
+                </Typography>
+                <Chip size="small" color="success" variant="outlined" icon={<Check size={12} />} label={`${importProgress.ok} materialized`} />
+                {importProgress.skipped > 0 && <Chip size="small" variant="outlined" label={`${importProgress.skipped} skipped`} />}
+                {importProgress.failed > 0 && <Chip size="small" color="error" variant="outlined" icon={<AlertCircle size={12} />} label={`${importProgress.failed} failed`} />}
+                <Typography variant="caption" color="text.secondary">· up to {BULK_CONCURRENCY} in parallel</Typography>
+              </>
+            )}
+            <Box sx={{ flex: 1 }} />
+            {importProgress.phase === 'done' && <IconButton size="small" onClick={() => setImportProgress(null)}><X size={14} /></IconButton>}
+          </Stack>
+          <LinearProgress
+            variant={importProgress.phase === 'sync' || !importProgress.total ? 'indeterminate' : 'determinate'}
+            value={importProgress.total ? (importProgress.done / importProgress.total) * 100 : 0}
+          />
+        </Paper>
+      )}
 
       {/* Bulk progress */}
       {bulkSummary && (
@@ -474,6 +665,9 @@ export default function SchemasTab() {
                     <TableCell><code>{s.ousId}</code></TableCell>
                     <TableCell><code>{s.serviceId}</code></TableCell>
                     <TableCell>{s.title || '—'}</TableCell>
+                    <TableCell>{Number.isFinite(Number(s.slotCount)) && s.slotCount > 0
+                      ? <Chip size="small" variant="outlined" label={s.slotCount} />
+                      : <Typography variant="caption" color="text.disabled">—</Typography>}</TableCell>
                     <TableCell><Chip size="small" variant="outlined" color={s.state === 'stale' ? 'warning' : 'success'} label={s.state} /></TableCell>
                     <TableCell>{s.hasDescription
                       ? <Chip size="small" color="success" variant="outlined" icon={<Check size={12} />} label="described" />
@@ -495,7 +689,7 @@ export default function SchemasTab() {
                 );
               })}
               {!filtered.length && (
-                <TableRow><TableCell colSpan={8}>
+                <TableRow><TableCell colSpan={9}>
                   <Typography variant="body2" color="text.secondary" sx={{ p: 1 }}>
                     {(items || []).length
                       ? 'No schemas match the current filter.'

@@ -145,16 +145,29 @@ async function runQuestionPlanner(provider, { snapshot, unfilledSlotIds, lang, o
   if (invalid.length) {
     throw new Error(`[QUESTION_PLANNER] slots not in active schema: ${invalid.join(', ')} (CODEX-RULE-077)`);
   }
+  // TASK-PROMPT-005: `helpText` (Altiora's field description + example) grounds the
+  // phrasing — it carries real rules ("above 364 days needs a written justification")
+  // the label alone does not convey. It informs HOW the question is asked; the slot
+  // list stays schema-bounded (CODEX-RULE-077).
   const hints = snapshot.slots
     .filter((s) => unfilledSlotIds.includes(s.slotId))
-    .map((s) => `- ${s.slotId}: ${s.promptHint || s.slotId}`)
+    .map((s) => {
+      const line = `- ${s.slotId}: ${s.promptHint || s.slotId}`;
+      return s.helpText ? `${line}\n  Guidance: ${s.helpText.replace(/\n+/g, ' ')}` : line;
+    })
     .join('\n');
   const langName = LANG_NAMES[lang] || 'English';
   // Operator guidance (ADMIN P5 prompt overlays): appended verbatim so admins can
   // tune question phrasing globally or per-service without a deploy. It may only
   // influence HOW questions are asked — the slot list stays schema-bounded (077).
   const extra = guidance ? `\n\nOperator guidance (follow when phrasing the question):\n${guidance}` : '';
-  const prompt = `Ask the user for the following missing information. Reply in ${langName} only — regardless of the language the user has been writing in, never switch languages — as one short question:\n${hints}${extra}`;
+  // The guidance above carries the assistant's persona (identity, tone), which on its own
+  // makes the model greet and introduce itself again — mid-form, before every question.
+  // Greeting the user is the client's job (it seeds one personalised greeting per
+  // session), so the planner is constrained to emit the question and nothing else. Kept
+  // LAST so it is the final word on output shape, whatever the persona guidance says.
+  const prompt = `Ask the user for the following missing information. Reply in ${langName} only — regardless of the language the user has been writing in, never switch languages — as one short question:\n${hints}${extra}`
+    + '\n\nOutput ONLY the question itself. The conversation is already under way: no greeting, no introducing yourself, no restating who you are or what you do, no sign-off, no preamble.';
   const { text } = await provider.completion(prompt, opts);
   return { question: text };
 }

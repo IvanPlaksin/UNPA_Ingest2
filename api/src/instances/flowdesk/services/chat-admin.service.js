@@ -82,7 +82,12 @@ function sessionView(s) {
   if ((s.repairSession || 0) >= 3) flags.push('repair_heavy');
   if ((s.outOfScopeTurns || 0) >= 2) flags.push('out_of_scope_loop');
   if ((s.errorTurns || 0) >= 1) flags.push('error_turns');
-  if (s.rating != null && s.rating <= 2) flags.push('negative_csat');
+  // No 'negative_csat' flag: nothing in FlowDesk ever writes ChatSession.rating —
+  // there is no CSAT collection point in the chat, so the flag could never fire
+  // (TASK-FLOWDESK-BUG-002). It also disagreed with the `flagged=true` Cypher
+  // filter below, which never considered rating either: a session could carry the
+  // flag in this view yet be absent from the negative feed. Restore both together
+  // if CSAT collection is ever built.
   return { ...s, flags, negative: BAD_OUTCOMES.includes(s.outcome) || flags.length > 0 };
 }
 
@@ -97,6 +102,18 @@ async function getSession(sessionId) {
   return { session, draft };
 }
 
+/**
+ * One recorded model call: the exact system prompt, conversation and reply.
+ *
+ * Kept in Redis for an hour by the agent loop (llm-call-store), so a missing
+ * call is the ordinary case — the hour passed — not a failure. The reader is
+ * told which, rather than being handed an empty object to puzzle over.
+ */
+async function getLlmCall(key) {
+  const call = await require('./llm-call-store.service').getCall(key);
+  return call || { missing: true, reason: 'Not in cache — recorded calls are kept for one hour.' };
+}
+
 async function getTurns(sessionId) {
   const rows = await read(
     `MATCH (:ChatSession {sessionId:$sessionId})-[:HAS_TURN]->(t:ChatTurn)
@@ -104,7 +121,15 @@ async function getTurns(sessionId) {
   const parse = (s) => { try { return JSON.parse(s || '[]'); } catch { return []; } };
   const turns = rows.map((r0) => {
     const t = props(r0, 't');
-    return { ...t, nodeTrace: parse(t.nodeTraceJson), llmCalls: parse(t.llmCallsJson), nodeTraceJson: undefined, llmCallsJson: undefined };
+    return {
+      ...t,
+      nodeTrace: parse(t.nodeTraceJson),
+      llmCalls: parse(t.llmCallsJson),
+      // Every timed operation of the turn — the Altiora round trips, the searches,
+      // each model call — so a replay can say where the time actually went.
+      spans: parse(t.spansJson),
+      nodeTraceJson: undefined, llmCallsJson: undefined, spansJson: undefined,
+    };
   });
   // Voice transcripts are the only raw-utterance store for the voice channel —
   // merge them in so replay covers both channels.
@@ -349,12 +374,14 @@ async function listSchemas() {
   // Enrich with freshness flags from the graph.
   const rows = await read(
     `MATCH (svc:ServiceDef) WHERE svc.namespace='Altiora'
+     OPTIONAL MATCH (svc)-[:HAS_SLOT]->(sl:SlotDef)
      RETURN svc.altioraOusId AS ousId, svc.serviceId AS serviceId, svc.title AS title,
             svc.contentHash AS contentHash, svc.needsRefresh AS needsRefresh,
-            svc.approvalRequired AS approvalRequired`);
+            svc.approvalRequired AS approvalRequired, count(sl) AS slotCount`);
+  const toInt = (v) => (v && typeof v.toNumber === 'function' ? v.toNumber() : Number(v) || 0);
   const byOus = new Map(rows.map((r0) => [Number(r0.get('ousId')), {
     title: r0.get('title'), needsRefresh: !!r0.get('needsRefresh'),
-    approvalRequired: !!r0.get('approvalRequired'),
+    approvalRequired: !!r0.get('approvalRequired'), slotCount: toInt(r0.get('slotCount')),
   }]));
   // ADMIN P7: which services already have an AI description (for the list badge).
   let described = new Set();
@@ -434,8 +461,8 @@ function envFlagsSnapshot() {
     FLOWDESK_SCHEMA_PROVIDER: pick('FLOWDESK_SCHEMA_PROVIDER') || 'graph',
     FLOWDESK_SUBMIT_TARGET: pick('FLOWDESK_SUBMIT_TARGET'),
     FLOWDESK_DIRECTORY_PROVIDER: pick('FLOWDESK_DIRECTORY_PROVIDER') || 'mock',
-    FLOWDESK_LLM_PROVIDER: pick('FLOWDESK_LLM_PROVIDER') || 'claude-code',
-    FLOWDESK_LLM_MODEL: pick('FLOWDESK_LLM_MODEL'),
+    FLOWDESK_LLM_PROVIDER: pick('FLOWDESK_LLM_PROVIDER') || 'anthropic-api',
+    FLOWDESK_LLM_MODEL: pick('FLOWDESK_LLM_MODEL') || 'claude-haiku-4-5-20251001',
     FLOWDESK_CHAT_TELEMETRY: pick('FLOWDESK_CHAT_TELEMETRY') || 'true',
     FLOWDESK_CHAT_LOG_PROMPTS: pick('FLOWDESK_CHAT_LOG_PROMPTS') || 'false',
     FLOWDESK_CHAT_LOG_RETENTION_DAYS: pick('FLOWDESK_CHAT_LOG_RETENTION_DAYS') || '90',
@@ -583,6 +610,7 @@ async function adminHealth() {
 }
 
 module.exports = {
+  sessionView, // pure — exported so the derived-flag contract is directly testable
   listSessions, getSession, getTurns, sessionStats,
   listNegativeSessions, triageSession, createBacklogFromSession,
   QUALITY_STATUSES, ROOT_CAUSES, BAD_OUTCOMES,
@@ -590,4 +618,5 @@ module.exports = {
   listSchemas, getSchemaDetail, invalidateSchema, rematerializeSchema,
   syncStatus, syncPollNow, envFlagsSnapshot,
   listTickets, getTicketLive, llmStats, adminHealth,
+  getLlmCall,
 };

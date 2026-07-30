@@ -74,9 +74,16 @@ describe('chat-telemetry wrapLLMProvider + withTurnCapture', () => {
 describe('recordTurn persistence (fake graph)', () => {
   afterEach(() => telemetry._setDeps({}));
 
+  // SUADA-PREREQ-001: the prompt-graph version governing the turn under test.
+  const PROV = { promptGraphEntryId: 'entry-1', promptGraphVersion: 3, promptTextHash: 'a'.repeat(64) };
+  const getPromptProvenance = async () => PROV;
+  // SUADA-PREREQ-001.1: the overlays layered on top of it.
+  const OVERLAY = { overlayHash: 'b'.repeat(64), overlayIds: ['POV-11111111', 'POV-22222222'] };
+  const getOverlayProvenance = async () => OVERLAY;
+
   test('writes session-merge + turn-create with derived counters', async () => {
     const writes = [];
-    telemetry._setDeps({ write: async (cypher, params) => { writes.push({ cypher, params }); return []; } });
+    telemetry._setDeps({ write: async (cypher, params) => { writes.push({ cypher, params }); return []; }, getPromptProvenance, getOverlayProvenance });
     await telemetry.recordTurn({
       sessionId: 'sess-1', userId: 'u1',
       userContext: { displayName: 'Ivan', orgUnit: { code: 'UNCS' } },
@@ -101,9 +108,82 @@ describe('recordTurn persistence (fake graph)', () => {
     expect(JSON.parse(params.llmCallsJson)).toHaveLength(1);
   });
 
+  test('the turn carries the prompt-graph provenance that produced it', async () => {
+    const writes = [];
+    telemetry._setDeps({ write: async (cypher, params) => { writes.push({ cypher, params }); return []; }, getPromptProvenance, getOverlayProvenance });
+    await telemetry.recordTurn({ sessionId: 'sess-p', message: 'hi', result: { response: 'hello', route: 'INFO_QUESTION' } });
+    const { cypher, params } = writes[0];
+    // Persisted on the turn (not the session): the active prompt can change
+    // mid-session, so the turn is the only honest grain for attribution.
+    expect(cypher).toContain('promptGraphEntryId:$promptGraphEntryId');
+    expect(cypher).toContain('promptGraphVersion:$promptGraphVersion');
+    expect(cypher).toContain('promptTextHash:$promptTextHash');
+    expect(params).toMatchObject(PROV);
+  });
+
+  test('the turn also carries the overlays layered on top of the prompt', async () => {
+    const writes = [];
+    telemetry._setDeps({ write: async (cypher, params) => { writes.push({ cypher, params }); return []; }, getPromptProvenance, getOverlayProvenance });
+    await telemetry.recordTurn({ sessionId: 'sess-o', message: 'hi', result: { response: 'hello', route: 'INFO_QUESTION' } });
+    const { cypher, params } = writes[0];
+    expect(cypher).toContain('overlayHash:$overlayHash');
+    expect(cypher).toContain('overlayIds:$overlayIds');
+    expect(params).toMatchObject(OVERLAY);
+  });
+
+  test('overlay provenance is resolved for the service in play', async () => {
+    const seen = [];
+    telemetry._setDeps({
+      write: async () => [],
+      getPromptProvenance,
+      getOverlayProvenance: async (serviceId) => { seen.push(serviceId); return OVERLAY; },
+    });
+    await telemetry.recordTurn({
+      sessionId: 'sess-s',
+      result: { response: 'ok', draft: { serviceId: 'EO-HR-BE-TRE-TRE' } },
+    });
+    // Service-scoped overlays only apply to their own service — resolving with a
+    // null serviceId here would silently drop them from the record.
+    expect(seen).toEqual(['EO-HR-BE-TRE-TRE']);
+  });
+
+  test('an overlay-provenance failure degrades to null hash and empty ids', async () => {
+    const writes = [];
+    telemetry._setDeps({
+      write: async (cypher, params) => { writes.push({ cypher, params }); return []; },
+      getPromptProvenance,
+      getOverlayProvenance: async () => { throw new Error('memgraph down'); },
+    });
+    await expect(telemetry.recordTurn({ sessionId: 'sess-t', result: {} })).resolves.toBeUndefined();
+    expect(writes[0].params).toMatchObject({ overlayHash: null, overlayIds: [] });
+  });
+
+  test('a provenance failure degrades to nulls, it never breaks the turn', async () => {
+    const writes = [];
+    telemetry._setDeps({
+      write: async (cypher, params) => { writes.push({ cypher, params }); return []; },
+      getPromptProvenance: async () => { throw new Error('memgraph down'); }, getOverlayProvenance,
+    });
+    await expect(telemetry.recordTurn({ sessionId: 'sess-q', result: {} })).resolves.toBeUndefined();
+    expect(writes[0].params).toMatchObject({
+      promptGraphEntryId: null, promptGraphVersion: null, promptTextHash: null,
+    });
+  });
+
+  test('no applied prompt yields null provenance rather than a missing property', async () => {
+    const writes = [];
+    telemetry._setDeps({
+      write: async (cypher, params) => { writes.push({ cypher, params }); return []; },
+      getPromptProvenance: async () => ({ promptGraphEntryId: null, promptGraphVersion: null, promptTextHash: null }),
+      getOverlayProvenance,
+    });
+    await telemetry.recordTurn({ sessionId: 'sess-r', result: {} });
+    expect(writes[0].params).toHaveProperty('promptTextHash', null);
+  });
+
   test('terminal turn stamps outcome + links ServiceRequest', async () => {
     const writes = [];
-    telemetry._setDeps({ write: async (cypher, params) => { writes.push({ cypher, params }); return []; } });
+    telemetry._setDeps({ write: async (cypher, params) => { writes.push({ cypher, params }); return []; }, getPromptProvenance, getOverlayProvenance });
     await telemetry.recordTurn({
       sessionId: 'sess-2', message: 'yes',
       result: { response: 'Done — TKT-1', srNumber: 'TKT-2026-000075', ticketId: 75, route: 'CONFIRM_YES', trace: ['SUBMIT'] },
@@ -114,7 +194,7 @@ describe('recordTurn persistence (fake graph)', () => {
   });
 
   test('a graph failure never throws (fire-and-forget contract)', async () => {
-    telemetry._setDeps({ write: async () => { throw new Error('memgraph down'); } });
+    telemetry._setDeps({ write: async () => { throw new Error('memgraph down'); }, getPromptProvenance, getOverlayProvenance });
     await expect(telemetry.recordTurn({ sessionId: 's', result: {} })).resolves.toBeUndefined();
   });
 });
@@ -122,9 +202,17 @@ describe('recordTurn persistence (fake graph)', () => {
 describe('chat-session sweeper', () => {
   const mkRecord = (obj) => ({ get: (k) => obj[k] });
 
+  // The JSONL pass deletes real files. Every sweeper test injects a fake fs so a
+  // test run can never touch the developer's logs/chat directory.
+  const fakeFs = (names = [], unlinked = []) => ({
+    readdirSync: () => names,
+    unlinkSync: (p) => { unlinked.push(p); },
+  });
+
   test('stamps abandoned with draft snapshot, parked_abandoned, retention', async () => {
     const writes = [];
     const sweeper = createChatSessionSweeper({
+      fs: fakeFs(), logDir: '/nonexistent',
       read: async () => [mkRecord({ sessionId: 'old-1' })],
       write: async (cypher, params) => {
         writes.push({ cypher, params });
@@ -145,6 +233,7 @@ describe('chat-session sweeper', () => {
 
   test('a failing pass is counted, not thrown', async () => {
     const sweeper = createChatSessionSweeper({
+      fs: fakeFs(), logDir: '/nonexistent',
       read: async () => { throw new Error('down'); },
       write: async () => { throw new Error('down'); },
       getDraft: async () => null,
@@ -152,6 +241,87 @@ describe('chat-session sweeper', () => {
     });
     const summary = await sweeper.sweepOnce();
     expect(summary.errors).toBeGreaterThan(0);
+  });
+
+  // TASK-SUADA-PREREQ-003 — retention has to mean the same thing in both stores.
+  describe('JSONL retention', () => {
+    const NOW = Date.parse('2026-07-28T12:00:00Z');
+    const mkSweeper = (names, unlinked, over = {}) => createChatSessionSweeper({
+      fs: fakeFs(names, unlinked), logDir: '/logs/chat', now: () => NOW,
+      read: async () => [], write: async () => [], getDraft: async () => null, log: () => {},
+      ...over,
+    });
+
+    test('deletes firehose files past the retention horizon, keeps the rest', async () => {
+      const unlinked = [];
+      const sweeper = mkSweeper([
+        'chat-turns-2026-01-01.jsonl',   // ~208 days old → gone
+        'chat-turns-2026-04-01.jsonl',   // ~118 days old → gone
+        'chat-turns-2026-07-01.jsonl',   // 27 days old → kept
+        'chat-turns-2026-07-28.jsonl',   // today → kept
+      ], unlinked);
+      const summary = await sweeper.sweepOnce();
+      expect(summary.jsonlDeleted).toBe(2);
+      expect(unlinked.map((p) => p.replace(/\\/g, '/'))).toEqual([
+        '/logs/chat/chat-turns-2026-01-01.jsonl',
+        '/logs/chat/chat-turns-2026-04-01.jsonl',
+      ]);
+    });
+
+    test('leaves files that are not the chat firehose alone', async () => {
+      const unlinked = [];
+      // The ACT audit log lives in the same directory and answers to a different
+      // policy — chat retention must not quietly delete audit records.
+      const summary = await mkSweeper([
+        'action-log-2020-01-01.jsonl', 'chat-turns-2020-01-01.jsonl.bak',
+        'notes.txt', 'chat-turns-2020-01-01.jsonl',
+      ], unlinked).sweepOnce();
+      expect(summary.jsonlDeleted).toBe(1);
+      expect(unlinked[0].replace(/\\/g, '/')).toBe('/logs/chat/chat-turns-2020-01-01.jsonl');
+    });
+
+    test('a missing log directory is normal, not an error', async () => {
+      const sweeper = createChatSessionSweeper({
+        fs: { readdirSync: () => { throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' }); }, unlinkSync: () => {} },
+        logDir: '/logs/chat', now: () => NOW,
+        read: async () => [], write: async () => [], getDraft: async () => null, log: () => {},
+      });
+      const summary = await sweeper.sweepOnce();
+      expect(summary.jsonlDeleted).toBe(0);
+      expect(summary.errors).toBe(0);
+    });
+
+    test('an undeletable file is counted, and the rest still go', async () => {
+      const unlinked = [];
+      const sweeper = createChatSessionSweeper({
+        fs: {
+          readdirSync: () => ['chat-turns-2020-01-01.jsonl', 'chat-turns-2020-01-02.jsonl'],
+          unlinkSync: (p) => { if (p.includes('01-01')) throw new Error('EBUSY'); unlinked.push(p); },
+        },
+        logDir: '/logs/chat', now: () => NOW,
+        read: async () => [], write: async () => [], getDraft: async () => null, log: () => {},
+      });
+      const summary = await sweeper.sweepOnce();
+      expect(summary.jsonlDeleted).toBe(1);
+      expect(summary.errors).toBe(1);
+    });
+
+    test('the JSONL window can be shortened but never outlive the graph copy', async () => {
+      const unlinked = [];
+      process.env.FLOWDESK_CHAT_JSONL_RETENTION_DAYS = '7';
+      try {
+        // 27 days old: still inside the graph's 90 days, but past the 7-day disk window.
+        const summary = await mkSweeper(['chat-turns-2026-07-01.jsonl'], unlinked).sweepOnce();
+        expect(summary.jsonlDeleted).toBe(1);
+      } finally { delete process.env.FLOWDESK_CHAT_JSONL_RETENTION_DAYS; }
+
+      const unlinked2 = [];
+      process.env.FLOWDESK_CHAT_JSONL_RETENTION_DAYS = '3650'; // ten years — ignored
+      try {
+        const summary = await mkSweeper(['chat-turns-2026-01-01.jsonl'], unlinked2).sweepOnce();
+        expect(summary.jsonlDeleted).toBe(1); // clamped back to the ratified 90 days
+      } finally { delete process.env.FLOWDESK_CHAT_JSONL_RETENTION_DAYS; }
+    });
   });
 });
 

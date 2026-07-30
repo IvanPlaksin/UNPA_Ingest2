@@ -1,0 +1,235 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://unpa.un.org/schemas/evolutio-prompt/1.0.0",
+  "title": "EVOLUTIO:PROMPT graph",
+  "description": "Typed prompt ontology for Suada (TASK-SUADA-PHASE1-SPEC). A prompt is a graph of typed nodes joined by typed edges; the compiler turns a graph plus a context into prompt text plus a manifest. Unlike the flat FlowDesk rules graph this replaces, every part can be added, removed, conditioned and attributed on its own.",
+  "type": "object",
+  "required": ["schemaVersion", "nodes", "edges"],
+  "additionalProperties": false,
+
+  "properties": {
+    "schemaVersion": {
+      "description": "Version of THIS schema the graph was authored against. Recorded in every compiled manifest so a prompt stays interpretable after the ontology moves on.",
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "nodes": { "type": "array", "items": { "$ref": "#/definitions/node" } },
+    "edges": { "type": "array", "items": { "$ref": "#/definitions/edge" } }
+  },
+
+  "definitions": {
+
+    "nodeType": {
+      "description": "Six types, each earning its place by having a distinct failure mode, a distinct mutation vocabulary and a distinct evaluation criterion. A seventh is justified only when a real defect cannot be expressed by these.",
+      "enum": ["Thesis", "Narrative", "Constraint", "Exemplar", "Persona", "ToolContract"]
+    },
+
+    "status": {
+      "description": "CANDIDATE is what GEPA proposes and no human has accepted. DEPRECATED is retired but retained — deleting a node would orphan every JudgeRecord attributed to it.",
+      "enum": ["CANDIDATE", "ACTIVE", "DEPRECATED"]
+    },
+
+    "engineNode": {
+      "description": "An LLM call in interpreter-engine that generates PROSE. Schema-bound extractors are deliberately absent (FLOWDESK-PROMPT-001): prose rules cannot help them and can break their output shape. Must stay in step with PROMPT_NODES in prompt-graph-compiler.",
+      "enum": ["router", "info_answer", "question_planner", "field_help"]
+    },
+
+    "language": { "enum": ["en", "fr", "es", "ar", "zh", "ru"] },
+
+    "origin": {
+      "description": "Why this node exists. Without it the graph becomes what today's prompt already is: a pile of sentences nobody dares remove because nobody remembers what they were for.",
+      "type": "object",
+      "required": ["kind", "rationale", "introducedBy", "introducedAt"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "description": "incident = a triaged ChatSession with a rootCause; audit = a failed JudgeRecord; norm = a policy document; human = a direct decision; evolved = a GEPA candidate; legacy = migrated with the original intent genuinely unrecorded.",
+          "enum": ["incident", "audit", "norm", "human", "evolved", "legacy"]
+        },
+        "ref": {
+          "description": "sessionId, judgeId, document symbol, backlogId or optimizationId, depending on kind.",
+          "type": ["string", "null"]
+        },
+        "rationale": {
+          "description": "One sentence: what problem this node solves. For kind=legacy this MUST say the intent is undocumented rather than invent a plausible one — the field's whole value is that it is true (SUADA-PROVENANCE-001).",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "introducedBy": { "type": "string", "minLength": 1 },
+        "introducedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+
+    "nodeBase": {
+      "type": "object",
+      "required": ["nodeId", "type", "title", "status", "origin"],
+      "properties": {
+        "nodeId": {
+          "description": "Stable across rewording — this is the identity attribution accumulates against, so it must survive an edit to the body.",
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "type": { "$ref": "#/definitions/nodeType" },
+        "title": {
+          "description": "Human label for editors and diagnostics. Never compiled into the prompt.",
+          "type": "string", "minLength": 1, "maxLength": 200
+        },
+        "status": { "$ref": "#/definitions/status" },
+        "appliesToNodes": {
+          "description": "EMPTY means every engine node. A list naming only names this build does not know means NO engine node — never 'all'. That inverted default is what turned a dead rule into a global one in TASK-FLOWDESK-BUG-001, and the validator names any node in that state.",
+          "type": "array",
+          "items": { "$ref": "#/definitions/engineNode" },
+          "uniqueItems": true,
+          "default": []
+        },
+        "priority": {
+          "description": "Tie-break within a compilation band; lower emits earlier.",
+          "type": "integer", "minimum": 0, "maximum": 1000, "default": 100
+        },
+        "weight": {
+          "description": "How strongly this node competes for token budget. Lowest weight is pruned first within its band.",
+          "type": "number", "minimum": 0, "maximum": 1, "default": 0.5
+        },
+        "origin": { "$ref": "#/definitions/origin" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" }
+      }
+    },
+
+    "node": {
+      "allOf": [{ "$ref": "#/definitions/nodeBase" }],
+      "oneOf": [
+        { "$ref": "#/definitions/thesis" },
+        { "$ref": "#/definitions/narrative" },
+        { "$ref": "#/definitions/constraint" },
+        { "$ref": "#/definitions/exemplar" },
+        { "$ref": "#/definitions/persona" },
+        { "$ref": "#/definitions/toolContract" }
+      ]
+    },
+
+    "thesis": {
+      "description": "One atomic behavioural prescription. Atomicity is the contract: if a rule cannot be violated independently it cannot be attributed independently, and attribution is the point. 'Ask one question per turn and acknowledge what you understood first' is TWO theses.",
+      "type": "object",
+      "required": ["type", "assertion", "category"],
+      "properties": {
+        "type": { "const": "Thesis" },
+        "assertion": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "category": {
+          "description": "Carried over from the FlowDesk compiler so migration is lossless and section ordering is preserved.",
+          "enum": ["identity", "domain", "routing", "dialogue", "tone", "safety", "deflection", "formatting", "custom"]
+        },
+        "scope": { "enum": ["global", "service", "route"], "default": "global" },
+        "scopeRef": { "type": ["string", "null"], "default": null }
+      }
+    },
+
+    "narrative": {
+      "description": "Role and situational framing. Distinct from Thesis because it prescribes nothing and cannot be violated — only present or absent. Judges must not score it as a rule.",
+      "type": "object",
+      "required": ["type", "framing"],
+      "properties": {
+        "type": { "const": "Narrative" },
+        "framing": { "type": "string", "minLength": 1, "maxLength": 4000 },
+        "audience": { "type": ["string", "null"], "default": null }
+      }
+    },
+
+    "constraint": {
+      "description": "A hard limit.",
+      "type": "object",
+      "required": ["type", "rule", "kind", "severity"],
+      "properties": {
+        "type": { "const": "Constraint" },
+        "rule": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "kind": { "enum": ["safety", "privacy", "legal", "scope"] },
+        "severity": { "enum": ["blocking", "strong"] },
+        "immutable": {
+          "description": "The load-bearing field of this whole ontology. An optimizer maximising task success will eventually discover that dropping 'do not expose other people's personal data' raises the score. Immutable constraints are excluded from the mutation operator's candidate set, are never dropped for budget, and are re-checked after every compilation. This is why an autonomous prompt optimizer is safe to run at all.",
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+
+    "exemplar": {
+      "description": "A few-shot example. The largest token consumer and the most reliable behaviour changer — hence the first thing a budget-aware compiler drops and a thing attribution must be able to credit. An exemplar derived from a real dialogue must arrive through the promotion path in SUADA_PII_DEIDENTIFICATION_SPEC.md.",
+      "type": "object",
+      "required": ["type", "input", "output", "polarity"],
+      "properties": {
+        "type": { "const": "Exemplar" },
+        "input": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "output": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "polarity": { "enum": ["positive", "negative"] }
+      }
+    },
+
+    "persona": {
+      "description": "Register and voice. Separate from Narrative because it varies along axes nothing else does — the voice channel needs different wording from text, and per-language register is a real requirement in a six-language service desk.",
+      "type": "object",
+      "required": ["type", "register"],
+      "properties": {
+        "type": { "const": "Persona" },
+        "register": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "language": {
+          "oneOf": [{ "$ref": "#/definitions/language" }, { "const": "all" }],
+          "default": "all"
+        },
+        "channel": { "enum": ["text", "voice", "all"], "default": "all" }
+      }
+    },
+
+    "toolContract": {
+      "description": "How to use a capability. Isolated because tool instructions change when a tool changes — a different cadence from tone or identity — and should be versionable on their own.",
+      "type": "object",
+      "required": ["type", "toolId", "usage"],
+      "properties": {
+        "type": { "const": "ToolContract" },
+        "toolId": { "type": "string", "minLength": 1 },
+        "usage": { "type": "string", "minLength": 1, "maxLength": 4000 },
+        "escalation": { "type": ["string", "null"], "default": null }
+      }
+    },
+
+    "edgeType": {
+      "description": "Edges carry meaning here, unlike the FlowDesk graph where they only order. SIMILAR_TO is deliberately absent (an analysis result, not a structural fact) and so is node-level SUPERSEDES (version lineage belongs to graph-catalog; two histories would disagree).",
+      "enum": ["REFINES", "DEPENDS_ON", "CONFLICTS_WITH", "ILLUSTRATES", "APPLIES_WHEN"]
+    },
+
+    "edge": {
+      "type": "object",
+      "required": ["edgeId", "type", "source", "target"],
+      "additionalProperties": false,
+      "properties": {
+        "edgeId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "type": { "$ref": "#/definitions/edgeType" },
+        "source": { "type": "string", "minLength": 1 },
+        "target": { "type": "string", "minLength": 1 },
+        "reason": {
+          "description": "Required on CONFLICTS_WITH: a conflict nobody explained cannot be resolved by whoever meets it next.",
+          "type": ["string", "null"]
+        },
+        "condition": {
+          "description": "APPLIES_WHEN only.",
+          "oneOf": [{ "$ref": "#/definitions/condition" }, { "type": "null" }]
+        }
+      }
+    },
+
+    "condition": {
+      "description": "Declarative and CLOSED — evaluated by the compiler, never by an LLM. No arbitrary expressions: a conditional prompt whose conditions cannot be statically enumerated cannot be budgeted, tested, or reproduced, and every compilation must follow from (graph version, context) alone. Multiple keys are ANDed; multiple APPLIES_WHEN edges on one node are ORed.",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "language": { "type": "array", "items": { "$ref": "#/definitions/language" }, "minItems": 1, "uniqueItems": true },
+        "channel": { "enum": ["text", "voice"] },
+        "engineNode": { "type": "array", "items": { "$ref": "#/definitions/engineNode" }, "minItems": 1, "uniqueItems": true },
+        "serviceId": { "type": "array", "items": { "type": "string" }, "minItems": 1, "uniqueItems": true },
+        "activeRoute": { "type": "array", "items": { "type": "string" }, "minItems": 1, "uniqueItems": true }
+      }
+    }
+  }
+}

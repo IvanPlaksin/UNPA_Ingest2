@@ -229,6 +229,13 @@ function createDraftSRService(deps = {}) {
   async function submit(sessionId) {
     const draft = await get(sessionId);
     if (!draft) throw new Error(`[draft-sr] no draft for session ${sessionId}`);
+    // P9-001 double-submit guard: an already-submitted draft returns its existing
+    // reference instead of minting a fresh srNumber and creating a duplicate SR /
+    // Altiora ticket. Prerequisite for side-effecting ACT (a repeated confirm must
+    // be idempotent). `submitted` is a terminal status the reducer never leaves.
+    if (draft.status === 'submitted' && draft.srNumber) {
+      return { srNumber: draft.srNumber, ticketId: draft.ticketId || null, alreadySubmitted: true };
+    }
     const snapshot = await loadSnapshot(draft.serviceId);
     if (!snapshot) throw new Error(`[draft-sr] no SchemaSnapshot for ${draft.serviceId}`);
 
@@ -244,6 +251,14 @@ function createDraftSRService(deps = {}) {
     const altioraBacked = snapshot.metadata && snapshot.metadata.altioraOusId != null;
     const altioraSubmitEnabled = process.env.FLOWDESK_SUBMIT_TARGET === 'altiora';
     if (altioraBacked && altioraSubmitEnabled) {
+      // P9-005 (Layer 2 ACT authorization): a REAL external Altiora write requires
+      // an ACT-enabled acting user (fail-closed allowlist) AND a live acting token
+      // (never the service-account fallback). The default local-materialization
+      // path below is NOT gated. Injectable for tests.
+      const gate = deps.checkAct || require('./act-authorization').checkAct;
+      const actCtx = require('./acting-user.context');
+      const decision = gate(actCtx.getActingUser(), actCtx.getActingToken());
+      if (!decision.ok) return { error: { code: 'ACT_DENIED', reason: decision.code } };
       const ticketSvc = deps.ticketService || require('./altiora-ticket.service').getAltioraTicketService();
       const ticket = await ticketSvc.createTicket(draft, snapshot); // throws typed AltioraError on failure
       // Persist the standard submitted draft (keeps its schema-valid local ref);
@@ -272,9 +287,24 @@ function createDraftSRService(deps = {}) {
     return { srNumber: res.srNumber, nodeId: res.nodeId };
   }
 
-  async function escalate(sessionId, reason, transcriptRef) {
+  /**
+   * Escalate a session to a human.
+   *
+   * `draft` is OPTIONAL. It used to be required, which meant escalation was
+   * impossible before a service was resolved — exactly the moment a stuck user
+   * asks for a person. The arena transcripts caught the consequence: the model
+   * said "I am transferring you now" six times and nothing happened, because no
+   * code path could honour it. Without a draft an (:Escalation) is still created,
+   * carrying whatever context the caller can supply.
+   *
+   * @param {string} sessionId
+   * @param {string} reason
+   * @param {string|null} transcriptRef
+   * @param {{conversationSummary?:string, stub?:boolean}} [extra]
+   */
+  async function escalate(sessionId, reason, transcriptRef, extra = {}) {
     const draft = await get(sessionId);
-    if (!draft) throw new Error(`[draft-sr] no draft for session ${sessionId}`);
+    if (!draft) return escalateWithoutDraft(sessionId, reason, transcriptRef, extra);
     const res = reducer.escalate(draft, { reason, transcriptRef, now: now(), makeRef });
 
     await graphWrite(
@@ -289,7 +319,33 @@ function createDraftSRService(deps = {}) {
     );
 
     await persist(res.draft);
-    return { escalationId: res.escalationId, nodeId: res.nodeId };
+    return { escalationId: res.escalationId, nodeId: res.nodeId, hadDraft: true };
+  }
+
+  /**
+   * No draft yet — record the escalation against the session alone. There is no
+   * draft to persist and no status to move, so this writes the node and returns.
+   * `stub` marks that no real hand-off happened: the request is registered, a
+   * human is not yet connected (EXP-002 scope decision).
+   */
+  async function escalateWithoutDraft(sessionId, reason, transcriptRef, extra = {}) {
+    const escalationId = makeRef({ sessionId }, 'ESC');
+    const createdAt = new Date(now()).toISOString();
+    await graphWrite(
+      `MERGE (e:Escalation {escalationId:$escalationId})
+       SET e.sessionId=$sessionId, e.serviceId=null, e.reason=$reason,
+           e.transcriptRef=$transcriptRef, e.createdAt=$createdAt, e.draftJson=null,
+           e.conversationSummary=$conversationSummary, e.stub=$stub, e.noDraft=true`,
+      {
+        escalationId, sessionId,
+        reason: reason || null,
+        transcriptRef: transcriptRef || null,
+        createdAt,
+        conversationSummary: extra.conversationSummary || null,
+        stub: extra.stub !== false,
+      }
+    );
+    return { escalationId, nodeId: `Escalation:${escalationId}`, hadDraft: false, stub: extra.stub !== false };
   }
 
   return { create, get, patch, setStatus, submit, escalate,

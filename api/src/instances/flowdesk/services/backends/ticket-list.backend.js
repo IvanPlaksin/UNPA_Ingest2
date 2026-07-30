@@ -84,7 +84,27 @@ function makeTicketListBackend(deps = {}) {
     };
   }
 
-  return { listTickets, metadata };
+  /**
+   * Full detail for one request by its human number (V3). Accepts "SR-12345",
+   * "12345", "UN…" etc. — the .NET `GET /api/tickets/number/{n}` resolves it and
+   * returns a TicketDetailsDto (status, approver, assignee, comments, history).
+   */
+  async function getTicketByNumber(ticketNumber) {
+    const n = String(ticketNumber || '').trim();
+    const res = await clientOf().get(`/api/tickets/number/${encodeURIComponent(n)}`);
+    const t = pick(res, ['ticket', 'Ticket']) || res;
+    const named = (o) => pick(o || {}, ['name', 'Name', 'displayName', 'DisplayName', 'fullName', 'FullName']);
+    return {
+      ...mapTicket(t),
+      description: pick(t, ['description', 'Description']),
+      requester: named(pick(res, ['requester', 'Requester'])) || pick(t, ['requesterName', 'RequesterName']),
+      assignedTo: named(pick(res, ['assignedTo', 'AssignedTo'])) || pick(t, ['assignedToName', 'AssignedToName']),
+      approver: named(pick(res, ['approver', 'Approver'])) || pick(t, ['approverName', 'ApproverName']),
+      tasksCount: (pick(res, ['tasks', 'Tasks']) || []).length,
+    };
+  }
+
+  return { listTickets, metadata, getTicketByNumber };
 }
 
 module.exports = { makeTicketListBackend, buildQuery, mapTicket, normalizeStatus };

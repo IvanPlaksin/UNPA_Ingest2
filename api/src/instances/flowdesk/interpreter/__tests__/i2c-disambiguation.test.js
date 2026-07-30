@@ -121,3 +121,82 @@ describe('I-2c: disambiguation reply', () => {
     expect(r.response).toMatch(/not available yet/);
   });
 });
+
+// CODE-004 — disambiguation used to be stateless: the same candidates were
+// re-offered on every NEW_INTENT turn because nothing recorded that the user had
+// already seen and rejected them. The arena transcripts showed the identical list
+// up to five times in one dialogue, and DISAMBIGUATE accounted for 153 of 291 turns.
+describe('CODE-004: the same candidates are never offered twice', () => {
+  const CLUSTER = [
+    svc('EO-HR-SP-PD-RMCU', 'Record Marriage / Civil Union', 0.915),
+    svc('EO-HR-SP-PD-RD', 'Record Divorce', 0.905),
+    svc('EO-HR-SP-HD-RDS', 'Record Dependent Spouse', 0.89),
+  ];
+
+  test('second time round it stops repeating and changes the offer', async () => {
+    const engine = makeEngine(CLUSTER);
+    const first = await engine.runTurn({ sessionId: 'loop1', message: 'record my marriage' });
+    expect(first.responseType).toBe('disambiguation');
+
+    const second = await engine.runTurn({ sessionId: 'loop1', message: 'none of those match' });
+    expect(second.responseType).toBe('disambiguation_exhausted');
+    expect(second.response).not.toBe(first.response);
+    expect(second.trace).toContain('DISAMBIGUATE_EXHAUSTED');
+  });
+
+  test('it never repeats, however many times the user pushes back', async () => {
+    const engine = makeEngine(CLUSTER);
+    const seen = [];
+    for (let i = 0; i < 5; i += 1) {
+      const r = await engine.runTurn({ sessionId: 'loop2', message: 'not what I need' });
+      seen.push(r.responseType);
+    }
+    // Exactly one plain disambiguation, then the exhausted branch for the rest.
+    expect(seen.filter((t) => t === 'disambiguation')).toHaveLength(1);
+    expect(seen.filter((t) => t === 'disambiguation_exhausted')).toHaveLength(4);
+  });
+
+  test('the exhausted turn explains itself and keeps the candidates selectable', async () => {
+    const engine = makeEngine(CLUSTER);
+    await engine.runTurn({ sessionId: 'loop3', message: 'record my marriage' });
+    const r = await engine.runTurn({ sessionId: 'loop3', message: 'none of those' });
+    expect(r.response).toMatch(/none of them is what you need/i);
+    // The user may still recognise one, so the options remain — they are simply
+    // no longer presented as the whole answer.
+    expect(r.controls[0].options.map((o) => o.value)).toEqual(CLUSTER.map((c) => c.serviceId));
+    expect(validate(r.controls)).toBe(true);
+  });
+
+  test('it does not promise a human hand-off it cannot perform', async () => {
+    // CODE-003: there is no ESCALATE route and escalate() needs a draft that does
+    // not exist here. Offering escalation would swap one broken promise for another.
+    const engine = makeEngine(CLUSTER);
+    await engine.runTurn({ sessionId: 'loop4', message: 'record my marriage' });
+    const r = await engine.runTurn({ sessionId: 'loop4', message: 'none of those' });
+    expect(r.response).not.toMatch(/escalat|human agent|transfer you|service desk team/i);
+  });
+
+  test('a DIFFERENT candidate set is still allowed to disambiguate', async () => {
+    // Progress must not be punished: after a rephrase that surfaces other
+    // services, asking which one is the right behaviour, not a loop. The engine
+    // closes over this array, so replacing its contents changes what resolve returns.
+    const hits = [...CLUSTER];
+    const engine = makeEngine(hits);
+    const first = await engine.runTurn({ sessionId: 'loop5', message: 'record my marriage' });
+    expect(first.responseType).toBe('disambiguation');
+
+    hits.splice(0, hits.length,
+      svc('EO-HR-BE-TRE-TRE', 'Travel Entitlements', 0.91),
+      svc('EO-HR-BE-TRE-AHL', 'Advance Home Leave', 0.90));
+    const r = await engine.runTurn({ sessionId: 'loop5', message: 'actually I need travel' });
+    expect(r.responseType).toBe('disambiguation');
+  });
+
+  test('sessions do not share the gate', async () => {
+    const engine = makeEngine(CLUSTER);
+    await engine.runTurn({ sessionId: 'loop6a', message: 'record my marriage' });
+    await engine.runTurn({ sessionId: 'loop6a', message: 'no' });
+    const other = await engine.runTurn({ sessionId: 'loop6b', message: 'record my marriage' });
+    expect(other.responseType).toBe('disambiguation');
+  });
+});

@@ -10,7 +10,7 @@
 const fs = require('fs');
 const path = require('path');
 const Ajv = require('ajv');
-const { buildConfirmControl, buildChoiceControl, directoryOf, toOption } = require('../controls');
+const { buildConfirmControl, buildChoiceControl, buildDateControl, directoryOf, toOption } = require('../controls');
 const { createEngine } = require('../interpreter-engine');
 const { MockLLMProvider } = require('../../contracts/llm-provider.stub');
 const { createDraftSRService } = require('../../services/draft-sr.service');
@@ -76,6 +76,26 @@ describe('I-3: controls builder', () => {
     expect(controls[0]).toMatchObject({ id: 'ctrl-urgency', type: 'choice', slotId: 'urgency', label: 'How urgent?' });
     expect(controls[0].options).toEqual([{ value: 'high', label: 'High' }, { value: 'low', label: 'Low' }]);
     expect(validate(controls)).toBe(true);
+  });
+
+  // TASK-PROMPT-001 — date control.
+  test('buildDateControl → date control (no prefill), contract-valid', () => {
+    const controls = buildDateControl({ slotId: 'validFrom', type: 'date' }, { label: 'From what date?' });
+    expect(controls).toHaveLength(1);
+    expect(controls[0]).toMatchObject({ id: 'ctrl-validFrom', type: 'date', slotId: 'validFrom', label: 'From what date?' });
+    expect(controls[0].prefill).toBeUndefined();
+    expect(validate(controls)).toBe(true);
+  });
+
+  test('buildDateControl carries an ISO prefill and stays contract-valid', () => {
+    const controls = buildDateControl({ slotId: 'validFrom', type: 'date' }, { label: 'From?', prefill: '2026-08-15' });
+    expect(controls[0].prefill).toBe('2026-08-15');
+    expect(validate(controls)).toBe(true);
+  });
+
+  test('a non-ISO prefill is rejected by the contract', () => {
+    const controls = buildDateControl({ slotId: 'validFrom', type: 'date' }, { prefill: '15/08/2026' });
+    expect(validate(controls)).toBe(false);
   });
 });
 
@@ -148,5 +168,66 @@ describe('I-3: engine dual-emit + controlAction', () => {
     await engine.runTurn({ sessionId: 'c4', message: 'нужен ноутбук для Иванова' });
     const r = await engine.runTurn({ sessionId: 'c4', choice: { slotId: 'beneficiary', action: 'confirm' } });
     expect(r.draft.slots.beneficiary.value.userId).toBe('U002');
+  });
+});
+
+// ── TASK-PROMPT-001: date control wiring ──────────────────────────────────────
+const DATE_SNAPSHOT = {
+  serviceId: 'SVC-DATE', version: 1, phases: ['detail'],
+  metadata: { title: 'Effective Date Test', approvalRequired: false },
+  slots: [
+    { slotId: 'effectiveDate', type: 'date', required: true, phase: 'detail', promptHint: 'From what date should it apply?' },
+  ],
+};
+function makeDateEngine() {
+  const loadSnapshot = async () => DATE_SNAPSHOT;
+  const store = new Map();
+  const draftService = createDraftSRService({
+    store: {
+      async get(k) { const v = store.get(k); return v ? JSON.parse(JSON.stringify(v)) : null; },
+      async set(k, v) { store.set(k, JSON.parse(JSON.stringify(v))); return true; },
+    },
+    loadSnapshot, graphWrite: async () => [],
+    now: () => Date.parse('2026-07-14T10:00:00Z'), makeRef: (_d, p = 'SR') => `${p}-1`,
+  });
+  const llm = new MockLLMProvider({
+    // Router → NEW_INTENT on the first turn; SLOT_EXTRACT returns nothing, so the
+    // lone date slot stays unfilled and the planner is reached.
+    structured: (prompt, schema) => (schema.properties?.route
+      ? { route: /Has active draft: true/.test(prompt) ? 'SLOT_FILL' : 'NEW_INTENT' }
+      : {}),
+    completion: () => 'From what date should it apply?',
+  });
+  const resolveSearch = async () => [{ type: 'SERVICE', serviceId: 'SVC-DATE', title: 'Effective Date Test', schemaRef: { serviceId: 'SVC-DATE', version: 1 }, score: 0.95, confidence: 'high' }];
+  // injectContext:false → bare snapshot (no universal beneficiary/location slots), so
+  // the lone date slot is the first thing asked.
+  return createEngine({ llm, resolveSearch, draftService, loadSnapshot, directory, injectContext: false });
+}
+
+describe('TASK-PROMPT-001: date control engine wiring', () => {
+  test('a date slot emits a `date` control (not free-text, no legacy choices)', async () => {
+    const engine = makeDateEngine();
+    const r = await engine.runTurn({ sessionId: 'd1', message: 'I need to set an effective date' });
+    expect(r.askingSlot).toBe('effectiveDate');
+    expect(Array.isArray(r.controls)).toBe(true);
+    expect(r.controls[0]).toMatchObject({ id: 'ctrl-effectiveDate', type: 'date', slotId: 'effectiveDate' });
+    expect(r.choices).toBeUndefined(); // additive — no legacy dual-emit for date
+    expect(validate(r.controls)).toBe(true);
+  });
+
+  test('controlAction {date_select, valid ISO} fills the slot', async () => {
+    const engine = makeDateEngine();
+    await engine.runTurn({ sessionId: 'd2', message: 'set an effective date' });
+    const r = await engine.runTurn({ sessionId: 'd2', controlAction: { controlId: 'ctrl-effectiveDate', slotId: 'effectiveDate', action: 'date_select', value: '2026-08-15' } });
+    expect(r.draft.slots.effectiveDate.value).toBe('2026-08-15');
+    expect(r.draft.slots.effectiveDate.provenance).toBe('user_edited');
+  });
+
+  test('controlAction {date_select, invalid} re-asks and never persists', async () => {
+    const engine = makeDateEngine();
+    await engine.runTurn({ sessionId: 'd3', message: 'set an effective date' });
+    const r = await engine.runTurn({ sessionId: 'd3', controlAction: { slotId: 'effectiveDate', action: 'date_select', value: '2026-13-40' } });
+    expect(r.askingSlot).toBe('effectiveDate');
+    expect(r.draft.slots.effectiveDate && r.draft.slots.effectiveDate.value).toBeFalsy();
   });
 });

@@ -1,0 +1,5 @@
+node_modules
+.env
+src/vendor/
+*.tgz
+e2e-test-package.ugp.tar.gz

@@ -1,0 +1,97 @@
+{
+  "generatedFrom": "run-golden-set",
+  "count": 13,
+  "runs": [
+    {
+      "runId": "a1f8102a-a1e6-4c87-8332-b4c52e90a2b9",
+      "scenarioId": "dg-scn-change-of-intent",
+      "personaId": "dg-persona-frustrated-requester",
+      "terminal": "service_matched",
+      "serviceIdentified": true
+    },
+    {
+      "runId": "22583780-d6a0-4715-bcfd-d2c8314a1f20",
+      "scenarioId": "dg-scn-change-of-intent",
+      "personaId": "dg-persona-multilingual-officer",
+      "terminal": "service_matched",
+      "serviceIdentified": true
+    },
+    {
+      "runId": "3a17ee41-b4fe-494d-8fbe-cc101a9cffaf",
+      "scenarioId": "dg-scn-leave-balance",
+      "personaId": "dg-persona-new-hr-staff",
+      "terminal": "max_turns",
+      "serviceIdentified": false
+    },
+    {
+      "runId": "c14df111-d6a7-42b4-9646-45a7f58ef5c8",
+      "scenarioId": "dg-scn-dependency-allowance",
+      "personaId": "dg-persona-new-hr-staff",
+      "terminal": "max_turns",
+      "serviceIdentified": false
+    },
+    {
+      "runId": "aba2be61-5507-4f56-a4f3-8873561bd598",
+      "scenarioId": "dg-scn-education-grant",
+      "personaId": "dg-persona-experienced-eo-admin",
+      "terminal": "service_matched",
+      "serviceIdentified": true
+    },
+    {
+      "runId": "88c9abc8-3dea-44ee-b677-71594737d210",
+      "scenarioId": "dg-scn-education-grant",
+      "personaId": "dg-persona-multilingual-officer",
+      "terminal": "max_turns",
+      "serviceIdentified": false
+    },
+    {
+      "runId": "c237a753-1cfd-4a83-b7b7-541f0f9f3418",
+      "scenarioId": "dg-scn-mixed-request",
+      "personaId": "dg-persona-frustrated-requester",
+      "terminal": "max_turns",
+      "serviceIdentified": false
+    },
+    {
+      "runId": "84cd07af-69d5-4116-be65-3cea07b2dda2",
+      "scenarioId": "dg-scn-mixed-request",
+      "personaId": "dg-persona-multilingual-officer",
+      "terminal": "max_turns",
+      "serviceIdentified": false
+    },
+    {
+      "runId": "4b4554f2-b76a-4ba2-826e-5c84c2cde2d6",
+      "scenarioId": "dg-scn-p11-renewal",
+      "personaId": "dg-persona-experienced-eo-admin",
+      "terminal": "max_turns",
+      "serviceIdentified": false
+    },
+    {
+      "runId": "754a2f85-4304-4b56-a629-7cdf718c033d",
+      "scenarioId": "dg-scn-travel-advance",
+      "personaId": "dg-persona-field-officer-mali",
+      "terminal": "service_matched",
+      "serviceIdentified": true
+    },
+    {
+      "runId": "dfefe5a7-4862-4410-9107-6426497f7ffe",
+      "scenarioId": "dg-scn-bank-details",
+      "personaId": "dg-persona-experienced-eo-admin",
+      "terminal": "gave_up",
+      "serviceIdentified": false
+    },
+    {
+      "runId": "323d8052-1976-462f-a442-7fff17092571",
+      "scenarioId": "dg-scn-vague-complaint",
+      "personaId": "dg-persona-new-hr-staff",
+      "terminal": "service_matched",
+      "serviceIdentified": true
+    },
+    {
+      "runId": "2e306be4-690a-4e3f-ac69-be0f3b2dd3f8",
+      "scenarioId": "dg-scn-vague-complaint",
+      "personaId": "dg-persona-frustrated-requester",
+      "terminal": "service_matched",
+      "serviceIdentified": true
+    }
+  ]
+}

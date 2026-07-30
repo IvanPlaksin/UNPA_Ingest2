@@ -72,11 +72,22 @@ function validatePromptGraph(graph) {
     if (d.category && !CATEGORY_ORDER.includes(d.category)) {
       warnings.push({ code: 'UNKNOWN_CATEGORY', message: `rule "${key}" has unknown category "${d.category}" (→ custom)`, nodeId: n.id });
     }
-    if (Array.isArray(d.appliesTo)) {
+    if (Array.isArray(d.appliesTo) && d.appliesTo.length) {
+      const known = d.appliesTo.filter((a) => a === 'all' || PROMPT_NODES.includes(a));
       for (const a of d.appliesTo) {
         if (a !== 'all' && !PROMPT_NODES.includes(a)) {
           warnings.push({ code: 'UNKNOWN_APPLIESTO', message: `rule "${key}" appliesTo "${a}" is not a known chat node`, nodeId: n.id });
         }
+      }
+      // Every scope the author picked is unknown to this build — the rule is in
+      // the graph, reads as active in the editor, and governs nothing. Say so
+      // loudly: a silently ineffective rule is the defect this check exists for.
+      if (!known.length && d.enabled !== false) {
+        warnings.push({
+          code: 'RULE_REACHES_NO_NODE',
+          message: `rule "${key}" applies only to unknown chat nodes (${d.appliesTo.join(', ')}) — it will govern nothing. Known nodes: ${PROMPT_NODES.join(', ')}, or "all"`,
+          nodeId: n.id,
+        });
       }
     }
     if (keys.has(key)) errors.push({ code: 'DUP_RULE_KEY', message: `duplicate rule key "${key}"`, nodeId: n.id });

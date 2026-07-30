@@ -15,11 +15,14 @@ export const OUTCOME_META = {
   error_terminated:  { color: 'error',   label: 'error' },
 };
 
+// Mirrors the derived flags in api chat-admin.service sessionView(). No
+// 'negative CSAT' entry: the chat has no rating collection point, so the API
+// never emits that flag (TASK-FLOWDESK-BUG-002). FlagChips falls back to the raw
+// flag name for anything not listed, so an unknown flag still renders.
 export const FLAG_LABELS = {
   repair_heavy: 'repair ≥3',
   out_of_scope_loop: 'out-of-scope loop',
   error_turns: 'error turns',
-  negative_csat: 'negative CSAT',
 };
 
 export function OutcomeChip({ outcome }) {

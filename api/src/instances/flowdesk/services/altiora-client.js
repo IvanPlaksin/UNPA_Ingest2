@@ -195,15 +195,43 @@ function createAltioraClient({
    * idempotent methods. A 4xx is a verdict, not a blip — never retried. POST
    * (ticket creation) is never auto-replayed, to avoid duplicate tickets.
    */
+  /**
+   * Every Altiora round trip is timed into the turn in flight (best-effort, and
+   * only when there IS one). This is the single place they all pass through, so
+   * instrumenting it here is what makes "where did the turn go" answerable
+   * without threading a timer through a dozen services.
+   *
+   * The name is the method plus the first two path segments — enough to tell
+   * `GET /api/Schema` from `POST /api/tickets`, without turning every record id
+   * into its own row.
+   */
+  function spanName(method, path) {
+    const clean = String(path || '').split('?')[0].split('/').filter(Boolean).slice(0, 2).join('/');
+    return `${method} /${clean}`;
+  }
+
   async function request(method, path, opts = {}) {
     const idempotent = method === 'GET' || method === 'HEAD';
     const attempts = idempotent ? retries + 1 : 1;
 
     let lastErr;
     for (let i = 0; i < attempts; i++) {
+      const t0 = Date.now();
       try {
-        return await once(method, path, opts);
+        const out = await once(method, path, opts);
+        try {
+          require('./chat-telemetry.service').recordSpan({
+            kind: 'altiora', name: spanName(method, path), durationMs: Date.now() - t0, status: 'success',
+          });
+        } catch { /* telemetry never breaks a request */ }
+        return out;
       } catch (err) {
+        try {
+          require('./chat-telemetry.service').recordSpan({
+            kind: 'altiora', name: spanName(method, path), durationMs: Date.now() - t0,
+            status: 'error', detail: err && err.message,
+          });
+        } catch { /* as above */ }
         lastErr = err;
         const transient = err instanceof AltioraUnavailableError || err instanceof AltioraServerError;
         if (!transient || i === attempts - 1) throw err;

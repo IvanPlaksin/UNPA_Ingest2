@@ -22,6 +22,20 @@
   --radius: 0.5rem;
 }
 
+/* Phase 8 demo: mock-portal tiles carrying data-kb-anchor (useKBAnchors injects
+ * the "?" trigger into each). */
+.alt-demo-anchors {
+  display: flex; gap: 0.75rem; padding: 0.75rem; flex-wrap: wrap;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+}
+.alt-demo-tile {
+  position: relative; min-width: 180px; padding: 0.7rem 0.9rem;
+  border: 1px solid rgba(148, 163, 184, 0.4); border-radius: 10px;
+  display: flex; flex-direction: column; gap: 0.2rem; background: rgba(148, 163, 184, 0.06);
+}
+.alt-demo-tile strong { font-size: 0.9rem; }
+.alt-demo-tile span { font-size: 0.72rem; opacity: 0.7; }
+
 .dark .alt-chat-scope {
   --background: 222 47% 11%;            /* slate-900 — MUI paper-ish */
   --foreground: 210 40% 96%;

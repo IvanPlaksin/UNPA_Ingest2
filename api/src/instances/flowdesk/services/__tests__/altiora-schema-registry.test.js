@@ -4,9 +4,14 @@
  * IP-1c test — AltioraSchemaRegistry against a live Memgraph.
  *
  * Uses registry-owned serviceIds (IT-RG-*) and a distinct ousId range so it does
- * not collide with the golden fixtures. `invalidateAll` scopes to namespace=
- * 'Altiora' (registry-tagged) and so leaves golden fixtures untouched even when
- * they carry an altioraOusId — no fixture restoration is needed.
+ * not collide with the golden fixtures.
+ *
+ * SAFETY (INCIDENT 2026-07-23): this suite runs against the SHARED live Memgraph.
+ * `invalidateAll()` is a MASS delete of a namespace; calling it on the production
+ * 'Altiora' tag once wiped ~76 real materialized schemas. So every store that this
+ * test later mass-invalidates is tagged with an ISOLATED namespace (TEST_NS), and
+ * `invalidateAll(TEST_NS)` can only ever reach this test's own rows — never real
+ * schemas. The registry also hard-blocks `invalidateAll('Altiora')` under NODE_ENV=test.
  */
 
 const {
@@ -30,6 +35,8 @@ const OUS_A = 900010;
 const OUS_B = 900011;
 const SID_A = 'IT-RG-A';
 const SID_B = 'IT-RG-B';
+// Isolated tag for anything this test will later mass-invalidate — NEVER 'Altiora'.
+const TEST_NS = 'AltioraTest';
 
 /** A realistic snapshot straight from the canonical materializer (I-4a). */
 function makeSnapshot(serviceId, ousId, { contentHash = 'hash-1', extraField = false } = {}) {
@@ -126,9 +133,9 @@ describe('IP-1c: freshness', () => {
 
 describe('IP-1e: listCached (poll enumeration)', () => {
   test('returns ousId + contentHash for each registry-managed schema', async () => {
-    await storeSchema(OUS_A, makeSnapshot(SID_A, OUS_A, { contentHash: 'h-A' }));
-    await storeSchema(OUS_B, makeSnapshot(SID_B, OUS_B, { contentHash: 'h-B' }));
-    const rows = await listCached();
+    await storeSchema(OUS_A, makeSnapshot(SID_A, OUS_A, { contentHash: 'h-A' }), { namespace: TEST_NS });
+    await storeSchema(OUS_B, makeSnapshot(SID_B, OUS_B, { contentHash: 'h-B' }), { namespace: TEST_NS });
+    const rows = await listCached(TEST_NS);
     const mine = rows.filter((r) => r.ousId === OUS_A || r.ousId === OUS_B);
     expect(mine).toEqual(
       expect.arrayContaining([
@@ -149,12 +156,18 @@ describe('IP-1c: invalidation', () => {
     expect(await invalidate(OUS_A)).toBe(false); // already gone
   });
 
-  test('invalidateAll removes registry schemas', async () => {
-    await storeSchema(OUS_A, makeSnapshot(SID_A, OUS_A));
-    await storeSchema(OUS_B, makeSnapshot(SID_B, OUS_B));
-    const removed = await invalidateAll();
+  test('invalidateAll removes registry schemas (isolated test namespace)', async () => {
+    await storeSchema(OUS_A, makeSnapshot(SID_A, OUS_A), { namespace: TEST_NS });
+    await storeSchema(OUS_B, makeSnapshot(SID_B, OUS_B), { namespace: TEST_NS });
+    // Scoped to TEST_NS: cannot reach real 'Altiora' schemas on the shared Memgraph.
+    const removed = await invalidateAll(TEST_NS);
     expect(removed).toBeGreaterThanOrEqual(2);
     expect(await getSchema(OUS_A)).toBeNull();
     expect(await getSchema(OUS_B)).toBeNull();
+  });
+
+  test("invalidateAll('Altiora') is blocked under NODE_ENV=test", async () => {
+    // The production-namespace mass wipe must be refused in tests (incident guard).
+    await expect(invalidateAll()).rejects.toThrow(/blocked under NODE_ENV=test/);
   });
 });

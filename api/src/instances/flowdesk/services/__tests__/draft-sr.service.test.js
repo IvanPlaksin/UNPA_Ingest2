@@ -125,6 +125,78 @@ describe('C2: submit / escalate materialize to Memgraph', () => {
     expect(draft.status).toBe('submitted');
   });
 
+  // P9-005: the REAL Altiora write path is gated by ACT authorization.
+  describe('P9-005 ACT authorization on the real Altiora write', () => {
+    const OLD = process.env.FLOWDESK_SUBMIT_TARGET;
+    beforeAll(() => { process.env.FLOWDESK_SUBMIT_TARGET = 'altiora'; });
+    afterAll(() => { if (OLD === undefined) delete process.env.FLOWDESK_SUBMIT_TARGET; else process.env.FLOWDESK_SUBMIT_TARGET = OLD; });
+
+    const altioraSnap = { ...hardware, metadata: { ...hardware.metadata, altioraOusId: 59 } };
+    const fill = async (svc, sid) => {
+      await svc.create(sid, 'IT-HW-LAP', 1);
+      await svc.patch(sid, [
+        { op: 'set', slotId: 'author', value: { userId: 'u1' }, provenance: 'context' },
+        { op: 'set', slotId: 'beneficiary', value: 'u1', provenance: 'context' },
+        { op: 'set', slotId: 'location', value: { id: 'geneva' }, provenance: 'resolved' },
+        { op: 'set', slotId: 'assetType', value: 'laptop_standard', provenance: 'extracted' },
+        { op: 'set', slotId: 'justification', value: 'New hire', provenance: 'user_edited' },
+        { op: 'set', slotId: 'approver', value: { userId: 'U005' }, provenance: 'resolved' },
+        { op: 'set', slotId: 'approverComment', value: 'ok', provenance: 'user_edited' },
+      ]);
+    };
+    const mk = (checkAct, ticketService) => createDraftSRService({
+      store: makeFakeStore(), loadSnapshot: async () => altioraSnap, graphWrite: write,
+      now, makeRef, ttlSeconds: 3600, checkAct, ticketService,
+    });
+
+    test('denied ACT → returns ACT_DENIED, never calls the ticket service', async () => {
+      const ticket = { createTicket: jest.fn() };
+      const svc = mk(() => ({ ok: false, code: 'NOT_ENABLED' }), ticket);
+      await fill(svc, 's-deny');
+      const res = await svc.submit('s-deny');
+      expect(res.error).toEqual({ code: 'ACT_DENIED', reason: 'NOT_ENABLED' });
+      expect(ticket.createTicket).not.toHaveBeenCalled();
+    });
+
+    test('authorized ACT → calls the ticket service (real Altiora write)', async () => {
+      const ticket = { createTicket: jest.fn(async () => ({ srNumber: 'ALT-1', ticketId: 'T1', status: 'New', altiora: true })) };
+      const svc = mk(() => ({ ok: true }), ticket);
+      await fill(svc, 's-allow');
+      const res = await svc.submit('s-allow');
+      expect(ticket.createTicket).toHaveBeenCalledTimes(1);
+      expect(res).toMatchObject({ srNumber: 'ALT-1', ticketId: 'T1', altiora: true });
+    });
+  });
+
+  // P9-001: a repeated submit must NOT mint a new srNumber or re-materialize.
+  test('submit is idempotent — second submit returns the existing ref, no re-write', async () => {
+    const store = makeFakeStore();
+    let writes = 0;
+    const svc = createDraftSRService({
+      store, loadSnapshot: async () => hardware,
+      graphWrite: async (...a) => { writes += 1; return write(...a); },
+      now, makeRef, ttlSeconds: 3600,
+    });
+    await svc.create('s-idem', 'IT-HW-LAP', 1);
+    await svc.patch('s-idem', [
+      { op: 'set', slotId: 'author', value: { userId: 'u1' }, provenance: 'context' },
+      { op: 'set', slotId: 'beneficiary', value: 'u1', provenance: 'context' },
+      { op: 'set', slotId: 'location', value: { id: 'geneva' }, provenance: 'resolved' },
+      { op: 'set', slotId: 'assetType', value: 'laptop_standard', provenance: 'extracted' },
+      { op: 'set', slotId: 'justification', value: 'New hire', provenance: 'user_edited' },
+      { op: 'set', slotId: 'approver', value: { userId: 'U005' }, provenance: 'resolved' },
+      { op: 'set', slotId: 'approverComment', value: 'ok', provenance: 'user_edited' },
+    ]);
+    const first = await svc.submit('s-idem');
+    expect(first.srNumber).toBe('SR-IT-HW-LAP-TEST');
+    expect(writes).toBe(1);
+
+    const second = await svc.submit('s-idem');
+    expect(second.alreadySubmitted).toBe(true);
+    expect(second.srNumber).toBe('SR-IT-HW-LAP-TEST');
+    expect(writes).toBe(1); // no second materialization
+  });
+
   test('escalate materializes an Escalation node with transcript', async () => {
     const store = makeFakeStore();
     const svc = svcWith(store);

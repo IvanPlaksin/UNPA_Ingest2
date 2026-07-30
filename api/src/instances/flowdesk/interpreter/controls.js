@@ -92,4 +92,92 @@ function buildChoiceControl(slotDef, presentOptions, { label } = {}) {
   }];
 }
 
-module.exports = { buildConfirmControl, buildChoiceControl, directoryOf, toOption };
+/**
+ * A date slot's question → a `date` control (TASK-PROMPT-001). Additive: date slots
+ * previously fell through to a free-text question. `prefill` (optional ISO 8601) is a
+ * convenience only — the committed value is always what the user picks and returns via
+ * a `date_select` action, so the LLM never authors a date value.
+ * @returns {Array} a single-element controls[]
+ */
+function buildDateControl(slotDef, { label, prefill } = {}) {
+  return [{
+    id: `ctrl-${slotDef.slotId}`,
+    type: 'date',
+    slotId: slotDef.slotId,
+    ...(label ? { label } : {}),
+    ...(prefill ? { prefill: String(prefill) } : {}),
+  }];
+}
+
+/**
+ * A multi-select enum slot's question → a `multichoice` control (P1-13). Same option
+ * domain as `choice`; the client may check any number of them and commits the set via
+ * `multichoice_select`. Used for Altiora checklist fields, where collapsing to a single
+ * value silently dropped the other attachments the user had ticked.
+ * @returns {Array} a single-element controls[]
+ */
+function buildMultichoiceControl(slotDef, presentOptions, { label, selected } = {}) {
+  return [{
+    id: `ctrl-${slotDef.slotId}`,
+    type: 'multichoice',
+    slotId: slotDef.slotId,
+    ...(label ? { label } : {}),
+    options: (presentOptions || []).map((o) => ({ value: String(o.value), label: String(o.label != null ? o.label : o.value) })),
+    ...(Array.isArray(selected) && selected.length ? { selected: selected.map(String) } : {}),
+  }];
+}
+
+/**
+ * Free-input controls (TASK-003/004) — `text`, `textarea`, `number`, `toggle`.
+ *
+ * These carry NO validation: the TASK-PROMPT-002 audit established that Altiora
+ * authors no min/max/length/regex, so there is nothing to enforce. Their value is
+ * structural — the right input affordance per slot type (multi-line for long text, a
+ * numeric field, an unambiguous on/off) instead of parsing free prose. The composer
+ * stays enabled, so a control is an ADDITIONAL affordance, never a gate.
+ *
+ * `placeholder` is seeded from the slot's helpText (TASK-PROMPT-005) when present —
+ * the form author's own guidance, shown where it is most useful.
+ */
+function freeInputControl(type, slotDef, { label, placeholder, prefill, rows } = {}) {
+  return [{
+    id: `ctrl-${slotDef.slotId}`,
+    type,
+    slotId: slotDef.slotId,
+    ...(label ? { label } : {}),
+    ...(placeholder ? { placeholder: String(placeholder) } : {}),
+    ...(prefill !== undefined && prefill !== null && prefill !== '' ? { prefill } : {}),
+    ...(rows ? { rows } : {}),
+  }];
+}
+
+const buildTextControl = (slotDef, opts) => freeInputControl('text', slotDef, opts);
+const buildTextareaControl = (slotDef, opts = {}) => freeInputControl('textarea', slotDef, { rows: 4, ...opts });
+const buildNumberControl = (slotDef, opts) => freeInputControl('number', slotDef, opts);
+const buildToggleControl = (slotDef, opts) => freeInputControl('toggle', slotDef, opts);
+
+/**
+ * P1-12 — one review for a whole cascade cluster. An index number typically resolves
+ * four or five fields at once; confirming them one at a time would trade the questions
+ * we just removed for an equal number of confirmations.
+ *
+ * The values are display-only. Accepting sends `cascade_accept`, and the backend
+ * re-resolves from the dictionary before writing — the client never supplies the value.
+ * @returns {Array} a single-element controls[]
+ */
+function buildCascadeConfirmControl(fields, { label } = {}) {
+  return [{
+    id: 'ctrl-cascade',
+    type: 'cascade_confirm',
+    slotId: fields[0].slotId, // the contract keys on a slot; the cluster rides in `fields`
+    ...(label ? { label } : {}),
+    fields: fields.map((f) => ({ slotId: f.slotId, label: String(f.label), display: String(f.display) })),
+  }];
+}
+
+module.exports = {
+  buildConfirmControl, buildChoiceControl, buildDateControl, buildMultichoiceControl,
+  buildCascadeConfirmControl,
+  buildTextControl, buildTextareaControl, buildNumberControl, buildToggleControl,
+  directoryOf, toOption,
+};

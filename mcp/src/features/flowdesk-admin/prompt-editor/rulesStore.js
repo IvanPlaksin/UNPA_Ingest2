@@ -10,7 +10,10 @@ let _seq = 1;
 const uid = (p = 'rule') => `${p}-${Date.now().toString(36)}-${_seq++}`;
 
 export const CATEGORIES = ['identity', 'domain', 'routing', 'dialogue', 'tone', 'safety', 'deflection', 'formatting', 'custom'];
-export const APPLIES_TO = ['all', 'router', 'info_answer', 'question_planner', 'slot_extract', 'field_help', 'my_requests'];
+// Must mirror PROMPT_NODES in api prompt-graph-compiler.js — offering a scope the
+// engine does not read means the operator writes rules that quietly do nothing
+// (TASK-FLOWDESK-BUG-001). The API serves the authoritative list at /prompt/meta.
+export const APPLIES_TO = ['all', 'router', 'info_answer', 'question_planner', 'field_help'];
 export const CATEGORY_COLOR = {
   identity: '#3b82f6', domain: '#0ea5e9', routing: '#8b5cf6', dialogue: '#06b6d4',
   tone: '#22c55e', safety: '#ef4444', deflection: '#f59e0b', formatting: '#64748b', custom: '#94a3b8',

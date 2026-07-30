@@ -9,7 +9,7 @@ import { useMessages } from '../store/chat-store';
  * message is from the assistant (so the reply is always visible). If the user
  * scrolled up to read history, incoming user echoes don't yank them down.
  */
-export default function MessageList({ children }) {
+export default function MessageList({ children, onNavigate }) {
   const { t } = useTranslation();
   const messages = useMessages();
   const containerRef = useRef(null);
@@ -40,7 +40,7 @@ export default function MessageList({ children }) {
             <p>{t('emptySub')}</p>
           </div>
         ) : (
-          messages.map((m, i) => <MessageBubble key={m.id} message={m} isLast={i === messages.length - 1} />)
+          messages.map((m, i) => <MessageBubble key={m.id} message={m} isLast={i === messages.length - 1} onNavigate={onNavigate} />)
         )}
         {/* Typing indicator (F7) mounts here, before the scroll anchor */}
         {children}

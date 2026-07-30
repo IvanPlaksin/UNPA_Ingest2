@@ -13,6 +13,7 @@
         "MCP_SERVER_VERSION": "1.0.0",
         "QDRANT_URL": "http://localhost:6333",
         "QDRANT_COLLECTION": "project_knowledge",
+        "UNPA_API_URL": "http://localhost:3010",
         "MEMGRAPH_URI": "bolt://localhost:7687",
         "MEMGRAPH_USER": "memgraph",
         "MEMGRAPH_PASSWORD": "secret_password_123",

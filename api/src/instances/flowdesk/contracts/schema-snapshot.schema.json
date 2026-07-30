@@ -192,6 +192,50 @@
         "promptHint": {
           "type": "string",
           "description": "Natural-language hint the QUESTION_PLANNER uses to phrase the ask. The planner may only ask for slots in this snapshot (CODEX-RULE-077)."
+        },
+        "dictRef": {
+          "type": "object",
+          "description": "P1-12 — CASCADE dictionary: this field's value is looked up from an Altiora dictionary FILTERED by another slot's value (e.g. staff name/grade/duty station resolved from an index number). Resolved during the conversation, once every `filters[].slotId` is filled — unlike `lov`, which is baked at materialization. Only faithfully expressible filters are carried; anything else is dropped so the slot degrades to manual entry.",
+          "additionalProperties": false,
+          "required": ["entityId", "displayFieldIds", "filters"],
+          "properties": {
+            "entityId": { "type": "string", "description": "Altiora dictionary entity id (e.g. 'intg:<guid>' or 'entity-dbo-lk_…')." },
+            "displayFieldIds": { "type": "array", "items": { "type": "string" }, "minItems": 1, "description": "Dictionary columns shown to the user when confirming the resolved row." },
+            "valueFieldId": { "type": "string", "description": "Dictionary column taken as the slot value; defaults to the display column." },
+            "filters": {
+              "type": "array",
+              "minItems": 1,
+              "description": "Cascade conditions. Every entry depends on another slot, so they also drive `dependsOn` ordering.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["fieldId", "operator", "slotId"],
+                "properties": {
+                  "fieldId": { "type": "string", "description": "Dictionary column to filter on." },
+                  "operator": { "enum": ["eq"], "description": "Only equality is implemented; anything else drops the descriptor (fail-closed)." },
+                  "slotId": { "type": "string", "description": "Slot whose value supplies the filter — must be filled first." }
+                }
+              }
+            }
+          }
+        },
+        "multi": {
+          "type": "boolean",
+          "description": "Enum slots only: the field accepts MORE THAN ONE of its presentOptions (Altiora checklist/multiselect), so the slot value is an array of option values rather than a scalar. Default false (single-select).",
+          "default": false
+        },
+        "helpText": {
+          "type": "string",
+          "description": "Field guidance carried from the source form (Altiora `description`, plus `placeholder` as a labelled example). Grounds the QUESTION_PLANNER's phrasing and FIELD_HELP answers. Machine artifacts (e.g. 'Auto-generated field for …') are filtered out at materialization (TASK-PROMPT-005)."
+        },
+        "section": {
+          "type": "string",
+          "description": "Stable slug of the Altiora form SECTION this slot belongs to (from FormField.sectionId → the referenced type='section' field). Sections are the form author's semantic grouping (avg ~3 fields each); carried so the dialogue, the graph (SlotGroup) and the KB description can group related questions. Layout-only; never a slot itself.",
+          "pattern": "^[a-z][a-zA-Z0-9]*$"
+        },
+        "sectionLabel": {
+          "type": "string",
+          "description": "Human label of the slot's section (the section field's label), for question grouping headings and KB description structure."
         }
       },
       "allOf": [

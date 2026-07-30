@@ -276,3 +276,186 @@ describe('I-4b: LOV descriptor capture (materializer stays pure)', () => {
     expect(lovDescriptorOf({ dictionaryEntityId: 'e', dictionaryDisplayFields: [] })).toBeNull();
   });
 });
+
+// ── TASK-PROMPT-005: description/placeholder → helpText ──────────────────────
+// The audit (TASK-PROMPT-002) established these are the ONLY constraint-like
+// attributes Altiora authors — no min/max/regex exist upstream — so carrying them
+// faithfully (and filtering the form builder's machine artifacts) is the whole win.
+describe('TASK-PROMPT-005: helpText materialization', () => {
+  const one = (field) => materializeSchema({
+    ...base,
+    schemaJson: { fields: [{ id: 'f1', label: 'Justification', type: 'textarea', required: true, ...field }], rules: [] },
+  }).snapshot.slots[0];
+
+  test('description only → helpText = description', () => {
+    expect(one({ description: 'A detailed written justification is mandatory above 364 days.' }).helpText)
+      .toBe('A detailed written justification is mandatory above 364 days.');
+  });
+
+  test('placeholder only → helpText = placeholder', () => {
+    expect(one({ placeholder: 'Please describe your request in detail' }).helpText)
+      .toBe('Please describe your request in detail');
+  });
+
+  test('both → merged with a labelled example', () => {
+    expect(one({ description: 'Explain why the extension is needed.', placeholder: 'e.g. project X continues' }).helpText)
+      .toBe('Explain why the extension is needed.\n\nExample: e.g. project X continues');
+  });
+
+  test('neither → helpText not set', () => {
+    expect(one({}).helpText).toBeUndefined();
+  });
+
+  test('auto-generated description is filtered out (machine artifact, not user help)', () => {
+    // Real case: ousId 1 dutyStation carries "Auto-generated field for LK_DutyStations.Name".
+    expect(one({ description: 'Auto-generated field for LK_DutyStations.Name' }).helpText).toBeUndefined();
+  });
+
+  test('auto-generated description + real placeholder → only the placeholder survives', () => {
+    expect(one({ description: 'Auto-generated field for LK_DutyStations.Name', placeholder: 'Start typing a city' }).helpText)
+      .toBe('Start typing a city');
+  });
+
+  test('whitespace-only → helpText not set; surrounding whitespace is trimmed', () => {
+    expect(one({ description: '   \n  ' }).helpText).toBeUndefined();
+    expect(one({ description: '  Trim me.  ' }).helpText).toBe('Trim me.');
+  });
+
+  test('a slot carrying helpText still satisfies the SchemaSnapshot contract', () => {
+    const { snapshot } = materializeSchema({
+      ...base,
+      schemaJson: { fields: [{ id: 'f1', label: 'Justification', type: 'textarea', required: true, description: 'Why?', placeholder: 'because…' }], rules: [] },
+    });
+    expect(validateSnapshot(snapshot)).toBe(true);
+  });
+});
+
+// ── P1-13: checklist/multiselect keep their multi-value semantics ────────────
+describe('P1-13: multi-select enum materialization', () => {
+  const one = (field) => materializeSchema({
+    ...base,
+    schemaJson: { fields: [{ id: 'f1', label: 'Supporting documents', required: false, options: ['TOR provided', 'DOA approval'], ...field }], rules: [] },
+  }).snapshot.slots[0];
+
+  test('checklist → enum + multi:true (option domain preserved)', () => {
+    const slot = one({ type: 'checklist' });
+    expect(slot.type).toBe('enum');
+    expect(slot.multi).toBe(true);
+    expect(slot.presentOptions.map((o) => o.value)).toEqual(['TOR provided', 'DOA approval']);
+  });
+
+  test('multiselect → enum + multi:true', () => {
+    expect(one({ type: 'multiselect' }).multi).toBe(true);
+  });
+
+  test('single-valued siblings stay single (no multi flag)', () => {
+    for (const type of ['select', 'radio', 'options_group', 'dropdown']) {
+      const slot = one({ type });
+      expect(slot.type).toBe('enum');
+      expect(slot.multi).toBeUndefined();
+    }
+  });
+
+  test('a multi slot is contract-valid', () => {
+    const { snapshot } = materializeSchema({
+      ...base,
+      schemaJson: { fields: [{ id: 'f1', label: 'Docs', type: 'checklist', required: false, options: ['a', 'b'] }], rules: [] },
+    });
+    expect(validateSnapshot(snapshot)).toBe(true);
+  });
+
+  // Altiora's DynamicForm renders `checklistMultiple:false` as radios and stores a
+  // plain scalar — so such a checklist is single-select despite its type.
+  test('checklistMultiple:false → single-select (no multi flag)', () => {
+    const slot = one({ type: 'checklist', checklistMultiple: false });
+    expect(slot.type).toBe('enum');
+    expect(slot.multi).toBeUndefined();
+  });
+
+  test('checklistMultiple:true (or absent) → multi', () => {
+    expect(one({ type: 'checklist', checklistMultiple: true }).multi).toBe(true);
+    expect(one({ type: 'checklist' }).multi).toBe(true);
+  });
+
+  test('a checklist with NO options degrades to free text and carries no multi flag', () => {
+    const slot = one({ type: 'checklist', options: [] });
+    expect(slot.type).toBe('string');
+    expect(slot.multi).toBeUndefined();
+  });
+});
+
+// ── P1-12: cascade dictionary (runtime-resolved, fail-closed) ────────────────
+describe('P1-12: cascade dictionary materialization', () => {
+  const tree = (fieldRef, op = 'eq', logic = 'AND', srcType = 'form_field') => ({
+    type: 'group', logic, items: [{
+      type: 'filter', dictionaryFieldId: 'intg:col-index', operator: op,
+      valueSource: { type: srcType, fieldId: fieldRef },
+    }],
+  });
+  // A realistic pair: an index number, and a name that resolves from it.
+  const form = (nameField) => ({
+    fields: [
+      { id: 'f_idx', label: 'Index Number', type: 'text', required: true },
+      { id: 'f_name', label: 'Staff Member Full Name', type: 'text', required: true, ...nameField },
+    ],
+    rules: [],
+  });
+  const run = (nameField) => materializeSchema({ ...base, schemaJson: form(nameField) });
+  const nameSlot = (res) => res.snapshot.slots.find((s) => s.slotId === 'staffMemberFullName');
+
+  test('a text field with a form_field-filtered dictionary gets a dictRef', () => {
+    const res = run({ dictionaryEntityId: 'intg:staff', dictionaryFieldId: 'intg:col-name', dictionaryFilterTree: tree('f_idx') });
+    const slot = nameSlot(res);
+    expect(slot.type).toBe('string'); // stays a normal slot type — dictRef is orthogonal
+    expect(slot.dictRef).toMatchObject({ entityId: 'intg:staff', displayFieldIds: ['intg:col-name'] });
+    expect(slot.dictRef.filters).toEqual([{ fieldId: 'intg:col-index', operator: 'eq', slotId: 'indexNumber' }]);
+  });
+
+  test('the cascade dependency becomes an ordering dependsOn', () => {
+    const slot = nameSlot(run({ dictionaryEntityId: 'intg:staff', dictionaryFieldId: 'intg:col-name', dictionaryFilterTree: tree('f_idx') }));
+    expect(slot.dependsOn).toContain('indexNumber');
+  });
+
+  test('a date field also carries a dictRef (autofill is not enum-only)', () => {
+    const res = materializeSchema({
+      ...base,
+      schemaJson: {
+        fields: [
+          { id: 'f_idx', label: 'Index Number', type: 'text', required: true },
+          { id: 'f_exp', label: 'Current Appointment Expiry', type: 'date', required: true, dictionaryEntityId: 'intg:staff', dictionaryFieldId: 'intg:col-exp', dictionaryFilterTree: tree('f_idx') },
+        ],
+        rules: [],
+      },
+    });
+    const slot = res.snapshot.slots.find((s) => s.slotId === 'currentAppointmentExpiry');
+    expect(slot.type).toBe('date');
+    expect(slot.dictRef.filters[0].slotId).toBe('indexNumber');
+  });
+
+  test('a snapshot carrying dictRef is contract-valid', () => {
+    const res = run({ dictionaryEntityId: 'intg:staff', dictionaryFieldId: 'intg:col-name', dictionaryFilterTree: tree('f_idx') });
+    expect(validateSnapshot(res.snapshot)).toBe(true);
+  });
+
+  // ── fail-closed cases: better manual entry than a silently weakened filter ──
+  test.each([
+    ['an unsupported operator', { op: 'contains' }],
+    ['an OR group', { logic: 'OR' }],
+    ['a current_user source', { srcType: 'current_user' }],
+    ['a reference to a field that was not materialized', { fieldRef: 'f_missing' }],
+  ])('drops the descriptor for %s', (_label, { op = 'eq', logic = 'AND', srcType = 'form_field', fieldRef = 'f_idx' }) => {
+    const res = run({ dictionaryEntityId: 'intg:staff', dictionaryFieldId: 'intg:col-name', dictionaryFilterTree: tree(fieldRef, op, logic, srcType) });
+    expect(nameSlot(res).dictRef).toBeUndefined();
+  });
+
+  test('a dictionary WITHOUT a field dependency stays the existing baked-lov case', () => {
+    // static/unfiltered select → no dictRef; the enum LOV path is untouched.
+    const res = materializeSchema({
+      ...base,
+      schemaJson: { fields: [{ id: 'f_ds', label: 'Duty Station', type: 'select', required: true, dictionaryEntityId: 'entity-dbo-lk_dutystations', dictionaryFieldId: 'fld-name' }], rules: [] },
+    });
+    const slot = res.snapshot.slots[0];
+    expect(slot.dictRef).toBeUndefined();
+    expect(slot.lov).toBeDefined();
+  });
+});

@@ -150,10 +150,10 @@ function createSessionAnalysis(deps = {}) {
   const getLlm = deps.llm ? () => deps.llm : () => {
     const { getLLMProvider } = require('../../../services/ai/llm-provider');
     return getLLMProvider({
-      provider: process.env.FLOWDESK_LLM_PROVIDER || 'claude-code',
-      // Analysis benefits from a stronger model than the chat's turn model —
-      // overridable independently of the chat.
-      model: process.env.FLOWDESK_ADMIN_ANALYSIS_MODEL || process.env.FLOWDESK_LLM_MODEL || 'claude-sonnet-4-6',
+      provider: process.env.FLOWDESK_LLM_PROVIDER || 'anthropic-api',
+      // Defaults to the chat's Haiku turn model; a stronger analysis model can be
+      // pinned independently via FLOWDESK_ADMIN_ANALYSIS_MODEL.
+      model: process.env.FLOWDESK_ADMIN_ANALYSIS_MODEL || process.env.FLOWDESK_LLM_MODEL || 'claude-haiku-4-5-20251001',
     });
   };
   const getSessionData = deps.getSessionData || (async (sessionId) => {
@@ -197,7 +197,7 @@ function createSessionAnalysis(deps = {}) {
     }
 
     const prompt = buildPrompt({ session, turns, draft, snapshot });
-    const model = process.env.FLOWDESK_ADMIN_ANALYSIS_MODEL || process.env.FLOWDESK_LLM_MODEL || 'claude-sonnet-4-6';
+    const model = process.env.FLOWDESK_ADMIN_ANALYSIS_MODEL || process.env.FLOWDESK_LLM_MODEL || 'claude-haiku-4-5-20251001';
     const { data: analysis } = await getLlm().structuredOutput(prompt, ANALYSIS_SCHEMA);
 
     // Guard: a schema recommendation without a schema in play is meaningless.

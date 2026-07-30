@@ -77,6 +77,8 @@ async function compile(serviceId) {
      RETURN sl.slotId AS slotId, sl.type AS type, sl.required AS required, sl.phase AS phase,
             sl.promptHint AS promptHint, sl.groupable AS groupable, sl.order AS order,
             sl.requiredWhen AS requiredWhen, sl.altioraFieldId AS altioraFieldId,
+            sl.helpText AS helpText, sl.multi AS multi, sl.dictRefJson AS dictRefJson,
+            sl.section AS section, sl.sectionLabel AS sectionLabel,
             r.resolverRef AS resolverRef, aw.condition AS trefCondition
      ORDER BY sl.order`,
     { sid: serviceId }
@@ -154,6 +156,29 @@ async function compile(serviceId) {
 
     const promptHint = rec.get('promptHint');
     if (promptHint) slot.promptHint = promptHint;
+
+    // TASK-PROMPT-005: field guidance carried from the source form. Persisted on the
+    // SlotDef so it survives the materialize → graph → compile round-trip.
+    const helpText = rec.get('helpText');
+    if (helpText) slot.helpText = helpText;
+
+    // P1-13: multi-select enum (Altiora checklist/multiselect).
+    if (rec.get('multi') === true) slot.multi = true;
+
+    // Section grouping (Altiora sectionId), round-tripped through the SlotDef.
+    const section = rec.get('section');
+    if (section) slot.section = section;
+    const sectionLabel = rec.get('sectionLabel');
+    if (sectionLabel) slot.sectionLabel = sectionLabel;
+
+    // P1-12: cascade dictionary descriptor, stored as JSON (see seed-schema-graphs).
+    // A corrupt payload is ignored rather than fatal — the slot then behaves as
+    // ordinary manual entry, which is the same fail-closed outcome as an unparseable
+    // filter at materialization.
+    const dictRefJson = rec.get('dictRefJson');
+    if (dictRefJson) {
+      try { slot.dictRef = JSON.parse(dictRefJson); } catch { /* keep the slot usable */ }
+    }
 
     slots.push(slot);
   }

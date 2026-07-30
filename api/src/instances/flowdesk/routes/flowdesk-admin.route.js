@@ -21,6 +21,9 @@ router.get('/sessions', c.listSessions);
 router.get('/sessions/stats', c.sessionStats);
 router.get('/sessions/:sessionId', c.getSession);
 router.get('/sessions/:sessionId/turns', c.getTurns);
+// One model call, by the key its span carries. Query param, not a path segment:
+// the key contains colons.
+router.get('/llm-call', c.getLlmCall);
 
 // Session-analysis AI agent + prompt overlays (P5)
 router.post('/sessions/:sessionId/analyze', c.analyzeSession);
@@ -81,5 +84,14 @@ router.get('/tickets', c.listTickets);
 router.get('/tickets/:ticketId/live', c.getTicketLive);
 router.get('/llm/stats', c.llmStats);
 router.get('/health', c.adminHealth);
+
+// ACT permissions (Phase 9 management) — who may invoke side-effecting chat
+// actions (submit a real Altiora ticket). env allowlist ∪ managed grants.
+router.get('/act-users', c.actUsersList);
+router.get('/act-users/check', c.actUsersCheck); // before /:key
+router.patch('/act-users/permissions/:permission', c.actPermSetDefault); // global default (enable-for-all)
+router.post('/act-users', c.actUsersAdd);
+router.patch('/act-users/:key', c.actUsersSetEnabled);
+router.delete('/act-users/:key', c.actUsersRemove);
 
 module.exports = router;

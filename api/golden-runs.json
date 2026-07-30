@@ -1,0 +1,62 @@
+{
+  "generatedFrom": "run-golden-set",
+  "count": 8,
+  "runs": [
+    {
+      "runId": "13d959aa-5926-4389-a0f4-edbd3954ce2c",
+      "scenarioId": "dg-scn-change-of-intent",
+      "personaId": "dg-persona-frustrated-requester",
+      "terminal": "service_matched",
+      "serviceIdentified": true
+    },
+    {
+      "runId": "8f310f51-baa9-410f-ab44-3e7f24647f1c",
+      "scenarioId": "dg-scn-leave-balance",
+      "personaId": "dg-persona-new-hr-staff",
+      "terminal": "goal_achieved",
+      "serviceIdentified": false
+    },
+    {
+      "runId": "5536991e-25f3-4a0b-8e30-d0fe1df5eda9",
+      "scenarioId": "dg-scn-dependency-allowance",
+      "personaId": "dg-persona-new-hr-staff",
+      "terminal": "gave_up",
+      "serviceIdentified": false
+    },
+    {
+      "runId": "4f085a77-2378-407a-ab9d-72c270381ed3",
+      "scenarioId": "dg-scn-education-grant",
+      "personaId": "dg-persona-experienced-eo-admin",
+      "terminal": "service_matched",
+      "serviceIdentified": true
+    },
+    {
+      "runId": "946434cd-b0c8-4fbf-a225-59c77af10888",
+      "scenarioId": "dg-scn-p11-renewal",
+      "personaId": "dg-persona-experienced-eo-admin",
+      "terminal": "goal_achieved",
+      "serviceIdentified": false
+    },
+    {
+      "runId": "d69e008c-a560-4957-9f92-9bfbdbcc0a7e",
+      "scenarioId": "dg-scn-travel-advance",
+      "personaId": "dg-persona-field-officer-mali",
+      "terminal": "service_matched",
+      "serviceIdentified": true
+    },
+    {
+      "runId": "c58a2585-6ba2-46e4-a919-dd508f0e432c",
+      "scenarioId": "dg-scn-bank-details",
+      "personaId": "dg-persona-experienced-eo-admin",
+      "terminal": "gave_up",
+      "serviceIdentified": false
+    },
+    {
+      "runId": "afc68e24-46dc-4789-b6c7-bc0425590c1a",
+      "scenarioId": "dg-scn-vague-complaint",
+      "personaId": "dg-persona-new-hr-staff",
+      "terminal": "service_matched",
+      "serviceIdentified": true
+    }
+  ]
+}

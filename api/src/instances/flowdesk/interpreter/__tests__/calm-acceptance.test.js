@@ -165,9 +165,11 @@ describe('CALM acceptance (ADCC-100) — 12 patterns from the core', () => {
     expect(r.response).toMatch(/review/i);
     const mid = await draftService.get(sid);
     expect(mid.dialogueStack).toEqual([]); // sequence explicitly closed
+    // Finalisation moved to Altiora's form: confirming hands over the collected
+    // values rather than creating the SR here.
     r = await engine.runTurn({ sessionId: sid, message: 'yes', lang: 'en' });
-    expect(r.isComplete).toBe(true);
-    expect(r.srNumber).toMatch(/^SR-/);
+    expect(r.route).toBe('confirm_form');
+    expect(r.openForm).toBeDefined();
   });
 
   // P10 — completed (ADCC-091): explicit closer on submit.
@@ -179,8 +181,11 @@ describe('CALM acceptance (ADCC-100) — 12 patterns from the core', () => {
     const sid = 'p10';
     await openColour(engine, sid);
     await engine.runTurn({ sessionId: sid, message: 'blue', lang: 'en' });
+    // No closer/SR number here any more — the form raises the request, and the
+    // assistant closes the conversation only once the host reports it created.
     const r = await engine.runTurn({ sessionId: sid, message: 'yes', lang: 'en' });
-    expect(r.closer).toBe(r.srNumber);
+    expect(r.openForm).toBeDefined();
+    expect(r.srNumber).toBeUndefined();
   });
 
   // P11 — chitchat (exclusion): out-of-scope redirect, not answered.

@@ -80,7 +80,7 @@ describe('F10c: repair ladder over an enum slot', () => {
     for (let i = 0; i < 3; i++) r = await engine.runTurn({ sessionId: sid, message: 'purple' });
     expect(r.askingSlot).toBe('color');
     expect(r.choices).toEqual(['Red', 'Blue']); // options shown
-    expect(r.response).toMatch(/Доступные варианты|не совсем понял/i); // ru default: optionsHint + didntCatch
+    expect(r.response).toMatch(/available options|didn't catch/i); // default lang 'en': optionsHint + didntCatch
     const draft = await draftService.get(sid);
     expect(draft.slots.color).toBeUndefined();
     expect(draft.repair.perSlot.color).toBe(3);

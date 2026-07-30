@@ -157,6 +157,144 @@
 .fdv2-exec-log li { font-size: 0.72rem; }
 .fdv2-exec-log li.err { color: #c0392b; }
 
+/* ── Sources ("Show sources", Phase 2) ─────────────────────────────────── */
+.fdv2-sources-btn {
+  display: inline-flex; align-items: center; gap: 0.2rem;
+  margin-inline-start: auto; padding: 0.1rem 0.4rem;
+  border: 1px solid var(--fdv2-border); border-radius: 999px;
+  background: transparent; color: var(--fdv2-text-muted);
+  cursor: pointer; opacity: 0.7;
+  transition: opacity 0.15s, color 0.15s, border-color 0.15s;
+}
+.fdv2-sources-btn:hover, .fdv2-sources-btn:focus-visible {
+  opacity: 1; color: var(--fdv2-accent); border-color: var(--fdv2-accent); outline: none;
+}
+.fdv2-sources-count { font-size: 0.68rem; font-weight: 600; line-height: 1; }
+
+.fdv2-sources-overlay {
+  position: absolute; inset: 0; z-index: 40;
+  display: flex; align-items: center; justify-content: center; padding: 1rem;
+  background: color-mix(in srgb, #000 45%, transparent);
+}
+.fdv2-sources-modal {
+  width: min(30rem, 100%); max-height: 80%; overflow-y: auto;
+  background: var(--fdv2-bg); color: var(--fdv2-text);
+  border: 1px solid var(--fdv2-border); border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+}
+.fdv2-sources-head {
+  position: sticky; top: 0; background: var(--fdv2-bg);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.8rem 1rem; border-bottom: 1px solid var(--fdv2-border);
+}
+.fdv2-sources-title { margin: 0; font-size: 0.95rem; font-weight: 600; }
+.fdv2-sources-close {
+  border: none; background: transparent; color: var(--fdv2-text-muted);
+  font-size: 1.3rem; line-height: 1; cursor: pointer; padding: 0 0.3rem;
+}
+.fdv2-sources-close:hover { color: var(--fdv2-text); }
+.fdv2-sources-list { list-style: none; margin: 0; padding: 0.5rem 1rem 1rem; }
+.fdv2-source-item { padding: 0.6rem 0; border-bottom: 1px solid var(--fdv2-border); }
+.fdv2-source-item:last-child { border-bottom: none; }
+.fdv2-source-row {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem;
+}
+.fdv2-source-name { font-weight: 600; font-size: 0.85rem; }
+.fdv2-source-badge {
+  flex: none; font-size: 0.7rem; font-weight: 600; color: var(--fdv2-accent);
+  background: color-mix(in srgb, var(--fdv2-accent) 14%, transparent);
+  padding: 0.05rem 0.4rem; border-radius: 999px;
+}
+.fdv2-source-collection { font-size: 0.72rem; color: var(--fdv2-text-muted); margin-top: 0.15rem; }
+.fdv2-source-snippet { font-size: 0.78rem; color: var(--fdv2-text); margin: 0.3rem 0 0; opacity: 0.85; }
+
+/* ── Floating chat window (Phase 3) ────────────────────────────────────── */
+.fdv2-floating-overlay { position: fixed; inset: 0; z-index: 1000; pointer-events: none; }
+.fdv2-floating-window {
+  position: absolute; bottom: 24px; inset-inline-end: 24px;
+  width: 400px; height: 520px;
+  max-width: calc(100vw - 48px); max-height: calc(100vh - 48px);
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--fdv2-bg); color: var(--fdv2-text);
+  border: 1px solid var(--fdv2-border); border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+  pointer-events: auto;
+}
+.fdv2-floating-header {
+  flex: none; display: flex; align-items: center; justify-content: space-between;
+  padding: 0.7rem 0.9rem; border-bottom: 1px solid var(--fdv2-border);
+}
+.fdv2-floating-title { font-weight: 600; font-size: 0.9rem; }
+.fdv2-floating-close {
+  border: none; background: transparent; color: var(--fdv2-text-muted);
+  font-size: 1.3rem; line-height: 1; cursor: pointer; padding: 0 0.3rem;
+}
+.fdv2-floating-close:hover { color: var(--fdv2-text); }
+.fdv2-floating-body { flex: 1; position: relative; min-height: 0; }
+.fdv2-floating-body .fdv2-root { position: absolute; inset: 0; }
+/* Compact mode (floating): drop the side draft panel, tighten the header. */
+.fdv2-compact .fdv2-draft { display: none; }
+.fdv2-compact .fdv2-header { padding-block: 0.4rem; }
+
+/* ── Navigate link ("Go there", Phase 5 SITE_NAVIGATE) ─────────────────── */
+.fdv2-navigate-link {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  margin-top: 0.55rem; padding: 0.4rem 0.8rem;
+  border: none; border-radius: 8px; cursor: pointer;
+  background: var(--fdv2-accent); color: var(--fdv2-accent-contrast);
+  font-size: 0.82rem; font-weight: 600;
+  transition: opacity 0.15s;
+}
+.fdv2-navigate-link:hover, .fdv2-navigate-link:focus-visible { opacity: 0.9; outline: none; }
+
+/* ── "Explain this" anchor trigger (Phase 8) ───────────────────────────── */
+.fdv2-explain-trigger {
+  position: absolute; top: 4px; inset-inline-end: 4px; z-index: 4;
+  width: 20px; height: 20px; border-radius: 50%; border: none; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; line-height: 1;
+  background: var(--fdv2-surface-2); color: var(--fdv2-accent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18); opacity: 0.85;
+  transition: opacity 0.2s, background 0.2s, color 0.2s;
+}
+.fdv2-explain-trigger:hover, .fdv2-explain-trigger:focus-visible {
+  opacity: 1; background: var(--fdv2-accent); color: var(--fdv2-accent-contrast); outline: none;
+}
+
+/* ── Voice orb + overlay (Phase 6) ─────────────────────────────────────── */
+.fdv2-voice-orb { width: var(--orb-size, 72px); height: var(--orb-size, 72px); display: flex; align-items: center; justify-content: center; }
+.fdv2-voice-orb-core {
+  width: 100%; height: 100%; border-radius: 50%;
+  background: var(--fdv2-accent); transform: scale(var(--orb-scale, 1));
+  transition: transform 0.06s ease-out, background-color 0.3s ease, opacity 0.3s ease;
+  box-shadow: 0 0 24px color-mix(in srgb, var(--fdv2-accent) 55%, transparent);
+}
+.fdv2-voice-orb--idle .fdv2-voice-orb-core { background: var(--fdv2-text-muted); opacity: 0.5; box-shadow: none; }
+.fdv2-voice-orb--thinking .fdv2-voice-orb-core { animation: fdv2-orb-breathe 2s ease-in-out infinite; }
+@keyframes fdv2-orb-breathe { 0%, 100% { transform: scale(0.92); } 50% { transform: scale(1.06); } }
+@media (prefers-reduced-motion: reduce) {
+  .fdv2-voice-orb--thinking .fdv2-voice-orb-core { animation: none; }
+  .fdv2-voice-orb-core { transition: background-color 0.3s ease, opacity 0.3s ease; }
+}
+.fdv2-voice-overlay {
+  position: fixed; inset: 0; z-index: 1100;
+  display: flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, #000 55%, transparent);
+}
+.fdv2-voice-stage { display: flex; flex-direction: column; align-items: center; gap: 1.1rem; }
+.fdv2-voice-status { color: #fff; font-size: 0.95rem; font-weight: 600; }
+.fdv2-voice-end {
+  border: 1px solid rgba(255, 255, 255, 0.5); background: transparent; color: #fff;
+  padding: 0.4rem 1.1rem; border-radius: 999px; cursor: pointer; font-size: 0.85rem;
+}
+.fdv2-voice-end:hover { background: rgba(255, 255, 255, 0.12); }
+@media (max-width: 480px) {
+  .fdv2-floating-window {
+    bottom: 0; inset-inline-end: 0; width: 100vw; height: 72vh;
+    max-width: 100vw; border-radius: 14px 14px 0 0;
+  }
+}
+
 .fdv2-message-system .fdv2-system-text {
   font-size: 0.8rem; color: var(--fdv2-text-muted);
   background: var(--fdv2-surface); border: 1px solid var(--fdv2-border);
@@ -324,6 +462,34 @@
 .fdv2-choice-search { display: flex; gap: 0.4rem; margin-top: 0.5rem; max-width: 22rem; }
 .fdv2-choice-search .fdv2-slot-input { flex: 1 1 auto; }
 
+/* ── Date control (TASK-PROMPT-001) ────────────────────────────────── */
+.fdv2-date-control { margin-top: 0.5rem; align-items: center; }
+.fdv2-date-input { flex: 0 0 auto; min-width: 9.5rem; }
+
+/* ── Free-input + toggle controls (TASK-003/004) ───────────────────── */
+.fdv2-freeinput-control { margin-top: 0.5rem; max-width: 22rem; display: flex; flex-direction: column; gap: 0.4rem; }
+.fdv2-freeinput-control .fdv2-slot-input { width: 100%; box-sizing: border-box; }
+.fdv2-freeinput-control textarea.fdv2-slot-input { resize: vertical; min-height: 4.5rem; line-height: 1.4; }
+.fdv2-toggle-control { margin-top: 0.5rem; }
+
+/* ── Cascade confirm (P1-12) ───────────────────────────────────────── */
+.fdv2-cascade-control { margin-top: 0.5rem; max-width: 24rem; }
+.fdv2-cascade-list { margin: 0 0 0.55rem; padding: 0.5rem 0.7rem; border: 1px solid var(--fdv2-border); border-radius: 8px; background: var(--fdv2-bg); }
+.fdv2-cascade-row { display: flex; gap: 0.6rem; padding: 0.15rem 0; font-size: 0.85rem; }
+.fdv2-cascade-row dt { flex: 0 0 44%; color: var(--fdv2-text-muted); }
+.fdv2-cascade-row dd { margin: 0; flex: 1 1 auto; font-weight: 500; }
+
+/* ── Multichoice control (P1-13) ───────────────────────────────────── */
+.fdv2-multichoice-control { margin-top: 0.5rem; max-width: 22rem; }
+.fdv2-multichoice-list { list-style: none; margin: 0 0 0.5rem; padding: 0; display: flex; flex-direction: column; gap: 0.3rem; }
+.fdv2-multichoice-option label {
+  display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer;
+  border: 1px solid var(--fdv2-border); background: var(--fdv2-bg);
+  border-radius: 8px; padding: 0.4rem 0.65rem; font-size: 0.85rem;
+}
+.fdv2-multichoice-option label:hover { border-color: var(--fdv2-accent); background: var(--fdv2-surface); }
+.fdv2-multichoice-option input { margin-top: 0.15rem; flex: 0 0 auto; }
+
 /* ── Echo preamble (F9.3b) ─────────────────────────────────────────── */
 .fdv2-preamble { color: var(--fdv2-text-muted); font-size: 0.85rem; margin: 0 0 0.4rem; font-style: italic; }
 
@@ -339,3 +505,56 @@
 [dir="rtl"] .fdv2-message-assistant { justify-content: flex-end; }
 [dir="rtl"] .fdv2-message-user .fdv2-bubble { border-bottom-right-radius: var(--fdv2-radius); border-bottom-left-radius: 5px; }
 [dir="rtl"] .fdv2-draft { border-left: none; border-right: 1px solid var(--fdv2-border); }
+
+/* ── Confirm-form review table (grouped, labelled, editable) ───────────────── */
+.fdv2-review {
+  margin: 0.5rem 0 0.25rem;
+  border: 1px solid var(--fdv2-border);
+  border-radius: var(--fdv2-radius, 10px);
+  background: var(--fdv2-surface);
+  overflow: hidden;
+}
+.fdv2-review-section {
+  padding: 0.4rem 0.7rem;
+  background: var(--fdv2-surface-2);
+  border-top: 1px solid var(--fdv2-border);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--fdv2-text-muted);
+}
+.fdv2-review-group:first-child .fdv2-review-section { border-top: 0; }
+.fdv2-review-row {
+  display: grid;
+  grid-template-columns: minmax(9rem, 42%) 1fr auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0.7rem;
+  border-top: 1px solid var(--fdv2-border);
+}
+.fdv2-review-label { color: var(--fdv2-text-muted); font-size: 0.85rem; }
+.fdv2-review-value { color: var(--fdv2-text); font-size: 0.9rem; word-break: break-word; }
+.fdv2-review-action { display: flex; justify-content: flex-end; min-width: 1.6rem; }
+.fdv2-review-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7rem; height: 1.7rem;
+  padding: 0;
+  border: 1px solid var(--fdv2-border);
+  border-radius: var(--fdv2-radius-sm, 7px);
+  background: var(--fdv2-bg);
+  color: var(--fdv2-text-muted);
+  cursor: pointer;
+  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+}
+.fdv2-review-edit:hover:not(:disabled) {
+  color: var(--fdv2-accent);
+  border-color: var(--fdv2-accent);
+}
+.fdv2-review-edit:disabled { opacity: 0.5; cursor: default; }
+@media (max-width: 480px) {
+  .fdv2-review-row { grid-template-columns: 1fr auto; }
+  .fdv2-review-label { grid-column: 1 / -1; margin-bottom: -0.2rem; }
+}

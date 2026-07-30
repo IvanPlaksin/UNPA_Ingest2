@@ -67,9 +67,11 @@ describe('F9.3a: author auto-confirm when beneficiary named', () => {
 });
 
 describe('F9.3b: echo preamble', () => {
-  test('acknowledges extracted item + beneficiary (ru default)', async () => {
+  test('acknowledges extracted item + beneficiary (ru)', async () => {
     const engine = makeEngine();
-    const r = await engine.runTurn({ sessionId: 'e1', message: 'нужен ноутбук для Иванова' });
+    // Explicit lang: the engine default is 'en' since 2026-07-28, so a test about
+    // Russian rendering has to ask for Russian rather than rely on the default.
+    const r = await engine.runTurn({ sessionId: 'e1', message: 'нужен ноутбук для Иванова', lang: 'ru' });
     expect(r.preamble).toBeTruthy();
     expect(r.preamble).toMatch(/ноутбук/);
     expect(r.preamble).toMatch(/Иванова/);
@@ -136,5 +138,71 @@ describe('F9.1d+F9.2: beneficiary confirm-or-choose (author asked first)', () =>
     const r = await engine.runTurn({ sessionId: 'd5', message: 'да' });
     expect(r.askingSlot).toBe('location');
     expect(r.resolveChoices.default.code).toBe('GVA');
+  });
+});
+
+// BUG-DIAL-001/002 — the confirm-or-choose labels were the only strings in the
+// engine that never went through uiStrings(lang). An English dialogue rendered
+// "Request for: для вас. Correct?", which the arena transcripts showed in 15 of
+// 41 runs: the user cannot answer a question they cannot read, so the turn fell
+// through to routing and the conversation looked like it had lost its state.
+describe('BUG-DIAL-001: confirm labels follow the dialogue language', () => {
+  const CYRILLIC = /[\u0400-\u04FF]/;
+
+  test('a self-request in English shows no Russian', async () => {
+    const engine = makeEngine();
+    const r = await engine.runTurn({ sessionId: 'loc-en', message: 'I need a laptop for myself', lang: 'en' });
+    expect(r.response).not.toMatch(CYRILLIC);
+    // Whichever slot is asked first, its prefix and its confirmation come from
+    // the English table.
+    expect(r.response).toMatch(/Author|Request for|Location|User/);
+    expect(r.response).toMatch(/Correct\?/);
+  });
+
+  test.each(['en', 'fr', 'es', 'zh'])('a %s dialogue never leaks Cyrillic into the confirm', async (lang) => {
+    const engine = makeEngine();
+    const r = await engine.runTurn({ sessionId: `loc-${lang}`, message: 'laptop for myself', lang });
+    expect(r.response).not.toMatch(CYRILLIC);
+  });
+
+  test('a Russian dialogue still reads in Russian', async () => {
+    const engine = makeEngine();
+    const r = await engine.runTurn({ sessionId: 'loc-ru', message: 'нужен ноутбук', lang: 'ru' });
+    expect(r.response).toMatch(CYRILLIC);
+  });
+
+  test('every language defines the confirm-label keys', () => {
+    const { ui: uiStrings } = require('../templates/ui-strings');
+    for (const lang of ['en', 'ru', 'fr', 'es', 'ar', 'zh']) {
+      const S = uiStrings(lang);
+      // A missing key would render "undefined" in the control — worse than the
+      // wrong language, because it reads as a broken system.
+      expect(typeof S.self).toBe('string');
+      expect(S.self.length).toBeGreaterThan(0);
+      expect(typeof S.recipientFallback).toBe('string');
+      expect(typeof S.locationFallback).toBe('string');
+    }
+  });
+
+  test('only the Russian table carries Cyrillic in those keys', () => {
+    const { ui: uiStrings } = require('../templates/ui-strings');
+    for (const lang of ['en', 'fr', 'es', 'zh']) {
+      const S = uiStrings(lang);
+      expect(S.self).not.toMatch(CYRILLIC);
+      expect(S.recipientFallback).not.toMatch(CYRILLIC);
+      expect(S.locationFallback).not.toMatch(CYRILLIC);
+    }
+    expect(uiStrings('ru').self).toMatch(CYRILLIC);
+  });
+
+  test('the label follows the turn language, and the default is English', async () => {
+    // confirmOrChoose used to default to lang='ru' AND ignore the argument
+    // entirely for the label. Both are fixed: the label tracks the turn language,
+    // and runTurn itself now defaults to 'en' (ratified 2026-07-28).
+    const engine = makeEngine();
+    const dflt = await engine.runTurn({ sessionId: 'loc-d-dflt', message: 'laptop for myself' });
+    expect(dflt.response).not.toMatch(CYRILLIC);
+    const ru = await engine.runTurn({ sessionId: 'loc-d-ru', message: 'laptop for myself', lang: 'ru' });
+    expect(ru.response).toMatch(CYRILLIC);
   });
 });

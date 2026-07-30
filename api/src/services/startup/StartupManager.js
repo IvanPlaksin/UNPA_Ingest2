@@ -317,14 +317,16 @@ class StartupManager {
       const { getDocumentIndexService } = require('../indexing/document-index.service');
       const indexer = getDocumentIndexService(this.log);
 
-      // Autostart harvesting on boot unless explicitly disabled; otherwise the
-      // worker is created and can be started later via POST /document-index/control.
-      if (process.env.DOCUMENT_INDEXER_AUTOSTART !== 'false') {
+      // Default: STOPPED on boot. The worker is created (so it can be started
+      // later via POST /document-index/control or the dashboard), but harvesting
+      // does NOT begin automatically. Set DOCUMENT_INDEXER_AUTOSTART=true to
+      // opt back into boot-time harvesting.
+      if (process.env.DOCUMENT_INDEXER_AUTOSTART === 'true') {
         const handle = indexer.schedule();
         this.timers.push({ name: 'DocumentIndexer', interval: 0, handle });
-        this._log('info', 'Document Indexer started (harvesting source metadata)');
+        this._log('info', 'Document Indexer started (autostart on — harvesting source metadata)');
       } else {
-        this._log('info', 'Document Indexer ready (autostart off — start via API)');
+        this._log('info', 'Document Indexer ready (stopped by default — start via dashboard/API)');
       }
     } catch (err) {
       this._log('warn', `Document Indexer init skipped: ${err.message}`);

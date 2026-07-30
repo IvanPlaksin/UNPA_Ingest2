@@ -80,6 +80,9 @@ describe('CATALOG_BROWSE', () => {
     expect(r.controls[0]).toMatchObject({ type: 'choice', slotId: '__catalog_browse__' });
     expect(r.controls[0].options.map((o) => o.value)).toEqual(['g-hr', 'g-fin']);
     expect(tools.browseCatalog).toHaveBeenCalledWith(null);
+    // VF-2: voice must read the categories aloud, not just the header.
+    expect(r.speech).toContain('Human Resources');
+    expect(r.speech).toContain('Finance');
   });
 
   test('drill-down controlAction browses children + adds a Back option', async () => {

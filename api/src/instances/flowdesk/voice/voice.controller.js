@@ -16,10 +16,7 @@
 
 const voiceConfig = require('./voice-config');
 const voiceProxy = require('./voice-proxy');
-const redis = require('../../../services/redis.service');
-
-const TRANSCRIPT_TTL_SECONDS = 60 * 60 * 24; // 24h — matches a working session lifetime
-const TRANSCRIPT_KEY = (sessionId) => `voice:transcript:${sessionId}`;
+const transcriptStore = require('./voice-transcript.store');
 
 // Base instruction for the voice session. Reuses the FlowDesk intake framing and
 // adds a voice-brevity addendum (spoken answers must stay short). Full reuse of the
@@ -30,18 +27,6 @@ const VOICE_SYSTEM_PROMPT = [
   'Keep answers to at most 2-3 sentences unless the user explicitly asks for detail.',
   'Detect and reply in the user\'s language (Arabic, Chinese, English, French, Russian, or Spanish).',
 ].join(' ');
-
-let msgCounter = 0;
-function makeMessage(role, content, extraMeta) {
-  msgCounter += 1;
-  return {
-    id: `m${Date.now()}_${msgCounter}`,
-    role,
-    content,
-    timestamp: new Date().toISOString(),
-    metadata: { source: 'voice', ...(extraMeta || null) },
-  };
-}
 
 /**
  * POST /flowdesk/voice/token
@@ -114,20 +99,11 @@ async function appendTranscript(req, res) {
       return res.status(400).json({ error: 'messages[] is required' });
     }
 
-    const normalized = messages
-      .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
-      .map((m) => makeMessage(m.role, m.content, m.timestamp ? { clientTimestamp: m.timestamp } : null));
-
-    if (normalized.length === 0) {
+    const { appended, total } = await transcriptStore.append(sessionId, messages);
+    if (appended === 0) {
       return res.status(400).json({ error: 'no valid messages (need {role: user|assistant, content: string})' });
     }
-
-    const key = TRANSCRIPT_KEY(sessionId);
-    const existing = (await redis.get(key)) || [];
-    const updated = existing.concat(normalized);
-    await redis.set(key, updated, TRANSCRIPT_TTL_SECONDS);
-
-    return res.json({ sessionId, appended: normalized.length, total: updated.length });
+    return res.json({ sessionId, appended, total });
   } catch (err) {
     console.error('[FlowDesk voice] transcript error:', err.message);
     return res.status(500).json({ error: 'voice transcript failed', detail: err.message });
@@ -142,7 +118,7 @@ async function getTranscript(req, res) {
   try {
     const sessionId = req.params.sessionId;
     if (!sessionId) return res.status(400).json({ error: 'sessionId is required' });
-    const messages = (await redis.get(TRANSCRIPT_KEY(sessionId))) || [];
+    const messages = await transcriptStore.get(sessionId);
     return res.json({ sessionId, messages });
   } catch (err) {
     console.error('[FlowDesk voice] get transcript error:', err.message);

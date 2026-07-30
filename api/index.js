@@ -70,6 +70,8 @@ const visualizationRoutes = require('./src/routes/visualization.routes');
 const dashboardRoutes = require('./src/routes/dashboard.routes');
 const exportRoutes = require('./src/routes/export.routes');
 const graphTransferRoutes = require('./src/routes/graph-transfer.routes');
+const graphSyncRoutes = require('./src/routes/graph-sync.routes');
+const graphSyncSourceRoutes = require('./src/routes/graph-sync-source.routes');
 const knowledgeDashboardRoutes = require('./src/routes/knowledge-dashboard.routes');
 const exportAssistantRoutes = require('./src/routes/export-assistant.routes');
 const reportRoutes = require('./src/routes/report.routes');
@@ -91,6 +93,7 @@ const flowdeskAdminRoutes = require('./src/instances/flowdesk/routes/flowdesk-ad
 const codexRoutes = require('./src/routes/codex.route');
 const backlogRoutes = require('./src/routes/backlog.route');
 const backlogExecutionRoutes = require('./src/routes/backlog-execution.route');
+const dialogueGymRoutes = require('./src/routes/dialogue-gym.route');
 const notificationsRoutes = require('./src/routes/notifications.route');
 const monitorRoutes = require('./src/routes/monitor.route');
 const kbHealthRoutes = require('./src/routes/kb-health.route');
@@ -207,6 +210,8 @@ app.use('/api/v1/connectors', connectorsRoutes);
 app.use('/api/v1/visualization', visualizationRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/export', exportRoutes);
+app.use('/api/v1/graph-transfer/sync', graphSyncRoutes); // receiver (peer-key auth; more specific — mount first)
+app.use('/api/v1/graph-transfer/push', graphSyncSourceRoutes); // source (operator/UI auth)
 app.use('/api/v1/graph-transfer', graphTransferRoutes);
 app.use('/api/v1/knowledge-dashboard', knowledgeDashboardRoutes);
 app.use('/api/v1/export-assistant', exportAssistantRoutes);
@@ -221,12 +226,16 @@ app.use('/api/v1/graph-status', graphStatusRoutes);
 app.use('/api/v1/tool-catalog', toolCatalogRoutes);
 app.use('/api/v1/approval', approvalRoutes);
 app.use('/api/v1/assistant', assistantRoutes);
+// Shared-secret gate for the whole FlowDesk surface (config + admin + chat).
+// Altiora's proxy attaches X-Flowdesk-Api-Key; fail-open when FLOWDESK_PROXY_API_KEY is unset.
+app.use('/api/v1/flowdesk', require('./src/middleware/flowdesk-proxy-auth.middleware').flowdeskProxyAuthMiddleware);
 app.use('/api/v1/flowdesk/config', flowdeskConfigRoutes);
 app.use('/api/v1/flowdesk/admin', flowdeskAdminRoutes);
 app.use('/api/v1/flowdesk', flowdeskRoutes);
 app.use('/api/v1/codex', codexRoutes);
 app.use('/api/v1/backlog', backlogRoutes);
 app.use('/api/v1/backlog', backlogExecutionRoutes);
+app.use('/api/v1/dialogue-gym', dialogueGymRoutes);
 app.use('/api/v1', notificationsRoutes);
 app.use('/api/v1/monitor', monitorRoutes);
 

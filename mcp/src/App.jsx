@@ -25,11 +25,13 @@ import TensorDashboardPage from './pages/TensorDashboardPage';
 import GxeManagerPage from './pages/GxeManagerPage';
 import GraphVerifierPage from './pages/GraphVerifierPage';
 import GraphTransferPage from './pages/GraphTransferPage';
+import DataSyncPage from './pages/DataSyncPage';
 import KnowledgeDashboardPage from './pages/KnowledgeDashboardPage';
 import FlowDeskPage from './instances/flowdesk/pages/FlowDeskPage';
 import FlowDeskConfigPage from './instances/flowdesk/pages/FlowDeskConfigPage';
 import FlowDeskChatV2 from './features/flowdesk-chat-v2/FlowDeskChatV2';
 import FlowDeskAdminPage from './features/flowdesk-admin/FlowDeskAdminPage';
+import DialogueGymPage from './features/dialogue-gym/DialogueGymPage';
 import BackLogPage from './pages/BackLogPage';
 import CodexViewerPage from './pages/CodexViewerPage';
 import DialoguePage from './pages/DialoguePage/DialoguePage';
@@ -219,6 +221,7 @@ function App() {
                                 {/* Graph Verifier - ExecutableGraphVerifier L1-L3 dashboard */}
                                 <Route path="/graph-verifier" element={<GraphVerifierPage />} />
                                 <Route path="/graph-transfer" element={<GraphTransferPage />} />
+                                <Route path="/data-sync" element={<DataSyncPage />} />
                                 <Route path="/knowledge-dashboard" element={<KnowledgeDashboardPage />} />
 
                                 {/* FlowDesk AI Intake Demo */}
@@ -231,6 +234,8 @@ function App() {
                                 <Route path="/flowdesk/config" element={<FlowDeskConfigPage />} />
                                 {/* FlowDesk Chat Admin — Chat V2 ↔ Altiora observability */}
                                 <Route path="/flowdesk-admin/*" element={<FlowDeskAdminPage />} />
+                                {/* Dialogue Gym — personas, scenarios, arena runs, judge */}
+                                <Route path="/dialogue-gym/*" element={<DialogueGymPage />} />
 
                                 {/* BackLog — AI-generated code modification tasks */}
                                 <Route path="/backlog" element={<BackLogPage />} />

@@ -1,0 +1,6 @@
+node_modules
+*.tgz
+__tests__
+e2e-test-package.ugp.tar.gz
+.env
+coverage

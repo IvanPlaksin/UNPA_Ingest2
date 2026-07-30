@@ -137,6 +137,12 @@ async function seedService(snap) {
     slotId: sl.slotId, type: sl.type, required: sl.required, phase: sl.phase, order: i,
     promptHint: sl.promptHint ?? null, groupable: sl.groupable === true,
     requiredWhen: sl.requiredWhen ?? null, altioraFieldId: sl.altioraFieldId ?? null,
+    helpText: sl.helpText ?? null, multi: sl.multi === true,
+    // Section grouping (Altiora sectionId): the form author's semantic group.
+    section: sl.section ?? null, sectionLabel: sl.sectionLabel ?? null,
+    // P1-12: the cascade descriptor is a nested object; Memgraph properties are scalars,
+    // so it round-trips as JSON (parsed back in schema-compiler).
+    dictRefJson: sl.dictRef ? JSON.stringify(sl.dictRef) : null,
   }));
 
   const optionRows = [];
@@ -185,7 +191,9 @@ async function seedService(snap) {
      CREATE (sl:SlotDef {serviceId:$sid, slotId:row.slotId, type:row.type, required:row.required,
        phase:row.phase, order:row.order})
      SET sl.promptHint = row.promptHint, sl.groupable = row.groupable,
-         sl.requiredWhen = row.requiredWhen, sl.altioraFieldId = row.altioraFieldId
+         sl.requiredWhen = row.requiredWhen, sl.altioraFieldId = row.altioraFieldId,
+         sl.helpText = row.helpText, sl.multi = row.multi, sl.dictRefJson = row.dictRefJson,
+         sl.section = row.section, sl.sectionLabel = row.sectionLabel
      CREATE (s)-[:HAS_SLOT]->(sl)`,
     { sid, rows: slotRows }
   );
@@ -255,7 +263,7 @@ async function seedService(snap) {
     );
   }
 
-  // 9. SlotGroup + INCLUDES
+  // 9. SlotGroup + INCLUDES (batchable slots — one group per service).
   if (groupable.length) {
     await write(
       `CREATE (g:SlotGroup {serviceId:$sid, groupId:$gid})
@@ -265,6 +273,32 @@ async function seedService(snap) {
        CREATE (g)-[:INCLUDES]->(sl)`,
       { sid, gid: `${sid}:grp`, slotIds: groupable }
     );
+  }
+
+  // 10. Section groups (Altiora sectionId) — the form author's semantic grouping.
+  // One (:SlotGroup {kind:'section'}) per distinct section, INCLUDES its slots in
+  // author order. Distinct groupId namespace (`${sid}:sec:<section>`) so it never
+  // collides with the batch group above.
+  const sectionRows = [];
+  for (const sl of slots) {
+    if (sl.section) sectionRows.push({ section: sl.section, label: sl.sectionLabel ?? null, slotId: sl.slotId });
+  }
+  if (sectionRows.length) {
+    const bySection = new Map();
+    for (const row of sectionRows) {
+      if (!bySection.has(row.section)) bySection.set(row.section, { label: row.label, slotIds: [] });
+      bySection.get(row.section).slotIds.push(row.slotId);
+    }
+    for (const [section, { label, slotIds }] of bySection) {
+      await write(
+        `CREATE (g:SlotGroup {serviceId:$sid, groupId:$gid, kind:'section', section:$section, label:$label})
+         WITH g
+         UNWIND $slotIds AS slotId
+         MATCH (sl:SlotDef {serviceId:$sid, slotId:slotId})
+         CREATE (g)-[:INCLUDES]->(sl)`,
+        { sid, gid: `${sid}:sec:${section}`, section, label, slotIds }
+      );
+    }
   }
 
   return sid;

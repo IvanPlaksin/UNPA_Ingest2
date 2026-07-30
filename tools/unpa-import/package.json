@@ -1,0 +1,32 @@
+{
+  "name": "unpa-import",
+  "version": "1.0.0",
+  "description": "UNPA Graph Package (UGP) importer for Memgraph + Qdrant",
+  "bin": {
+    "unpa-import": "./bin/unpa-import.js"
+  },
+  "main": "src/cli.js",
+  "scripts": {
+    "start": "node bin/unpa-import.js",
+    "vendor": "node scripts/vendor.js",
+    "standalone-check": "node scripts/standalone-check.js",
+    "test": "jest",
+    "e2e": "node scripts/e2e-test.js",
+    "prepack": "node scripts/vendor.js"
+  },
+  "dependencies": {
+    "@qdrant/js-client-rest": "^1.16.2",
+    "chalk": "^4.1.2",
+    "cli-table3": "^0.6.5",
+    "commander": "^12.1.0",
+    "dotenv": "^16.4.5",
+    "neo4j-driver": "^5.28.1",
+    "tar-stream": "^2.2.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

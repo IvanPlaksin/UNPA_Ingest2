@@ -34,6 +34,7 @@ const getSession = h(async (req) => {
   return out;
 });
 const getTurns = h((req) => svc.getTurns(req.params.sessionId));
+const getLlmCall = h((req) => svc.getLlmCall(req.query.key));
 
 // ── Quality (P2) ──────────────────────────────────────────────────────────────
 const listNegative = h((req) => svc.listNegativeSessions(req.query));
@@ -151,8 +152,25 @@ const getTicketLive = h((req) => svc.getTicketLive(req.params.ticketId));
 const llmStats = h((req) => svc.llmStats({ days: req.query.days }));
 const adminHealth = h(() => svc.adminHealth());
 
+// ── ACT permissions (Phase 9 management) ──────────────────────────────────────
+const actPerm = require('../services/act-permissions.service');
+const actUsersList = h(() => actPerm.effective());
+const actUsersAdd = h((req) => actPerm.add({
+  key: req.body?.key, label: req.body?.label,
+  addedBy: req.flowdeskUser?.email || req.flowdeskUser?.userId || 'admin',
+}));
+const actUsersSetEnabled = h((req) => actPerm.setEnabled(req.params.key, req.body?.enabled));
+const actUsersRemove = h((req) => actPerm.remove(req.params.key));
+const actUsersCheck = h((req) => ({
+  authorized: require('../services/act-authorization').isActAuthorized({ userId: req.query.userId, email: req.query.email }),
+}));
+const actPermSetDefault = h((req) => actPerm.setDefault(
+  req.params.permission, req.body?.enabledForAll,
+  req.flowdeskUser?.email || req.flowdeskUser?.userId || 'admin',
+));
+
 module.exports = {
-  listSessions, sessionStats, getSession, getTurns,
+  listSessions, sessionStats, getSession, getTurns, getLlmCall,
   listNegative, qualityMeta, triageSession, createBacklog,
   listCatalog, catalogProviders, runCatalogSync, listCatalogSyncRuns, resolveIntent,
   listSchemas, getSchemaDetail, invalidateSchema, rematerializeSchema,
@@ -163,4 +181,5 @@ module.exports = {
   promptGetVersions, promptCompile, promptValidate, promptSandbox, promptApply,
   promptActive, promptApplied, promptClear, promptAssistantChat,
   listTickets, getTicketLive, llmStats, adminHealth,
+  actUsersList, actUsersAdd, actUsersSetEnabled, actUsersRemove, actUsersCheck, actPermSetDefault,
 };
