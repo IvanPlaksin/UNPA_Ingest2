@@ -18,11 +18,25 @@
  * So this module turns what the persona SAID into what a person would have DONE
  * with the widget in front of them.
  *
- * WHAT IT DELIBERATELY WILL NOT SIMULATE. A directory autocomplete — a person, a
- * duty station — is a record PICKED from a live search, and inventing a pick would
- * fabricate data the directory never returned. Those turns stay free text, and say
- * so (`why: 'directory_needs_a_real_pick'`), so the arena's remaining blind spot is
- * recorded rather than hidden.
+ * A DIRECTORY FIELD IS SEARCHED, NOT INVENTED — and that distinction took a
+ * deadlock to get right.
+ *
+ * The first version refused directory fields outright, reasoning that a pick is a
+ * real record and making one up fabricates data. The reasoning was sound; the
+ * consequence was not. Every Altiora form opens with two directory fields (the
+ * recipient and the duty station), so a persona that cannot pick can never reach
+ * field three. Watched live: the assistant asked for the duty station five times,
+ * the persona answered "New York" five times and then gave up — sixteen turns, no
+ * form, and a transcript that reads like an interpreter defect when it was a harness
+ * one.
+ *
+ * The distinction that resolves it: SEARCHING is what a person does, INVENTING is
+ * what must not happen. So a directory field takes the persona's own words as a
+ * QUERY against the real directory and commits whichever record comes back — the
+ * same act, and the same data, as a user typing and clicking. When the search
+ * returns nothing the original refusal stands, and says so
+ * (`why: 'directory_no_match'`), because at that point there is genuinely no record
+ * to pick.
  *
  * @module services/dialogue-gym/persona-click
  */
@@ -79,12 +93,46 @@ function fieldControl(controls) {
   return (controls || []).find((c) => c && c.slotId && !String(c.slotId).startsWith('__'));
 }
 
+/** The query a persona's sentence makes: its longest proper-noun-ish phrase, else all of it. */
+function queryFrom(text) {
+  const said = String(text || '').trim();
+  // "New York is my duty station" → "New York". Capitalised runs are what a person
+  // types into a directory box; failing that, the whole sentence is a fair query.
+  const proper = said.match(/\b([A-Z][\w'’-]+(?:\s+[A-Z][\w'’-]+)*)/g);
+  if (proper && proper.length) return proper.sort((a, b) => b.length - a.length)[0];
+  return said.slice(0, 60);
+}
+
+/**
+ * Search the directory the control names, with the persona's own words.
+ *
+ * Which directory comes from the control itself (`source.directory`, or the
+ * autocomplete child a confirm carries) — never guessed from the slot name, because
+ * a people search for a duty station is exactly the confusion the typed controls
+ * exist to prevent.
+ */
+async function pickFromDirectory(control, said, opts) {
+  if (typeof opts.resolveDirectory !== 'function') return null;
+  const child = (control.children || []).find((x) => x && x.type === 'autocomplete');
+  const kind = (control.source && control.source.directory)
+    || (child && child.source && child.source.directory)
+    || null;
+  if (!kind) return null;
+  try {
+    return await opts.resolveDirectory(kind, queryFrom(said));
+  } catch {
+    return null; // the directory being down is not the persona's problem to solve
+  }
+}
+
 /**
  * @param {Array} controls        `turn.controls` from the previous agent turn
  * @param {string} text           what the persona wrote
- * @returns {{controlAction: object, userMessage: string}|{controlAction: null, why: string}}
+ * @param {{resolveDirectory?: Function}} [opts]  async (kind, query) => record|null,
+ *   injected by the runner and bound to the REAL directory (see the header).
+ * @returns {Promise<{controlAction: object, userMessage: string}|{controlAction: null, why: string}>}
  */
-function clickFor(controls, text) {
+async function clickFor(controls, text, opts = {}) {
   const c = fieldControl(controls);
   if (!c) return { controlAction: null, why: 'no_field_control' };
   const said = String(text || '').trim();
@@ -94,11 +142,15 @@ function clickFor(controls, text) {
 
   switch (c.type) {
     case 'confirm': {
-      // A confirm proposes a value and offers a search for anything else. Agreement
-      // is a click; disagreement means the person would search the directory, which
-      // is the one thing that cannot be faked (see the header).
+      // A confirm proposes a value and offers a search underneath it. Agreement is a
+      // click. Disagreement is what a person does next: they search for the right
+      // record — so that is what happens here too, against the real directory.
       if (AFFIRMATIVE.test(said)) return { controlAction: { slotId, value: true }, userMessage: said };
-      if (NEGATIVE.test(said)) return { controlAction: null, why: 'declined_needs_a_real_pick' };
+      if (NEGATIVE.test(said) || !AFFIRMATIVE.test(said)) {
+        const picked = await pickFromDirectory(c, said, opts);
+        if (picked) return { controlAction: { slotId, value: picked }, userMessage: said };
+        return { controlAction: null, why: NEGATIVE.test(said) ? 'directory_no_match' : 'unclear_confirm' };
+      }
       return { controlAction: null, why: 'unclear_confirm' };
     }
 
@@ -135,12 +187,16 @@ function clickFor(controls, text) {
       // arrives as the field's value rather than as a message about it.
       return { controlAction: { slotId, value: said }, userMessage: said };
 
-    case 'autocomplete':
-      return { controlAction: null, why: 'directory_needs_a_real_pick' };
+    case 'autocomplete': {
+      const picked = await pickFromDirectory(c, said, opts);
+      return picked
+        ? { controlAction: { slotId, value: picked }, userMessage: said }
+        : { controlAction: null, why: 'directory_no_match' };
+    }
 
     default:
       return { controlAction: null, why: `unsupported_control:${c.type}` };
   }
 }
 
-module.exports = { clickFor, fieldControl, dateFrom, numberFrom, optionsFrom, NEGATIVE };
+module.exports = { clickFor, fieldControl, dateFrom, numberFrom, optionsFrom, queryFrom, NEGATIVE };

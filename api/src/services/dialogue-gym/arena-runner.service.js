@@ -161,6 +161,26 @@ function isDirectoryUnavailableTurn(turn) {
 
 const { clickFor } = require('./persona-click');
 
+/**
+ * The directory a simulated user searches — the REAL one.
+ *
+ * A pick has to be a record the directory actually returned (see persona-click), so
+ * this is the same search the UI performs, with the persona's words as the query and
+ * the top hit as the pick. Injectable for tests; absent, a directory field simply
+ * stays free text as it did before.
+ */
+function defaultResolveDirectory() {
+  return async (kind, query) => {
+    const dir = require('../../instances/flowdesk/services/directory');
+    if (kind === 'location') {
+      const hits = await dir.searchLocations(query);
+      return (Array.isArray(hits) && hits[0]) || null;
+    }
+    const hits = await dir.resolveUser(query);
+    return (Array.isArray(hits) && hits[0]) || null;
+  };
+}
+
 function createArenaRunner(deps = {}) {
   const gym = deps.gym || require('./dialogue-gym.service');
   const simulator = deps.simulator || require('./persona-simulator');
@@ -176,6 +196,7 @@ function createArenaRunner(deps = {}) {
     return require('../../instances/flowdesk/services/prompt-sandbox.service').createSandboxSession(p, d);
   });
   const promptLoader = deps.promptLoader || require('./prompt-loader');
+  const resolveDirectory = deps.resolveDirectory || defaultResolveDirectory();
 
   /**
    * Resolve which CHAT_PROMPT to test into {promptGraph|systemPromptText} + a
@@ -405,7 +426,7 @@ function createArenaRunner(deps = {}) {
           userMessage = opt.label; // human-readable message for transcript
         } else {
           userMessage = personaResult.userMessage;
-          const clicked = clickFor(internals.controlsRaw, userMessage);
+          const clicked = await clickFor(internals.controlsRaw, userMessage, { resolveDirectory });
           if (clicked.controlAction) pendingControlAction = clicked.controlAction;
           else {
           lastNoClick = clicked.why; // recorded, so the blind spots stay visible
