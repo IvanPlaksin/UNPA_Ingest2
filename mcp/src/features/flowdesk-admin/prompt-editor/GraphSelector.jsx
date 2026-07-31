@@ -20,8 +20,13 @@ import {
   promptListGraphs, promptActiveEntry, promptSetActiveEntry, promptCreateGraph,
 } from '../api/adminClient';
 import { useRulesStore } from './rulesStore';
+import { useTourAnchor } from '@guided-ux/tour/react';
 
 export default function GraphSelector({ onOpenGraph, onCreated }) {
+  // TOUR-003: the whole `prompt-activate` tour points here.
+  const rootRef = useTourAnchor('editor.graphSelector', {
+    label: 'Which graph is the system prompt', route: '/flowdesk-admin/prompt',
+  });
   const entryId = useRulesStore((s) => s.entryId);
   const graphName = useRulesStore((s) => s.graphName);
   const isEvolutio = useRulesStore((s) => s.isEvolutio);
@@ -82,7 +87,7 @@ export default function GraphSelector({ onOpenGraph, onCreated }) {
 
   return (
     <>
-      <Stack direction="row" spacing={0.5} alignItems="center">
+      <Stack direction="row" spacing={0.5} alignItems="center" ref={rootRef}>
         <Button size="small" variant="outlined" startIcon={<GitBranch size={14} />}
           onClick={(e) => { setAnchor(e.currentTarget); refresh(); }}>
           {graphName}

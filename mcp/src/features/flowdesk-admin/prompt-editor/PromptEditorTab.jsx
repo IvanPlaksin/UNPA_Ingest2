@@ -37,6 +37,12 @@ import { useTourAnchor } from '@guided-ux/tour/react';
 const nodeTypes = { ruleNode: RuleNode };
 
 function Canvas() {
+  // TOUR-003 — the canvas is the thing four of the five prompt-editor tours point at,
+  // and it had no anchor: a step aimed here would have attached to nothing and been
+  // skipped, which reads as a tour that silently loses steps.
+  const canvasRef = useTourAnchor('editor.canvas', {
+    label: 'The rules canvas', route: '/flowdesk-admin/prompt',
+  });
   const { nodes, onNodesChange, onEdgesChange, onConnect, setSelected, addRule } = useRulesStore();
   const selectedId = useRulesStore((s) => s.selectedId);
   const selectedEdgeId = useRulesStore((s) => s.selectedEdgeId);
@@ -103,6 +109,7 @@ function Canvas() {
   }, [rf, addRule]);
 
   return (
+    <Box ref={canvasRef} sx={{ width: '100%', height: '100%' }}>
     <ReactFlow
       nodes={viewNodes} edges={edges}
       onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect}
@@ -121,6 +128,7 @@ function Canvas() {
         <MiniMap nodeColor={(n) => CATEGORY_COLOR[n.data?.category] || '#64748b'} pannable zoomable />
       )}
     </ReactFlow>
+    </Box>
   );
 }
 

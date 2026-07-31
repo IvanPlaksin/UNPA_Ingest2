@@ -74,7 +74,7 @@ const DIAGNOSE = {
         'The Context tab compiles the prompt as the model will actually receive it, in one of the nine states a conversation can be in. A rule missing here is missing for real — and the panel says why: its condition, its status, or its scope.',
         'Вкладка Context собирает промпт так, как его получит модель, в одном из девяти состояний разговора. Если правила здесь нет — его нет по-настоящему, и панель говорит почему: условие, статус или область.',
       ),
-      { anchorId: 'editor.tab.preview', next: 'compare' }),
+      { anchorId: 'editor.preview', next: 'compare' }),
 
     step('compare',
       t('Compare two contexts to see the difference', 'Сравните два контекста, чтобы увидеть разницу'),
@@ -82,7 +82,7 @@ const DIAGNOSE = {
         'The real question is rarely “what does the model see while filling a form” — it is “what is DIFFERENT between filling and confirming”. Turn on Compare and the rules that differ sort to the top.',
         'Настоящий вопрос редко звучит как «что видит модель при заполнении» — он звучит как «чем это отличается от подтверждения». Включите Compare, и различающиеся правила окажутся сверху.',
       ),
-      { anchorId: 'editor.tab.preview', next: 'coverage' }),
+      { anchorId: 'editor.preview', next: 'coverage' }),
 
     step('coverage',
       t('A rule that reaches nothing at all', 'Правило, не достигающее ничего'),
@@ -142,7 +142,7 @@ const CONDITION = {
         'Unconditional rules form the cached part of the prompt, paid for once. Conditional text sits after it and is re-sent on every turn. Scoping a long rule to a narrow phase can cost more than leaving it always on — the Context tab shows both numbers.',
         'Безусловные правила образуют кешируемую часть промпта, оплачиваемую один раз. Условный текст идёт после неё и пересылается каждый ход. Ограничить длинное правило узкой фазой может выйти дороже, чем оставить его всегда — вкладка Context показывает оба числа.',
       ),
-      { anchorId: 'editor.tab.preview' }),
+      { anchorId: 'editor.preview' }),
   ],
 };
 
@@ -274,7 +274,7 @@ const COVERAGE = {
         'The opposite finding, and the more serious one: a context that no constraint and no identity rule reaches. For those turns the assistant is, in effect, a different assistant. It is not visible in any single compile, because a compile only ever looks at one context.',
         'Обратная находка и более серьёзная: контекст, до которого не доходит ни одно ограничение и ни одно правило идентичности. На этих ходах ассистент фактически другой. В отдельной сборке этого не видно — сборка всегда смотрит только на один контекст.',
       ),
-      { anchorId: 'editor.tab.preview', next: 'attribution' }),
+      { anchorId: 'editor.preview', next: 'attribution' }),
 
     step('attribution',
       t('Which rules governed a real turn', 'Какие правила действовали на реальном ходу'),

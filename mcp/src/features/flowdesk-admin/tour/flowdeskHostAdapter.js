@@ -180,20 +180,38 @@ export function createFlowdeskHostAdapter(deps) {
       return { ok: false, reason: 'not_supported', message: `Cannot search ${domain}.`, items: [], total: 0 };
     },
 
-    /** Show a found object. Navigation plus selection — a mutation, by the standard. */
+    /**
+     * Show a found object. Navigation plus selection — a mutation, by the standard.
+     *
+     * TOUR-002 — this is the assistant's answer to "where is it?". It used to know
+     * two domains and to say nothing about WHERE it had put the thing, so a caller
+     * could not tell a successful reveal from a no-op: the tour had to guess which
+     * anchor to point at next. It now names the anchor it made visible, and reports
+     * `alreadyVisible` rather than navigating on the spot the user is already on.
+     */
     async reveal(intent) {
-      const { domain, id } = intent;
-      if (domain === 'sessions') {
-        const path = ROUTES['session-detail']({ id });
-        if (getPath() === path) return ok({ alreadyThere: true });
-        navigate(path);
-        return ok();
-      }
-      if (domain === 'rules') {
-        navigate(ROUTES['prompt-rule']({ nodeId: id }));
-        return ok();
-      }
-      return no('target_not_found', `Nothing called ${domain}/${id} to show.`);
+      const { domain, id, highlight } = intent;
+      const land = (path, anchorId) => {
+        const already = getPath() === path;
+        if (!already) navigate(path);
+        if (highlight) {
+          // Best effort: the element may not be mounted for a frame or two.
+          setTimeout(() => { this.interact({ type: 'highlight', anchorId }).catch(() => {}); }, 350);
+        }
+        return ok({ anchorId, alreadyVisible: already });
+      };
+
+      if (!id) return no('target_not_found', 'No id was given to show.');
+
+      if (domain === 'sessions') return land(ROUTES['session-detail']({ id }), 'session.turn.rules');
+      if (domain === 'rules') return land(ROUTES['prompt-rule']({ nodeId: id }), 'editor.properties');
+      if (domain === 'schemas') return land(ROUTES['schema-detail']({ ousId: id }), 'admin.tab.schemas');
+      // A version and a graph are both reached through the editor, which is where
+      // their controls live — the selector for one, the history menu for the other.
+      if (domain === 'versions') return land(`${ADMIN}/prompt?version=${encodeURIComponent(id)}`, 'editor.save');
+      if (domain === 'graphs') return land(`${ADMIN}/prompt?graph=${encodeURIComponent(id)}`, 'editor.graphSelector');
+
+      return no('not_supported', `This application cannot show a “${domain}”.`);
     },
 
     /**
