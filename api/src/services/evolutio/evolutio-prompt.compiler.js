@@ -67,6 +67,17 @@ function conditionHolds(cond, ctx) {
   if (cond.engineNode && !(ctx.engineNode && cond.engineNode.includes(ctx.engineNode))) return false;
   if (cond.serviceId && !(ctx.serviceId && cond.serviceId.includes(ctx.serviceId))) return false;
   if (cond.activeRoute && !(ctx.activeRoute && cond.activeRoute.includes(ctx.activeRoute))) return false;
+  // EC-001 — the agent's own dimensions. `engineNode` and `activeRoute` above describe
+  // the state machine; the agent has neither, so scoping a rule to a branch of its
+  // dialogue needs these.
+  if (cond.phase && !(ctx.phase && cond.phase.includes(ctx.phase))) return false;
+  if (cond.serviceCategory && !(ctx.serviceCategory && cond.serviceCategory.includes(ctx.serviceCategory))) return false;
+  // toolContext is a LIST on the context (a turn can be both "has_draft" and
+  // "searching_kb"), so the condition holds when any required value is present.
+  if (cond.toolContext) {
+    const have = Array.isArray(ctx.toolContext) ? ctx.toolContext : (ctx.toolContext ? [ctx.toolContext] : []);
+    if (!cond.toolContext.some((t) => have.includes(t))) return false;
+  }
   return true;
 }
 
@@ -86,9 +97,34 @@ function selectNodes(graph, ctx, manifest) {
 
   const kept = new Map();
   for (const n of nodes) {
-    if (!isLive(n)) { continue; }
-    if (ctx.engineNode && !reachedEngineNodes(n).includes(ctx.engineNode)) continue;
-    if (!nodeApplies(n.nodeId, edges, ctx)) continue;
+    // EC-007: every exclusion is NAMED with its reason.
+    //
+    // This loop used to drop nodes silently, and that was survivable only while the
+    // graph had no conditions: an operator edited a rule, saw no change, and had
+    // nothing to look at. With APPLIES_WHEN the same silence becomes the ordinary
+    // case — a rule scoped to one phase is absent from most prompts by design — and
+    // "absent because it does not apply here" must not look like "absent because you
+    // broke something".
+    if (!isLive(n)) {
+      manifest.excluded.push({ nodeId: n.nodeId, type: n.type, reason: 'status', detail: n.status || 'not active' });
+      continue;
+    }
+    if (ctx.engineNode && !reachedEngineNodes(n).includes(ctx.engineNode)) {
+      manifest.excluded.push({ nodeId: n.nodeId, type: n.type, reason: 'engine_node', detail: ctx.engineNode });
+      continue;
+    }
+    if (!nodeApplies(n.nodeId, edges, ctx)) {
+      const conds = edges
+        .filter((e) => e.type === 'APPLIES_WHEN' && e.source === n.nodeId)
+        .map((e) => e.condition);
+      manifest.excluded.push({
+        nodeId: n.nodeId, type: n.type, reason: 'condition',
+        // The conditions that did NOT hold, so the panel can say what the turn would
+        // have had to look like for this rule to apply.
+        detail: conds,
+      });
+      continue;
+    }
     kept.set(n.nodeId, n);
   }
 
@@ -264,7 +300,9 @@ function pruneToBudget(selected, edges, budget, manifest) {
 // ── emission ──────────────────────────────────────────────────────────────────
 
 function emit(bands, title) {
-  const lines = [`# ${title}`, ''];
+  // A null title continues the document rather than starting a new one — the
+  // conditional layer is a second half, not a second prompt (EC-005).
+  const lines = title ? [`# ${title}`, ''] : [];
   const positions = [];
   const push = (node, band) => {
     const body = String(bodyOf(node) || '').trim();
@@ -317,12 +355,22 @@ function emit(bands, title) {
  * @returns {{text:string, byNode:Object, manifest:object, diagnostics:Array}}
  */
 function compile(graph, context = {}, meta = {}) {
+  // The context is normalised to a CLOSED shape on purpose: a compilation must follow
+  // from (graph version, context) alone, and an open bag would let a caller smuggle in
+  // something the manifest never records. Adding a condition key therefore means
+  // adding it here too — and forgetting to is silent, because an unknown key in a
+  // condition is simply never checked. That is exactly how `phase` first appeared to
+  // work and then applied everywhere.
   const ctx = {
     engineNode: context.engineNode || null,
     language: context.language || null,
     channel: context.channel || 'text',
     serviceId: context.serviceId || null,
     activeRoute: context.activeRoute || null,
+    // EC-001 — the agent's dimensions.
+    phase: context.phase || null,
+    toolContext: context.toolContext || null,
+    serviceCategory: context.serviceCategory || null,
     tokenBudget: context.tokenBudget || null,
   };
   const edges = graph.edges || [];
@@ -335,6 +383,8 @@ function compile(graph, context = {}, meta = {}) {
     context: ctx,
     nodes: [],
     droppedForBudget: [],
+    // EC-007: nodes that never reached the banding stage, each with why.
+    excluded: [],
     pulledInByDependency: [],
     conflictsChecked: 0,
     constraintsPresent: [],
@@ -345,11 +395,50 @@ function compile(graph, context = {}, meta = {}) {
   let selected = selectNodes(graph, ctx, manifest);
   selected = pruneToBudget(selected, edges, ctx.tokenBudget, manifest);
 
-  const bands = { narrative: [], constraint_blocking: [], persona: [], thesis: [], tool_contract: [], exemplar: [] };
-  for (const n of selected) bands[bandOf(n)].push(n);
-  for (const band of Object.keys(bands)) bands[band] = orderWithin(band, bands[band], edges);
+  // EC-005 — TWO LAYERS, because a conditional prompt and a cached prompt pull in
+  // opposite directions.
+  //
+  // The provider caches a PREFIX, and only if the same bytes come back every time. A
+  // rule scoped to a phase changes those bytes per phase, so putting conditional text
+  // in the prefix would give every phase its own cache entry — and below the measured
+  // floor (~4.5k tokens on Haiku 4.5) nothing caches at all.
+  //
+  // So the unconditional rules form a `core` that is byte-identical for everyone, and
+  // the conditional ones follow in a `conditional` block. The band order is preserved
+  // WITHIN each layer rather than across them: a reader gets the standing instructions
+  // in their usual order, then what applies here. Splitting bands across the boundary
+  // was the alternative and it is worse — an uncondition­al Thesis would be separated
+  // from its own band by a Persona.
+  const isConditional = (n) => edges.some((e) => e.type === 'APPLIES_WHEN' && e.source === n.nodeId && e.condition);
+  const bandsOf = (list) => {
+    const b = { narrative: [], constraint_blocking: [], persona: [], thesis: [], tool_contract: [], exemplar: [] };
+    for (const n of list) b[bandOf(n)].push(n);
+    for (const k of Object.keys(b)) b[k] = orderWithin(k, b[k], edges);
+    return b;
+  };
 
-  const { text, positions } = emit(bands, meta.title || 'System Prompt');
+  const coreNodes = selected.filter((n) => !isConditional(n));
+  const conditionalNodes = selected.filter(isConditional);
+
+  const core = emit(bandsOf(coreNodes), meta.title || 'System Prompt');
+  // The conditional block carries no title: it continues the same document.
+  const conditional = conditionalNodes.length ? emit(bandsOf(conditionalNodes), null) : { text: '', positions: [] };
+
+  const text = conditional.text ? `${core.text}
+${conditional.text}` : core.text;
+  // Positions of the conditional block are offset by the core it follows, so a caller
+  // can still point at a line of the whole prompt.
+  const coreLines = core.text.split('\n').length;
+  const positions = [
+    ...core.positions.map((x) => ({ ...x, layer: 'core' })),
+    ...conditional.positions.map((x) => ({ ...x, layer: 'conditional', position: x.position + coreLines })),
+  ];
+  manifest.layers = {
+    coreTokens: core.positions.reduce((a, x) => a + x.tokens, 0),
+    conditionalTokens: conditional.positions.reduce((a, x) => a + x.tokens, 0),
+    coreText: core.text,
+    conditionalText: conditional.text,
+  };
 
   manifest.nodes = positions;
   manifest.estimatedTokens = positions.reduce((a, p) => a + p.tokens, 0);

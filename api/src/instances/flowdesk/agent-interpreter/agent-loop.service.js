@@ -223,9 +223,24 @@ function createAgentLoop(deps = {}) {
       openedForm = res && res.ok !== false;
     }
 
+    // EC-003: which rules apply depends on where the conversation stands. Computed
+    // from the session and the draft by code — never by the model, whose behaviour
+    // this prompt is about to configure.
+    //
+    // The draft is read best-effort: a store hiccup must cost a coarser prompt scope,
+    // not the turn. The form snapshot is deliberately NOT fetched here — it would add
+    // an Altiora round trip to every turn to sharpen a scope that is already right.
+    let promptContext = null;
+    try {
+      const { compilationContext } = require('../interpreter/dialogue-phase');
+      const draftNow = typeof tools.currentDraft === 'function' ? await tools.currentDraft(ctx) : null;
+      promptContext = compilationContext({ session: ctx.session, draft: draftNow, controlAction: p.controlAction, lang });
+    } catch { /* no context is the old behaviour: every rule applies */ }
+
     const built = await promptService.build({
       entryId: promptEntryId, version: promptVersion, graph: promptGraph,
       lang, toolSchemas: tools.TOOL_SCHEMAS || TOOL_SCHEMAS,
+      context: promptContext,
     });
 
     // Never send an empty user turn: the Messages API rejects it outright, and a
@@ -345,7 +360,20 @@ ${brief}` : userTurnText },
       for (const use of uses) {
         const result = await tools.execute(use.name, use.input, ctx);
         if (result.ok === false) allOk = false;
-        toolCalls.push({ name: use.name, ok: result.ok !== false, ms: result.ms ?? null });
+        // P-4: WHY it failed, not just that it did.
+        //
+        // A failed tool call was recorded as `{name, ok:false}` and the reason was
+        // told to the model and then thrown away. Live, draft_create failed twice in
+        // one dialogue — two wasted turns and a question asked into nothing — and the
+        // replay could only say "draft_create: error". The operator this admin exists
+        // for has no process logs, so the turn record has to carry the sentence.
+        //
+        // Capped: these are written for a person to read, but a tool that returns a
+        // provider's stack trace must not push a turn record to a megabyte.
+        toolCalls.push({
+          name: use.name, ok: result.ok !== false, ms: result.ms ?? null,
+          ...(result.ok === false ? { error: String(result.error || 'failed').slice(0, 500) } : {}),
+        });
         results.push({
           type: 'tool_result',
           tool_use_id: use.id,
@@ -426,9 +454,17 @@ ${brief}` : userTurnText },
       meta: {
         iterations, toolCalls, costUsd, tokens, degraded,
         cacheCreationTokens, cacheReadTokens,
-        promptTextHash: built.manifest ? built.manifest.textHash : null,
+        // What the model was actually sent (rules + contract + padding + language).
+        promptTextHash: built.textHash || null,
+        // The compiled RULES alone — the only one comparable to a rebuilt version of
+        // the graph. See the two-hash note in agent-prompt.service.
+        promptGraphTextHash: built.manifest ? built.manifest.textHash : null,
         promptGraphEntryId: built.manifest ? built.manifest.graphEntryId : null,
         promptGraphVersion: built.manifest ? built.manifest.graphVersion : null,
+        // EC-004: WHICH rules applied now follows from (version, context), so the
+        // context has to be recorded too — otherwise attribution can name the version
+        // and still not explain what the model was given.
+        promptContext,
       },
       // History for the next turn: the user's message and the final reply only.
       // Tool traffic stays out — replaying it would grow the context without

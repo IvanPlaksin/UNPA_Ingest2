@@ -30,6 +30,28 @@
       "minItems": 1,
       "items": { "$ref": "#/definitions/slot" }
     },
+    "presentation": {
+      "type": "array",
+      "description": "SCH-001. Fields the Altiora schema has that are NOT questions — sections, dividers, headings, static paragraphs, labels. Carried so the snapshot is a translation of the schema rather than a selection from it: the wizard renders these, and a request built from a schema we had only partly read cannot be reconciled with what the user will see. Deliberately outside `slots`, because every queue in the interpreter reads `slots` and a paragraph of static text there would be asked as a question.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["fieldId", "type"],
+        "properties": {
+          "fieldId": { "type": "string", "minLength": 1 },
+          "type": { "type": "string", "minLength": 1 },
+          "label": { "type": "string" },
+          "description": { "type": "string" },
+          "html": { "type": "string" },
+          "section": { "type": "string" },
+          "sectionLabel": { "type": ["string", "null"] },
+          "dictionaryEntityId": {
+            "type": "string",
+            "description": "A presentation field can be dictionary-backed: Altiora autofills a `label` from one and displays the resolved text (DICT_AUTOFILL_FIELD_TYPES)."
+          }
+        }
+      }
+    },
     "metadata": {
       "type": "object",
       "additionalProperties": false,
@@ -54,6 +76,16 @@
         "contentHash": {
           "type": "string",
           "description": "SHA256 of the source Altiora SchemaJson, as reported by GET /api/ServiceDistribution/{ousId}/schema/version. The cache-invalidation key."
+        },
+        "sourceFieldCount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "SCH-001. How many fields the Altiora schema had. Paired with translatedFieldCount so a materializer that stopped understanding part of its input is a visible number rather than a required field nobody is ever asked for."
+        },
+        "translatedFieldCount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "SCH-001. slots + presentation. Equal to sourceFieldCount when the translation is complete."
         }
       }
     }

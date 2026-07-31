@@ -54,13 +54,67 @@ function graphWrite(cypher, params) {
   return _write(cypher, params);
 }
 
+const NO_PROVENANCE = {
+  promptGraphEntryId: null, promptGraphVersion: null,
+  promptTextHash: null, promptGraphTextHash: null, promptProvenanceSource: null,
+  promptContextJson: null,
+};
+
 /**
- * SUADA-PREREQ-001 — which prompt governed this turn. Resolved here rather than
- * threaded from the caller so EVERY write path (text chat, voice, any future
- * caller of recordTurn) carries provenance without plumbing. The source is the
- * same 30s-cached read the engine already performs per turn, so this costs no
- * extra query. Best-effort like everything else in this module.
+ * SUADA-PREREQ-001 — which prompt governed this turn.
+ *
+ * P-1. THIS USED TO RECORD THE WRONG GRAPH, ON EVERY TURN, FOR MONTHS.
+ *
+ * The provenance was resolved from `system-prompt.service.getProvenance()`, which
+ * reads the materialised ACTIVE PROMPT RECORD — and only the state machine has one.
+ * The live chat is the agent: it compiles EVOLUTIO:PROMPT straight from the catalog
+ * and has no such record. So every agent turn was stamped with the entry and version
+ * of `CHAT_PROMPT`, a graph that did not influence it at all. Measured on live data:
+ * 580 turns, all pointing at "Chat System Prompt (opening flow)" v3/v6, while the
+ * agent's own graph is a different entry with four versions.
+ *
+ * Nothing failed and nothing looked wrong — the field was populated, the number was
+ * plausible, the join key existed. This is the third instance of one class of bug
+ * (the editor and the admin MCP tools had it too): TWO GRAPHS EXIST, AND A
+ * SUBSYSTEM SILENTLY WORKS WITH THE ONE THAT DOES NOT DRIVE BEHAVIOUR.
+ *
+ * So provenance now comes from THE TURN THAT RAN, and the record says where it came
+ * from, because "no version recorded" and "version recorded from the wrong graph"
+ * must never again be indistinguishable:
+ *
+ *   'turn'      the agent built this prompt and reported its manifest — trustworthy
+ *   'template'  a hybrid template answered; NO prompt governed it, so no version
+ *   'fsm-active' the state machine ran; its active record is the right source there
+ *
+ * The historical 580 turns are unrecoverable: which version of the agent's graph was
+ * current at the time was never written down anywhere.
  */
+function provenanceFromTurn(result) {
+  const meta = result && result.agentMeta;
+  if (meta && (meta.promptGraphEntryId || meta.promptTextHash)) {
+    return {
+      promptGraphEntryId: meta.promptGraphEntryId || null,
+      promptGraphVersion: meta.promptGraphVersion != null ? Number(meta.promptGraphVersion) : null,
+      promptTextHash: meta.promptTextHash || null,
+      promptGraphTextHash: meta.promptGraphTextHash || null,
+      promptProvenanceSource: 'turn',
+      // EC-004. Which rules were in force no longer follows from the version alone:
+      // a rule can be scoped to a phase, so the same version compiles differently in
+      // different parts of the conversation. Without the context recorded here, the
+      // attribution panel could name the version and still not explain what the model
+      // was given — the regression P-1 was fixed to prevent.
+      promptContextJson: meta.promptContext ? JSON.stringify(meta.promptContext) : null,
+    };
+  }
+  // A template turn is not a turn with a missing prompt — it is a turn with NO
+  // prompt. Falling back here would credit the state machine's graph for words the
+  // template wrote, which is the very confusion this function exists to end.
+  if (result && result.turnAuthor === 'template') {
+    return { ...NO_PROVENANCE, promptProvenanceSource: 'template' };
+  }
+  return null;
+}
+
 let _getPromptProvenance = null;
 async function promptProvenance() {
   try {
@@ -71,9 +125,13 @@ async function promptProvenance() {
       promptGraphEntryId: (p && p.promptGraphEntryId) || null,
       promptGraphVersion: (p && p.promptGraphVersion != null) ? Number(p.promptGraphVersion) : null,
       promptTextHash: (p && p.promptTextHash) || null,
+      // The state machine has no separate graph-only hash; its active record IS the
+      // compiled graph, so the two coincide there.
+      promptGraphTextHash: (p && p.promptTextHash) || null,
+      promptProvenanceSource: 'fsm-active',
     };
   } catch {
-    return { promptGraphEntryId: null, promptGraphVersion: null, promptTextHash: null };
+    return { ...NO_PROVENANCE };
   }
 }
 
@@ -312,7 +370,14 @@ async function recordTurn(p) {
   // The service in play decides which service-scoped overlays applied, so it is
   // resolved before provenance rather than inline in the record below.
   const serviceId = draft.serviceId || (result.state && result.state.serviceId) || null;
-  const [prov, overlay] = await Promise.all([promptProvenance(), overlayProvenance(serviceId)]);
+  // P-1: the turn's own manifest wins. The active-record read is only consulted when
+  // the turn cannot say for itself — which today means the state-machine path.
+  const own = provenanceFromTurn(result);
+  const [fallback, overlay] = await Promise.all([
+    own ? null : promptProvenance(),
+    overlayProvenance(serviceId),
+  ]);
+  const prov = own || fallback || { ...NO_PROVENANCE };
 
   const record = {
     ts, sessionId, seq: null, channel, lang: lang || null,
@@ -331,6 +396,19 @@ async function recordTurn(p) {
     repairSession: (draft.repair && draft.repair.session) || 0,
     outcome, srNumber: result.srNumber || null, ticketId: result.ticketId || null,
     escalationId: result.escalationId || null,
+    // P-2: WHO wrote this turn, and why it went to the model.
+    //
+    // The hybrid router decides per turn whether a template can answer a click or the
+    // model must. Both fields were being set on the turn and read by nobody: the
+    // response object carried them to the client, this record never picked them up,
+    // and the CREATE below had no such properties. 0 of 1203 live turns had an author.
+    //
+    // Which means the only measurement of "how much of the dialogue is deterministic"
+    // came from arena runs holding turn objects in memory. For live traffic the
+    // question was unanswerable, and any panel claiming a percentage would have been
+    // quoting a benchmark as if it were production.
+    turnAuthor: result.turnAuthor || null,
+    routerReason: result.routerReason || null,
   };
   jsonlAppend(record);
 
@@ -365,7 +443,9 @@ async function recordTurn(p) {
          llmCostUsd:$costUsd, llmTokens:$llmTokens, llmLatencyMs:$llmLatencyMs,
          nodeTraceJson:$nodeTraceJson, llmCallsJson:$llmCallsJson, spansJson:$spansJson,
          promptGraphEntryId:$promptGraphEntryId, promptGraphVersion:$promptGraphVersion,
-         promptTextHash:$promptTextHash,
+         promptTextHash:$promptTextHash, promptGraphTextHash:$promptGraphTextHash,
+         promptProvenanceSource:$promptProvenanceSource, promptContextJson:$promptContextJson,
+         turnAuthor:$turnAuthor, routerReason:$routerReason,
          overlayHash:$overlayHash, overlayIds:$overlayIds})
        MERGE (s)-[:HAS_TURN]->(t)`,
       {
@@ -383,10 +463,17 @@ async function recordTurn(p) {
         nodeTraceJson: JSON.stringify(nodeEvents),
         llmCallsJson: JSON.stringify(llmCalls),
         spansJson: JSON.stringify(spans),
-        // SUADA-PREREQ-001: the prompt-graph version this turn ran under.
+        // SUADA-PREREQ-001: the prompt-graph version this turn ran under, and where
+        // that claim comes from (P-1). Two hashes, because only one of them is
+        // comparable to a rebuilt graph version (P-3).
         promptGraphEntryId: prov.promptGraphEntryId,
         promptGraphVersion: prov.promptGraphVersion,
         promptTextHash: prov.promptTextHash,
+        promptGraphTextHash: prov.promptGraphTextHash ?? null,
+        promptProvenanceSource: prov.promptProvenanceSource ?? null,
+        promptContextJson: prov.promptContextJson ?? null,
+        turnAuthor: record.turnAuthor,
+        routerReason: record.routerReason,
         // SUADA-PREREQ-001.1: the operator overlays layered on top of it.
         overlayHash: overlay.overlayHash,
         overlayIds: overlay.overlayIds,

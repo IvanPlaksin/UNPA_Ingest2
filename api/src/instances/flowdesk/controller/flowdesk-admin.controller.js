@@ -106,6 +106,53 @@ const setOverlayActive = h((req) => require('../services/prompt-overlay.service'
 // ── Prompt-graph editor (P6) ──────────────────────────────────────────────────
 const pe = () => require('../services/prompt-editor.service');
 const promptMeta = h(() => pe().meta());
+
+/**
+ * HYB-FIX-003 — which interpreter is serving conversations, and PROOF of it.
+ *
+ * The mode alone would be a claim; the split is the evidence. A hybrid that reports
+ * itself on while no turn is authored by a template means the router is handing
+ * everything to the model, which looks identical to being switched off and cost
+ * exactly as much for weeks before anyone noticed.
+ */
+const interpreterStatus = h(async (req) => {
+  const chat = require('../interpreter/chat-v2.service');
+  const { mode, source } = chat.interpreterMode();
+  const hours = Number(req.query?.hours) || 24;
+  const since = new Date(Date.now() - hours * 3600 * 1000).toISOString();
+  const num = (v) => (v && typeof v === 'object' && 'low' in v ? v.low : v);
+
+  let template = 0;
+  let model = 0;
+  try {
+    const { read } = require('../schema-graph/driver');
+    const rows = await read(
+      `MATCH (t:ChatTurn) WHERE t.ts >= $since AND t.turnAuthor IS NOT NULL
+       RETURN t.turnAuthor AS author, count(t) AS n`,
+      { since },
+    );
+    for (const r of rows) {
+      const n = num(r.get('n'));
+      if (r.get('author') === 'template') template = n; else if (r.get('author') === 'model') model = n;
+    }
+  } catch { /* telemetry unavailable — the mode is still worth reporting */ }
+
+  const total = template + model;
+  return {
+    mode,
+    source,
+    windowHours: hours,
+    turns: { total, template, model },
+    templateShare: total ? Math.round((template / total) * 100) : null,
+    // The one state that must be loud: claiming to be hybrid while behaving as agent.
+    warning: mode === 'hybrid' && total > 0 && template === 0
+      ? 'Hybrid is on, but no turn in this window was answered by the template. Every turn '
+        + 'is costing a model call — the router is sending everything to the model.'
+      : (mode === 'agent'
+        ? 'Every turn calls the model, including form clicks a template answers without one.'
+        : null),
+  };
+});
 const promptDefaultGraph = h(() => pe().defaultGraph());
 // HYB-011a: WHICH graph — 'agent' (EVOLUTIO:PROMPT, what the live chat compiles)
 // or 'fsm' (CHAT_PROMPT, the state machine's). Read from the query for GETs and the
@@ -115,6 +162,14 @@ const src = (req) => req.query?.source || req.body?.source || null;
 const promptListGraphs = h((req) => pe().listGraphs(src(req)));
 const promptGetGraph = h((req) => pe().getGraph(req.params.entryId, req.query.version, src(req)));
 const promptSaveGraph = h((req) => pe().saveGraph({ ...req.body, createdBy: req.flowdeskUser?.email || 'admin' }));
+// ПР-001/ПР-003 — WHICH graph is the system prompt. A GET that explains where the
+// answer came from, because a selector that cannot say "the environment overrides you"
+// would silently do nothing; and a POST that refuses a graph which cannot serve.
+const fs = () => require('../services/flowdesk-settings.service');
+const promptActiveEntry = h(() => fs().describeActivePromptEntry());
+const promptSetActiveEntry = h((req) => fs().setActivePromptEntry(req.body?.entryId, {
+  updatedBy: req.flowdeskUser?.email || 'admin',
+}));
 const promptMutateGraph = h((req) => pe().mutateGraph({ ...req.body, createdBy: req.flowdeskUser?.email || 'ai-assistant' }));
 const promptGetVersions = h((req) => pe().getVersions(req.params.entryId, src(req)));
 const promptPromoteVersion = h((req) => pe().promoteVersion(req.params.entryId, req.body?.version, src(req)));
@@ -127,9 +182,42 @@ const promptCompile = h(async (req) => {
     title: req.body?.title, source: src(req), language: req.body?.language, entryId: req.body?.entryId, version: req.body?.version,
   });
   const tokens = await require('../services/prompt-tokens.service').countPromptTokens(compiled && compiled.text);
-  return { ...compiled, tokens };
+  // EC-006: what the prompt is MADE of. The operator edits the graph, but what the
+  // provider caches is graph + contract + padding — showing the graph's size against
+  // the cache floor would light up red on a healthy prompt (measured: a 1,247-token
+  // core under a 4,800 floor, with the padding closing the gap by design).
+  let composition = null;
+  if (src(req) === 'agent') {
+    try {
+      const layers = (compiled && compiled.manifest && compiled.manifest.layers) || {};
+      composition = require('../agent-interpreter/agent-prompt.service').composition({
+        graphText: layers.coreText ?? (compiled && compiled.text),
+        conditionalText: layers.conditionalText || '',
+      });
+    } catch { /* the preview is still useful without the breakdown */ }
+  }
+  return { ...compiled, tokens, composition };
 });
 const promptValidate = h((req) => pe().validate(req.body?.graph || req.body, { source: src(req) }));
+// EC-011 — the prompt in one or two of the nine reachable contexts, plus the per-rule
+// table that says what differs between them.
+const promptPreview = h((req) => pe().previewContexts(req.body?.graph || req.body, {
+  contexts: req.body?.contexts, language: req.body?.language,
+}));
+const promptCoverage = h((req) => require('../../../services/evolutio/evolutio-prompt.coverage')
+  .coverage(req.body?.graph || req.body, { catalogCategories: req.body?.catalogCategories }));
+// PE-006/007 — the two directions between a recorded turn and the rules that were in
+// force on it. The provenance travels on the turn itself, so the caller passes what it
+// already has rather than the service re-reading the turn.
+const pa = () => require('../services/prompt-attribution.service');
+const promptRulesForTurn = h((req) => pa().rulesInForce({ ...req.body, ...req.query }));
+const promptTurnsUnderRule = h((req) => pa().turnsUnderRule(req.params.nodeId, { entryId: req.query.entryId }));
+// PE-004: how much of the dialogue the prompt governs, measured — plus the fixed
+// strings the template speaks with, which no rule controls.
+const promptAuthorship = h(async (req) => ({
+  ...(await pa().dialogueAuthorship({ days: req.query.days })),
+  controlAcks: pa().controlAcks(),
+}));
 const promptSandbox = h((req) => pe().sandbox(req.body));
 const promptApply = h((req) => pe().apply({ ...req.body, updatedBy: req.flowdeskUser?.email || 'admin' }));
 const promptActive = h(() => pe().getActive());
@@ -194,7 +282,9 @@ module.exports = {
   syncStatus, listSyncEvents, syncPollNow,
   analyzeSession, listOverlays, applyOverlay, setOverlayActive,
   promptMeta, promptDefaultGraph, promptListGraphs, promptGetGraph, promptSaveGraph, promptMutateGraph, promptPromoteVersion,
-  promptGetVersions, promptCompile, promptValidate, promptSandbox, promptApply,
+  promptGetVersions, promptCompile, promptValidate, promptPreview, promptCoverage, promptSandbox, promptApply,
+  promptActiveEntry, promptSetActiveEntry, interpreterStatus,
+  promptRulesForTurn, promptTurnsUnderRule, promptAuthorship,
   promptActive, promptApplied, promptClear, promptAssistantChat,
   listTickets, getTicketLive, llmStats, adminHealth,
   actUsersList, actUsersAdd, actUsersSetEnabled, actUsersRemove, actUsersCheck, actPermSetDefault,

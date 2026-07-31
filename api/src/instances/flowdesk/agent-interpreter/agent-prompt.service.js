@@ -16,9 +16,28 @@
  * @module instances/flowdesk/agent-interpreter/agent-prompt.service
  */
 
+const crypto = require('crypto');
 const { langInstruction } = require('../interpreter/templates/ui-strings');
 
 const CACHE_MS = 30 * 1000;
+
+/**
+ * TWO HASHES, AND THEY ARE NOT INTERCHANGEABLE (P-3).
+ *
+ * The graph is only PART of this prompt: the compiled rules are followed by
+ * AGENT_CONTRACT (written in this file), padded to the cache floor, then given a
+ * language tail. So the compiler's `manifest.textHash` — a hash of the rules alone
+ * — can never equal a hash of what the model was sent.
+ *
+ * Both are recorded on the turn, for two different questions:
+ *   promptGraphTextHash  did the RULES change?  ← comparable to a rebuilt version
+ *   promptTextHash       what did the model see? ← reproducibility, nothing else
+ *
+ * Conflating them is not academic. The editor is meant to warn "the rebuilt rules
+ * differ from what ran"; compared against the final text that warning would fire on
+ * every turn ever recorded, and an alarm that is always on is not an alarm.
+ */
+const sha256 = (s) => crypto.createHash('sha256').update(String(s), 'utf8').digest('hex');
 
 /**
  * Prompt-cache floor.
@@ -83,11 +102,24 @@ const PAD_UNIT = 'Lorem ipsum dolor sit amet consectetur adipiscing elit sed do 
  * Pad the cacheable prefix up to the floor. Returns it untouched when it is
  * already long enough, or when padding is switched off.
  */
+/**
+ * The prefix's size in tokens, by the SAME arithmetic the padder uses.
+ *
+ * Kept as one function because the alternative was tried and failed immediately: the
+ * report recounted the padded text with the prose divisor while the padding had been
+ * sized with the filler's own denser one, and the preview announced that a perfectly
+ * healthy prompt would not be cached — 4,745 against a floor of 4,800. Two numbers
+ * meaning one thing will always drift; this project has now proved it twice.
+ */
+function estimatePrefixTokens(prefix, toolSchemas) {
+  const toolChars = toolSchemas && toolSchemas.length ? JSON.stringify(toolSchemas).length : 0;
+  return Math.floor(String(prefix || '').length / CHARS_PER_TOKEN_PROSE)
+    + Math.floor(toolChars / CHARS_PER_TOKEN_JSON);
+}
+
 function padToCacheFloor(prefix, toolSchemas) {
   if (!PADDING_ENABLED) return prefix;
-  const toolChars = toolSchemas && toolSchemas.length ? JSON.stringify(toolSchemas).length : 0;
-  const estimated = Math.floor(prefix.length / CHARS_PER_TOKEN_PROSE)
-    + Math.floor(toolChars / CHARS_PER_TOKEN_JSON);
+  const estimated = estimatePrefixTokens(prefix, toolSchemas);
   const shortfall = CACHE_FLOOR_TOKENS - estimated;
   if (shortfall <= 0) return prefix;
 
@@ -169,7 +201,13 @@ function createAgentPrompt(deps = {}) {
    */
   async function build(p = {}) {
     const lang = p.lang || 'en';
-    const key = `${p.entryId || 'inline'}@${p.version ?? 'current'}:${lang}`;
+    // EC-003: the compilation context is part of the cache key. Rules can now be
+    // scoped to a phase, so two turns of the same session in different phases compile
+    // to DIFFERENT prompts — caching them under one key would serve the wrong one and
+    // nothing would report it. Absent context degrades to the old key.
+    const ctx = p.context || null;
+    const ctxKey = ctx ? `|${ctx.phase || '-'}|${(ctx.toolContext || []).join('+') || '-'}|${ctx.serviceCategory || '-'}|${ctx.channel || 'text'}` : '';
+    const key = `${p.entryId || 'inline'}@${p.version ?? 'current'}:${lang}${ctxKey}`;
     const hit = cache.get(key);
     if (hit && now() - hit.at < CACHE_MS) return { ...hit.value, cached: true };
 
@@ -180,7 +218,12 @@ function createAgentPrompt(deps = {}) {
       if (loaded && loaded.graph) {
         // No engineNode: the agent is one conversational surface, not the state
         // machine's separate router/answerer/planner nodes, so it takes every rule.
-        const c = compile(loaded.graph, { language: lang }, {
+        // The context decides which conditional rules apply (APPLIES_WHEN). Passing
+        // only the language — as this did — meant every condition on a phase, route or
+        // service evaluated FALSE, because `conditionHolds` treats a missing context
+        // key as "does not hold". Adding a condition would have silently dropped the
+        // rule from every prompt.
+        const c = compile(loaded.graph, { language: lang, ...(ctx || {}) }, {
           graphEntryId: p.entryId || null,
           graphVersion: (loaded.meta && loaded.meta.versionNumber) ?? p.version ?? null,
           title: 'FlowDesk Assistant',
@@ -208,7 +251,10 @@ function createAgentPrompt(deps = {}) {
     const tail = String(langInstruction(lang) || '').trim();
     const text = tail ? `${prefix}\n\n${tail}` : prefix;
 
-    const value = { text, prefix, tail, manifest };
+    // Hashed here rather than at the call site: `text` is assembled in this
+    // function, and a caller that re-derived it would be hashing its own guess at
+    // how the parts fit together.
+    const value = { text, prefix, tail, manifest, textHash: sha256(text) };
     cache.set(key, { at: now(), value });
     return { ...value, cached: false };
   }
@@ -218,7 +264,71 @@ function createAgentPrompt(deps = {}) {
   return { build, invalidate, AGENT_CONTRACT, toolsSection };
 }
 
+/**
+ * EC-006 — what the prompt is actually made of, for the compile preview.
+ *
+ * The operator edits the GRAPH, but what the provider caches is the whole prefix:
+ * graph + AGENT_CONTRACT (written in this file) + padding. Showing only the graph's
+ * size against the cache floor would light up red on a perfectly healthy prompt —
+ * measured live, the graph core is 1,257 tokens against a floor of 4,800, and the
+ * padding closes the gap on purpose.
+ *
+ * So all three numbers are reported, and the warnings are about the things that can
+ * really go wrong:
+ *   - the prefix falls under the floor only when padding is OFF, so warn only then;
+ *   - the CONDITIONAL block is never cached and is billed on every single turn, which
+ *     is the risk that actually grows as rules get scoped.
+ *
+ * @param {{graphText:string, conditionalText?:string, toolSchemas?:Array}} p
+ */
+function composition(p = {}) {
+  const graphText = String(p.graphText || '');
+  const conditionalText = String(p.conditionalText || '');
+  const toolSchemas = p.toolSchemas || [];
+
+  const asTokens = (text) => Math.floor(String(text || '').length / CHARS_PER_TOKEN_PROSE);
+  const realPrefix = [graphText, '', AGENT_CONTRACT].filter(Boolean).join('\n').trim();
+
+  const graphTokens = asTokens(graphText);
+  const contractTokens = asTokens(AGENT_CONTRACT);
+  // The padder's OWN arithmetic, not a recount of its output. Recounting was tried
+  // and reported 4,745 against a floor of 4,800 on a healthy prompt — the filler is
+  // sized with a denser chars-per-token than prose, so measuring it as prose loses
+  // tokens that are really there.
+  const beforePadding = estimatePrefixTokens(realPrefix, toolSchemas);
+  const paddingTokens = PADDING_ENABLED ? Math.max(0, CACHE_FLOOR_TOKENS - beforePadding) : 0;
+  const prefixTokens = beforePadding + paddingTokens;
+  const conditionalTokens = asTokens(conditionalText);
+
+  const warnings = [];
+  if (!PADDING_ENABLED && prefixTokens < CACHE_FLOOR_TOKENS) {
+    warnings.push({
+      code: 'BELOW_CACHE_FLOOR',
+      message: `The prefix is ${prefixTokens} tokens against a measured floor of ${CACHE_FLOOR_TOKENS}, `
+        + 'and padding is disabled — nothing in this prompt will be cached.',
+    });
+  }
+  // A quarter, not a third: this part is re-sent and re-billed on every turn, so the
+  // warning should arrive before it is a habit.
+  if (prefixTokens > 0 && conditionalTokens > prefixTokens * 0.25) {
+    warnings.push({
+      code: 'CONDITIONAL_TOO_LARGE',
+      message: `Conditional rules are ${conditionalTokens} tokens, over a quarter of the cached prefix. `
+        + 'They are not cached and are billed on every turn.',
+    });
+  }
+
+  return {
+    graphTokens, contractTokens, paddingTokens, prefixTokens, conditionalTokens,
+    floor: CACHE_FLOOR_TOKENS,
+    paddingEnabled: PADDING_ENABLED,
+    cacheable: prefixTokens >= CACHE_FLOOR_TOKENS,
+    warnings,
+  };
+}
+
 module.exports = createAgentPrompt();
+module.exports.composition = composition;
 module.exports.createAgentPrompt = createAgentPrompt;
 module.exports.AGENT_CONTRACT = AGENT_CONTRACT;
 module.exports.toolsSection = toolsSection;

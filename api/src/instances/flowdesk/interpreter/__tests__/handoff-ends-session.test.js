@@ -38,6 +38,11 @@ describe('a turn that opens the form closes the session', () => {
   beforeEach(() => {
     jest.resetModules();
     process.env.FLOWDESK_AGENT_INTERPRETER = '1';
+    // This suite is about the AGENT path's hand-off, and it mocks the agent's
+    // dependencies only. Since HYB-FIX-001 the default is the hybrid, which wraps the
+    // agent and needs its own — so the path under test is named rather than inherited.
+    // The hybrid's own propagation of the hand-off is covered in the hybrid suite.
+    process.env.FLOWDESK_INTERPRETER = 'agent';
     discarded = [];
 
     jest.doMock('../../services/draft-sr.service', () => ({

@@ -136,11 +136,15 @@ describe('the model takes the turns it should, and says which condition sent it'
     expect(out.turn.routerReason).toBe('not_fill_phase');
   });
 
-  test('a non-English session, because promptHint is an English label', async () => {
+  test('NOT a non-English session — the automaton answers it with the English label', async () => {
+    // Ivan's ruling: no localisation means fall back to the English field name, not
+    // to the model. The old rule made the automaton unreachable for every non-English
+    // user, which is most of them.
     const h = harness();
     midForm(h);
     const out = await h.session.sendTurn(null, { controlAction: { slotId: 'indexNumber', value: '1' }, lang: 'ru' });
-    expect(out.turn.routerReason).toBe('non_english');
+    expect(out.turn.turnAuthor).toBe('template');
+    expect(h.modelCalls).toHaveLength(0);
   });
 
   test('an invalid date is REFUSED, not stored, and the model explains', async () => {
@@ -324,18 +328,33 @@ describe('the pure functions', () => {
 });
 
 describe('the other two modes are untouched', () => {
-  test('chat-v2 routes to the agent unless the hybrid flag is set', () => {
+  /**
+   * HYB-FIX-001 — this test used to assert that an unset flag meant AGENT, and it
+   * passed for weeks while that default sent every form click through the model. It
+   * was not wrong about the code; it encoded the defect as the contract.
+   *
+   * The default is now hybrid, and the expensive path must be asked for by name.
+   */
+  test('chat-v2 defaults to the HYBRID, and takes the agent only when told', () => {
     const chatV2 = require('../../interpreter/chat-v2.service');
     const prev = { i: process.env.FLOWDESK_INTERPRETER, h: process.env.FLOWDESK_HYBRID_INTERPRETER };
     try {
       delete process.env.FLOWDESK_INTERPRETER;
       delete process.env.FLOWDESK_HYBRID_INTERPRETER;
-      expect(chatV2.hybridEnabled()).toBe(false);
-      process.env.FLOWDESK_INTERPRETER = 'hybrid';
       expect(chatV2.hybridEnabled()).toBe(true);
       process.env.FLOWDESK_INTERPRETER = 'agent';
+      expect(chatV2.hybridEnabled()).toBe(false);
+      delete process.env.FLOWDESK_INTERPRETER;
+      process.env.FLOWDESK_INTERPRETER = 'hybrid';
+      expect(chatV2.hybridEnabled()).toBe(true);
+      // Both set is a contradiction, and the precedence changed with the default.
+      // `FLOWDESK_INTERPRETER=agent` is now a deliberate, expensive opt-OUT, while
+      // the legacy switch is redundant (hybrid is the default anyway) and is most
+      // likely left over. The explicit refusal wins — and `announceInterpreter` says
+      // which one took effect, so the contradiction is visible rather than guessed at.
+      process.env.FLOWDESK_INTERPRETER = 'agent';
       process.env.FLOWDESK_HYBRID_INTERPRETER = '1';
-      expect(chatV2.hybridEnabled()).toBe(true); // either switch is enough
+      expect(chatV2.hybridEnabled()).toBe(false);
     } finally {
       if (prev.i === undefined) delete process.env.FLOWDESK_INTERPRETER; else process.env.FLOWDESK_INTERPRETER = prev.i;
       if (prev.h === undefined) delete process.env.FLOWDESK_HYBRID_INTERPRETER; else process.env.FLOWDESK_HYBRID_INTERPRETER = prev.h;
@@ -352,5 +371,35 @@ describe('the other two modes are untouched', () => {
     expect(a.interpreterMode).toBe('agent');
     expect(a.toolSession).toBeDefined();
     expect(a.toolSession.skippedSlotIds instanceof Set).toBe(true);
+  });
+});
+
+/**
+ * HYB-FIX-001 made the hybrid the default, which means it — not the agent — is what
+ * a user's hand-off now goes through. The hand-off itself is the agent's work and is
+ * tested there; what has to hold HERE is that the wrapper does not swallow the signal
+ * on its way out. A session that failed to end would leave the chat answering against
+ * a request that has already left for the form.
+ */
+describe('the hand-off survives the hybrid wrapper', () => {
+  test('a boundary turn is delegated, and the agent verdict comes back untouched', async () => {
+    const h = harness();
+    const openForm = { serviceId: 'EO-HR-SA-EXT', ousId: 3, prefill: {} };
+    // Replace the delegate: the question is what the wrapper does with its answer.
+    h.session.agent.sendTurn = async () => ({
+      ok: true,
+      ms: 5,
+      turn: {
+        response: 'Opening the form now.', responseType: 'open_form', openForm,
+        sessionEnded: true, controls: null, askingSlot: null, isComplete: false,
+      },
+    });
+
+    // Free text is condition 1 in the router: a boundary, always the model's.
+    const out = await h.session.sendTurn('open the form please', {});
+
+    expect(out.turn.responseType).toBe('open_form');
+    expect(out.turn.openForm).toEqual(openForm);
+    expect(out.turn.sessionEnded).toBe(true);
   });
 });

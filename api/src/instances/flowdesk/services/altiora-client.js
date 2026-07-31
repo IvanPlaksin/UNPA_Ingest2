@@ -107,6 +107,10 @@ function createServiceTokenProvider({
 } = {}) {
   let cached = null;      // { token, expiresAtMs }
   let inFlight = null;    // de-dupe concurrent logins
+  let keyOnly = false;    // login endpoint absent (Release) → send API-Key only
+  let keyOnlyWarned = false;
+  // A pre-supplied bearer (e.g. an Azure-AD token for the remote Altiora) skips login.
+  const staticToken = (process.env.ALTIORA_API_TOKEN || '').trim() || null;
 
   async function login() {
     const res = await fetchImpl(buildUrl(baseUrl, '/api/auth/login'), {
@@ -114,6 +118,17 @@ function createServiceTokenProvider({
       headers: { 'Content-Type': 'application/json', 'API-Key': apiKey },
       body: JSON.stringify({ email, password }),
     });
+    // Release Altiora compiles /api/auth/login under #if DEBUG → it is absent (404).
+    // The shared API-Key authenticates on its own (ApiKeyMiddleware issues a service
+    // principal), so drop to key-only: return no bearer instead of failing.
+    if (res.status === 404) {
+      keyOnly = true;
+      if (!keyOnlyWarned) {
+        keyOnlyWarned = true;
+        console.warn('[altiora-client] /api/auth/login not found (404) — authenticating with API-Key only (no bearer).');
+      }
+      return null;
+    }
     const body = await res.json().catch(() => null);
     if (!res.ok) {
       throw errorFor(res.status, `Altiora service login failed (${res.status})`, body);
@@ -127,6 +142,8 @@ function createServiceTokenProvider({
   }
 
   return async function getServiceToken() {
+    if (staticToken) return staticToken;
+    if (keyOnly) return null; // key-only mode: client sends API-Key without a bearer
     if (cached && Date.now() < cached.expiresAtMs) return cached.token;
     if (!inFlight) inFlight = login().finally(() => { inFlight = null; });
     return inFlight;

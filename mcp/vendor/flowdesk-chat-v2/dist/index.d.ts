@@ -134,6 +134,18 @@ export interface OpenFormTarget {
   ousId?: number;
   /** Values gathered in the conversation, in the wizard's initialFormData shape. */
   prefill: Record<string, any>;
+  /**
+   * Dictionary rows the backend already holds, so the form need not fetch them while it
+   * paints. Pass straight through to the wizard (`initialDictionary`); the form uses only
+   * the entries that match what it would have fetched and falls back to fetching for the
+   * rest, so this is always optional and always safe to ignore.
+   */
+  hydration?: {
+    /** form field id → rows as returned by `POST /FormLookup/values` */
+    values?: Record<string, { label: string; value: string }[]>;
+    /** form field id → value the chat resolved for a field the form would auto-fill */
+    autofill?: Record<string, string>;
+  };
 }
 
 export interface AltioraChatProps {
@@ -159,6 +171,10 @@ export interface AltioraChatProps {
     email?: string;
     [key: string]: unknown;
   };
+  /** Rendered next to the user's own message bubbles instead of the default "Me" label — e.g. the host's own <UserAvatar>. Omit to keep the plain text label. */
+  userAvatar?: React.ReactNode;
+  /** Rendered inside the assistant's avatar circle instead of the default "◆" glyph — e.g. a bot icon. */
+  assistantAvatar?: React.ReactNode;
   /** Extra headers per API call; may be async, so tokens can refresh lazily. */
   getAuthHeaders?: () => Record<string, string> | Promise<Record<string, string>>;
   /** Replacement fetch (auth, retry, tracing). Defaults to globalThis.fetch. */
@@ -205,6 +221,10 @@ export interface AltioraChatProps {
   storeId?: string;
   /** Phase V1.1: adopt an external backend session id so this chat shares ONE session with another surface (e.g. the portal voice channel). */
   sessionId?: string;
+  /** The HOST's own dev/prod flag (e.g. `import.meta.env.DEV`) — NOT this package's build mode. When true, turn-failure system messages append the raw technical detail (code + message) after the friendly text. Default false. */
+  debug?: boolean;
+  /** Fires whenever the composer's Live Chat voice session starts/stops (connecting, live, or ended). The in-chat voice overlay only covers this component's own conversation area — a host with content OUTSIDE it (e.g. a hero's catalog button) can use this to blur/disable that content too while a voice session is busy. */
+  onVoiceActiveChange?: (active: boolean) => void;
 }
 
 /**
@@ -244,6 +264,9 @@ export interface ChatStoreActions {
 }
 export interface ChatStoreApi {
   getState: () => { actions: ChatStoreActions; [k: string]: any };
+  /** Raw Zustand setState — merges the given partial into the store. Escape hatch for
+   *  host-side needs the actions don't cover (e.g. rehydrating a persisted session). */
+  setState: (partial: Record<string, any> | ((state: { actions: ChatStoreActions; [k: string]: any }) => Record<string, any>)) => void;
   subscribe: (listener: (...args: any[]) => void) => () => void;
 }
 export declare function getChatStore(storeId?: string): ChatStoreApi;

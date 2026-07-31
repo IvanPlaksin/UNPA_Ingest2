@@ -13,10 +13,15 @@ import { Search, Sparkles } from 'lucide-react';
 import { getSessions } from '../api/adminClient';
 import { OutcomeChip, FlagChips, Loading, ErrorNote, useAutoRefresh, fmtCost, fmtTs } from '../components/common';
 import SessionDrawer from '../components/SessionDrawer';
+import { useTourAnchor } from '@guided-ux/tour/react';
 
 const OUTCOME_OPTIONS = ['', 'active', 'completed', 'escalated', 'parked', 'parked_abandoned', 'abandoned', 'submit_failed'];
 
 export default function SessionsTab() {
+  // Declared for the tour; this component learns nothing else about tours.
+  const tableRef = useTourAnchor('sessions.table', {
+    label: 'Session list', route: '/flowdesk-admin/sessions',
+  });
   const navigate = useNavigate();
   const { sessionId } = useParams();
   const [searchParams] = useSearchParams();
@@ -53,7 +58,7 @@ export default function SessionsTab() {
       </Paper>
       <ErrorNote error={error} onRetry={reload} />
       {loading && !data ? <Loading /> : (
-        <Paper variant="outlined">
+        <Paper variant="outlined" ref={tableRef}>
           <Table size="small">
             <TableHead>
               <TableRow>

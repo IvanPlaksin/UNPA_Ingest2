@@ -635,10 +635,43 @@ function materializeSchema(p) {
   const fieldIdMapping = {};
   for (const s of orderedSlots) fieldIdMapping[s.slotId] = s.altioraFieldId;
 
+  // SCH-001 — every field the Altiora schema has, including the ones the chat will
+  // never ask and never render.
+  //
+  // Until now a layout field was read for its side effects (a `section` became a
+  // grouping label) and then discarded. Nothing was lost from THIS catalogue — 72 of
+  // the 73 live schemas translate field-for-field, and the only gap was one stale
+  // cache — but the materializer's contract was "the fields we intend to use" rather
+  // than "the schema". Those differ the day Altiora adds a divider, a paragraph of
+  // guidance, or a `label` that its own form autofills from a dictionary: we would
+  // hand the wizard a request built from a schema we had only partly read, and
+  // nothing would report the difference.
+  //
+  // They are kept OUT of `slots` deliberately. A slot is a question; putting a
+  // paragraph of static text in the queue would make the assistant ask it.
+  const presentation = fields
+    .filter((f) => f && f.id && LAYOUT_TYPES.has(String(f.type || '').toLowerCase()))
+    .map((f) => {
+      const sect = sectionById.get(f.sectionId);
+      return {
+        fieldId: String(f.id),
+        type: String(f.type).toLowerCase(),
+        ...(f.label ? { label: String(f.label).trim() } : {}),
+        ...(f.description ? { description: String(f.description).trim() } : {}),
+        ...(f.html ? { html: String(f.html) } : {}),
+        ...(sect ? { section: sect.slug, sectionLabel: sect.label } : {}),
+        // A presentation field can carry a dictionary too: Altiora autofills a
+        // `label` from one and shows the resolved text. Carried so the value we send
+        // the wizard can be reconciled with what it will display.
+        ...(f.dictionaryEntityId ? { dictionaryEntityId: String(f.dictionaryEntityId) } : {}),
+      };
+    });
+
   const snapshot = {
     serviceId: p.serviceCode,
     version: p.version || 1,
     phases: [phase],
+    ...(presentation.length ? { presentation } : {}),
     metadata: {
       title: p.title || p.serviceCode,
       approvalRequired: !!p.approvalRequired,
@@ -646,6 +679,12 @@ function materializeSchema(p) {
       altioraOusId: p.ousId,
       ...(p.contentHash ? { contentHash: p.contentHash } : {}),
       fieldIdMapping,
+      // SCH-001 — the count the source had, against the count we translated. A
+      // difference is a materializer that stopped understanding its input, and this
+      // is the number that makes that visible instead of leaving it to be discovered
+      // by a required field nobody was ever asked for.
+      sourceFieldCount: (fields || []).filter((f) => f && f.id).length,
+      translatedFieldCount: orderedSlots.length + presentation.length,
     },
     slots: orderedSlots,
   };

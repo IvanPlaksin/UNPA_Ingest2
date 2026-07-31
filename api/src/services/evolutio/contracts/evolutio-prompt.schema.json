@@ -228,8 +228,39 @@
         "channel": { "enum": ["text", "voice"] },
         "engineNode": { "type": "array", "items": { "$ref": "#/definitions/engineNode" }, "minItems": 1, "uniqueItems": true },
         "serviceId": { "type": "array", "items": { "type": "string" }, "minItems": 1, "uniqueItems": true },
-        "activeRoute": { "type": "array", "items": { "type": "string" }, "minItems": 1, "uniqueItems": true }
+        "activeRoute": { "type": "array", "items": { "type": "string" }, "minItems": 1, "uniqueItems": true },
+        "phase": {
+          "description": "EC-001. Where the conversation stands, on the AGENT path. `engineNode` and `activeRoute` describe the state machine, which has separate LLM nodes and a rich route vocabulary; the agent has neither — every one of its turns is route AGENT — so scoping a rule to a branch of the dialogue needs its own dimension. Computed by code from the tool session, never by the model: a prompt whose scope depended on the model it configures could not be reproduced.",
+          "type": "array",
+          "items": { "$ref": "#/definitions/phase" },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "toolContext": {
+          "description": "EC-001. What the assistant was last doing, where that is finer than the phase — searching the catalogue, reading the knowledge base, holding an open draft. Use `phase` unless the rule genuinely depends on the last action: `toolContext` changes every turn, so a rule scoped to it flickers in and out of the prompt.",
+          "type": "array",
+          "items": { "$ref": "#/definitions/toolContext" },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "serviceCategory": {
+          "description": "EC-001. The family of the service in play (the first two segments of the code, e.g. EO-HR), for rules that hold across a domain rather than one form. Coarser than `serviceId` on purpose: a rule pinned to a single service is nearly always a field hint in disguise and belongs on the form, not in the prompt.",
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "uniqueItems": true
+        }
       }
+    },
+
+    "phase": {
+      "description": "The stage of an agent conversation. Deliberately few and deliberately stable: a rule scoped to a phase should stay in the prompt for several turns, otherwise the model is handed a different instruction sheet every time it speaks.",
+      "enum": ["intent", "service_choice", "fill", "confirm", "reading", "handed_off"]
+    },
+
+    "toolContext": {
+      "description": "A fact about the last action, for scopes the phase cannot express.",
+      "enum": ["has_draft", "searching_catalog", "searching_kb", "no_draft"]
     }
   }
 }

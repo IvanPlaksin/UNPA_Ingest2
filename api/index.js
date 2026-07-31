@@ -233,6 +233,10 @@ app.use('/api/v1/flowdesk', require('./src/middleware/flowdesk-proxy-auth.middle
 app.use('/api/v1/flowdesk/config', flowdeskConfigRoutes);
 app.use('/api/v1/flowdesk/admin', flowdeskAdminRoutes);
 app.use('/api/v1/flowdesk', flowdeskRoutes);
+// Guided tours (@guided-ux/tour). Mounted OUTSIDE the FlowDesk gate on purpose: the
+// tour is a general help system, its content is public explanatory text, and the
+// package is meant to serve hosts that have nothing to do with FlowDesk.
+app.use('/api/v1/tour', require('./src/routes/tour.route'));
 app.use('/api/v1/codex', codexRoutes);
 app.use('/api/v1/backlog', backlogRoutes);
 app.use('/api/v1/backlog', backlogExecutionRoutes);

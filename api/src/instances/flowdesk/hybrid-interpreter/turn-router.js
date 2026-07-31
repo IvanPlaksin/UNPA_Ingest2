@@ -52,7 +52,7 @@ const REASONS = [
   'not_fill_phase',   // 5. not walking the form (service choice, confirm, hand-off…)
   'no_prompt_hint',   // 6. nothing to ask, or nothing to ask it with
   'first_field',      // 7. the first field of a form deserves context
-  'non_english',      // 9. the template speaks English only
+
   'large_form_offer', // 10. a big form must be offered as a choice, once, in words
 ];
 
@@ -112,15 +112,24 @@ function turnNeedsModel(input, state) {
   //    form buys the context every later template turn borrows.
   if (!(state.fieldsAskedThisForm > 0)) return { needsModel: true, reason: 'first_field' };
 
-  // 9. `promptHint` is the Altiora field label, and Altiora's labels are English.
-  //    On a Russian session a template would answer "Понял. When do you need to
-  //    travel?" — a language switch mid-sentence, which is worse than the 3 seconds
-  //    it costs to have the model ask properly. (Condition 8 of the draft test —
-  //    "the previous message was a question" — was dropped at the gate: a click and
-  //    free text are mutually exclusive, so condition 1 already covers it.)
-  if (String(state.lang || 'en').toLowerCase().split('-')[0] !== 'en') {
-    return { needsModel: true, reason: 'non_english' };
-  }
+  // 9. WAS: a non-English session went to the model, because `promptHint` is the
+  //    Altiora field label and Altiora's labels are English — "Понял. When do you
+  //    need to travel?" reads as a language switch mid-sentence.
+  //
+  //    REVERSED by Ivan's ruling (2026-07-31): where the user's language has no
+  //    localisation, use the automaton with the English label rather than the model.
+  //
+  //    I had it the other way and the concern was real, but it was outweighed by a
+  //    fact this condition ignored: it made the automaton unreachable for a Russian
+  //    or French user on EVERY turn, so the whole feature existed only for English
+  //    sessions. And the field label is English in the Altiora form the user is
+  //    handed anyway — the label was never going to be translated by the model, only
+  //    the sentence around it. The template's own strings ARE localised (`ui`), so
+  //    what remains mixed is the field name itself, exactly as in the form.
+  //
+  //    (Condition 8 of the draft test — "the previous message was a question" — was
+  //    dropped at the gate: a click and free text are mutually exclusive, so
+  //    condition 1 already covers it.)
 
   // 10. A form of thirty fields should be offered as a choice — "you might find it
   //     quicker to fill this in the form itself" — and that offer is an explanation,
@@ -136,4 +145,15 @@ function turnNeedsModel(input, state) {
   return { needsModel: false, reason: 'template' };
 }
 
-module.exports = { turnNeedsModel, REASONS };
+/**
+ * Reasons that are no longer evaluated but still appear in recorded turns. Kept
+ * separate from REASONS, which IS the evaluation order and is asserted as such — a
+ * retired reason left in that list would make the order untestable.
+ */
+const RETIRED_REASONS = [
+  // Retired 2026-07-31 by Ivan's ruling: a missing localisation falls back to the
+  // English field label rather than to the model.
+  'non_english',
+];
+
+module.exports = { turnNeedsModel, REASONS, RETIRED_REASONS };

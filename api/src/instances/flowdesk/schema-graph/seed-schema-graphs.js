@@ -174,13 +174,21 @@ async function seedService(snap) {
     `CREATE (s:ServiceDef {serviceId:$sid, version:$version, title:$title,
        approvalRequired:$approvalRequired, phases:$phases})
      SET s.slaHours = $slaHours, s.handlerRef = $handlerRef,
-         s.altioraOusId = $altioraOusId, s.contentHash = $contentHash`,
+         s.altioraOusId = $altioraOusId, s.contentHash = $contentHash,
+         s.presentationJson = $presentationJson,
+         s.sourceFieldCount = $sourceFieldCount, s.translatedFieldCount = $translatedFieldCount`,
     {
       sid, version: snap.version, title: snap.metadata.title,
       approvalRequired: snap.metadata.approvalRequired, phases: snap.phases,
       slaHours: snap.metadata.slaHours ?? null, handlerRef: snap.metadata.handlerRef ?? null,
       altioraOusId: snap.metadata.altioraOusId ?? null,
       contentHash: snap.metadata.contentHash ?? null,
+      // SCH-001 — as JSON rather than as nodes. These are not questions and nothing
+      // queries them structurally; modelling them as SlotDef would put them in reach
+      // of every query that looks for something to ask.
+      presentationJson: snap.presentation ? JSON.stringify(snap.presentation) : null,
+      sourceFieldCount: snap.metadata.sourceFieldCount ?? null,
+      translatedFieldCount: snap.metadata.translatedFieldCount ?? null,
     }
   );
 

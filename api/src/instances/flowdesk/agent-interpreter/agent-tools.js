@@ -354,6 +354,8 @@ function createToolSession() {
     // the template path has no loop, so the session remembers them — a click is
     // resolved against the control that was actually shown.
     lastControls: [],
+    // EC-002: the last tool this session executed, for the dialogue phase.
+    lastTool: null,
   };
 }
 
@@ -1316,11 +1318,32 @@ function createAgentTools(deps = {}) {
 
     const shown = (shownControls || []).find((c) => c && canonicalSlotId(c.slotId) === slotId);
     const raw = controlAction.value;
-    const declined = raw === false || raw === 'false';
-    if (declined) return null; // "no, someone else" — the next turn asks; nothing to store
+
+    // The form is consulted BEFORE the click is interpreted, because what `true`
+    // means depends on the field.
+    const draft = await draftService.get(ctx.sessionId).catch(() => null);
+    const hasDraft = !!(draft && draft.serviceId);
+    const snapshot = hasDraft ? await loadSnapshot(draft.serviceId).catch(() => null) : null;
+    const def = (snapshot && snapshot.slots ? snapshot.slots : []).find((sl) => sl.slotId === slotId);
+
+    // A YES/NO FIELD ANSWERS ITSELF.
+    //
+    // On a confirm, `true` means "agree to the value you proposed" and `false` means
+    // "no, someone else" — nothing to store, ask again. On a BOOLEAN field the same
+    // two values ARE the answer, and treating them as a confirmation loses them:
+    // `true` looked for a defaultValue a toggle does not carry, `false` was read as a
+    // decline and discarded. Watched in the arena: the consent checkbox on the
+    // extension form was answered "yes" four times, recorded none of them, and asked
+    // again each turn until the user gave up — 31 turns for a form that needed 20.
+    const isBooleanField = !!def && (def.type === 'boolean' || def.type === 'toggle');
+    const asBoolean = raw === true || raw === 'true' ? true : ((raw === false || raw === 'false') ? false : null);
 
     let value;
-    if (raw !== undefined && raw !== null && raw !== '' && raw !== true && raw !== 'true') {
+    if (isBooleanField && asBoolean !== null) {
+      value = asBoolean;
+    } else if (raw === false || raw === 'false') {
+      return null; // "no, someone else" — the next turn asks; nothing to store
+    } else if (raw !== undefined && raw !== null && raw !== '' && raw !== true && raw !== 'true') {
       // An option was picked: keep the option's own value, not its label.
       const opt = shown && Array.isArray(shown.options)
         ? shown.options.find((o) => String(o.value) === String(raw))
@@ -1331,16 +1354,14 @@ function createAgentTools(deps = {}) {
     } else if (SELF_DEFAULT_SLOTS.has(slotId)) {
       value = await selfValue(ctx); // …and if the control is gone, to the signed-in user
     }
+    // `false` is a value; only absence is not.
     if (value === undefined || value === null || value === '') return null;
 
-    const draft = await draftService.get(ctx.sessionId).catch(() => null);
-    if (!draft || !draft.serviceId) {
+    if (!hasDraft) {
       const ok = await recordPreDraftAnswer(ctx, slotId, value);
       return ok ? { slotId, value, label: (shown && shown.label) || slotId } : null;
     }
 
-    const snapshot = await loadSnapshot(draft.serviceId).catch(() => null);
-    const def = (snapshot && snapshot.slots ? snapshot.slots : []).find((sl) => sl.slotId === slotId);
     if (!def) return null; // not a field of this form — the model's own control
     try {
       await draftService.patch(ctx.sessionId, [{ op: 'set', slotId, value, provenance: 'resolved', pending: false }]);
@@ -1529,6 +1550,10 @@ function createAgentTools(deps = {}) {
     const fn = TOOLS[name];
     if (!fn) return err(`unknown tool "${name}"`);
     const t0 = Date.now();
+    // EC-002: what the assistant last did. The dialogue phase distinguishes reading
+    // the knowledge base from resolving a service, and only the tool call says which.
+    // Recorded here rather than in each tool so a new tool cannot forget to.
+    if (ctx && ctx.session) ctx.session.lastTool = name;
     try {
       const result = await fn(input || {}, ctx);
       return { ...result, ms: Date.now() - t0 };
@@ -1537,8 +1562,17 @@ function createAgentTools(deps = {}) {
     }
   }
 
+  /**
+   * The current draft, for callers that need the conversation's state without
+   * running a tool — the dialogue phase (EC-002) is the first. Never throws: a store
+   * hiccup costs a coarser prompt scope, not the turn.
+   */
+  async function currentDraft(ctx) {
+    try { return await draftService.get((ctx && ctx.sessionId) || null); } catch { return null; }
+  }
+
   return { execute, TOOLS, TOOL_SCHEMAS, createToolSession, CONTROL_TYPES, autoControlFor, recordSkip, missingRequired, turnBrief, recordPreDraftAnswer, recordControlAnswer, recordTypedAnswer, resolveForControl, prefetchCatalog, loadSnapshot,
-    beginTurn };
+    beginTurn, currentDraft };
 }
 
 module.exports = { createAgentTools, createToolSession, TOOL_SCHEMAS, CONTROL_TYPES };

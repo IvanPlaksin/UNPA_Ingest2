@@ -36,8 +36,14 @@ describe('a typed node reaches the editor with its own text', () => {
     expect(n.data.nodeType).toBe('Thesis');
   });
 
-  it('reads a Narrative from `narrative` and a Constraint from `rule`', () => {
-    expect(fromEvolutio({ nodeId: 'n1', type: 'Narrative', narrative: 'A story.' }).data.text).toBe('A story.');
+  it('reads a Narrative from `framing` and a Constraint from `rule`', () => {
+    // This test used to say `narrative`, and so did the code — both written from the
+    // same guess that the field is named after the type. The compiler reads `framing`
+    // (bodyOf), so every Narrative rendered blank and every edit to one was saved
+    // into a field nothing compiles. The names come from the compiler, not from the
+    // type name; see CONTENT_FIELD.
+    expect(fromEvolutio({ nodeId: 'n1', type: 'Narrative', framing: 'A story.' }).data.text).toBe('A story.');
+    expect(fromEvolutio({ nodeId: 'p1', type: 'Persona', register: 'Warm.' }).data.text).toBe('Warm.');
     expect(fromEvolutio({ nodeId: 'c1', type: 'Constraint', rule: 'Never do X.' }).data.text).toBe('Never do X.');
   });
 
@@ -74,10 +80,13 @@ describe('a round trip loses nothing', () => {
     expect(out.appliesToNodes).toEqual([]);
   });
 
-  it('a disabled node becomes RETIRED rather than silently active', () => {
+  it('a disabled node becomes DEPRECATED rather than silently active', () => {
+    // Was asserting "RETIRED" — a value the ontology does not have. The test encoded
+    // the bug: CANDIDATE | ACTIVE | DEPRECATED is the whole enum, and saveGraph
+    // validates, so a disabled rule could not be saved at all.
     const n = fromEvolutio(thesis());
     n.data.enabled = false;
-    expect(toEvolutio(n).status).toBe('RETIRED');
+    expect(toEvolutio(n).status).toBe('DEPRECATED');
   });
 });
 

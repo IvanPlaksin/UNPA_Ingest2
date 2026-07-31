@@ -50,6 +50,15 @@ describe('what a person does with the widget in front of them', () => {
     expect((await clickFor(ctrl('number'), 'about 12 months in total')).controlAction).toEqual({ slotId: 'field1', value: 12 });
   });
 
+  test('agreement is read from the whole sentence, because a person does not answer "yes"', async () => {
+    // Live twice: "Form Completer, 123456 — that's me. Confirm." was read as a
+    // DECLINE, because the interpreters' affirmative test is anchored to the start of
+    // the message. The assistant then asked the same question five turns running.
+    const said = "Form Completer, 123456 — that's me. Confirm.";
+    expect((await clickFor(ctrl('confirm'), said)).controlAction).toEqual({ slotId: 'field1', value: true });
+    expect((await clickFor(ctrl('confirm'), 'Geneva is correct, proceed')).controlAction).toEqual({ slotId: 'field1', value: true });
+  });
+
   test('a confirm is a click when the persona agrees', async () => {
     expect((await clickFor(ctrl('confirm'), 'Yes, that is correct')).controlAction).toEqual({ slotId: 'field1', value: true });
     expect((await clickFor(ctrl('confirm'), 'да, верно')).controlAction).toEqual({ slotId: 'field1', value: true });

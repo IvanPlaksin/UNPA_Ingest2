@@ -29,7 +29,7 @@ const FORM = {
   ],
 };
 
-function harness() {
+function harness(form = FORM) {
   const draft = { sessionId: 's1', serviceId: 'EO-HR-SA-EXT', slots: {}, status: 'draft' };
   let created = false;
   const draftService = {
@@ -44,7 +44,7 @@ function harness() {
   };
   const tools = createAgentTools({
     draftService,
-    loadSnapshot: async () => FORM,
+    loadSnapshot: async () => form,
     resolveSearch: async () => [{ type: 'SERVICE', serviceId: 'EO-HR-SA-EXT', title: 'Extension' }],
     directory: { getCurrentUser: async () => ME },
   });
@@ -140,6 +140,68 @@ describe('a control answer is written by code, not by the model', () => {
 
     await h.tools.execute('draft_create', { serviceCode: 'EO-HR-SA-EXT' }, h.ctx);
     expect(h.draft.slots.beneficiary.value).toEqual(ME);
+  });
+});
+
+describe('a yes/no field answers itself', () => {
+  // Its own form: FORM is shared, and adding a field to it moves the required-set and
+  // the ask order for every other test in this file.
+  const CONSENT_FORM = {
+    ...FORM,
+    slots: [...FORM.slots, { slotId: 'consent', type: 'toggle', required: true, phase: 'detail', promptHint: 'I confirm the information is accurate' }],
+  };
+  const consentHarness = () => harness(CONSENT_FORM);
+
+  // Found in the arena, not in a unit test: the consent checkbox on the extension
+  // form was answered "yes" four times, recorded none of them, and was asked again
+  // every turn until the simulated user gave up — 31 turns for a form that needed 20.
+  //
+  // The cause was a confirm's semantics applied to a boolean field. On a confirm,
+  // `true` means "agree to the value you proposed" (so the code went looking for a
+  // defaultValue, which a toggle does not carry) and `false` means "no, someone else"
+  // (so it was discarded as a decline). On a yes/no FIELD both values are the answer.
+  test('true is stored as the value, not read as agreement to a default', async () => {
+    const h = consentHarness();
+    await start(h);
+
+    const rec = await h.tools.recordControlAnswer(h.ctx, { slotId: 'consent', value: true },
+      [{ id: 'c', type: 'toggle', slotId: 'consent' }]);
+
+    expect(rec).toMatchObject({ slotId: 'consent', value: true });
+    expect(h.draft.slots.consent.value).toBe(true);
+  });
+
+  test('FALSE is an answer too, and must not be discarded as a decline', async () => {
+    const h = consentHarness();
+    await start(h);
+
+    const rec = await h.tools.recordControlAnswer(h.ctx, { slotId: 'consent', value: false },
+      [{ id: 'c', type: 'toggle', slotId: 'consent' }]);
+
+    expect(rec).toMatchObject({ slotId: 'consent', value: false });
+    expect(h.draft.slots.consent.value).toBe(false);
+  });
+
+  test('…while on a DIRECTORY confirm, false still means "no, someone else" and stores nothing', async () => {
+    const h = harness();
+    await start(h);
+    // `beneficiary`, not `author`: draft_create fills the requester silently from the
+    // signed-in identity, so "nothing was stored" could never hold for it.
+    const rec = await h.tools.recordControlAnswer(h.ctx, { slotId: 'beneficiary', value: false },
+      [{ id: 'c', type: 'confirm', slotId: 'beneficiary', defaultValue: ME }]);
+
+    expect(rec).toBeNull();
+    expect(h.draft.slots.beneficiary).toBeUndefined();
+  });
+
+  test('and a confirm answered "yes" still agrees to what was proposed', async () => {
+    const h = harness();
+    await start(h);
+
+    const rec = await h.tools.recordControlAnswer(h.ctx, { slotId: 'beneficiary', value: true },
+      [{ id: 'c', type: 'confirm', slotId: 'beneficiary', defaultValue: ME }]);
+
+    expect(rec.value).toEqual(ME);
   });
 });
 

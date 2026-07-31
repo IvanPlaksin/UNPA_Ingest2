@@ -53,7 +53,9 @@ async function compile(serviceId) {
      RETURN s.serviceId AS serviceId, s.version AS version, s.title AS title,
             s.slaHours AS slaHours, s.approvalRequired AS approvalRequired,
             s.handlerRef AS handlerRef, s.phases AS phases,
-            s.altioraOusId AS altioraOusId, s.contentHash AS contentHash`,
+            s.altioraOusId AS altioraOusId, s.contentHash AS contentHash,
+            s.presentationJson AS presentationJson,
+            s.sourceFieldCount AS sourceFieldCount, s.translatedFieldCount AS translatedFieldCount`,
     { sid: serviceId }
   );
   if (svcRecs.length === 0) return null;
@@ -69,6 +71,25 @@ async function compile(serviceId) {
   if (ousId !== null && ousId !== undefined) metadata.altioraOusId = ousId;
   const contentHash = s.get('contentHash');
   if (contentHash !== null && contentHash !== undefined) metadata.contentHash = contentHash;
+  // SCH-001 — the fields that are not questions, and the reconciliation counts. Read
+  // back here so a snapshot that went through the graph is the same snapshot: without
+  // this the presentation fields would survive materialization and be lost on the
+  // first round trip, which is the shape of loss this feature exists to prevent.
+  const sourceFieldCount = s.get('sourceFieldCount');
+  if (sourceFieldCount !== null && sourceFieldCount !== undefined) {
+    metadata.sourceFieldCount = typeof sourceFieldCount === 'object' && 'low' in sourceFieldCount
+      ? sourceFieldCount.low : sourceFieldCount;
+  }
+  const translatedFieldCount = s.get('translatedFieldCount');
+  if (translatedFieldCount !== null && translatedFieldCount !== undefined) {
+    metadata.translatedFieldCount = typeof translatedFieldCount === 'object' && 'low' in translatedFieldCount
+      ? translatedFieldCount.low : translatedFieldCount;
+  }
+  let presentation = null;
+  const presentationJson = s.get('presentationJson');
+  if (presentationJson) {
+    try { presentation = JSON.parse(presentationJson); } catch { presentation = null; }
+  }
 
   const slotRecs = await read(
     `MATCH (s:ServiceDef {serviceId:$sid})-[:HAS_SLOT]->(sl:SlotDef)
@@ -189,6 +210,9 @@ async function compile(serviceId) {
     serviceId: s.get('serviceId'),
     version: s.get('version'),
     phases: s.get('phases'),
+    // Emitted only when there is something to emit, so a snapshot without
+    // presentation fields is byte-identical to what it was before SCH-001.
+    ...(presentation && presentation.length ? { presentation } : {}),
     metadata,
     slots,
   };

@@ -42,6 +42,17 @@ function makeEngine({ routeFor, approvalService, actOk = true, logAction } = {})
     completion: () => 'ok',
   });
   return createEngine({
+    // The Altiora tools adapter, faked. Un-injected it defaults to the REAL one, and
+    // the "unrelated control click" test below clicks __catalog_browse__ — which then
+    // makes a live catalogue call from a suite that has faked everything else. Alone
+    // that cost 375ms against 1-3ms for every other test here; in a parallel run it
+    // blew the 5s timeout and read like an ACT-gate regression. Same defect class as
+    // the arena runner's promptLoader.
+    tools: {
+      browseCatalog: async () => [],
+      searchArticles: async () => [],
+      searchCatalog: async () => [],
+    },
     injectContext: false, llm, resolveSearch: async () => [], draftService,
     loadSnapshot: async (sid) => snapshotFor(sid),
     approvalService,

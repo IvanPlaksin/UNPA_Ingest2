@@ -64,8 +64,13 @@ router.post('/sync/poll', c.syncPollNow);
 
 // Prompt-graph editor (P6): system-prompt-from-rules-graph
 router.get('/prompt/meta', c.promptMeta);
+// HYB-FIX-003 — the interpreter in force, with the template/model split as evidence.
+router.get('/interpreter-status', c.interpreterStatus);
 router.get('/prompt/default-graph', c.promptDefaultGraph);
 router.get('/prompt/graphs', c.promptListGraphs);
+// ПР-003 — the graph that IS the system prompt: read the choice, and make one.
+router.get('/prompt/active-entry', c.promptActiveEntry);
+router.post('/prompt/active-entry', c.promptSetActiveEntry);
 router.get('/prompt/graphs/:entryId', c.promptGetGraph);
 router.post('/prompt/graphs', c.promptSaveGraph);
 router.post('/prompt/graphs/mutate', c.promptMutateGraph); // AI direct-edit: apply mutations (+ optional save version)
@@ -75,6 +80,15 @@ router.get('/prompt/graphs/:entryId/versions', c.promptGetVersions);
 router.post('/prompt/graphs/:entryId/promote', c.promptPromoteVersion);
 router.post('/prompt/compile', c.promptCompile);
 router.post('/prompt/validate', c.promptValidate);
+// EC-011/EC-013 — the prompt per context, and what a whole graph looks like across all nine.
+router.post('/prompt/preview', c.promptPreview);
+router.post('/prompt/coverage', c.promptCoverage);
+// PE-006: a turn's recorded provenance → the rules that were in force on it.
+// PE-007: a rule → how many recorded turns had it in force (never "affected").
+router.post('/prompt/rules-for-turn', c.promptRulesForTurn);
+router.get('/prompt/rules/:nodeId/turns', c.promptTurnsUnderRule);
+// PE-004: measured share of turns the prompt governs + the template's fixed strings.
+router.get('/prompt/authorship', c.promptAuthorship);
 router.post('/prompt/sandbox', c.promptSandbox);
 router.post('/prompt/apply', c.promptApply);
 router.get('/prompt/active', c.promptActive);

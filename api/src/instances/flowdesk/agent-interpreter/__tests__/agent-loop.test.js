@@ -32,7 +32,16 @@ const fakeTools = (impl = {}) => ({
   execute: async (name, input, ctx) => (impl[name] ? impl[name](input, ctx) : { ok: true, ms: 1 }),
 });
 
-const fakePrompt = { build: async () => ({ text: 'SYSTEM', manifest: { textHash: 'h1', graphEntryId: 'e1', graphVersion: 3 } }) };
+// Two hashes, as the real build() returns: `textHash` is the FINAL prompt (rules +
+// contract + padding + language), `manifest.textHash` is the compiled rules alone.
+// They are necessarily different, and only the second one is comparable to a
+// rebuilt version of the graph.
+const fakePrompt = {
+  build: async () => ({
+    text: 'SYSTEM', textHash: 'final-hash',
+    manifest: { textHash: 'h1', graphEntryId: 'e1', graphVersion: 3 },
+  }),
+};
 
 const mk = (script, tools = fakeTools(), over = {}) => createAgentLoop({
   llm: scriptedLlm(script), tools, promptService: fakePrompt, ...over,
@@ -176,9 +185,39 @@ describe('provenance and cost travel with the turn', () => {
   test('the prompt hash and graph version are recorded', async () => {
     const loop = mk([say('ok')]);
     const r = await loop.runTurn(base);
-    expect(r.meta.promptTextHash).toBe('h1');
+    expect(r.meta.promptTextHash).toBe('final-hash');
     expect(r.meta.promptGraphEntryId).toBe('e1');
     expect(r.meta.promptGraphVersion).toBe(3);
+  });
+
+  test('the graph hash is recorded SEPARATELY from what the model was sent', async () => {
+    // Kept apart so "the rebuilt rules differ from what ran" can mean something. The
+    // final prompt also carries the contract and the cache padding, so comparing a
+    // rebuilt graph against it would flag every turn ever recorded.
+    const loop = mk([say('ok')]);
+    const r = await loop.runTurn(base);
+    expect(r.meta.promptGraphTextHash).toBe('h1');
+    expect(r.meta.promptGraphTextHash).not.toBe(r.meta.promptTextHash);
+  });
+
+  test('a failed tool call carries WHY it failed, not just that it did', async () => {
+    // Live, draft_create failed twice in one dialogue — two wasted turns — and the
+    // replay could only say "draft_create: error". The reason was told to the model
+    // and discarded; the operator reading the session has no process logs.
+    const tools = fakeTools({ catalog_search: () => ({ ok: false, error: 'no provider for this duty station', ms: 3 }) });
+    const loop = mk([call('catalog_search'), say('sorry')], tools);
+    const r = await loop.runTurn(base);
+    const failed = r.meta.toolCalls.find((c) => !c.ok);
+    expect(failed.error).toBe('no provider for this duty station');
+  });
+
+  test('a successful call carries no error field, and a huge one is capped', async () => {
+    const tools = fakeTools({ catalog_search: () => ({ ok: false, error: 'x'.repeat(2000), ms: 1 }) });
+    const loop = mk([call('catalog_search'), say('ok')], tools);
+    const r = await loop.runTurn(base);
+    const [failed] = r.meta.toolCalls.filter((c) => !c.ok);
+    expect(failed.error).toHaveLength(500);
+    expect(r.meta.toolCalls.filter((c) => c.ok).every((c) => c.error === undefined)).toBe(true);
   });
 
   test('cost and tokens accumulate across iterations', async () => {

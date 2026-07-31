@@ -97,6 +97,7 @@ function createAltioraProvider(config = {}) {
   const svcPassword = config.servicePassword || process.env.ALTIORA_SERVICE_PASSWORD || null;
   let token = config.token || process.env.ALTIORA_API_TOKEN || null;
   let tokenExp = token ? Infinity : 0; // a pre-supplied token has no known expiry
+  let keyOnly = false; // login endpoint absent (Release Altiora) → send API-Key only
   const httpClient = config.httpClient || defaultHttp;
 
   function defaultHttp(method, url, { headers, body } = {}) {
@@ -105,11 +106,15 @@ function createAltioraProvider(config = {}) {
   }
 
   async function login() {
-    if (!svcEmail || !svcPassword) throw new Error('ALTIORA_SERVICE_EMAIL/PASSWORD not configured (and no ALTIORA_API_TOKEN)');
+    // No service creds and no pre-supplied token → rely on the API-Key alone.
+    if (!svcEmail || !svcPassword) { keyOnly = true; return null; }
     const res = await httpClient('POST', `${baseUrl}/api/auth/login`, {
       headers: { 'Content-Type': 'application/json', ...(apiKey ? { 'API-Key': apiKey } : {}) },
       body: { email: svcEmail, password: svcPassword },
     });
+    // Release Altiora has no /api/auth/login (#if DEBUG) → 404. The API-Key
+    // authenticates on its own (ApiKeyMiddleware service principal) → key-only.
+    if (res.status === 404) { keyOnly = true; return null; }
     if (!res.ok || !res.json) throw new Error(`login ${res.status}`);
     token = pick(res.json, ['token', 'Token']);
     tokenExp = Date.now() + 2.5 * 3600 * 1000; // refresh a bit before the 3h expiry
@@ -118,6 +123,7 @@ function createAltioraProvider(config = {}) {
   }
 
   async function ensureToken() {
+    if (keyOnly) return null;
     if (token && Date.now() < tokenExp) return token;
     return login();
   }
@@ -126,9 +132,13 @@ function createAltioraProvider(config = {}) {
     const t = await ensureToken();
     const qs = query ? `?${new URLSearchParams(Object.entries(query).filter(([, v]) => v != null)).toString()}` : '';
     const res = await httpClient(method, `${baseUrl}${path}${qs}`, {
-      headers: { 'Content-Type': 'application/json', ...(apiKey ? { 'API-Key': apiKey } : {}), Authorization: `Bearer ${t}` },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(apiKey ? { 'API-Key': apiKey } : {}),
+        ...(t ? { Authorization: `Bearer ${t}` } : {}),
+      },
     });
-    if (res.status === 401 && retry) { token = null; return call(method, path, { query, retry: false }); }
+    if (res.status === 401 && retry && !keyOnly) { token = null; return call(method, path, { query, retry: false }); }
     if (res.status === 404) return { status: 404, json: null };
     if (!res.ok) throw new Error(`Altiora ${method} ${path} → ${res.status}`);
     return res;

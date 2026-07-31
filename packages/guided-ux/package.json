@@ -1,0 +1,41 @@
+{
+  "name": "@guided-ux/tour",
+  "version": "0.1.0",
+  "description": "Guided product tours driven by a knowledge model: the host declares anchors, the tour asks for them. Framework-free core, optional React bindings, optional voice.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "main": "core/index.js",
+  "exports": {
+    ".": "./core/index.js",
+    "./core": "./core/index.js",
+    "./react": "./react/index.js",
+    "./voice": "./voice/index.js",
+    "./providers/json": "./providers/json-provider.js"
+  },
+  "files": [
+    "core",
+    "react",
+    "voice",
+    "providers",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test \"core/__tests__/*.test.js\" \"providers/__tests__/*.test.js\" \"voice/__tests__/*.test.js\""
+  },
+  "peerDependencies": {
+    "react": ">=17.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "keywords": [
+    "tour",
+    "onboarding",
+    "walkthrough",
+    "guided",
+    "product-tour"
+  ]
+}

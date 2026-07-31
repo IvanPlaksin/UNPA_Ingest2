@@ -48,6 +48,20 @@ const { AFFIRMATIVE } = require('../../instances/flowdesk/agent-interpreter/agen
 
 const NEGATIVE = /^\s*(n|no|nope|not|никак|нет|не|non|no gracias|لا|不|否)(\s|$|[.,!;。！，])/i;
 
+/**
+ * Agreement anywhere in a sentence — because a person does not answer "yes".
+ *
+ * The interpreters' AFFIRMATIVE is anchored to the start of the message, which is
+ * right for a chat where a user taps a button or types one word. A simulated user
+ * writes prose: "Form Completer, 123456 — that's me. Confirm." starts with a name,
+ * so the anchored test failed, the confirm was treated as a decline, and the
+ * assistant asked the same question five turns running. Watched twice.
+ *
+ * Only used to read a persona's reply to a CONFIRM. Nothing here changes what the
+ * interpreters accept from a real user.
+ */
+const AGREES_SOMEWHERE = /\b(yes|yeah|yep|correct|confirm(ed)?|that'?s me|it'?s me|that is me|right|agreed|proceed|go ahead)\b/i;
+
 const ISO_DATE = /\b(\d{4})-(\d{2})-(\d{2})\b/;
 /** 30/09/2026, 30.09.2026, 30-09-2026 — what a person types when not given a picker. */
 const LOOSE_DATE = /\b(\d{1,2})[./-](\d{1,2})[./-](\d{4})\b/;
@@ -145,8 +159,10 @@ async function clickFor(controls, text, opts = {}) {
       // A confirm proposes a value and offers a search underneath it. Agreement is a
       // click. Disagreement is what a person does next: they search for the right
       // record — so that is what happens here too, against the real directory.
-      if (AFFIRMATIVE.test(said)) return { controlAction: { slotId, value: true }, userMessage: said };
-      if (NEGATIVE.test(said) || !AFFIRMATIVE.test(said)) {
+      if (AFFIRMATIVE.test(said) || AGREES_SOMEWHERE.test(said)) {
+        return { controlAction: { slotId, value: true }, userMessage: said };
+      }
+      {
         const picked = await pickFromDirectory(c, said, opts);
         if (picked) return { controlAction: { slotId, value: picked }, userMessage: said };
         return { controlAction: null, why: NEGATIVE.test(said) ? 'directory_no_match' : 'unclear_confirm' };
@@ -199,4 +215,4 @@ async function clickFor(controls, text, opts = {}) {
   }
 }
 
-module.exports = { clickFor, fieldControl, dateFrom, numberFrom, optionsFrom, queryFrom, NEGATIVE };
+module.exports = { clickFor, fieldControl, dateFrom, numberFrom, optionsFrom, queryFrom, NEGATIVE, AGREES_SOMEWHERE };

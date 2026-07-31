@@ -2,7 +2,7 @@
  * TestApplyPanel (P6) — validate the rules graph, preview the compiled prompt,
  * sandbox-test it against real chat turns (no side effects), and apply it live.
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Box, Stack, Button, Typography, Paper, Chip, TextField, Alert, CircularProgress,
   Divider, Accordion, AccordionSummary, AccordionDetails, IconButton, MenuItem, Tooltip,
@@ -14,10 +14,12 @@ import {
 } from '../api/adminClient';
 import { useRulesStore } from './rulesStore';
 import { diffLines, condense, diffNodes } from './promptDiff';
+import { useTourAnchor } from '@guided-ux/tour/react';
 
 const OUTCOME_COLOR = { OUT_OF_SCOPE: 'default', NEW_INTENT: 'primary', DISAMBIGUATE: 'info', SLOT_FILL: 'primary', INFO_QUESTION: 'success', CONFIRM_YES: 'success', ERROR: 'error' };
 
 export default function TestApplyPanel() {
+  const previewRef = useTourAnchor('editor.preview', { label: 'Compiled prompt preview', route: '/flowdesk-admin/prompt' });
   const toGraph = useRulesStore((s) => s.toGraph);
   const entryId = useRulesStore((s) => s.entryId);
   const version = useRulesStore((s) => s.version);
@@ -40,6 +42,9 @@ export default function TestApplyPanel() {
   const [msgs, setMsgs] = useState(['I need to initiate the separation process', 'what is the weather today']);
   const [busy, setBusy] = useState('');
   const [note, setNote] = useState(null);
+  // PE-003: on by default — a preview that has to be asked for is a preview that is
+  // usually stale. Switchable, because a compile is a round trip.
+  const [livePreview, setLivePreview] = useState(true);
 
   const loadActive = () => promptActive().then(setActive).catch(() => setActive(null));
   useEffect(() => { loadActive(); }, []);
@@ -48,6 +53,44 @@ export default function TestApplyPanel() {
 
   const doValidate = () => run('validate', async () => setValidation(await promptValidate(toGraph())));
   const doCompile = () => run('compile', async () => setCompiled(await promptCompile(toGraph(), { language: lang, entryId, version })));
+
+  /**
+   * PE-003 — the preview follows the edit instead of waiting to be asked.
+   *
+   * Behind a button, the compiled text was almost always STALE: the operator changed a
+   * rule, looked at the preview, and read the previous compile as if it were the new
+   * one. That is worse than no preview, because it looks authoritative.
+   *
+   * Debounced 500ms — a compile is a round trip, and firing one per keystroke would
+   * both hammer the API and make the panel flicker while a sentence is being typed.
+   *
+   * The dependency is the SERIALISED graph, not the node array: dragging a node
+   * changes positions on every animation frame and none of that reaches the prompt.
+   */
+  const nodes = useRulesStore((s) => s.nodes);
+  const graphKey = useMemo(() => {
+    try {
+      return JSON.stringify((nodes || []).map((n) => {
+        const d = n.data || {};
+        return [n.id, d.text, d.nodeType, d.category, d.priority, d.enabled, d.title];
+      }));
+    } catch { return String((nodes || []).length); }
+  }, [nodes]);
+
+  const [liveError, setLiveError] = useState(null);
+  useEffect(() => {
+    if (!livePreview) return undefined;
+    let cancelled = false;
+    const t = setTimeout(() => {
+      promptCompile(toGraph(), { language: lang, entryId, version })
+        .then((c) => { if (!cancelled) { setCompiled(c); setLiveError(null); } })
+        // A graph mid-edit legitimately fails to compile (an immutable constraint
+        // momentarily missing, a budget overrun). Saying so beats showing the last
+        // good compile as though it were current.
+        .catch((e) => { if (!cancelled) setLiveError(e.message || 'compile failed'); });
+    }, 500);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [graphKey, lang, livePreview]); // eslint-disable-line react-hooks/exhaustive-deps
   const doSandbox = () => run('sandbox', async () => setSandbox(await promptSandbox({ graph: toGraph(), messages: msgs.filter((m) => m.trim()), lang: 'en' })));
   /**
    * "Make this live" means two different things, and the difference is not cosmetic.
@@ -184,7 +227,7 @@ export default function TestApplyPanel() {
             the selected node contributed. The prompt is compiled per language (only
             the language instruction varies), so a preview that does not name its
             language is a preview of something in particular pretending to be general. */}
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: 'wrap', gap: 1 }}>
+        <Stack ref={previewRef} direction="row" spacing={1} alignItems="center" sx={{ flexWrap: 'wrap', gap: 1 }}>
           <TextField
             select size="small" label="Preview language" value={lang}
             onChange={(e) => setLang(e.target.value)} sx={{ width: 150 }}
@@ -208,7 +251,60 @@ export default function TestApplyPanel() {
               <Chip size="small" color="info" variant="outlined" label="under the cache floor" />
             </Tooltip>
           )}
+          {/* PE-003: the preview follows the edit. Off it goes stale silently, which
+              is why the state is shown rather than assumed. */}
+          <Tooltip title="Recompile automatically as the graph changes (500ms after the last edit)">
+            <Chip
+              size="small" variant={livePreview ? 'filled' : 'outlined'}
+              color={livePreview ? 'primary' : 'default'}
+              label={livePreview ? 'live' : 'manual'}
+              onClick={() => setLivePreview((v) => !v)}
+            />
+          </Tooltip>
+          {liveError && (
+            <Tooltip title={liveError}>
+              <Chip size="small" color="error" variant="outlined" label="does not compile" />
+            </Tooltip>
+          )}
         </Stack>
+
+        {/* EC-006 — what the prompt is MADE of, not just how big the graph is.
+            The operator edits the graph; the provider caches graph + contract +
+            padding. Showing the graph alone against the cache floor would read as a
+            problem on a perfectly healthy prompt. */}
+        {compiled && compiled.composition && (
+          <Paper variant="outlined" sx={{ p: 1, mb: 1 }}>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: 'wrap', gap: 0.5 }}>
+              <Typography variant="caption" sx={{ fontWeight: 600 }}>Prompt composition</Typography>
+              <Tooltip title="The rules you edit">
+                <Chip size="small" variant="outlined" label={`graph ${compiled.composition.graphTokens}`} />
+              </Tooltip>
+              <Tooltip title="Fixed in code — how the assistant uses its tools">
+                <Chip size="small" variant="outlined" label={`contract ${compiled.composition.contractTokens}`} />
+              </Tooltip>
+              <Tooltip title="Inert filler that lifts the prefix to the provider's minimum cacheable length">
+                <Chip size="small" variant="outlined" label={`padding ${compiled.composition.paddingTokens}`} />
+              </Tooltip>
+              <Typography variant="caption" color="text.secondary">=</Typography>
+              <Tooltip title={`Cache floor is ${compiled.composition.floor} tokens, measured against the live API`}>
+                <Chip
+                  size="small"
+                  color={compiled.composition.cacheable ? 'success' : 'warning'}
+                  variant="outlined"
+                  label={`prefix ${compiled.composition.prefixTokens}${compiled.composition.cacheable ? ' · cached' : ' · NOT cached'}`}
+                />
+              </Tooltip>
+              {compiled.composition.conditionalTokens > 0 && (
+                <Tooltip title="Conditional rules are not cached — this is billed on every turn">
+                  <Chip size="small" color="info" variant="outlined" label={`conditional ${compiled.composition.conditionalTokens}`} />
+                </Tooltip>
+              )}
+            </Stack>
+            {(compiled.composition.warnings || []).map((w) => (
+              <Alert key={w.code} severity="warning" sx={{ py: 0, mt: 0.5 }}>{w.message}</Alert>
+            ))}
+          </Paper>
+        )}
 
         {compiled && (
           <Accordion defaultExpanded disableGutters>

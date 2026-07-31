@@ -33,7 +33,7 @@ const gym = require('../src/services/dialogue-gym/dialogue-gym.service');
 
 const PERSONA = {
   name: 'Form Completer (EO Admin)',
-  description: 'An administrator who came to file one specific request and will see it through.',
+  description: 'An administrator who came to file one specific request and will see it through. Accepts the identity the assistant proposes — the arena\'s acting user is a REAL directory record while this persona\'s name is a fixture, so a persona that insists on its own name can never satisfy a people picker (it deadlocked twice before this instruction existed).',
   domainKnowledge: 'expert',
   patience: 10,
   verbosity: 'terse',
@@ -50,7 +50,10 @@ const PERSONA = {
     '4. Dates: answer in ISO form (2026-09-01). Numbers: answer with digits only.',
     '5. Optional fields you do not care about: say "skip".',
     '6. Do NOT change your mind, raise a second request, or ask policy questions — that is not what you came for.',
-    '7. Emit goal_achieved only when the assistant states the request has been created or hands you the completed form.',
+    '7. IDENTITY: when the assistant proposes who the request is for, or which duty station, ACCEPT what it proposes.',
+    '   Say "yes, that is me" or "yes, correct" and move on. Never insist on a different name, ID or office, and never',
+    '   ask to see a directory list — you are the signed-in user, and the assistant already knows who that is.',
+    '8. Emit goal_achieved only when the assistant states the request has been created or hands you the completed form.',
   ].join('\n'),
 };
 

@@ -36,6 +36,9 @@
  * @module instances/flowdesk/services/prompt-editor.service
  */
 
+// The agent graph's ontology. Read for the condition vocabulary (EC-009) so the
+// editor cannot offer a value the compiler has never heard of.
+const PROMPT_SCHEMA = require('../../../services/evolutio/contracts/evolutio-prompt.schema.json');
 const { compilePromptGraph, PROMPT_NODES, CATEGORY_ORDER } = require('./prompt-graph-compiler');
 const { validatePromptGraph } = require('./prompt-graph-validator');
 const systemPrompt = require('./system-prompt.service');
@@ -62,7 +65,10 @@ function catalog() { return require('../../../services/graphCatalog.service').gr
 async function listGraphs(source) {
   if (isAgent(source)) {
     const items = await evolutio().listGraphs();
-    const live = agentEntryId();
+    // ПР-003: the STORED choice, not just the environment — otherwise the list would
+    // mark the wrong graph as live for the whole life of a process whose `.env` still
+    // names the previous one.
+    const live = await require('./flowdesk-settings.service').getActivePromptEntry();
     // The one the runtime reads is marked and sorted first: an operator opening the
     // editor should not have to know an entry id to find the graph that matters.
     return (Array.isArray(items) ? items : [])
@@ -97,13 +103,41 @@ async function getGraph(entryId, version, source) {
   return catalog().getGraphById(entryId, false);
 }
 
-async function saveGraph({ entryId, name, description, nodes, edges, changelog, createdBy, source }) {
+/**
+ * ПР-004 — save a version, or create a NEW graph when `asNew` says so.
+ *
+ * The `asNew` flag is not decoration. This function used to substitute the LIVE entry
+ * whenever `entryId` was absent:
+ *
+ *     entryId: entryId || agentEntryId()
+ *
+ * which made a new graph impossible to create and — worse — turned any attempt at one
+ * into a new version OF THE RUNNING PROMPT. Nothing would have failed: a version
+ * appears, the editor reports success, and the live assistant quietly starts using
+ * whatever was on screen. An absent id now means what the caller says it means, and
+ * the fallback only applies when they are editing.
+ */
+async function saveGraph({ entryId, name, description, nodes, edges, changelog, createdBy, source, asNew }) {
   if (isAgent(source)) {
+    if (asNew && entryId) {
+      throw Object.assign(
+        new Error('asNew and entryId are contradictory: pass entryId to add a version, asNew to create a graph.'),
+        { status: 400 },
+      );
+    }
+    if (!asNew && !entryId && !agentEntryId()) {
+      throw Object.assign(
+        new Error('No entryId given and no live graph is set — pass asNew:true to create one.'),
+        { status: 400 },
+      );
+    }
     // The agent's graph has its own writer: it validates against the EVOLUTIO
     // ontology (typed nodes, immutable constraints) before it saves, and that
     // validation is the whole reason not to write the catalog directly from here.
     const { saved, validation } = await evolutio().saveGraph({
-      entryId: entryId || agentEntryId(),
+      entryId: asNew ? undefined : (entryId || agentEntryId()),
+      name: name || undefined,
+      description: description || undefined,
       graph: { nodes: nodes || [], edges: edges || [] },
       changelog: changelog || 'prompt graph update (editor)',
       createdBy,
@@ -142,7 +176,19 @@ function compile(graph, opts = {}) {
   // (`data.text`) simply are not there — so the source has to decide.
   if (isAgent(opts.source)) {
     const { compile: compileEvolutio } = require('../../../services/evolutio/evolutio-prompt.compiler');
-    return compileEvolutio(graph, { language: opts.language || 'en' }, {
+    // EC-011: the CONTEXT has to travel. Until conditions existed this only ever
+    // passed the language, which was harmless — every compile was the same compile.
+    // With APPLIES_WHEN it is not: dropping the context here would make every preview
+    // show the unconditional prompt and quietly report that no rule was excluded,
+    // which is the most convincing possible way to be wrong.
+    return compileEvolutio(graph, {
+      language: opts.language || 'en',
+      channel: opts.channel || 'text',
+      ...(opts.phase ? { phase: opts.phase } : {}),
+      ...(opts.toolContext ? { toolContext: opts.toolContext } : {}),
+      ...(opts.serviceCategory ? { serviceCategory: opts.serviceCategory } : {}),
+      ...(opts.serviceId ? { serviceId: opts.serviceId } : {}),
+    }, {
       graphEntryId: opts.entryId || null,
       graphVersion: opts.version ?? null,
       title: opts.title || 'FlowDesk Assistant',
@@ -312,13 +358,126 @@ function defaultGraph() {
   return { nodes, edges };
 }
 
+/**
+ * EC-009 — the vocabulary a condition may be written in, READ FROM THE SCHEMA.
+ *
+ * Not restated here, and not restated in the editor. A dropdown offering a value the
+ * compiler does not understand is the same failure as `appliesTo` once was: the
+ * operator picks it, it saves, it validates, and the rule silently never applies. The
+ * schema is the only place that decides, so the list is derived from it — adding a
+ * phase there makes it appear in the editor with no second edit, and REMOVING one
+ * makes it disappear rather than linger as a dead option.
+ *
+ * `serviceCategory` has no enum by design (the catalogue supplies it), so it is
+ * reported as free text and the editor must not pretend otherwise.
+ */
+function conditionVocabulary() {
+  const defs = (PROMPT_SCHEMA && PROMPT_SCHEMA.definitions) || {};
+  const props = (defs.condition && defs.condition.properties) || {};
+  const enumOf = (name) => (defs[name] && Array.isArray(defs[name].enum) ? defs[name].enum : []);
+  const describe = (key) => (props[key] && props[key].description) || '';
+  return {
+    // The four the editor offers. `engineNode`, `activeRoute` and `serviceId`
+    // describe the STATE MACHINE or a single form — deliberately not surfaced on the
+    // agent's graph, where they would be scope nothing reads.
+    phase: { values: enumOf('phase'), description: describe('phase') },
+    toolContext: { values: enumOf('toolContext'), description: describe('toolContext') },
+    language: { values: enumOf('language'), description: describe('language') },
+    serviceCategory: { values: null, free: true, description: describe('serviceCategory') },
+    // Carried, not offered: a condition loaded with these keys must survive an edit.
+    passthroughKeys: Object.keys(props).filter(
+      (k) => !['phase', 'toolContext', 'language', 'serviceCategory'].includes(k)
+    ),
+  };
+}
+
+/**
+ * EC-011 — the prompt as it will be in one context, and what fell out of it.
+ *
+ * One or two contexts, chosen from the nine REACHABLE ones rather than assembled from
+ * four independent dropdowns. That is not a simplification: four dropdowns let the
+ * operator build `fill + no_draft`, a turn that cannot happen, and then spend an
+ * afternoon tuning a prompt for it. The list comes from the coverage module, so the
+ * preview and the coverage report can never disagree about what a context is.
+ *
+ * @param {object} graph
+ * @param {{contexts?:string[], language?:string}} opts
+ * @returns {{contexts:Array, rules:Array}}
+ */
+function previewContexts(graph, opts = {}) {
+  const { REACHABLE_CONTEXTS } = require('../../../services/evolutio/evolutio-prompt.coverage');
+  const wanted = Array.isArray(opts.contexts) && opts.contexts.length
+    ? REACHABLE_CONTEXTS.filter((c) => opts.contexts.includes(c.name))
+    : REACHABLE_CONTEXTS.slice(0, 1);
+
+  const compiled = wanted.map((ctx) => {
+    try {
+      const out = compile(graph, {
+        source: 'agent', language: opts.language || 'en',
+        phase: ctx.phase, toolContext: ctx.toolContext,
+      });
+      const m = out.manifest || {};
+      return {
+        name: ctx.name,
+        phase: ctx.phase,
+        toolContext: ctx.toolContext,
+        text: out.text,
+        layers: m.layers || null,
+        included: (m.nodes || []).map((n) => n.nodeId),
+        excluded: m.excluded || [],
+        error: null,
+      };
+    } catch (e) {
+      // A context the graph will not compile in is the finding, not an empty panel.
+      return { name: ctx.name, phase: ctx.phase, toolContext: ctx.toolContext, error: e.message };
+    }
+  });
+
+  // One row per rule, so "what is different between these two" is answered by
+  // reading across rather than by holding two prompts in your head.
+  const byId = new Map(((graph && graph.nodes) || []).map((n) => [n.nodeId, n]));
+  const ids = [...new Set(compiled.flatMap((c) => [
+    ...(c.included || []),
+    ...(c.excluded || []).map((x) => x.nodeId),
+  ]))];
+  const rules = ids.map((nodeId) => {
+    const n = byId.get(nodeId) || {};
+    return {
+      nodeId,
+      title: n.title || nodeId,
+      type: n.type || null,
+      cells: compiled.map((c) => {
+        if (c.error) return { state: 'unknown' };
+        if ((c.included || []).includes(nodeId)) return { state: 'in' };
+        const x = (c.excluded || []).find((e) => e.nodeId === nodeId);
+        return { state: 'out', reason: (x && x.reason) || 'unknown' };
+      }),
+    };
+  }).sort((a, b) => {
+    // The rules that DIFFER between the contexts first — they are the reason anyone
+    // opened this panel.
+    const differs = (r) => (new Set(r.cells.map((c) => c.state)).size > 1 ? 0 : 1);
+    return differs(a) - differs(b) || String(a.title).localeCompare(String(b.title));
+  });
+
+  // The full list travels with the answer so the panel does not need a second
+  // endpoint to know what it may ask for — and cannot offer a context that no longer
+  // exists.
+  return { contexts: compiled, rules, allContexts: REACHABLE_CONTEXTS.map((c) => c.name) };
+}
+
 function meta() {
-  return { promptNodes: PROMPT_NODES, categories: CATEGORY_ORDER, namespace: NAMESPACE };
+  return {
+    promptNodes: PROMPT_NODES,
+    categories: CATEGORY_ORDER,
+    namespace: NAMESPACE,
+    conditions: conditionVocabulary(),
+  };
 }
 
 module.exports = {
   listGraphs, getGraph, saveGraph, getVersions, promoteVersion,
   compile, validate, sandbox, apply, getActive, listApplied, clearActive,
   applyMutations, mutateGraph,
-  defaultGraph, meta, NAMESPACE,
+  defaultGraph, meta, conditionVocabulary, previewContexts, NAMESPACE,
 };

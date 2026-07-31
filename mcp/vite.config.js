@@ -1,11 +1,22 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const here = path.dirname(fileURLToPath(import.meta.url))
+// @guided-ux/tour lives in the monorepo, not in node_modules. It is plain ESM with no
+// build step, so an alias is all it needs — that portability is the whole point of the
+// package, and needing a bundler config here would disprove it.
+const guidedUx = path.resolve(here, '../packages/guided-ux')
 
 // https://vitejs.dev/config/
 export default defineConfig({
     plugins: [react()],
     resolve: {
         dedupe: ['react', 'react-dom', 'three', '@react-three/fiber'],
+        alias: {
+            '@guided-ux/tour': guidedUx,
+        },
     },
     optimizeDeps: {
         // @flowdesk/chat-v2 pinned so a local rebuild is re-optimized. (v1.0.9)
@@ -21,6 +32,9 @@ export default defineConfig({
     server: {
         host: true,
         port: 5173,
+        // The package sits outside this app's root; without this the dev server
+        // refuses to serve it.
+        fs: { allow: [here, guidedUx] },
         proxy: {
             '/api': {
                 target: 'http://localhost:3010',

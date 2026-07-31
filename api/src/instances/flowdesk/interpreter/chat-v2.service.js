@@ -122,8 +122,56 @@ const agentEnabled = () => String(process.env.FLOWDESK_AGENT_INTERPRETER || '') 
  * turning it on without turning the agent off is what an operator will do, and the
  * sensible reading of that is "hybrid".
  */
-const hybridEnabled = () => String(process.env.FLOWDESK_INTERPRETER || '').toLowerCase() === 'hybrid'
-  || String(process.env.FLOWDESK_HYBRID_INTERPRETER || '') === '1';
+/**
+ * HYB-FIX-001 — hybrid is the DEFAULT when the agent is on, not an opt-in.
+ *
+ * It was opt-in, and the opt-in was never taken. `FLOWDESK_INTERPRETER` existed in
+ * exactly three places in the repository: this reader, the comment above it, and the
+ * tests that set it themselves. Not in `.env`, not in the deployment. So the hybrid
+ * ran in tests, in the arena, and in the hand-configured processes where it was
+ * measured — and never once for a user. Every turn of every real conversation went
+ * through the model, including the clicks that a template answers in 850 ms.
+ *
+ * A flag nobody sets is a feature nobody has. The measured path is now the default
+ * and the expensive one requires saying so: FLOWDESK_INTERPRETER=agent.
+ */
+function interpreterMode() {
+  const explicit = String(process.env.FLOWDESK_INTERPRETER || '').toLowerCase();
+  if (explicit === 'agent') return { mode: 'agent', source: 'FLOWDESK_INTERPRETER=agent' };
+  if (explicit === 'hybrid') return { mode: 'hybrid', source: 'FLOWDESK_INTERPRETER=hybrid' };
+  if (String(process.env.FLOWDESK_HYBRID_INTERPRETER || '') === '1') {
+    return { mode: 'hybrid', source: 'FLOWDESK_HYBRID_INTERPRETER=1' };
+  }
+  if (!agentEnabled()) return { mode: 'fsm', source: 'FLOWDESK_AGENT_INTERPRETER is not 1' };
+  return { mode: 'hybrid', source: 'default (FLOWDESK_INTERPRETER not set)' };
+}
+
+const hybridEnabled = () => interpreterMode().mode === 'hybrid';
+
+/**
+ * HYB-FIX-002 — say which interpreter is in force, at startup, in the log.
+ *
+ * The reason this is here and not in a comment: for weeks the only way to find out
+ * was to read three files and evaluate two expressions by hand, which is what it took
+ * to discover that the answer had been "the expensive one" the whole time. A
+ * configuration that decides what every conversation costs should not be something
+ * anyone has to derive.
+ */
+let _announced = false;
+function announceInterpreter(log = console.log) {
+  if (_announced) return;
+  _announced = true;
+  const { mode, source } = interpreterMode();
+  log(`[flowdesk] Interpreter mode: ${mode.toUpperCase()}`);
+  log(`[flowdesk]   source: ${source}`);
+  if (mode === 'agent') {
+    log('[flowdesk]   WARNING: hybrid disabled — EVERY turn calls the model, including '
+      + 'form clicks a template answers without one.');
+  }
+  if (mode === 'hybrid') {
+    log('[flowdesk]   form clicks are answered by the template; the model keeps the boundaries.');
+  }
+}
 
 function getAgentSession(sessionId, userContext, lang) {
   let s = AGENT_SESSIONS.get(sessionId);
@@ -179,6 +227,10 @@ async function endSessionAfterHandoff(sessionId) {
 }
 
 async function processMessage(sessionId, userId, message, userContext, choice, lang, controlAction, anchor, formEvent) {
+  // Announced on the first turn rather than on a timer at import. A process that
+  // never serves a conversation has nothing to announce, and a timer fired after a
+  // test suite finished is noise in someone else's output.
+  announceInterpreter();
   if (agentEnabled() || hybridEnabled()) {
     return processMessageWithAgent(sessionId, userId, message, userContext, choice, lang, controlAction);
   }
@@ -301,7 +353,12 @@ async function processMessageWithAgent(sessionId, userId, message, userContext, 
         ? [{ method: 'agentLoop', model: null, latencyMs: r.ms, costUsd: meta.costUsd, tokens: meta.tokens, error: null }]
         : [],
       nodeEvents: meta
-        ? meta.toolCalls.map((c) => ({ node: c.name, status: c.ok ? 'success' : 'error', durationMs: c.ms, ts: Date.now() }))
+        // P-4: the failure text rides through to the turn record. Without it a replay
+        // says "draft_create: error" and the operator has nowhere else to look.
+        ? meta.toolCalls.map((c) => ({
+          node: c.name, status: c.ok ? 'success' : 'error', durationMs: c.ms, ts: Date.now(),
+          ...(c.error ? { error: c.error } : {}),
+        }))
         : [{ node: 'TEMPLATE_FILL', status: 'success', durationMs: r.ms || 0, ts: Date.now() }],
       // Whatever the layers recorded for themselves during the turn.
       spans: scoped.spans,
@@ -346,4 +403,9 @@ async function processMessageWithAgent(sessionId, userId, message, userContext, 
 /** Test seam. */
 function _reset() { _engine = null; AGENT_SESSIONS.clear(); }
 
-module.exports = { processMessage, processMessageWithAgent, getEngine, _reset, agentEnabled, hybridEnabled };
+module.exports = {
+  processMessage, processMessageWithAgent, getEngine, _reset,
+  agentEnabled, hybridEnabled, interpreterMode, announceInterpreter,
+  // Test seam: the announcement is once-per-process by design.
+  _resetAnnounce: () => { _announced = false; },
+};

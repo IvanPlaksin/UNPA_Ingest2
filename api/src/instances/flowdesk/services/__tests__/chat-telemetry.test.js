@@ -121,6 +121,75 @@ describe('recordTurn persistence (fake graph)', () => {
     expect(params).toMatchObject(PROV);
   });
 
+  describe('the provenance belongs to the graph that ran the turn (P-1)', () => {
+    // For months this recorded the wrong graph on every agent turn. The active-prompt
+    // record only exists for the state machine; the agent compiles its own graph and
+    // has no such record, so 580 live turns were stamped with the entry and version of
+    // CHAT_PROMPT — a graph that did not influence a single word of them.
+    //
+    // Nothing looked broken: the field was populated and the number was plausible.
+    // These tests exist because that is exactly what makes the bug survive.
+    const AGENT_META = {
+      promptGraphEntryId: 'agent-entry', promptGraphVersion: 4,
+      promptTextHash: 'f'.repeat(64), promptGraphTextHash: 'g'.repeat(64),
+      toolCalls: [], costUsd: 0, tokens: 0,
+    };
+
+    test("an agent turn records ITS OWN manifest, not the state machine's record", async () => {
+      const writes = [];
+      telemetry._setDeps({ write: async (c, params) => { writes.push(params); return []; }, getPromptProvenance, getOverlayProvenance });
+      await telemetry.recordTurn({
+        sessionId: 'sess-a', message: 'hi',
+        result: { response: 'hello', agentMeta: AGENT_META },
+      });
+      expect(writes[0]).toMatchObject({
+        promptGraphEntryId: 'agent-entry', promptGraphVersion: 4,
+        promptTextHash: 'f'.repeat(64), promptGraphTextHash: 'g'.repeat(64),
+        promptProvenanceSource: 'turn',
+      });
+      expect(writes[0].promptGraphEntryId).not.toBe(PROV.promptGraphEntryId);
+    });
+
+    test('a TEMPLATE turn records no prompt at all — none governed it', async () => {
+      // Falling back here would credit the state machine's graph for words a template
+      // wrote from the field's own promptHint. "No prompt ran" is the honest record.
+      const writes = [];
+      telemetry._setDeps({ write: async (c, params) => { writes.push(params); return []; }, getPromptProvenance, getOverlayProvenance });
+      await telemetry.recordTurn({
+        sessionId: 'sess-tpl', message: '[control:set:startDate]',
+        result: { response: 'Noted. When?', turnAuthor: 'template', routerReason: 'template' },
+      });
+      expect(writes[0]).toMatchObject({
+        promptGraphEntryId: null, promptGraphVersion: null,
+        promptProvenanceSource: 'template',
+      });
+    });
+
+    test('a state-machine turn still reads the active record, and says so', async () => {
+      const writes = [];
+      telemetry._setDeps({ write: async (c, params) => { writes.push(params); return []; }, getPromptProvenance, getOverlayProvenance });
+      await telemetry.recordTurn({ sessionId: 'sess-fsm', message: 'hi', result: { response: 'hello', route: 'INFO_QUESTION' } });
+      expect(writes[0]).toMatchObject({ ...PROV, promptProvenanceSource: 'fsm-active' });
+    });
+  });
+
+  test('who wrote the turn, and why, reach the graph (P-2)', async () => {
+    // Both fields were set on every hybrid turn and written by nobody: they rode the
+    // response to the client, and the CREATE had no such properties. 0 of 1203 live
+    // turns carried an author, so the deterministic share of the dialogue was
+    // measurable only in the arena.
+    const writes = [];
+    telemetry._setDeps({ write: async (cypher, params) => { writes.push({ cypher, params }); return []; }, getPromptProvenance, getOverlayProvenance });
+    await telemetry.recordTurn({
+      sessionId: 'sess-h', message: '[control:set:x]',
+      result: { response: 'ok', turnAuthor: 'model', routerReason: 'free_text' },
+    });
+    const { cypher, params } = writes[0];
+    expect(cypher).toContain('turnAuthor:$turnAuthor');
+    expect(cypher).toContain('routerReason:$routerReason');
+    expect(params).toMatchObject({ turnAuthor: 'model', routerReason: 'free_text' });
+  });
+
   test('the turn also carries the overlays layered on top of the prompt', async () => {
     const writes = [];
     telemetry._setDeps({ write: async (cypher, params) => { writes.push({ cypher, params }); return []; }, getPromptProvenance, getOverlayProvenance });

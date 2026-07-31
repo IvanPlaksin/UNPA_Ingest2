@@ -25,6 +25,8 @@ import TicketsTab from './tabs/TicketsTab';
 import LlmTab from './tabs/LlmTab';
 import PermissionsTab from './tabs/PermissionsTab';
 import PromptEditorTab from './prompt-editor/PromptEditorTab';
+import TourMount, { TourLauncher } from './tour/TourMount';
+import { useTourAnchor } from '@guided-ux/tour/react';
 
 const TABS = [
   { key: '',         label: 'Overview', icon: LayoutDashboard, el: <OverviewTab /> },
@@ -78,6 +80,15 @@ function Shell() {
   const seg = location.pathname.replace(/^\/flowdesk-admin\/?/, '').split('/')[0] || '';
   const active = TABS.some((t) => t.key === seg) ? seg : '';
 
+  // Anchors the tour may point at. Declaring them is all this component does for the
+  // tour — it never learns what a tour is, only that these two tabs have names.
+  const sessionsTabRef = useTourAnchor('admin.tab.sessions', {
+    label: 'Sessions tab', route: '/flowdesk-admin/sessions',
+  });
+  const promptTabRef = useTourAnchor('admin.tab.prompt', {
+    label: 'Prompt Editor tab', route: '/flowdesk-admin/prompt',
+  });
+
   return (
     <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1, flexWrap: 'wrap', gap: 1 }}>
@@ -87,7 +98,10 @@ function Shell() {
             Chat V2 ↔ Altiora — sessions, quality, catalog, schemas, sync, tickets, LLM
           </Typography>
         </Box>
-        <HealthChips />
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <HealthChips />
+          <TourLauncher />
+        </Stack>
       </Stack>
 
       <Tabs
@@ -98,6 +112,7 @@ function Shell() {
       >
         {TABS.map((t) => (
           <Tab key={t.key} value={t.key} label={t.label} icon={<t.icon size={15} />} iconPosition="start"
+            ref={t.key === 'sessions' ? sessionsTabRef : (t.key === 'prompt' ? promptTabRef : undefined)}
             sx={{ minHeight: 40, py: 0 }} />
         ))}
       </Tabs>
@@ -123,5 +138,12 @@ function Shell() {
 }
 
 export default function FlowDeskAdminPage() {
-  return <Shell />;
+  // The tour wraps the whole section: an anchor declared by a component that mounted
+  // outside the provider is invisible to the runner, and the tour would report it as
+  // "not declared" — truthfully, and uselessly.
+  return (
+    <TourMount>
+      <Shell />
+    </TourMount>
+  );
 }

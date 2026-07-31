@@ -83,9 +83,21 @@ describe('each condition sends the turn to the model, and says which one did it'
       .toEqual({ needsModel: true, reason: 'first_field' });
   });
 
-  test('9 — a non-English session: promptHint is an English label, and a mid-sentence language switch is worse than a slow answer', () => {
-    expect(verdict((t) => { t.state.lang = 'ru'; }))
-      .toEqual({ needsModel: true, reason: 'non_english' });
+  /**
+   * Reversed by Ivan's ruling (2026-07-31). The old rule sent every non-English turn
+   * to the model, which meant the automaton was unreachable for a Russian or French
+   * user on every turn of every form — the feature existed for English sessions only.
+   * A missing localisation now falls back to the English field label, which is the
+   * label the Altiora form shows that user anyway.
+   */
+  test('9 — a non-English session is answered by the template, not handed to the model', () => {
+    expect(verdict((t) => { t.state.lang = 'ru'; })).toEqual({ needsModel: false, reason: 'template' });
+  });
+
+  test('9 — and so is every other language we do not localise', () => {
+    for (const lang of ['fr', 'es', 'ar', 'zh', 'pt-BR']) {
+      expect(verdict((t) => { t.state.lang = lang; }).needsModel).toBe(false);
+    }
   });
 
   test('9 — a regional English tag is still English', () => {
@@ -146,7 +158,6 @@ describe('priority — the first match wins, so the reason is predictable', () =
       not_fill_phase: (t) => { t.state.inFillPhase = false; },
       no_prompt_hint: (t) => { t.state.nextField = null; },
       first_field: (t) => { t.state.fieldsAskedThisForm = 0; },
-      non_english: (t) => { t.state.lang = 'ru'; },
       large_form_offer: (t) => { t.state.largeFormOfferPending = true; },
     };
     const applied = [];

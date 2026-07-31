@@ -55,7 +55,7 @@ function reachedEngineNodes(node) {
 
 // ── graph-level checks ────────────────────────────────────────────────────────
 
-function checkIdentity(nodes, edges, errors) {
+function checkIdentity(nodes, edges, errors, warnings) {
   const seen = new Set();
   for (const n of nodes) {
     if (seen.has(n.nodeId)) errors.push(err('DUP_NODE_ID', `duplicate nodeId "${n.nodeId}"`, n.nodeId));
@@ -67,7 +67,29 @@ function checkIdentity(nodes, edges, errors) {
     edgeIds.add(e.edgeId);
     if (!seen.has(e.source)) errors.push(err('DANGLING_EDGE', `edge ${e.edgeId} source "${e.source}" does not exist`));
     if (!seen.has(e.target)) errors.push(err('DANGLING_EDGE', `edge ${e.edgeId} target "${e.target}" does not exist`));
-    if (e.source === e.target) errors.push(err('SELF_EDGE', `edge ${e.edgeId} joins "${e.source}" to itself`, e.source));
+    // APPLIES_WHEN is an ANNOTATION, not a relation: the condition belongs to the
+    // source node and `nodeApplies` never looks at the target. The schema still
+    // requires one, so the convention is target === source — which the self-edge rule
+    // rejected, making a declared edge type impossible to express. Exempted here, and
+    // required to be a self-loop so it cannot be mistaken for a relation to another
+    // node.
+    if (e.type === 'APPLIES_WHEN') {
+      // The TARGET is not read by anything: `nodeApplies` looks only at the source, so
+      // the condition is an annotation on its own node. Both conventions exist in this
+      // codebase — a self-loop and a pointer at some other node — and neither changes
+      // what compiles. Saying so is better than silently blessing a line that reads
+      // like a relationship and is not one.
+      if (e.source !== e.target) {
+        warnings.push(err(
+          'APPLIES_WHEN_TARGET_IGNORED',
+          `edge ${e.edgeId} is APPLIES_WHEN and points at "${e.target}", but the target of a `
+          + 'condition is never read — it applies to its source. Point it at itself to say so.',
+          e.source,
+        ));
+      }
+    } else if (e.source === e.target) {
+      errors.push(err('SELF_EDGE', `edge ${e.edgeId} joins "${e.source}" to itself`, e.source));
+    }
   }
   return seen;
 }
@@ -106,12 +128,69 @@ function checkRefinesAcyclic(nodes, edges, errors) {
 /** Do two condition sets have any context in common? Used to test conflict separation. */
 function conditionsIntersect(a, b) {
   if (!a || !b) return true; // an unconditioned node applies everywhere
-  const keys = ['language', 'engineNode', 'serviceId', 'activeRoute'];
+  // EC-001: the agent's dimensions belong here too. Without `phase`, two rules kept
+  // apart by phase would look simultaneous, and the CONFLICTS_WITH check would report
+  // a contradiction that cannot happen — a false error on a correct graph.
+  const keys = ['language', 'engineNode', 'serviceId', 'activeRoute', 'phase', 'serviceCategory', 'toolContext'];
   for (const k of keys) {
     if (Array.isArray(a[k]) && Array.isArray(b[k]) && !a[k].some((v) => b[k].includes(v))) return false;
   }
   if (a.channel && b.channel && a.channel !== b.channel) return false;
   return true;
+}
+
+/** Phases that only exist once a request is open — see dialogue-phase.computePhase. */
+const PHASES_WITH_DRAFT = new Set(['fill', 'confirm']);
+const ALL_PHASES = ['intent', 'service_choice', 'fill', 'confirm', 'reading', 'handed_off'];
+
+/**
+ * EC-006 — a condition that cannot hold, and one that always holds.
+ *
+ * Both are silent failures of the same family: the first removes a rule from every
+ * prompt while looking deliberate, the second adds a line of ceremony that changes
+ * nothing. Neither shows up as an error anywhere else, because a condition is only
+ * ever evaluated — never questioned.
+ */
+function checkConditionsSane(nodes, edges, errors, warnings) {
+  for (const e of edges) {
+    if (e.type !== 'APPLIES_WHEN' || !e.condition) continue;
+    const c = e.condition;
+
+    // Filling and confirming both require an open request, so pairing either with
+    // "no draft" describes a turn that cannot occur.
+    if (Array.isArray(c.phase) && Array.isArray(c.toolContext)
+      && c.phase.every((p) => PHASES_WITH_DRAFT.has(p))
+      && c.toolContext.length === 1 && c.toolContext[0] === 'no_draft') {
+      errors.push(err(
+        'CONDITION_UNSATISFIABLE',
+        `edge ${e.edgeId}: phase ${c.phase.join('/')} only happens with a request open, so `
+        + '"no_draft" can never hold at the same time — this rule would never apply',
+        e.source,
+      ));
+    }
+
+    // A key that lists every possible value constrains nothing.
+    if (Array.isArray(c.phase) && ALL_PHASES.every((p) => c.phase.includes(p)) && Object.keys(c).length === 1) {
+      warnings.push(err(
+        'CONDITION_ALWAYS_TRUE',
+        `edge ${e.edgeId} lists every phase, which is the same as having no condition — remove it`,
+        e.source,
+      ));
+    }
+
+    // The same mistake in the other dimension: a request is either open or it is not,
+    // so requiring both exhausts the possibilities and constrains nothing. Added when
+    // the editor's live diagnosis (EC-009) caught it and this did not — one of the two
+    // had to become the authority, and it is this one.
+    if (Array.isArray(c.toolContext) && Object.keys(c).length === 1
+      && c.toolContext.includes('has_draft') && c.toolContext.includes('no_draft')) {
+      warnings.push(err(
+        'CONDITION_ALWAYS_TRUE',
+        `edge ${e.edgeId} requires a request to be either open or not, which is always true — remove it`,
+        e.source,
+      ));
+    }
+  }
 }
 
 /** All APPLIES_WHEN conditions on a node (ORed). Empty = applies unconditionally. */
@@ -227,6 +306,116 @@ function checkConstraints(nodes, warnings) {
   }
 }
 
+/**
+ * EC-006 — safety is not contextual.
+ *
+ * `SUADA-COMPILE-001` requires every immutable Constraint to reach the compiled text,
+ * and compilation FAILS when one does not. A condition on such a node would therefore
+ * not fail at save time, when someone is looking: it would fail in whichever branch of
+ * the conversation the condition excluded — in front of a user, on a live turn.
+ *
+ * That is the whole meaning of the word: an immutable constraint applies everywhere or
+ * it is not immutable.
+ */
+function checkImmutableUnconditional(nodes, edges, errors) {
+  const immutable = new Set(
+    nodes.filter((n) => n.type === 'Constraint' && n.immutable).map((n) => n.nodeId),
+  );
+  if (!immutable.size) return;
+  for (const e of edges) {
+    if (e.type !== 'APPLIES_WHEN' || !immutable.has(e.source)) continue;
+    errors.push(err(
+      'IMMUTABLE_CONDITIONAL',
+      `"${e.source}" is an immutable Constraint and cannot carry APPLIES_WHEN: it would `
+      + 'be excluded in some contexts, and the compile checks that every immutable '
+      + 'constraint reached the prompt — so this fails on a live turn, not on save',
+    ));
+  }
+}
+
+/**
+ * EC-005 — which kinds of rule may be contextual at all.
+ *
+ * The prompt compiles in two layers: an unconditional core that is byte-identical for
+ * everyone (and therefore cacheable) and a conditional block after it. What goes where
+ * is decided by whether a node carries a condition — so the question "may this type be
+ * conditional?" is really "may this type leave the cached core?".
+ *
+ *   Narrative  — no. It states who the assistant IS, and an identity that changes with
+ *                the phase of a conversation is not an identity.
+ *   Persona    — only by `channel`. The register is genuinely different spoken aloud;
+ *                that is the case `channel` exists for. Scoping it by phase would give
+ *                the assistant a different manner in every part of one conversation.
+ *   Constraint — immutable never (checked separately: safety is not contextual);
+ *                an ordinary one may be, it is a strong rule rather than an absolute.
+ *   Thesis / Exemplar / ToolContract — yes. These are instructions, and instructions
+ *                are what a branch of the dialogue legitimately changes.
+ */
+function checkConditionableTypes(nodes, edges, errors) {
+  const byId = new Map(nodes.map((n) => [n.nodeId, n]));
+  for (const e of edges) {
+    if (e.type !== 'APPLIES_WHEN' || !e.condition) continue;
+    const n = byId.get(e.source);
+    if (!n) continue;
+
+    if (n.type === 'Narrative') {
+      errors.push(err(
+        'NARRATIVE_CONDITIONAL',
+        `"${n.nodeId}" is a Narrative and cannot be conditional: it states who the assistant is, `
+        + 'and an identity that changes with the phase of a conversation is not an identity',
+        n.nodeId,
+      ));
+      continue;
+    }
+    if (n.type === 'Persona') {
+      const keys = Object.keys(e.condition);
+      const offending = keys.filter((k) => k !== 'channel');
+      if (offending.length) {
+        errors.push(err(
+          'PERSONA_CONDITION_NOT_CHANNEL',
+          `"${n.nodeId}" is a Persona: it may be scoped by channel — the spoken register really `
+          + `does differ — but not by ${offending.join(', ')}, which would give the assistant a `
+          + 'different manner in different parts of one conversation',
+          n.nodeId,
+        ));
+      }
+    }
+  }
+}
+
+/**
+ * EC-005 — a dependency must not cross from the core into the conditional layer.
+ *
+ * The core is emitted first and the conditional block after it, so an unconditional
+ * node that DEPENDS_ON a conditional one is read BEFORE its own premise — when the
+ * premise is present at all. The compiler's DEPENDS_ON closure would drag the
+ * prerequisite in, but it cannot reorder the layers, and a sentence whose premise
+ * follows it is worse than one whose premise is missing.
+ *
+ * The other direction is fine: a conditional node depending on an unconditional one
+ * reads after a premise that is always there.
+ */
+function checkLayerDependencies(nodes, edges, errors) {
+  const conditional = new Set(
+    edges.filter((e) => e.type === 'APPLIES_WHEN' && e.condition).map((e) => e.source),
+  );
+  if (!conditional.size) return;
+  const byId = new Map(nodes.map((n) => [n.nodeId, n]));
+  for (const e of edges) {
+    if (e.type !== 'DEPENDS_ON') continue;
+    if (!byId.has(e.source) || !byId.has(e.target)) continue;
+    if (!conditional.has(e.source) && conditional.has(e.target)) {
+      errors.push(err(
+        'DEPENDENCY_CROSSES_LAYERS',
+        `"${e.source}" is unconditional but depends on "${e.target}", which is conditional: the `
+        + 'unconditional core is emitted before the conditional block, so this rule would be read '
+        + 'before its own premise',
+        e.source,
+      ));
+    }
+  }
+}
+
 // ── entry point ───────────────────────────────────────────────────────────────
 
 /**
@@ -251,13 +440,17 @@ function validateGraph(graph) {
   const nodes = g.nodes || [];
   const edges = g.edges || [];
 
-  checkIdentity(nodes, edges, errors);
+  checkIdentity(nodes, edges, errors, warnings);
   checkRefinesAcyclic(nodes, edges, errors);
   checkConflicts(nodes, edges, errors);
   checkDependencies(nodes, edges, errors, warnings);
   checkExemplars(nodes, edges, warnings);
   checkReachability(nodes, warnings);
   checkConstraints(nodes, warnings);
+  checkImmutableUnconditional(nodes, edges, errors);
+  checkConditionsSane(nodes, edges, errors, warnings);
+  checkConditionableTypes(nodes, edges, errors);
+  checkLayerDependencies(nodes, edges, errors);
 
   const live = nodes.filter(isLive);
   return {

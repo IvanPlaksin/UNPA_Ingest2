@@ -40,7 +40,9 @@ const { effectiveSnapshot } = require('../interpreter/form-overlay');
 const { ui } = require('../interpreter/templates/ui-strings');
 
 /** Controls that are the question of their own turn rather than a field of the form. */
-const FORK_SLOTS = new Set(['__service__', '__confirm__', '__open_form__', '__large_form__']);
+// EC-002: one definition, imported. The prompt compiler scopes rules by the same
+// phase this router decides turns with, so the two must not be able to disagree.
+const { FORK_SLOTS, computePhase } = require('../interpreter/dialogue-phase');
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -158,9 +160,12 @@ function createHybridSession(p = {}, deps = {}) {
     // question (which service, confirm, open the form) and belongs to the model;
     // an open submit gate does too, because the next thing said is about the
     // request as a whole. Skip IS filling — it is how an optional field is answered.
-    const onFork = !!(controlAction && FORK_SLOTS.has(controlAction.slotId));
-    const inFillPhase = !!(draft && draft.serviceId && snapshot) && !onFork
-      && !(toolSession.confirmShown && !toolSession.confirmAccepted);
+    // EC-002: the phase comes from the shared computation, so the rules the prompt
+    // compiler selects and the turns this router hands to a template are decided by
+    // one fact. `fill` requires the snapshot here because a template cannot render a
+    // question without the form — the phase itself is deliberately coarser.
+    const phase = computePhase({ session: toolSession, draft, snapshot, controlAction });
+    const inFillPhase = phase.phase === 'fill' && !!snapshot;
     return {
       draft,
       snapshot,
@@ -172,6 +177,9 @@ function createHybridSession(p = {}, deps = {}) {
       repair: { active: !!(draft && draft.repair && (draft.repair.session > 0
         || Object.values(draft.repair.perSlot || {}).some((n) => n > 0))) },
       inFillPhase,
+      // Carried so the turn can record the scope it ran under (EC-004).
+      phase: phase.phase,
+      phaseWhy: phase.why,
       fieldsAskedThisForm: toolSession.fieldsAskedThisForm || 0,
       lang,
       // The long-form fork is offered once per form, by the model, in words. The
@@ -310,6 +318,11 @@ function createHybridSession(p = {}, deps = {}) {
     sendTurn,
     sessionId,
     systemPromptText: null,
+    // The delegate, named. The hybrid IS a wrapper around the agent, and every turn
+    // it does not answer itself is this object's. Exposing it lets a test assert what
+    // the wrapper does with the delegate's verdict instead of reconstructing a whole
+    // tool-call flow to provoke one.
+    agent,
     sideEffects: agent.sideEffects,
     sandboxed: agent.sandboxed,
     interpreterMode: 'hybrid',

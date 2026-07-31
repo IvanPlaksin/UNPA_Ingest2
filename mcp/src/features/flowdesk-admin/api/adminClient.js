@@ -55,15 +55,48 @@ const withSource = (qs = '') => `${qs ? `${qs}&` : '?'}source=${GRAPH_SOURCE}`;
 export const promptListGraphs = () => request(`/prompt/graphs${withSource()}`);
 export const promptGetGraph = (entryId, version) => request(`/prompt/graphs/${encodeURIComponent(entryId)}${withSource(version != null ? `?version=${version}` : '')}`);
 export const promptSaveGraph = (body) => request('/prompt/graphs', { method: 'POST', body: { ...body, source: GRAPH_SOURCE } });
+// ПР-004 — a NEW graph, not a new version of the live one. `asNew` is explicit
+// because an absent entryId used to mean "the live graph", which turned every attempt
+// at a new graph into an edit of the running prompt.
+export const promptCreateGraph = (body) => request('/prompt/graphs', {
+  method: 'POST', body: { ...body, asNew: true, source: GRAPH_SOURCE },
+});
+// ПР-001/ПР-003 — which graph IS the system prompt.
+export const promptActiveEntry = () => request('/prompt/active-entry');
+export const promptSetActiveEntry = (entryId) => request('/prompt/active-entry', {
+  method: 'POST', body: { entryId },
+});
 export const promptGetVersions = (entryId) => request(`/prompt/graphs/${encodeURIComponent(entryId)}/versions${withSource()}`);
 export const promptPromoteVersion = (entryId, version) => request(`/prompt/graphs/${encodeURIComponent(entryId)}/promote`, { method: 'POST', body: { version, source: GRAPH_SOURCE } });
 export const promptCompile = (graph, opts = {}) => request('/prompt/compile', { method: 'POST', body: { graph, source: GRAPH_SOURCE, ...opts } });
 export const promptValidate = (graph) => request('/prompt/validate', { method: 'POST', body: { graph, source: GRAPH_SOURCE } });
+// EC-011 — the prompt in one or two of the nine reachable contexts, with the per-rule
+// table of what differs. EC-013 — the same graph across all nine at once.
+export const promptPreview = ({ graph, contexts, language } = {}) => request('/prompt/preview', {
+  method: 'POST', body: { graph, contexts, language, source: GRAPH_SOURCE },
+});
+export const promptCoverage = (graph, opts = {}) => request('/prompt/coverage', {
+  method: 'POST', body: { graph, source: GRAPH_SOURCE, ...opts },
+});
 export const promptSandbox = (body) => request('/prompt/sandbox', { method: 'POST', body });
 export const promptApply = (body) => request('/prompt/apply', { method: 'POST', body });
 export const promptActive = () => request('/prompt/active');
 export const promptApplied = (limit = 20) => request(`/prompt/applied?limit=${limit}`);
 export const promptClear = () => request('/prompt/clear', { method: 'POST' });
+// PE-006 — the rules that were IN FORCE on a recorded turn. The turn's own recorded
+// provenance is the input, so the caller passes the turn it already has.
+export const promptRulesForTurn = (turn) => request('/prompt/rules-for-turn', {
+  method: 'POST',
+  body: {
+    promptGraphEntryId: turn.promptGraphEntryId, promptGraphVersion: turn.promptGraphVersion,
+    promptProvenanceSource: turn.promptProvenanceSource, promptGraphTextHash: turn.promptGraphTextHash,
+    turnAuthor: turn.turnAuthor, lang: turn.lang,
+  },
+});
+// PE-007 — how many recorded turns had a rule in force. Never "affected".
+export const promptTurnsUnderRule = (nodeId, entryId) => request(`/prompt/rules/${encodeURIComponent(nodeId)}/turns${qs({ entryId })}`);
+// PE-004 — measured share of turns the prompt governs, plus the template's own strings.
+export const promptAuthorship = (days = 7) => request(`/prompt/authorship${qs({ days })}`);
 // SSE assistant — returns {abort}; caller passes onEvent.
 export function promptAssistantChat({ message, history, graph, model }, onEvent) {
   const ac = new AbortController();

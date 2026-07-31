@@ -1,8 +1,9 @@
 /**
  * SessionDrawer — right-anchored session replay with sub-tabs:
- * Transcript · Timeline (node waterfall) · Draft · LLM · Triage.
+ * Transcript · Timeline (node waterfall) · Prompt (rules in force) · Draft · LLM · Triage.
  */
 import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Drawer, Box, Typography, Stack, Tabs, Tab, Chip, IconButton, Divider,
   Table, TableHead, TableRow, TableCell, TableBody, Tooltip, TextField,
@@ -17,6 +18,8 @@ import {
 } from '../api/adminClient';
 import { OutcomeChip, FlagChips, Loading, ErrorNote, fmtCost, fmtMs, fmtTs, fmtTsShort } from './common';
 import AnalysisView from './AnalysisView';
+import PromptForTurnView from './PromptForTurnView';
+import { useTourAnchor } from '@guided-ux/tour/react';
 
 const NODE_COLORS = {
   ROUTER: '#3b82f6', SLOT_EXTRACT: '#8b5cf6', QUESTION_PLANNER: '#06b6d4',
@@ -441,24 +444,42 @@ function TimelineView({ turns }) {
               </Box>
               <Typography variant="body2" fontWeight={600}>Turn {t.seq}</Typography>
               <Chip size="small" variant="outlined" label={t.route || '?'} color={t.error ? 'error' : 'default'} />
+              {/* Who wrote the turn belongs next to how long it took: a template turn
+                  is ~170ms and a model turn seconds, and seeing the two together is
+                  what makes the hybrid's behaviour legible at a glance. */}
+              {t.turnAuthor && (
+                <Tooltip title={t.routerReason ? `router: ${t.routerReason}` : ''}>
+                  <Chip size="small" variant={t.turnAuthor === 'template' ? 'outlined' : 'filled'}
+                    color={t.turnAuthor === 'template' ? 'default' : 'primary'} label={t.turnAuthor} />
+                </Tooltip>
+              )}
               <Typography variant="caption" color="text.secondary">{fmtMs(t.durationMs)} · {fmtTsShort(t.ts)}</Typography>
               {t.error && <Chip size="small" color="error" label={t.error} />}
             </Stack>
             <Collapse in={isOpen}>
               <Box sx={{ pl: 3, pt: 0.5 }}>
                 {trace.length ? trace.map((n, i) => (
-                  <Stack key={i} direction="row" alignItems="center" spacing={1} sx={{ mb: 0.25 }}>
-                    <Typography variant="caption" sx={{ width: 130, flexShrink: 0, fontFamily: 'monospace' }}>{n.node}</Typography>
-                    <Tooltip title={`${n.durationMs ?? '?'}ms · ${n.status}`}>
-                      <Box sx={{
-                        height: 8, borderRadius: 1,
-                        width: `${Math.max(2, ((n.durationMs || 0) / max) * 60)}%`,
-                        bgcolor: n.status === 'error' ? '#ef4444' : (NODE_COLORS[n.node] || '#64748b'),
-                        opacity: 0.85,
-                      }} />
-                    </Tooltip>
-                    <Typography variant="caption" color="text.secondary">{fmtMs(n.durationMs)}</Typography>
-                  </Stack>
+                  <Box key={i} sx={{ mb: 0.25 }}>
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <Typography variant="caption" sx={{ width: 130, flexShrink: 0, fontFamily: 'monospace' }}>{n.node}</Typography>
+                      <Tooltip title={`${n.durationMs ?? '?'}ms · ${n.status}`}>
+                        <Box sx={{
+                          height: 8, borderRadius: 1,
+                          width: `${Math.max(2, ((n.durationMs || 0) / max) * 60)}%`,
+                          bgcolor: n.status === 'error' ? '#ef4444' : (NODE_COLORS[n.node] || '#64748b'),
+                          opacity: 0.85,
+                        }} />
+                      </Tooltip>
+                      <Typography variant="caption" color="text.secondary">{fmtMs(n.durationMs)}</Typography>
+                    </Stack>
+                    {/* P-4: the reason, where the failure is. An operator reading a
+                        replay has no process logs to fall back on. */}
+                    {n.error && (
+                      <Typography variant="caption" color="error" sx={{ display: 'block', pl: '138px', whiteSpace: 'pre-wrap' }}>
+                        {n.error}
+                      </Typography>
+                    )}
+                  </Box>
                 )) : <Typography variant="caption" color="text.secondary">no node trace</Typography>}
               </Box>
             </Collapse>
@@ -602,6 +623,12 @@ export default function SessionDrawer({ sessionId, open, onClose, onChanged, ini
   const [detail, setDetail] = useState(null);
   const [turnsData, setTurnsData] = useState(null);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
+  // The tour points at the Prompt tab only while a session is open — `available`
+  // says so, rather than the tour discovering an invisible element.
+  const promptTabRef = useTourAnchor('session.tab.prompt', {
+    label: 'Prompt tab of a session', available: () => open,
+  });
 
   useEffect(() => {
     if (!open || !sessionId) return;
@@ -632,8 +659,10 @@ export default function SessionDrawer({ sessionId, open, onClose, onChanged, ini
         </Stack>
         <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" scrollButtons="auto"
           sx={{ minHeight: 36, borderBottom: 1, borderColor: 'divider' }}>
-          {['transcript', 'timeline', 'draft', 'llm', 'analysis', 'triage'].map((k) => (
-            <Tab key={k} value={k} label={k === 'analysis' ? 'AI analysis' : k} sx={{ minHeight: 36, py: 0, textTransform: 'capitalize' }} />
+          {['transcript', 'timeline', 'prompt', 'draft', 'llm', 'analysis', 'triage'].map((k) => (
+            <Tab key={k} value={k} label={k === 'analysis' ? 'AI analysis' : k}
+              ref={k === 'prompt' ? promptTabRef : undefined}
+              sx={{ minHeight: 36, py: 0, textTransform: 'capitalize' }} />
           ))}
         </Tabs>
         <Divider />
@@ -642,6 +671,14 @@ export default function SessionDrawer({ sessionId, open, onClose, onChanged, ini
           {!detail && !error && <Loading />}
           {detail && tab === 'transcript' && <TranscriptView turns={turnsData?.turns} voice={turnsData?.voice} />}
           {detail && tab === 'timeline' && <TimelineView turns={turnsData?.turns} />}
+          {/* PE-006: from a turn that went wrong to the rules that were in force on
+              it — the operator's actual way into prompt work. */}
+          {detail && tab === 'prompt' && (
+            <PromptForTurnView
+              turns={turnsData?.turns}
+              onOpenRule={(rule) => navigate(`/flowdesk-admin/prompt?node=${encodeURIComponent(rule.nodeId)}`)}
+            />
+          )}
           {detail && tab === 'draft' && <DraftView draft={detail.draft} />}
           {detail && tab === 'llm' && <LlmView turns={turnsData?.turns} />}
           {detail && tab === 'analysis' && s && <AnalysisView session={s} />}
