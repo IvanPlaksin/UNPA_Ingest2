@@ -99,11 +99,10 @@ function draftToInitialFormData(draft, snapshot) {
     if (aid) out.manualApproverUserId = aid;
   }
 
-  // Colleagues given read-only visibility → the wizard's MultiEmployeeSelector, an array
-  // of directory users keyed by `.id`.
+  // Colleagues given read-only visibility → the wizard's MultiEmployeeSelector.
   const shared = slots.sharedWith && slots.sharedWith.value;
   if (Array.isArray(shared) && shared.length) {
-    out.sharedWith = shared.map((u) => (u && typeof u === 'object' ? { ...u, id: u.id || u.userId } : u));
+    out.sharedWith = shared.map(toAltioraUser).filter(Boolean);
   }
 
   return out;
@@ -131,4 +130,60 @@ function postSubmitServices(S, canApprove) {
   return [{ id: 'ctrl-services', type: 'choice', slotId: '__services__', options }];
 }
 
-module.exports = { draftToInitialFormData, postSubmitServices };
+
+/**
+ * SCH-003 — our directory user in the shape Altiora's own components read.
+ *
+ * They are not the same object. Ours is `{userId, name, email, …}`; Altiora's `User`
+ * is `{id, firstName, lastName, email}` (shared/api types), and its
+ * MultiEmployeeSelector renders `{user.firstName} {user.lastName}` — nothing else.
+ * We were handing it `{...ours, id}`, which carries an `id` the selector can key on
+ * and NO name it can display: the colleagues a user had just chosen came back as
+ * blank chips. Nothing failed; the request simply looked as though it had been
+ * shared with nobody.
+ *
+ * Splitting a display name is lossy and this does it in the one place where the
+ * alternative is worse — a chip with no text at all. Where the directory gives us
+ * the parts, they are used; where it gives us one string, the first token is the
+ * given name and the rest the family name, which is the convention the UN directory
+ * itself follows.
+ *
+ * @param {object} u a directory user, or an already-Altiora-shaped one
+ * @returns {{id:string, firstName:string, lastName:string, email:string}|null}
+ */
+function toAltioraUser(u) {
+  if (!u || typeof u !== 'object') return null;
+  const id = u.id || u.userId || u.value || null;
+  if (!id) return null;
+  let firstName = u.firstName || u.FirstName || '';
+  let lastName = u.lastName || u.LastName || '';
+  if (!firstName && !lastName) {
+    const parts = String(u.name || u.displayName || u.label || '').trim().split(/\s+/).filter(Boolean);
+    firstName = parts.shift() || '';
+    lastName = parts.join(' ');
+  }
+  return {
+    ...u,
+    id: String(id),
+    firstName,
+    lastName,
+    email: u.email || u.Email || '',
+  };
+}
+
+/**
+ * The ids Altiora's create-ticket API expects. Its own wizard sends
+ * `SharedWithIds: data.sharedWith.map(u => u.id)` (request-service.ts) — the objects
+ * are the FORM's currency, the ids are the API's.
+ *
+ * @returns {Array<string>|undefined} undefined when there is nothing to share
+ */
+function sharedWithIds(draft) {
+  const shared = draft && draft.slots && draft.slots.sharedWith && draft.slots.sharedWith.value;
+  if (!Array.isArray(shared) || !shared.length) return undefined;
+  const ids = shared.map((u) => (u && typeof u === 'object' ? (u.id || u.userId) : u)).filter(Boolean);
+  return ids.length ? ids.map(String) : undefined;
+}
+
+module.exports = {
+  toAltioraUser, sharedWithIds, draftToInitialFormData, postSubmitServices };

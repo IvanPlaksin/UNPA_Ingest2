@@ -159,10 +159,18 @@ describe('Universal sharedWith + manualApprover context slots', () => {
     expect(out.manualApproverUserId).toBe('M1');
   });
 
-  test('form-handoff maps sharedWith to an array of users keyed by id', () => {
-    const shared = [{ userId: 'U2', name: 'Maria' }, { userId: 'U3', name: 'Ivan' }];
+  /**
+   * SCH-003 corrected this. An `id` alone is what the selector KEYS on; it renders
+   * `{firstName} {lastName}`, so the old shape produced chips with no text — the
+   * request looked shared with nobody.
+   */
+  test('form-handoff gives sharedWith the shape the selector renders', () => {
+    const shared = [{ userId: 'U2', name: 'Maria Silva' }, { userId: 'U3', name: 'Ivan Petrov' }];
     const out = draftToInitialFormData({ slots: { sharedWith: { value: shared } } }, { metadata: {} });
-    expect(out.sharedWith).toEqual([{ userId: 'U2', id: 'U2', name: 'Maria' }, { userId: 'U3', id: 'U3', name: 'Ivan' }]);
+    expect(out.sharedWith).toEqual([
+      expect.objectContaining({ id: 'U2', firstName: 'Maria', lastName: 'Silva' }),
+      expect.objectContaining({ id: 'U3', firstName: 'Ivan', lastName: 'Petrov' }),
+    ]);
   });
 
   test('an empty sharedWith is omitted, not sent as a blank array', () => {

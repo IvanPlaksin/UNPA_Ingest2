@@ -26,6 +26,8 @@
  */
 
 const SUBJECT_HINT = /subject|title|summary|topic/i;
+const { sharedWithIds } = require('../interpreter/form-handoff');
+
 const DESCRIPTION_HINT = /descr|detail|notes|comment|reason|justif/i;
 
 /** A slot value coming from a directory resolver is an object; scalars pass through. */
@@ -91,6 +93,16 @@ function mapDraftToTicketDto(draft, snapshot, actingUser) {
     dto.BeneficiaryId = beneId;
     if (actorId) dto.RequesterId = actorId; // genuine on-behalf → needs HelpdeskExecute
   }
+
+  // SCH-003 — colleagues given read-only visibility.
+  //
+  // This was absent entirely: a user could name three colleagues in chat, see them
+  // confirmed, and the ticket went to Altiora without them. Its own wizard sends
+  // `SharedWithIds: data.sharedWith.map(u => u.id)` (request-service.ts) — the
+  // objects are the form's currency, the ids are the API's, and we were sending
+  // neither.
+  const sharedIds = sharedWithIds(draft);
+  if (sharedIds) dto.SharedWithIds = sharedIds;
 
   // Location: a resolved duty station, if the form gathered one.
   const locSlot = draft.slots.location || draft.slots.dutyStation || draft.slots.facility;
