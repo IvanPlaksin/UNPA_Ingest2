@@ -366,7 +366,15 @@ async function indexScenario(scenario, extraDocs = []) {
   const push = async (payload, text) => {
     if (!text) return;
     const vector = await deps().embed(text);
-    points.push({ id: hashId(`${payload.type}:${payload.stepId || payload.docId}:${payload.lang}`), vector, payload: { ...payload, text } });
+    points.push({
+      id: hashId(`${payload.type}:${payload.stepId || payload.docId}:${payload.lang}`),
+      vector,
+      // TOUR-001 — every point is stamped with the namespace and the section it
+      // belongs to. Without them a search cannot tell tour guidance from any other
+      // knowledge in the same store, and the assistant would answer a question about
+      // a button with a paragraph about a service.
+      payload: { namespace: 'ALTIORA', section: 'Tour', ...payload, text },
+    });
     n += 1;
   };
 

@@ -443,6 +443,20 @@ async function rematerializeSchema(ousIdOrCode) {
     code = rows[0].get('serviceId');
   }
 
+  // SCH-005b — "Rematerialize" means "get me the current one".
+  //
+  // It rebuilt from the STORED SchemaJson, so on a schema already known to be stale
+  // it returned success, the same wrong fields, and no warning. That is what happened
+  // to ousId 42: its cache held a laptop form while the live schema had six other
+  // fields, two of them required, and the system had been reporting fresh:false about
+  // it the whole time. Invalidate first when the cache is known to be behind — the
+  // operator does not distinguish "rebuild from cache" from "re-read the source", and
+  // has no reason to.
+  try {
+    const detail = await getSchemaDetail(code);
+    if (detail && detail.fresh === false) await invalidateSchema(code);
+  } catch { /* no detail to judge by — materialize as before */ }
+
   const { materializeOne, catalogEntries } = require('../../../../scripts/materialize-altiora-service');
   const { getAltioraSchemaClient } = require('./altiora-schema-client');
   const entries = await catalogEntries([code]);
