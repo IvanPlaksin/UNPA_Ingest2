@@ -137,6 +137,10 @@
           "type": "string",
           "description": "Optional origin detail (e.g. resolver token, extractor node id)."
         },
+        "display": {
+          "type": "string",
+          "description": "SCH-004. What the DICTIONARY said, when the stored value is a key rather than a label. Altiora composes a row's display from its columns (formatLinkedDictionaryParts); the key alone is a number where the reader expects a name, and it is the confirmation summary — the last thing seen before a request is sent — that shows it. Captured at resolution because nothing later can recover it without asking the dictionary again."
+        },
         "updatedAt": { "type": "string" },
         "stale": {
           "type": "boolean",

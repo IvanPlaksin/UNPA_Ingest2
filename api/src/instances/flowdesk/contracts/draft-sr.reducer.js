@@ -223,6 +223,10 @@ function applyPatches(draft, patches, snapshot, now, ttlMs = DEFAULT_TTL_MS) {
       provenance: patch.provenance,
       ...(patch.confidence !== undefined ? { confidence: patch.confidence } : {}),
       ...(patch.source !== undefined ? { source: patch.source } : {}),
+      // SCH-004 — the dictionary's own words for this key. Dropped here, it could
+      // only be recovered by asking the dictionary again, which the confirmation
+      // summary has no opportunity to do.
+      ...(patch.display !== undefined ? { display: patch.display } : {}),
       updatedAt: ts,
       stale: false,
       // F9.1d: directory-backed provisional state.

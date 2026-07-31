@@ -1120,7 +1120,14 @@ function createAgentTools(deps = {}) {
     for (const { slot, result } of cluster) {
       if (!isAutofillCascadeSlot(slot)) continue;   // an option cascade is a question
       if (result.status === 'resolved') {
-        patches.push({ op: 'set', slotId: slot.slotId, value: result.value, provenance: 'resolved', pending: false });
+        // SCH-004 — the label travels with the value. It is the only record of what
+        // the dictionary actually said: the stored value is a key, and nothing later
+        // in the conversation can turn it back into a name without asking again.
+        patches.push({
+          op: 'set', slotId: slot.slotId, value: result.value,
+          provenance: 'resolved', pending: false,
+          ...(result.display && result.display !== result.value ? { display: result.display } : {}),
+        });
         out.resolved.push({ slotId: slot.slotId, label: slot.promptHint || slot.slotId, display: result.display });
       } else if (result.status === 'ambiguous') {
         out.ambiguous.push({ slotId: slot.slotId, label: slot.promptHint || slot.slotId, options: result.options });

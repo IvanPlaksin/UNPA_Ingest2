@@ -31,6 +31,7 @@ const {
 const { resolveCascadeCluster, isAutofillCascadeSlot, filledDependentsOf, autofillHandledByForm } = require('./cascade-resolver');
 const { draftToInitialFormData, postSubmitServices } = require('./form-handoff');
 const { buildFormHydration } = require('./form-hydration');
+const { displayForValue } = require('./dictionary-display');
 
 /** Where a created request can be opened. Overridable per deployment. */
 const PORTAL_REQUESTS_URL = process.env.FLOWDESK_PORTAL_REQUESTS_URL || 'https://localhost:3001/requests';
@@ -202,7 +203,9 @@ function buildReview(draft, snapshot) {
       slotId: s.slotId,
       label: s.promptHint || s.slotId,
       value: sv.value,
-      display: displayValue(sv.value),
+      // SCH-004: what the dictionary said, not the key it stored. This line is read
+      // in the confirmation summary — the last thing seen before a request is sent.
+      display: displayForValue(sv.value, s, sv),
       editable: !isReferenceDerived(s),
       stale: !!sv.stale,
     });
