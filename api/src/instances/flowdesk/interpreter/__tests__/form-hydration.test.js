@@ -173,18 +173,42 @@ describe('every failure degrades to sending nothing', () => {
   });
 });
 
-describe('auto-fill suppression follows the form-fill gate', () => {
+/**
+ * SCH-002 changed what decides this.
+ *
+ * It used to follow the form-fill GATE: under the default 'wizard' the chat was
+ * assumed never to resolve a cascade field, so nothing was sent and the form
+ * resolved everything itself. That assumption held exactly as long as it was true.
+ * Now the agent path resolves these fields (agent-tools `resolveCascades`), and a
+ * value held back is a value the form re-derives independently of ours — two
+ * answers to one question, with no way to notice they differ.
+ *
+ * So the test is now "is there a value", not "whose job was it". The gate still
+ * decides who ASKS; `autofill` only reports what is already in the draft.
+ */
+describe('a resolved cascade value is carried to the form', () => {
   const snapshot = snapshotWith([{ slotId: 'staffName', type: 'string', dictRef: DICT_REF }]);
   const draft = { slots: { indexNumber: { value: '1' }, staffName: { value: 'Ivanov' } } };
   const gate = process.env.FLOWDESK_FORM_FILL_GATE;
   afterEach(() => { process.env.FLOWDESK_FORM_FILL_GATE = gate; });
 
-  test("under the default 'wizard' gate the form owns auto-fill, so nothing is suppressed", async () => {
+  test("under the default 'wizard' gate a value the chat resolved is STILL carried", async () => {
+    // The change SCH-002 made. Before it, this returned nothing and the form
+    // re-resolved `staffName` from the index number on its own.
     process.env.FLOWDESK_FORM_FILL_GATE = 'wizard';
 
     const out = await buildFormHydration(draft, snapshot, {});
 
-    expect(out === null || out.autofill === undefined).toBe(true);
+    expect(out.autofill).toEqual({ field_staff: 'Ivanov' });
+  });
+
+  test('an empty draft still carries no autofill — there is nothing to carry', async () => {
+    process.env.FLOWDESK_FORM_FILL_GATE = 'wizard';
+    const empty = { slots: { indexNumber: { value: '1' } } };
+
+    const out = await buildFormHydration(empty, snapshot, {});
+
+    expect(out === null || out.autofill === undefined || Object.keys(out.autofill).length === 0).toBe(true);
   });
 
   test("under the 'agent' gate the value the chat resolved is carried", async () => {

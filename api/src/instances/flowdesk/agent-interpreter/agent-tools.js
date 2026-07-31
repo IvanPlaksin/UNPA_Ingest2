@@ -82,6 +82,8 @@ const ctrl = require('../interpreter/controls');
 const policy = require('../interpreter/form-policy');
 const resolvers = require('../interpreter/resolvers');
 const { draftToInitialFormData } = require('../interpreter/form-handoff');
+const { resolveCascadeCluster, isAutofillCascadeSlot } = require('../interpreter/cascade-resolver');
+const { buildFormHydration } = require('../interpreter/form-hydration');
 const { effectiveSnapshot, CONTEXT_SLOTS } = require('../interpreter/form-overlay');
 const { ui } = require('../interpreter/templates/ui-strings');
 
@@ -364,6 +366,13 @@ function createAgentTools(deps = {}) {
     || require('../services/resolve-search.service').getResolveSearch();
   const draftService = deps.draftService
     || require('../services/draft-sr.service').getDraftSRService();
+  // SCH-002 — the dictionary. The state machine has had this since P1-12; the agent
+  // that replaced it never did, so every cascade field the Altiora form fills for
+  // itself was simply absent from the conversation AND from the hand-off.
+  const fetchLovValues = deps.fetchLovValues || (async (req) => {
+    const { getAltioraSchemaClient } = require('../services/altiora-schema-client');
+    return getAltioraSchemaClient().getLovValues(req);
+  });
   // Same loader the sandbox and the state machine use, so both architectures see
   // identical forms (schema-orchestrator exposes a factory, not a bare function).
   let _loader = null;
@@ -661,6 +670,13 @@ function createAgentTools(deps = {}) {
       ctx.session.confirmShown = false; ctx.session.confirmAccepted = false; ctx.session.confirmSlotId = null;
     }
 
+    // SCH-002 — a value just set may be the KEY to a dictionary cluster (an index
+    // number resolves the payee, the grade, the duty station). Resolved here, before
+    // the state is recomputed, so the fields the form would fill for itself are
+    // already in the draft and travel with the hand-off.
+    const midway = await draftService.get(ctx.sessionId);
+    const cascade = await resolveCascades(ctx, midway, snapshot);
+
     // Recomputed AFTER the patch: a value just set can reveal fields that were
     // hidden and retire fields that are no longer required (trefCondition,
     // requiredWhen). A list computed before the patch would be stale by one turn.
@@ -668,6 +684,18 @@ function createAgentTools(deps = {}) {
     return {
       ok: true,
       set: patches.map((p) => p.slotId),
+      // What the dictionary answered on the back of this value. The model is told so
+      // it can say "I've got the payee as X" instead of silently carrying a value the
+      // user never saw — and so an ambiguity becomes a question rather than a guess.
+      ...(cascade.resolved.length ? { resolvedFromDictionary: cascade.resolved } : {}),
+      ...(cascade.ambiguous.length ? {
+        needsChoice: cascade.ambiguous.map((a) => ({
+          slotId: a.slotId, label: a.label,
+          options: a.options.slice(0, 12).map((o) => ({ value: o.value, label: o.label })),
+        })),
+        tellUser: 'The directory returned several matches. Ask which one, using emit_control '
+          + 'with those options — do not choose for them.',
+      } : {}),
       rejected,
       ...(refused.length ? { refused: refused.map((f) => f.slotId), note: `${refused.map((f) => `"${f.slotId}"`).join(', ')} must be picked from the directory — emit its control with a searchHint instead.` } : {}),
       ...(invalid.length ? { invalid: invalid.map((p) => ({ slotId: p.slotId, reason: p.reason })) } : {}),
@@ -1060,6 +1088,66 @@ function createAgentTools(deps = {}) {
   }
 
   /**
+   * SCH-002 — resolve the dictionary fields the Altiora form fills for itself.
+   *
+   * A cascade field's value lives in an Altiora dictionary keyed by ANOTHER field:
+   * give the index number and the payee's name follows from it. Altiora's own form
+   * does this (`DynamicForm` DICT_AUTOFILL_FIELD_TYPES, `maxResults: 1`), which is
+   * why the chat does not ASK for these fields — and why, until now, nobody filled
+   * them either: the resolver has existed since P1-12 and was wired only into the
+   * state machine. The agent that replaced it never called it, so a required field
+   * like `payeeName` was neither asked, nor resolved, nor sent.
+   *
+   * On several matches we ASK rather than take the first row, which is what Altiora
+   * does. The difference is deliberate and was ratified: our value travels in the
+   * hand-off as `autofill`, and that SUPPRESSES the form's own resolution — so a row
+   * picked silently here is final, with no screen left on which to correct it.
+   *
+   * @returns {Promise<{resolved:Array, ambiguous:Array}>}
+   */
+  async function resolveCascades(ctx, draft, snapshot) {
+    const out = { resolved: [], ambiguous: [] };
+    if (!snapshot || !draft) return out;
+    let cluster;
+    try {
+      cluster = await resolveCascadeCluster(snapshot, draft, { fetchLovValues });
+    } catch {
+      // The dictionary is unreachable. The form will resolve these itself, exactly
+      // as it did before this existed — never a silent partial fill.
+      return out;
+    }
+    const patches = [];
+    for (const { slot, result } of cluster) {
+      if (!isAutofillCascadeSlot(slot)) continue;   // an option cascade is a question
+      if (result.status === 'resolved') {
+        patches.push({ op: 'set', slotId: slot.slotId, value: result.value, provenance: 'resolved', pending: false });
+        out.resolved.push({ slotId: slot.slotId, label: slot.promptHint || slot.slotId, display: result.display });
+      } else if (result.status === 'ambiguous') {
+        out.ambiguous.push({ slotId: slot.slotId, label: slot.promptHint || slot.slotId, options: result.options });
+      }
+      // `empty` and `unavailable` both mean the dictionary had nothing to say. The
+      // form still runs its own lookup at hand-off, so nothing is lost by silence.
+    }
+    if (patches.length) {
+      try { await draftService.patch(ctx.sessionId, patches); } catch { /* keep the turn */ }
+    }
+    return out;
+  }
+
+  /**
+   * Resolve whatever the value just written unlocked. Swallows its own failures:
+   * a dictionary that is down must not lose the answer the user just gave.
+   */
+  async function resolveAfterWrite(ctx) {
+    try {
+      const draft = await draftService.get(ctx.sessionId);
+      if (!draft || !draft.serviceId) return;
+      const snapshot = await loadSnapshot(draft.serviceId);
+      await resolveCascades(ctx, draft, snapshot);
+    } catch { /* the form still resolves these itself at hand-off */ }
+  }
+
+  /**
    * Hand the whole form to the user (rule 9's other half).
    *
    * The state machine emits `openForm` on the turn and the host opens Altiora's
@@ -1073,10 +1161,23 @@ function createAgentTools(deps = {}) {
     if (!draft || !draft.serviceId) return err('there is no draft to open — call draft_create first');
     const snapshot = await loadSnapshot(draft.serviceId);
     if (!snapshot) return err('the form for this request could not be loaded');
+    // SCH-002 — the hand-off carries the dictionary work with it.
+    //
+    // The state machine has hydrated its hand-off since P1-12; this path never did,
+    // so the wizard opened with prefill alone and re-resolved every cascade from
+    // scratch. Worse, a value WE resolved had no way to reach it: `autofill` is the
+    // channel by which the form is told not to resolve a field itself, and we were
+    // not using it. Sending it is what makes our answer and the form's agree.
+    let hydration = null;
+    try {
+      hydration = await buildFormHydration(draft, snapshot, { fetchLovValues });
+    } catch { /* the form resolves everything itself, as it did before */ }
+
     ctx.session.openForm = {
       serviceId: snapshot.serviceId,
       ousId: snapshot.metadata && snapshot.metadata.altioraOusId,
       prefill: draftToInitialFormData(draft, snapshot),
+      ...(hydration ? { dictionary: hydration } : {}),
     };
     return {
       ok: true,
@@ -1255,6 +1356,7 @@ function createAgentTools(deps = {}) {
     }
     try {
       await draftService.patch(ctx.sessionId, [{ op: 'set', slotId: def.slotId, value, provenance: 'user', pending: false }]);
+      await resolveAfterWrite(ctx);
     } catch {
       return null;
     }
@@ -1365,6 +1467,11 @@ function createAgentTools(deps = {}) {
     if (!def) return null; // not a field of this form — the model's own control
     try {
       await draftService.patch(ctx.sessionId, [{ op: 'set', slotId, value, provenance: 'resolved', pending: false }]);
+      // SCH-002 — a CLICK keys a dictionary just as a typed value does, and the click
+      // is the commoner path by far. Hooking only `draft_update` left the resolution
+      // running for values the model wrote and never for values the user chose, which
+      // is the wrong way round.
+      await resolveAfterWrite(ctx);
     } catch {
       return null; // the draft refused it; the model still gets the plain description
     }

@@ -129,7 +129,16 @@ async function buildFormHydration(draft, snapshot, deps = {}) {
     // them — so nothing is emitted and its auto-fill runs exactly as it does today.
     const filled = draft && draft.slots && draft.slots[slot.slotId];
     const hasValue = !!(filled && filled.value !== undefined && filled.value !== null && filled.value !== '' && !filled.pending);
-    if (hasValue && isAutofillCascadeSlot(slot) && !autofillHandledByForm() && typeof filled.value !== 'object') {
+    // SCH-002 — the test is "do we HAVE a value", not "whose job was it".
+    //
+    // It used to be gated on `!autofillHandledByForm()`, which is false by default —
+    // so a cascade value the chat had resolved was held back and the form resolved it
+    // again from scratch. That was harmless while the chat never resolved these at
+    // all; now that it does, holding the value back is how our answer and the form's
+    // come to disagree. `autofill` is precisely the channel by which the form is told
+    // not to resolve a field itself, and a value in the draft only got there because
+    // something resolved it.
+    if (hasValue && isAutofillCascadeSlot(slot) && typeof filled.value !== 'object') {
       autofill[fieldId] = String(filled.value);
     }
 
