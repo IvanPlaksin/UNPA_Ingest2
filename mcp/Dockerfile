@@ -38,4 +38,9 @@ RUN chmod +x /docker-entrypoint.d/05-enable-tls-template.sh
 ENV NGINX_API_URL=http://localhost:3010
 # SERVER_NAME is referenced by the TLS template; "_" = match any host.
 ENV SERVER_NAME=_
+# Must exist even when empty. envsubst only replaces variables that are SET, and
+# an unsubstituted ${FLOWDESK_PROXY_API_KEY} reaches nginx as a $-variable
+# reference — "unknown variable" — so the frontend would not start at all on a
+# deployment that does not enforce the proxy key.
+ENV FLOWDESK_PROXY_API_KEY=
 EXPOSE 80 443
