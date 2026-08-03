@@ -376,6 +376,16 @@ async function processMessageWithAgent(sessionId, userId, message, userContext, 
     responseType: turn.responseType,
     resolveChoices: null,
     controls: turn.controls,
+    // REQ-005 — the rows a turn SHOWS (requests, tasks). Separate from `controls`
+    // because they fill no slot; the client reads `result.cards`.
+    //
+    // This return is a NAMED-FIELD copy, not a spread: a field the agent sets and
+    // this list does not name is dropped here without a word, and the loss is
+    // invisible from both ends — the tool reports success, the client renders
+    // nothing, and the model, seeing rows it believes went unshown, recites them in
+    // prose instead. That is exactly how it failed. Anything new on the turn has to
+    // be added here too.
+    ...(Array.isArray(turn.cards) && turn.cards.length ? { cards: turn.cards } : {}),
     // The form hand-off rides the turn here exactly as it does on the state
     // machine's path, so the client opens the same pre-filled Altiora form — and
     // ends this session with it.

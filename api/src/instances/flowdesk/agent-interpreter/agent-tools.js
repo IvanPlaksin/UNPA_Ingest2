@@ -1174,10 +1174,15 @@ function createAgentTools(deps = {}) {
       total: out.totalCount,
       hasMore: !!out.hasMore,
       tellUser: items.length
-        // The list is RENDERED. A model that also recites it says everything twice,
-        // and in voice reads out a table.
-        ? 'These are shown as a list the user can open. Say how many there are and '
-          + 'what stands out — do not repeat the rows.'
+        // The list is RENDERED, under whatever is said here. A model that also recites
+        // it says everything twice — and in voice reads out a table. Phrased as a hard
+        // constraint first, then what to do instead: the softer wording ("do not repeat
+        // the rows", last) was ignored live and the reply numbered them 1..10 beneath a
+        // list showing the same ten.
+        ? `The ${items.length} row(s) are ALREADY ON SCREEN as a list the user can click. `
+          + 'Do NOT list them, number them, or name their reference numbers. Write ONE or '
+          + 'two sentences: how many there are, and anything worth noticing across them '
+          + '(the oldest still open, several on one service). Then stop.'
         : 'Nothing matched. Say so plainly and offer to widen it (a longer period, any status).',
     };
   }
@@ -1206,7 +1211,11 @@ function createAgentTools(deps = {}) {
       total: out.totalCount ?? items.length,
       hasMore: !!out.hasMore,
       tellUser: items.length
-        ? 'These are shown as a list the user can open. Say how many there are and what is urgent — do not repeat the rows.'
+        // Same hard-constraint-first phrasing as list_requests, and for the same
+        // measured reason.
+        ? `The ${items.length} task(s) are ALREADY ON SCREEN as a list the user can click. `
+          + 'Do NOT list them or name their reference numbers. Write ONE or two sentences: '
+          + 'how many, and what is most urgent or overdue. Then stop.'
         : 'Nothing is waiting on them. Say so.',
     };
   }

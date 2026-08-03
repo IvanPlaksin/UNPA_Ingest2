@@ -55,10 +55,20 @@ function requestCard(r) {
   };
 }
 
-/** A task row → its card. */
+/**
+ * A task row → its card.
+ *
+ * The request a task belongs to arrives as `ref` — that is what `mapTask` in
+ * tasks.backend calls it, and the only name it ever has. This read `ticketNumber`,
+ * which no task row carries: live, every task card came out with no reveal intent and
+ * so could not be opened, while the unit test passed against a fixture I had written
+ * with `ticketNumber` in it. The fixture agreed with the code and neither agreed with
+ * the backend. Both names are read here; `ref` is the real one.
+ */
 function taskCard(r) {
+  const ref = r.ref || r.ticketNumber || null;
   const fields = [
-    field('Request', r.ticketNumber || r.requestTitle),
+    field('Request', ref || r.requestTitle),
     field('Service', r.service),
     field('Assigned to', r.assignee, 'user'),
     field('Priority', r.priority),
@@ -70,11 +80,11 @@ function taskCard(r) {
     type: 'task',
     id: String(r.id || r.taskId || ''),
     title: r.title || r.label || 'Task',
-    subtitle: r.ticketNumber || undefined,
+    subtitle: ref || undefined,
     fields,
     accent: r.priority || r.status || undefined,
     revealIntent: r.revealIntent
-      || (r.ticketNumber ? { domain: 'requests', id: String(r.ticketNumber) } : undefined),
+      || (ref ? { domain: 'requests', id: String(ref) } : undefined),
   };
 }
 

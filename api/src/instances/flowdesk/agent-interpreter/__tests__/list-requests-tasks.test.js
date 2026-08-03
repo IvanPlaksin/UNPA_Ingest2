@@ -69,9 +69,12 @@ describe('listing the requests a person raised', () => {
 
   test('the model is told the rows are RENDERED, so it does not recite them', async () => {
     // Otherwise everything is said twice — and read aloud as a table in voice.
+    // Measured live: with the constraint last and softly worded, Haiku numbered all
+    // ten rows underneath a list already showing them. It leads now.
     const tools = mk({ ticketList: { listTickets: async () => ({ tickets: [TICKET], totalCount: 1 }) } });
     const out = await tools.TOOLS.list_requests({}, ctx());
-    expect(out.tellUser).toMatch(/do not repeat the rows/);
+    expect(out.tellUser).toMatch(/ALREADY ON SCREEN/);
+    expect(out.tellUser).toMatch(/Do NOT list them/);
   });
 
   test('nothing found is a plain answer with an offer, not an empty list', async () => {
@@ -173,8 +176,16 @@ describe('the rows a turn shows', () => {
   });
 
   test('a task points at the request it belongs to, so the click still opens something', () => {
-    const card = toCard('task', { id: 't1', title: 'Approve', ticketNumber: 'SR-1001', priority: 'high' });
-    expect(card.revealIntent).toEqual({ domain: 'requests', id: 'SR-1001' });
+    // Built through the backend's own mapper, from a payload shaped like Altiora's.
+    // Written by hand this fixture said `ticketNumber`, which the card builder also
+    // read and no task row has ever carried — so the test agreed with the code and
+    // both were wrong, and live every task card came out unopenable. A fixture for a
+    // row the backend produces has to come from the thing that produces it.
+    const { mapTask } = require('../../services/backends/tasks.backend');
+    const row = mapTask({ Id: 't1', Label: 'Submit Selection Recommendation', RfsNumber: 'SR-1001', Priority: 'Medium' });
+
+    expect(row.ref).toBe('SR-1001');
+    expect(toCard('task', row).revealIntent).toEqual({ domain: 'requests', id: 'SR-1001' });
   });
 
   test('a row with nothing on it still says so rather than rendering an empty box', () => {

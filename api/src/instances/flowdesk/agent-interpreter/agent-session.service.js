@@ -126,6 +126,11 @@ function createAgentSession(p = {}, deps = {}) {
         // The host opens Altiora's own form from this; dropping it here would
         // leave the agent promising a hand-off the client never receives.
         ...(out.openForm ? { openForm: out.openForm } : {}),
+        // REQ-005 — the rows the turn shows. Dropped here once already: the loop
+        // built them, this copy did not name them, and the chat showed nothing while
+        // every test either side of this line passed. The warning above `openForm`
+        // was about the same hazard on the same object; the field after it fell to it.
+        ...(Array.isArray(out.cards) && out.cards.length ? { cards: out.cards } : {}),
         route: 'AGENT',
         askingSlot: null,
         waiting: true,
