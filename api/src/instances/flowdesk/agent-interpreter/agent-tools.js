@@ -85,6 +85,7 @@ const { draftToInitialFormData } = require('../interpreter/form-handoff');
 const { resolveCascadeCluster, isAutofillCascadeSlot } = require('../interpreter/cascade-resolver');
 const { buildFormHydration } = require('../interpreter/form-hydration');
 const { isMultiDirectory } = require('../interpreter/controls');
+const { toCard } = require('../interpreter/cards');
 const { effectiveSnapshot, CONTEXT_SLOTS } = require('../interpreter/form-overlay');
 const { ui } = require('../interpreter/templates/ui-strings');
 const { questionFor } = require('../interpreter/context-questions');
@@ -384,6 +385,7 @@ function createToolSession() {
     largeFormOffered: false,         // the wizard choice is offered once, not every turn
     finalGateShown: false,           // the form hand-off that ends a completed request
     openForm: null,                  // set by open_form; rides the turn like the FSM's
+    cards: [],                       // REQ-005: rows the turn SHOWS (requests, tasks)
     // HYB-1: the two facts the hybrid interpreter cannot derive from the draft.
     // How many fields THIS form has already asked — the first one gets a model turn
     // for context, every later one may be a template (turn-router condition 7).
@@ -1165,6 +1167,7 @@ function createAgentTools(deps = {}) {
     }
     const items = out.tickets || [];
     ctx.session.lastList = { kind: 'requests', items };
+    ctx.session.cards = items.map((r) => toCard('request', r));
     return {
       ok: true,
       items,
@@ -1196,6 +1199,7 @@ function createAgentTools(deps = {}) {
     }
     const items = out.tasks || out.items || [];
     ctx.session.lastList = { kind: 'tasks', items };
+    ctx.session.cards = items.map((r) => toCard('task', r));
     return {
       ok: true,
       items,

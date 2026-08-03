@@ -132,3 +132,60 @@ describe('what the rows carry', () => {
     expect(row.sharedWith).toEqual([]);
   });
 });
+
+/**
+ * REQ-005 — the rows a turn SHOWS.
+ *
+ * Their own field, not a `controls` entry of type "list". A control has a slotId and
+ * fills it; a list of requests has neither and fills nothing, and calling it a control
+ * would mean explaining ever after why this one has no slot.
+ */
+describe('the rows a turn shows', () => {
+  const { toCard } = require('../../interpreter/cards');
+
+  const ROW = {
+    ticketNumber: 'SR-1001', title: 'Education grant claim', status: 'Open',
+    service: 'Education Grant', priority: 'Normal', onBehalf: 'Ivan Plaksin',
+    taskCount: 2, sharedWith: ['Maria Silva'], createdAt: '2026-07-01',
+    revealIntent: { domain: 'requests', id: 'SR-1001' },
+  };
+
+  test('says what Altiora’s own list says', () => {
+    const labels = toCard('request', ROW).fields.map((f) => f.label);
+    expect(labels).toEqual(['Service', 'For', 'Priority', 'Submitted', 'Status', 'Tasks', 'Shared with']);
+  });
+
+  test('a field the ticket does not have is left out, not shown empty', () => {
+    // An empty row in a conversation reads as something that failed to load.
+    const labels = toCard('request', { ticketNumber: 'SR-2', title: 'X', status: 'Open' })
+      .fields.map((f) => f.label);
+    expect(labels).toEqual(['Status']);
+  });
+
+  test('carries the host intent and no action of its own', () => {
+    const card = toCard('request', ROW);
+    expect(card.revealIntent).toEqual({ domain: 'requests', id: 'SR-1001' });
+    expect(card.actions).toBeUndefined();
+  });
+
+  test('the accent is a MEANING, never a colour — the palette is the host’s', () => {
+    expect(toCard('request', { ...ROW, slaStatus: 'breached' }).accent).toBe('breached');
+  });
+
+  test('a task points at the request it belongs to, so the click still opens something', () => {
+    const card = toCard('task', { id: 't1', title: 'Approve', ticketNumber: 'SR-1001', priority: 'high' });
+    expect(card.revealIntent).toEqual({ domain: 'requests', id: 'SR-1001' });
+  });
+
+  test('a row with nothing on it still says so rather than rendering an empty box', () => {
+    expect(toCard('request', {}).fields.length).toBeGreaterThan(0);
+  });
+
+  test('dates and people are marked for the client to format, not formatted here', () => {
+    // The chat does not own the host's date format or its status palette.
+    const byLabel = Object.fromEntries(toCard('request', ROW).fields.map((f) => [f.label, f.format]));
+    expect(byLabel.Submitted).toBe('date');
+    expect(byLabel.For).toBe('user');
+    expect(byLabel.Status).toBe('status');
+  });
+});

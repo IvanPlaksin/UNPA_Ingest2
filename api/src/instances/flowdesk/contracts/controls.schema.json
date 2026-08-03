@@ -7,37 +7,92 @@
     "option": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["value", "label"],
+      "required": [
+        "value",
+        "label"
+      ],
       "properties": {
-        "value": { "type": "string", "description": "Stable identifier echoed back in controlAction.value (userId, duty-station code, or enum value)." },
-        "label": { "type": "string", "description": "Human-readable text to render." },
-        "description": { "type": "string", "description": "Optional secondary line (email, department, city)." }
+        "value": {
+          "type": "string",
+          "description": "Stable identifier echoed back in controlAction.value (userId, duty-station code, or enum value)."
+        },
+        "label": {
+          "type": "string",
+          "description": "Human-readable text to render."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional secondary line (email, department, city)."
+        }
       }
     },
     "source": {
       "type": "object",
       "description": "Typeahead data source for an autocomplete control — the I-6 directory endpoint.",
       "additionalProperties": false,
-      "required": ["directory", "endpoint"],
+      "required": [
+        "directory",
+        "endpoint"
+      ],
       "properties": {
-        "directory": { "enum": ["user", "location"], "description": "Directory kind; selects the endpoint path segment and the resolver." },
-        "endpoint": { "type": "string", "description": "GET typeahead URL; the client appends `?q=` (and optional `&limit=`)." },
-        "minChars": { "type": "integer", "minimum": 1, "default": 2, "description": "Minimum query length before the client calls the endpoint." },
-        "placeholder": { "type": "string" }
+        "directory": {
+          "enum": [
+            "user",
+            "location"
+          ],
+          "description": "Directory kind; selects the endpoint path segment and the resolver."
+        },
+        "endpoint": {
+          "type": "string",
+          "description": "GET typeahead URL; the client appends `?q=` (and optional `&limit=`)."
+        },
+        "minChars": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 2,
+          "description": "Minimum query length before the client calls the endpoint."
+        },
+        "placeholder": {
+          "type": "string"
+        }
       }
     },
     "control": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "type", "slotId"],
+      "required": [
+        "id",
+        "type",
+        "slotId"
+      ],
       "properties": {
-        "id": { "type": "string", "description": "Unique within the turn. The client echoes it in controlAction.controlId." },
+        "id": {
+          "type": "string",
+          "description": "Unique within the turn. The client echoes it in controlAction.controlId."
+        },
         "type": {
-          "enum": ["confirm", "choice", "autocomplete", "date", "multichoice", "text", "textarea", "number", "toggle", "cascade_confirm"],
+          "enum": [
+            "confirm",
+            "choice",
+            "autocomplete",
+            "date",
+            "multichoice",
+            "text",
+            "textarea",
+            "number",
+            "toggle",
+            "cascade_confirm"
+          ],
           "description": "confirm = a resolved default to accept or override (with optional alternatives + search child); choice = pick one of a closed option set (enum slot); autocomplete = typeahead against a directory source; date = a calendar picker for a date slot, the client returns an ISO 8601 date via a `date_select` action (TASK-PROMPT-001); multichoice = pick ANY NUMBER of a closed option set (an enum slot with `multi`, i.e. an Altiora checklist), committed as an array via `multichoice_select` (P1-13). (type:'text' is deferred — free-text still arrives via the plain `message`.)"
         },
-        "slotId": { "type": "string", "description": "DraftSR slot this control fills." },
-        "label": { "type": "string", "description": "Prompt/label to render." },
+        "slotId": {
+          "type": "string",
+          "description": "DraftSR slot this control fills."
+        },
+        "label": {
+          "type": "string",
+          "description": "Prompt/label to render."
+        },
         "defaultValue": {
           "description": "For type=confirm: the pre-resolved value to accept on a bare confirm (object for user/location slots, scalar otherwise)."
         },
@@ -50,8 +105,12 @@
           "type": "array",
           "items": {
             "oneOf": [
-              { "type": "string" },
-              { "$ref": "#/definitions/option" }
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/option"
+              }
             ]
           },
           "default": []
@@ -74,24 +133,42 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["slotId", "label", "display"],
+            "required": [
+              "slotId",
+              "label",
+              "display"
+            ],
             "properties": {
-              "slotId": { "type": "string" },
-              "label": { "type": "string", "description": "Field label to show." },
-              "display": { "type": "string", "description": "Resolved value as shown to the user." }
+              "slotId": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string",
+                "description": "Field label to show."
+              },
+              "display": {
+                "type": "string",
+                "description": "Resolved value as shown to the user."
+              }
             }
           }
         },
         "options": {
           "type": "array",
           "description": "Selectable options. Required for type=choice; the alternatives for type=confirm.",
-          "items": { "$ref": "#/definitions/option" }
+          "items": {
+            "$ref": "#/definitions/option"
+          }
         },
-        "source": { "$ref": "#/definitions/source" },
+        "source": {
+          "$ref": "#/definitions/source"
+        },
         "children": {
           "type": "array",
           "description": "Nested controls revealed when the parent's value equals showChildrenOn — e.g. an autocomplete revealed under a confirm's `_search`, or under a 'for someone else' choice.",
-          "items": { "$ref": "#/definitions/control" }
+          "items": {
+            "$ref": "#/definitions/control"
+          }
         },
         "showChildrenOn": {
           "type": "string",
@@ -100,24 +177,95 @@
       },
       "allOf": [
         {
-          "if": { "properties": { "type": { "const": "choice" } } },
-          "then": { "required": ["options"], "properties": { "options": { "minItems": 1 } } }
+          "if": {
+            "properties": {
+              "type": {
+                "const": "choice"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "options"
+            ],
+            "properties": {
+              "options": {
+                "minItems": 1
+              }
+            }
+          }
         },
         {
-          "if": { "properties": { "type": { "const": "autocomplete" } } },
-          "then": { "required": ["source"] }
+          "if": {
+            "properties": {
+              "type": {
+                "const": "autocomplete"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "source"
+            ]
+          }
         },
         {
-          "if": { "properties": { "type": { "const": "multichoice" } } },
-          "then": { "required": ["options"], "properties": { "options": { "minItems": 1 } } }
+          "if": {
+            "properties": {
+              "type": {
+                "const": "multichoice"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "options"
+            ],
+            "properties": {
+              "options": {
+                "minItems": 1
+              }
+            }
+          }
         },
         {
-          "if": { "properties": { "type": { "const": "date" } }, "required": ["type"] },
-          "then": { "properties": { "prefill": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" } } }
+          "if": {
+            "properties": {
+              "type": {
+                "const": "date"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "prefill": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              }
+            }
+          }
         },
         {
-          "if": { "properties": { "type": { "const": "toggle" } }, "required": ["type"] },
-          "then": { "properties": { "prefill": { "type": "boolean" } } }
+          "if": {
+            "properties": {
+              "type": {
+                "const": "toggle"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "prefill": {
+                "type": "boolean"
+              }
+            }
+          }
         }
       ]
     },
@@ -125,26 +273,139 @@
       "type": "object",
       "description": "A client's reply to a control. Rides the POST /chat body alongside (and taking precedence over) the legacy `choice`.",
       "additionalProperties": false,
-      "required": ["slotId", "action"],
+      "required": [
+        "slotId",
+        "action"
+      ],
       "properties": {
-        "controlId": { "type": "string", "description": "The control.id being answered (diagnostic; the backend keys on slotId)." },
-        "slotId": { "type": "string" },
+        "controlId": {
+          "type": "string",
+          "description": "The control.id being answered (diagnostic; the backend keys on slotId)."
+        },
+        "slotId": {
+          "type": "string"
+        },
         "action": {
-          "enum": ["confirm", "select", "search", "submit", "date_select", "multichoice_select", "text_input", "number_input", "toggle_input", "cascade_accept", "cascade_edit", "edit"],
+          "enum": [
+            "confirm",
+            "select",
+            "search",
+            "submit",
+            "date_select",
+            "multichoice_select",
+            "text_input",
+            "number_input",
+            "toggle_input",
+            "cascade_accept",
+            "cascade_edit",
+            "edit"
+          ],
           "description": "confirm = accept the control's defaultValue; select = pick options[].value; search = re-resolve with `value` as the query; submit = commit an autocomplete pick (treated as select); date_select = commit a date control's picked ISO 8601 value (validated then treated as select); multichoice_select = commit a multichoice control's chosen option values, carried in `values` (P1-13); text_input = commit a text/textarea control's string (one action for both — they differ only in how they are rendered); number_input = commit a number control's numeric value; toggle_input = commit a toggle control's boolean (TASK-003/004); cascade_accept = accept a cascade_confirm cluster (the backend RE-RESOLVES and patches — the echoed values are never trusted); cascade_edit = decline the cluster and fill those fields by hand instead (P1-12); edit = the user clicked the ✎ button on a row of the confirm-form review to change that field — the backend steers the next turn onto `slotId` and asks for a new value (warning first if the field has filled cascade dependents). Not offered for reference-derived (directory/dictionary/LOV) values."
         },
-        "value": { "description": "Option value / query string / picked item, per action. Omitted for a bare confirm." },
+        "value": {
+          "description": "Option value / query string / picked item, per action. Omitted for a bare confirm."
+        },
         "values": {
           "type": "array",
           "description": "For action=multichoice_select: the chosen option values. Every entry must be one of the control's options; the backend re-validates against the slot's presentOptions.",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "card": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "id",
+        "title",
+        "fields"
+      ],
+      "description": "REQ-005. A row the turn SHOWS. Deliberately not a control: a control has a slotId and fills it, a card has neither and fills nothing. Its fields mirror Altiora's own /requests table so a request read in chat and the same request read on /requests do not disagree about what is worth showing. A card carries no action of its own — clicking it asks the HOST to open its detail dialog through revealIntent.",
+      "properties": {
+        "type": {
+          "enum": [
+            "request",
+            "task",
+            "kb_article",
+            "service"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "subtitle": {
+          "type": "string"
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "label",
+              "value"
+            ],
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              },
+              "format": {
+                "enum": [
+                  "date",
+                  "status",
+                  "user"
+                ],
+                "description": "How the client should render it. A hint, not markup — the chat does not own the host's date format or status palette."
+              }
+            }
+          }
+        },
+        "accent": {
+          "type": "string",
+          "description": "The meaning behind Altiora's leading colour bar (a status or SLA state), never a colour: the palette belongs to whoever renders it."
+        },
+        "revealIntent": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "domain",
+            "id"
+          ],
+          "properties": {
+            "domain": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "highlight": {
+              "type": "boolean"
+            }
+          },
+          "description": "Host Adapter intent. The chat does not know how the host's detail dialog works and must not."
         }
       }
     }
   },
   "type": "object",
   "properties": {
-    "controls": { "type": "array", "items": { "$ref": "#/definitions/control" } },
-    "controlAction": { "$ref": "#/definitions/controlAction" }
+    "controls": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/control"
+      }
+    },
+    "controlAction": {
+      "$ref": "#/definitions/controlAction"
+    }
   }
 }

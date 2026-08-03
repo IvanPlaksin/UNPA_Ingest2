@@ -442,11 +442,19 @@ ${brief}` : userTurnText },
     // The form is opening: assisted filling is over, so nothing on this turn may
     // still ask for a field. Live, the model acknowledged the hand-off and put a
     // "describe your request" box underneath it.
-    if (session.openForm) session.controls = [];
+    if (session.openForm) { session.controls = []; session.cards = []; }
 
     return {
       response: finalText,
       controls: session.controls.length ? session.controls : null,
+      // REQ-005 — data the turn SHOWS, beside the controls that COLLECT.
+      //
+      // Deliberately its own field rather than a `controls` entry of type "list". A
+      // control has a slotId and fills it; a list of requests has neither and fills
+      // nothing, and calling it a control would mean explaining ever after why this
+      // one has no slot. We spend enough of this project undoing things used for what
+      // they were not.
+      ...(session.cards && session.cards.length ? { cards: session.cards } : {}),
       // Rides the turn exactly as the state machine's does; the host opens the
       // real form with the draft pre-filled.
       ...(session.openForm ? { openForm: session.openForm } : {}),
