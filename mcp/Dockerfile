@@ -31,7 +31,7 @@ COPY mcp/nginx.conf.template /etc/nginx/templates/default.conf.template
 # Public HTTP(S) variant (:80 ACME + redirect, :443 SPA + /api proxy). Swapped in
 # by the entrypoint hook below ONLY when /etc/nginx/ssl holds a certificate, so
 # the same image still starts on hosts without one.
-COPY mcp/nginx.public-tls.conf.template /etc/nginx/templates/public-tls.conf.template
+COPY mcp/nginx.public-tls.conf.template /etc/nginx/public-tls.conf.template
 COPY mcp/docker-entrypoint.d/05-enable-tls-template.sh /docker-entrypoint.d/05-enable-tls-template.sh
 RUN chmod +x /docker-entrypoint.d/05-enable-tls-template.sh
 # Default API URL (overridden via ACA env var NGINX_API_URL at runtime)
