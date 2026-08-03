@@ -1,0 +1,6 @@
+# The frontend image's entrypoint hook is executed by /bin/sh inside the
+# container — a CRLF checkout would make nginx:alpine fail to start. Pin these
+# to LF no matter which platform checks the repo out.
+mcp/docker-entrypoint.d/*.sh text eol=lf
+mcp/nginx.conf.template text eol=lf
+mcp/nginx.public-tls.conf.template text eol=lf

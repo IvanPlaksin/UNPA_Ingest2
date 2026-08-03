@@ -99,6 +99,15 @@ services:
       - TEI_URL=http://tei:80
       - GLINER_URL=http://gliner:5100
       - CORS_ORIGINS=${CORS_ORIGINS:-*}
+      # External identity of this node, propagated to the backend.
+      - PUBLIC_IP=${PUBLIC_IP:-}
+      - PUBLIC_BASE_URL=${PUBLIC_BASE_URL:-}
+      # The always-on Document Indexer saturates Memgraph on a 2-vCPU box and made
+      # chat turns take 33-125s. Off by default here; flip via .env if a node is
+      # meant to harvest. `environment` wins over api.env, so the secret cannot
+      # silently re-enable it.
+      - DOCUMENT_INDEXER_ENABLED=${DOCUMENT_INDEXER_ENABLED:-false}
+      - VALIDITY_REFRESH_ENABLED=${VALIDITY_REFRESH_ENABLED:-false}
     # App/feature config + secrets (ANTHROPIC_API_KEY, FLOWDESK_*, ALTIORA_*, VOICE_*,
     # CLAUDE_*, ADO_*, GEMINI). Written on the VM by the deploy job from the
     # FLOWDESK_ENV GitHub secret. Infra vars above override any endpoints here.
@@ -120,9 +129,24 @@ services:
     image: ${GHCR:-ghcr.io/ivanplaksin/unpa_ingest2}/mcp:${IMAGE_TAG:-latest}
     container_name: projectadvisor-mcp
     restart: unless-stopped
-    ports: ["8080:80"]
+    # :80 (ACME + redirect to HTTPS) and :443 (SPA + /api proxy) when ./certs holds
+    # a certificate; the image falls back to a plain :80 SPA when it does not.
+    # :8080 stays mapped for the health checks and for backward compatibility.
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+      - "8080:80"
     environment:
       - NGINX_API_URL=http://api:3000
+      - SERVER_NAME=${SERVER_NAME:-_}
+      - PUBLIC_IP=${PUBLIC_IP:-}
+      - PUBLIC_BASE_URL=${PUBLIC_BASE_URL:-}
+    volumes:
+      # TLS material (Let's Encrypt live copy, refreshed by the certbot deploy hook)
+      # and the shared ACME HTTP-01 webroot. Created by the deploy job if absent —
+      # an empty certs dir simply means the plain :80 config is served.
+      - ./certs:/etc/nginx/ssl:ro
+      - ./certbot-www:/var/www/certbot
     depends_on:
       api: {condition: service_started}
     networks: [projectadvisor-network]

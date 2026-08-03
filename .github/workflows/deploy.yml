@@ -175,13 +175,24 @@ jobs:
             fi
             cd ~/unpa-ci
             mv -f docker-compose.ci.yml docker-compose.yml
-            # runtime .env (secrets from GitHub) — never printed
+            # runtime .env (secrets from GitHub) — never printed.
+            # Node-local settings (public identity, TLS ports, feature gates) exist
+            # only on the VM; carry them across or a deploy silently drops HTTPS.
+            cp -f .env .env.prev 2>/dev/null || true
+            chmod 600 .env.prev 2>/dev/null || true
             umask 077
-            cat > .env <<EOF
-            IMAGE_TAG=${IMAGE_TAG}
-            GHCR=ghcr.io/ivanplaksin/unpa_ingest2
-            MEMGRAPH_PASSWORD=${MEMGRAPH_PASSWORD}
-            EOF
+            {
+              echo "IMAGE_TAG=${IMAGE_TAG}"
+              echo "GHCR=ghcr.io/ivanplaksin/unpa_ingest2"
+              echo "MEMGRAPH_PASSWORD=${MEMGRAPH_PASSWORD}"
+              for k in HTTP_PORT HTTPS_PORT SERVER_NAME PUBLIC_IP PUBLIC_BASE_URL \
+                       CORS_ORIGINS DOCUMENT_INDEXER_ENABLED VALIDITY_REFRESH_ENABLED; do
+                grep -E "^${k}=" .env.prev 2>/dev/null | tail -1 || true
+              done
+            } > .env
+            # TLS material + ACME webroot bind mounts. An empty certs dir is fine:
+            # the frontend image then serves its plain :80 config.
+            mkdir -p certs certbot-www
             # api app/feature config + secrets (env_file for the api service)
             printf '%s' "${FLOWDESK_ENV}" > api.env
             echo "${GHCR_TOKEN}" | sudo docker login ghcr.io -u "${GHCR_USER}" --password-stdin
@@ -216,11 +227,25 @@ jobs:
             wait_http() { local url=$1 name=$2 tries=${3:-24}; for i in $(seq 1 $tries); do
               curl -fsS -o /dev/null "$url" && { echo "$name OK"; return 0; }; sleep 5; done
               echo "$name FAIL ($url)"; return 1; }
+            # same, over TLS on the loopback: the cert is issued for the public
+            # hostname, so certificate verification is deliberately skipped here.
+            wait_https() { local url=$1 name=$2 tries=${3:-24}; for i in $(seq 1 $tries); do
+              curl -fsSk -o /dev/null "$url" && { echo "$name OK"; return 0; }; sleep 5; done
+              echo "$name FAIL ($url)"; return 1; }
             fail=0
             sudo docker exec projectadvisor-redis redis-cli ping | grep -q PONG || { echo "redis FAIL"; fail=1; }
             wait_http http://localhost:6333/healthz qdrant 12 || fail=1
             wait_http http://localhost:3010/health  api    36 || fail=1     # api boots + DB connects
             wait_http http://localhost:8080/        mcp    12 || fail=1
+            # Public HTTP(S): only asserted on nodes that actually hold a cert, so
+            # a cert-less node is not failed for it — but a node that HAD HTTPS and
+            # lost it now fails the deploy instead of degrading quietly.
+            if [ -s certs/fullchain.pem ]; then
+              wait_https https://localhost/          https  12 || fail=1
+              wait_https https://localhost/api/v1/flowdesk/health https-api-proxy 12 || fail=1
+            else
+              echo "no certs/fullchain.pem -> skipping HTTPS checks"
+            fi
             wait_http http://localhost:5100/health  gliner 48 || echo "gliner still loading (non-fatal)"
             wait_http http://localhost:8081/health  tei    48 || echo "tei still loading model (non-fatal)"
             for c in projectadvisor-etl projectadvisor-sync; do
