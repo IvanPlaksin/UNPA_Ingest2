@@ -236,7 +236,7 @@ const TOOL_SCHEMAS = [
       type: 'object',
       properties: {
         status: { type: 'string', description: 'open | closed | all. Omit for the default (everything ongoing).' },
-        fromDate: { type: 'string', description: 'ISO date (YYYY-MM-DD). Resolve relative wording — "last week", "since June" — before calling.' },
+        fromDate: { type: 'string', description: 'ISO date (YYYY-MM-DD). Resolve relative wording — "last week", "since June" — before calling, and SAY THE RESOLVED PERIOD in your reply ("your requests since 27 July:"). A period understood wrongly returns a plausible list with things missing from it, and nothing on screen would show that.' },
         toDate: { type: 'string', description: 'ISO date (YYYY-MM-DD).' },
         service: { type: 'string', description: 'Service or category name, when they named one.' },
         search: { type: 'string', description: 'Free text to match against the title.' },
