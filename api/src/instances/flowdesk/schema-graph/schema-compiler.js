@@ -98,7 +98,7 @@ async function compile(serviceId) {
      RETURN sl.slotId AS slotId, sl.type AS type, sl.required AS required, sl.phase AS phase,
             sl.promptHint AS promptHint, sl.groupable AS groupable, sl.order AS order,
             sl.requiredWhen AS requiredWhen, sl.altioraFieldId AS altioraFieldId,
-            sl.helpText AS helpText, sl.multi AS multi, sl.dictRefJson AS dictRefJson,
+            sl.helpText AS helpText, sl.fieldMeaning AS fieldMeaning, sl.multi AS multi, sl.dictRefJson AS dictRefJson,
             sl.section AS section, sl.sectionLabel AS sectionLabel,
             r.resolverRef AS resolverRef, aw.condition AS trefCondition
      ORDER BY sl.order`,
@@ -182,6 +182,10 @@ async function compile(serviceId) {
     // SlotDef so it survives the materialize → graph → compile round-trip.
     const helpText = rec.get('helpText');
     if (helpText) slot.helpText = helpText;
+    // The generated meaning, kept beside the authored text rather than merged into
+    // it — the question prefers the human words and falls back to these.
+    const fieldMeaning = rec.get('fieldMeaning');
+    if (fieldMeaning) slot.fieldMeaning = fieldMeaning;
 
     // P1-13: multi-select enum (Altiora checklist/multiselect).
     if (rec.get('multi') === true) slot.multi = true;

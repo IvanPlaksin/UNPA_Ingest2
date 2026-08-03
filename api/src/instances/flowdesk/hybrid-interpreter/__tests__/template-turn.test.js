@@ -36,7 +36,10 @@ describe('the rendered turn is a real turn', () => {
     const t = await turn();
 
     expect(t.fallthrough).toBeUndefined();
-    expect(t.response).toBe('Got it. Index Number');
+    // The field's own guidance now travels IN the sentence, not only on the control's
+    // label where it renders small or not at all. "Got it. Index Number" was a label
+    // read out as a question.
+    expect(t.response).toBe('Got it. Index Number: Your staff file identifier');
     expect(t.askingSlot).toBe('indexNumber');
     expect(t.controls).toHaveLength(1);
     expect(t.controls[0].type).toBe('text');

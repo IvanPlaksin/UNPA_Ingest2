@@ -29,6 +29,7 @@ const ctrl = require('../interpreter/controls');
 const policy = require('../interpreter/form-policy');
 const { ui } = require('../interpreter/templates/ui-strings');
 const { questionFor } = require('../interpreter/context-questions');
+const { questionWithGuidance, guidanceFor } = require('../interpreter/field-guidance');
 
 /** Nothing rendered — the model takes this turn. `why` is for telemetry only. */
 const fallthrough = (why) => ({ fallthrough: true, why });
@@ -114,7 +115,8 @@ async function buildTemplateTurn(p = {}) {
       }
     }
 
-    const help = slotDef.helpText ? ` — ${slotDef.helpText}` : '';
+    const g = guidanceFor(slotDef);
+    const help = g ? ` — ${g.full}` : '';
     const control = ctrl.buildControlFromSlot(slotDef, {
       label: `${question}${help}${optional ? ` ${S.optionalMark}` : ''}`,
       defaultValue: resolved.defaultValue,
@@ -140,8 +142,11 @@ async function buildTemplateTurn(p = {}) {
     const ack = ackFor(lang, skipped ? 'skip' : (lastControlType || 'text'));
 
     return {
-      // The label carries the full wording; the sentence stays a sentence.
-      response: `${ack} ${shortQuestion(question)}`,
+      // The label carries the FULL wording; the sentence carries enough of it to be
+      // answerable. "Got it. Amendment Type" was a label read out as a question —
+      // the guidance existed and sat only on the control, where it is rendered small
+      // or not at all.
+      response: `${ack} ${questionWithGuidance(shortQuestion(question), slotDef)}`,
       preamble: null,
       choices: null,
       responseType: 'agent_with_controls',

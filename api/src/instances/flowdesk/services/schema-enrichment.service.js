@@ -196,6 +196,26 @@ async function storeGraph({ serviceId, serviceDescription, keywords, fieldDescri
      FOREACH (_ IN CASE WHEN s IS NULL THEN [] ELSE [1] END | MERGE (d)-[:DESCRIBES]->(s))`,
     { sid: serviceId, text: serviceDescription, keywords: JSON.stringify(keywords || []), fields: fieldsJson,
       model: model || null, ts: new Date().toISOString() });
+
+  // The meaning also goes ONTO THE SLOT, so the question can carry it without a
+  // lookup. The template path answers a click in ~680 ms; a graph round trip per
+  // field, on every form, is paid out of exactly that budget.
+  //
+  // A SEPARATE property, never `helpText`. Altiora's own description is authored by
+  // whoever owns the service and sometimes states a rule rather than a description
+  // ("if you do not know the Umoja document number, enter -1"); overwriting that with
+  // a generated paraphrase would replace an instruction with a summary of it.
+  const rows = (fieldDescriptions || [])
+    .filter((f) => f && f.slotId && f.description)
+    .map((f) => ({ slotId: f.slotId, meaning: String(f.description).trim() }));
+  if (rows.length) {
+    await w()(
+      `UNWIND $rows AS row
+       MATCH (s:ServiceDef {serviceId:$sid})-[:HAS_SLOT]->(sl:SlotDef {slotId: row.slotId})
+       SET sl.fieldMeaning = row.meaning`,
+      { sid: serviceId, rows },
+    );
+  }
 }
 
 /** Apply a (generated or edited) enrichment: vectorize + graph-link. */

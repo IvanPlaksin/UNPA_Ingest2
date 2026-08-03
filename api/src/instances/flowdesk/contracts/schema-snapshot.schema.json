@@ -260,6 +260,10 @@
           "type": "string",
           "description": "Field guidance carried from the source form (Altiora `description`, plus `placeholder` as a labelled example). Grounds the QUESTION_PLANNER's phrasing and FIELD_HELP answers. Machine artifacts (e.g. 'Auto-generated field for …') are filtered out at materialization (TASK-PROMPT-005)."
         },
+        "fieldMeaning": {
+          "type": "string",
+          "description": "A generated explanation of what this field is for (P7 enrichment), merged onto the slot at apply-time. Kept SEPARATE from helpText: Altiora's own description is authored by the service owner and sometimes states a rule rather than a description, so a generated paraphrase must never replace it. The question prefers helpText and falls back to this."
+        },
         "section": {
           "type": "string",
           "description": "Stable slug of the Altiora form SECTION this slot belongs to (from FormField.sectionId → the referenced type='section' field). Sections are the form author's semantic grouping (avg ~3 fields each); carried so the dialogue, the graph (SlotGroup) and the KB description can group related questions. Layout-only; never a slot itself.",
