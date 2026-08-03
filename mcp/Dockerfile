@@ -17,6 +17,10 @@ RUN npm install --prefer-offline
 # the aliased package lives outside mcp/ — hence the repo-root context
 COPY packages /app/packages
 COPY mcp .
+# The SPA bundles to a single ~8.6 MB chunk and rollup exhausts node's default
+# heap inside a container ("Ineffective mark-compacts near heap limit"). This is
+# a ceiling, not a reservation, so it is safe on smaller build machines too.
+ENV NODE_OPTIONS=--max-old-space-size=8192
 RUN npm run build
 
 # Stage 2: Serve
