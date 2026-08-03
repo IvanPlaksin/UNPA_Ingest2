@@ -100,8 +100,25 @@ function locationQuestion(draft, actingUser) {
  * language nobody would be able to audit, and these are the two questions whose
  * wording genuinely turns on an answer already given.
  */
+/**
+ * Who the request is for — named, not offered as a fork.
+ *
+ * "Is this request for yourself, or for someone else?" makes the person answer a
+ * question about the SHAPE of the answer before giving it, and costs a turn: yes, then
+ * the name. The control already holds the signed-in user, so the question can propose
+ * them and the same turn accepts or replaces them (fdv2-65d84c0e).
+ */
+function beneficiaryQuestion(draft, actingUser) {
+  const me = actingUser && typeof actingUser === 'object' ? actingUser : null;
+  const who = nameOf(me);
+  return who
+    ? `Is this request for you, ${who}? If it is for a colleague, search for them instead.`
+    : 'Who is this request for? Search for the person, or confirm it is for you.';
+}
+
 const DYNAMIC = {
   location: locationQuestion,
+  beneficiary: beneficiaryQuestion,
 };
 
 /**
@@ -118,4 +135,4 @@ function questionFor(slotDef, draft, actingUser) {
   try { return fn(draft, actingUser) || (slotDef.promptHint || ''); } catch { return slotDef.promptHint || ''; }
 }
 
-module.exports = { questionFor, locationQuestion, isSelf, nameOf, locationOf };
+module.exports = { questionFor, locationQuestion, beneficiaryQuestion, isSelf, nameOf, locationOf };

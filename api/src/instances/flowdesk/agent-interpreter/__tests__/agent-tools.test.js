@@ -103,7 +103,9 @@ describe('GUARDRAIL: draft_create only accepts a searched service', () => {
     // What the model gets is the running order as LABELS — enough to tell the user
     // what is coming, and not enough to pick a field out of turn.
     expect(r.willAsk).toEqual([
-      'Who is this request for?',
+      // Proposed, not forked: the question names the signed-in user and says how to
+      // pick someone else, so the beneficiary is settled in one turn.
+      'Who is this request for? Search for the person, or confirm it is for you.',
       // Composed from the draft, not copied from the schema — see context-questions.
       'Which location or duty station should this request be handled at?',
       'Subject', 'Notes', 'Travel date',

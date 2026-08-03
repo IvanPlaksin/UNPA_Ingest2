@@ -141,3 +141,36 @@ describe('sharing a request with colleagues is a directory pick, not typing', ()
     expect(c.multi).toBeUndefined();
   });
 });
+
+/**
+ * "Is this request for yourself, or for someone else?" (fdv2-65d84c0e) makes the
+ * person answer a question about the SHAPE of the answer before giving it, and costs
+ * a turn: yes, and then the name. The control already holds the signed-in user, so
+ * the question can propose them and the same turn accepts or replaces them.
+ */
+describe('who the request is for is proposed, not forked', () => {
+  const B = { slotId: 'beneficiary', type: 'user', promptHint: 'Who is this request for?' };
+
+  test('names the signed-in person and says how to change it', () => {
+    expect(questionFor(B, draftWith({}), { userId: 'u1', name: 'Ivan Plaksin' }))
+      .toBe('Is this request for you, Ivan Plaksin? If it is for a colleague, search for them instead.');
+  });
+
+  test('composes a name from its parts when that is all the directory gives', () => {
+    expect(questionFor(B, draftWith({}), { userId: 'u1', firstName: 'Ana', lastName: 'Costa' }))
+      .toMatch('Ana Costa');
+  });
+
+  test('with nobody signed in it asks plainly rather than naming a stranger', () => {
+    expect(questionFor(B, draftWith({}), null))
+      .toBe('Who is this request for? Search for the person, or confirm it is for you.');
+  });
+
+  test('it is never a two-button fork', () => {
+    // The phrasing this replaced. It cost a turn and told the user nothing about who
+    // the assistant already had in mind.
+    for (const actor of [{ userId: 'u1', name: 'X Y' }, null]) {
+      expect(questionFor(B, draftWith({}), actor)).not.toMatch(/yourself, or for someone else/i);
+    }
+  });
+});

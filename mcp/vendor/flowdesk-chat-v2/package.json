@@ -1,6 +1,6 @@
 {
   "name": "@flowdesk/chat-v2",
-  "version": "1.0.31",
+  "version": "1.0.32",
   "description": "FlowDesk Chat V2 — conversational service-request intake component (React)",
   "license": "UNLICENSED",
   "type": "module",
