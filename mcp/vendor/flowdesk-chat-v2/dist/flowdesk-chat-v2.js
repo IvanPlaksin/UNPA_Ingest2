@@ -1,5 +1,5 @@
 import { jsxs as N, jsx as g, Fragment as Gn } from "react/jsx-runtime";
-import Me, { createContext as Jn, useContext as Yn, useMemo as xt, useRef as oe, useCallback as Ee, useState as re, useEffect as ne, createElement as Ui } from "react";
+import Me, { createContext as Jn, useContext as Yn, useMemo as xt, useRef as oe, useCallback as Ee, useState as ne, useEffect as te, createElement as Ui } from "react";
 import { createPortal as qi } from "react-dom";
 const $ = (e) => typeof e == "string", dt = () => {
   let e, t;
@@ -415,22 +415,22 @@ class Ut extends Jt {
           });
           Z && Z.res && this.logger.warn("Seems the loaded translations were in flat JSON format instead of nested. Either set keySeparator: false on init or make sure your translations are published in nested format.");
         }
-        let te = [];
-        const se = this.languageUtils.getFallbackCodes(this.options.fallbackLng, i.lng || this.language);
-        if (this.options.saveMissingTo === "fallback" && se && se[0])
-          for (let Z = 0; Z < se.length; Z++)
-            te.push(se[Z]);
-        else this.options.saveMissingTo === "all" ? te = this.languageUtils.toResolveHierarchy(i.lng || this.language) : te.push(i.lng || this.language);
+        let re = [];
+        const ie = this.languageUtils.getFallbackCodes(this.options.fallbackLng, i.lng || this.language);
+        if (this.options.saveMissingTo === "fallback" && ie && ie[0])
+          for (let Z = 0; Z < ie.length; Z++)
+            re.push(ie[Z]);
+        else this.options.saveMissingTo === "all" ? re = this.languageUtils.toResolveHierarchy(i.lng || this.language) : re.push(i.lng || this.language);
         const y = (Z, ae, b) => {
           const he = L && b !== p ? b : V;
           this.options.missingKeyHandler ? this.options.missingKeyHandler(Z, l, ae, he, W, i) : this.backendConnector?.saveMissing && this.backendConnector.saveMissing(Z, l, ae, he, W, i), this.emit("missingKey", Z, l, ae, p);
         };
-        this.options.saveMissing && (this.options.saveMissingPlurals && E ? te.forEach((Z) => {
+        this.options.saveMissing && (this.options.saveMissingPlurals && E ? re.forEach((Z) => {
           const ae = this.pluralResolver.getSuffixes(Z, i);
           j && i[`defaultValue${this.options.pluralSeparator}zero`] && !ae.includes(`${this.options.pluralSeparator}zero`) && ae.push(`${this.options.pluralSeparator}zero`), ae.forEach((b) => {
             y([Z], a + b, i[`defaultValue${b}`] || F);
           });
-        }) : y(te, a, F));
+        }) : y(re, a, F));
       }
       p = this.extendTranslation(p, t, i, d, r), _ && p === a && this.options.appendNamespaceToMissingKey && (p = `${l}${c}${a}`), (_ || M) && this.options.parseMissingKeyHandler && (p = this.options.parseMissingKeyHandler(this.options.appendNamespaceToMissingKey ? `${l}${c}${a}` : a, M ? p : void 0, i));
     }
@@ -1614,11 +1614,11 @@ const da = (e, t) => {
       revision: A
     };
     return p.current = _, _;
-  }, [s, f, u, o, t.lng]), [v, k] = re(0), {
+  }, [s, f, u, o, t.lng]), [v, k] = ne(0), {
     t: C,
     ready: S
   } = fa.useSyncExternalStore(d, m, m);
-  ne(() => {
+  te(() => {
     if (s && !S && !a) {
       const F = () => k((w) => w + 1);
       t.lng ? zr(s, t.lng, f, F) : On(s, f, F);
@@ -1687,6 +1687,7 @@ const Qn = [
     emptyTitle: "How can I help?",
     emptySub: "Describe what you need — I will find the service and raise the request.",
     greeting: "Hello, {{name}}! How can I help you today?",
+    greetingNoName: "Hello! How can I help you today?",
     capabilities: `I can help you:
 
 - **Raise a service request** - I find the right service and fill the form with you
@@ -1740,6 +1741,7 @@ What would you like to do?`,
     emptyTitle: "Чем могу помочь?",
     emptySub: "Опишите, что вам нужно — я подберу услугу и оформлю заявку.",
     greeting: "Здравствуйте, {{name}}! Чем могу помочь?",
+    greetingNoName: "Здравствуйте! Чем могу помочь?",
     capabilities: `Я могу:
 
 - **Оформить сервисную заявку** - найду нужный сервис и заполню форму вместе с вами
@@ -1793,6 +1795,7 @@ What would you like to do?`,
     emptyTitle: "Comment puis-je aider ?",
     emptySub: "Décrivez ce dont vous avez besoin — je trouverai le service et créerai la demande.",
     greeting: "Bonjour, {{name}} ! Comment puis-je vous aider aujourd’hui ?",
+    greetingNoName: "Bonjour ! Comment puis-je vous aider aujourd’hui ?",
     capabilities: `Je peux :
 
 - **Créer une demande de service** - je trouve le service et remplis le formulaire avec vous
@@ -1844,6 +1847,7 @@ Que souhaitez-vous faire ?`,
     emptyTitle: "¿En qué puedo ayudar?",
     emptySub: "Describa lo que necesita — encontraré el servicio y crearé la solicitud.",
     greeting: "¡Hola, {{name}}! ¿En qué puedo ayudarle hoy?",
+    greetingNoName: "¡Hola! ¿En qué puedo ayudarle hoy?",
     capabilities: `Puedo:
 
 - **Crear una solicitud de servicio** - busco el servicio y completo el formulario con usted
@@ -1895,6 +1899,7 @@ Que souhaitez-vous faire ?`,
     emptyTitle: "كيف يمكنني المساعدة؟",
     emptySub: "صف ما تحتاجه — سأجد الخدمة وأنشئ الطلب.",
     greeting: "مرحبًا، {{name}}! كيف يمكنني مساعدتك اليوم؟",
+    greetingNoName: "مرحبًا! كيف يمكنني مساعدتك اليوم؟",
     capabilities: `يمكنني:
 
 - **إنشاء طلب خدمة** - أجد الخدمة المناسبة وأملأ النموذج معك
@@ -1946,6 +1951,7 @@ Que souhaitez-vous faire ?`,
     emptyTitle: "有什么可以帮您？",
     emptySub: "描述您的需求——我会找到相应服务并创建请求。",
     greeting: "您好，{{name}}！今天有什么可以帮您？",
+    greetingNoName: "您好！今天有什么可以帮您？",
     capabilities: `我可以：
 
 - **提交服务请求** - 找到对应服务并与您一起填写表单
@@ -1990,8 +1996,8 @@ Que souhaitez-vous faire ?`,
     floatingChat: { defaultTitle: "帮助", close: "关闭" },
     stopped: "请求已停止。"
   } }
-}, es = "fdv2-lang", be = de.createInstance();
-be.use(oa).init({
+}, es = "fdv2-lang", ge = de.createInstance();
+ge.use(oa).init({
   resources: ga,
   lng: typeof localStorage < "u" && localStorage.getItem(es) || "en",
   fallbackLng: "en",
@@ -2004,13 +2010,13 @@ function ma(e) {
   return t ? t.dir : "ltr";
 }
 function nt() {
-  return be.language || "en";
+  return ge.language || "en";
 }
 function Vr() {
   return ma(nt());
 }
 function ya(e) {
-  be.changeLanguage(e);
+  ge.changeLanguage(e);
   try {
     localStorage.setItem(es, e);
   } catch {
@@ -2509,10 +2515,10 @@ function _a(e) {
           seedGreeting: () => {
             const o = s().user;
             if (!o || s().messages.length > 0 || s().anchorContext) return;
-            const a = o.firstName || (o.displayName ? String(o.displayName).split(/\s+/)[0] : "") || o.name || "", u = `${be.t("greeting", { name: a })}
+            const a = o.firstName || (o.displayName ? String(o.displayName).split(/\s+/)[0] : "") || o.name || "", l = `${a ? ge.t("greeting", { name: a }) : ge.t("greetingNoName")}
 
-${be.t("capabilities")}`;
-            s().actions.addMessage("assistant", u, { responseType: "greeting" });
+${ge.t("capabilities")}`;
+            s().actions.addMessage("assistant", l, { responseType: "greeting" });
           },
           /** Send a turn: optimistic user message → SSE progress + POST → assistant
            *  reply + draft refresh. SSE stays open across turns for the session. */
@@ -2533,7 +2539,7 @@ ${be.t("capabilities")}`;
                 }
             } catch (d) {
               if (u?.aborted) {
-                i((k) => ({ ui: { ...k.ui, loading: !1, currentNode: null } })), c.addMessage("system", be.t("stopped"));
+                i((k) => ({ ui: { ...k.ui, loading: !1, currentNode: null } })), c.addMessage("system", ge.t("stopped"));
                 return;
               }
               const p = d instanceof Q ? d : new Q("SERVER", d.message);
@@ -2563,7 +2569,7 @@ ${be.t("capabilities")}`;
           sendChoice: async (o, a, u) => {
             if (s().ui.loading) return;
             const { actions: l } = s(), c = s().session.id, f = s().user?.userId || u || ve().userId;
-            l.addMessage("user", a || o.value || be.t("choice.yes")), i((h) => ({ ui: { ...h.ui, loading: !0, error: null, currentNode: null } })), n(c, l.setCurrentNode, () => l.setCurrentNode(null));
+            l.addMessage("user", a || o.value || ge.t("choice.yes")), i((h) => ({ ui: { ...h.ui, loading: !0, error: null, currentNode: null } })), n(c, l.setCurrentNode, () => l.setCurrentNode(null));
             try {
               const h = await Ce.sendMessage(c, f, null, { choice: o, lang: nt(), userContext: s().user || void 0 });
               l.addMessage("assistant", h.response, pt(h)), h.draft && l.updateDraft(h.draft), l.applyTurnResult(h);
@@ -2585,7 +2591,7 @@ ${be.t("capabilities")}`;
           sendControlAction: async (o, a, u) => {
             if (s().ui.loading) return;
             const { actions: l } = s(), c = s().session.id, f = s().user?.userId || u || ve().userId;
-            l.addMessage("user", a || o.value || be.t("choice.yes")), i((h) => ({ ui: { ...h.ui, loading: !0, error: null, currentNode: null } })), n(c, l.setCurrentNode, () => l.setCurrentNode(null));
+            l.addMessage("user", a || o.value || ge.t("choice.yes")), i((h) => ({ ui: { ...h.ui, loading: !0, error: null, currentNode: null } })), n(c, l.setCurrentNode, () => l.setCurrentNode(null));
             try {
               const h = await Ce.sendMessage(c, f, null, { controlAction: o, lang: nt(), userContext: s().user || void 0 });
               l.addMessage("assistant", h.response, pt(h)), h.draft && l.updateDraft(h.draft), l.applyTurnResult(h);
@@ -2648,7 +2654,7 @@ ${be.t("capabilities")}`;
            * request begins a fresh session on the next load. Idempotent within a session.
            */
           completeWithThanks: (o = null) => {
-            s().ui.completed || (s().actions.addMessage("assistant", be.t("thanks"), { responseType: "thanks", ...o ? { srNumber: o } : {} }), i((a) => ({
+            s().ui.completed || (s().actions.addMessage("assistant", ge.t("thanks"), { responseType: "thanks", ...o ? { srNumber: o } : {} }), i((a) => ({
               session: { ...a.session, serviceId: null, status: "submitted" },
               draft: et(),
               ui: { ...a.ui, loading: !1, currentNode: null, completed: !0, composerDisabled: !0 }
@@ -2795,8 +2801,8 @@ function ls(e) {
   return t;
 }
 function er() {
-  const [e, t] = re($t);
-  ne(() => {
+  const [e, t] = ne($t);
+  te(() => {
     const r = (s) => t(s.detail || $t()), i = (s) => {
       s.key === Yt && t($t());
     };
@@ -2851,7 +2857,7 @@ function us(e, t) {
 function Mn(e) {
   return e.toLowerCase();
 }
-class ge {
+class me {
   /**
    * @param {string} property
    *   Property.
@@ -2864,28 +2870,28 @@ class ge {
     this.attribute = n, this.property = t;
   }
 }
-ge.prototype.attribute = "";
-ge.prototype.booleanish = !1;
-ge.prototype.boolean = !1;
-ge.prototype.commaOrSpaceSeparated = !1;
-ge.prototype.commaSeparated = !1;
-ge.prototype.defined = !1;
-ge.prototype.mustUseProperty = !1;
-ge.prototype.number = !1;
-ge.prototype.overloadedBoolean = !1;
-ge.prototype.property = "";
-ge.prototype.spaceSeparated = !1;
-ge.prototype.space = void 0;
+me.prototype.attribute = "";
+me.prototype.booleanish = !1;
+me.prototype.boolean = !1;
+me.prototype.commaOrSpaceSeparated = !1;
+me.prototype.commaSeparated = !1;
+me.prototype.defined = !1;
+me.prototype.mustUseProperty = !1;
+me.prototype.number = !1;
+me.prototype.overloadedBoolean = !1;
+me.prototype.property = "";
+me.prototype.spaceSeparated = !1;
+me.prototype.space = void 0;
 let Ka = 0;
-const B = Ye(), ie = Ye(), zn = Ye(), T = Ye(), Y = Ye(), Ue = Ye(), ye = Ye();
+const B = Ye(), se = Ye(), zn = Ye(), T = Ye(), Y = Ye(), Ue = Ye(), be = Ye();
 function Ye() {
   return 2 ** ++Ka;
 }
 const jn = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   boolean: B,
-  booleanish: ie,
-  commaOrSpaceSeparated: ye,
+  booleanish: se,
+  commaOrSpaceSeparated: be,
   commaSeparated: Ue,
   number: T,
   overloadedBoolean: zn,
@@ -2894,7 +2900,7 @@ const jn = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   /** @type {ReadonlyArray<keyof typeof types>} */
   Object.keys(jn)
 );
-class tr extends ge {
+class tr extends me {
   /**
    * @constructor
    * @param {string} property
@@ -2937,10 +2943,10 @@ function at(e) {
 const cs = at({
   properties: {
     ariaActiveDescendant: null,
-    ariaAtomic: ie,
+    ariaAtomic: se,
     ariaAutoComplete: null,
-    ariaBusy: ie,
-    ariaChecked: ie,
+    ariaBusy: se,
+    ariaChecked: se,
     ariaColCount: T,
     ariaColIndex: T,
     ariaColSpan: T,
@@ -2948,36 +2954,36 @@ const cs = at({
     ariaCurrent: null,
     ariaDescribedBy: Y,
     ariaDetails: null,
-    ariaDisabled: ie,
+    ariaDisabled: se,
     ariaDropEffect: Y,
     ariaErrorMessage: null,
-    ariaExpanded: ie,
+    ariaExpanded: se,
     ariaFlowTo: Y,
-    ariaGrabbed: ie,
+    ariaGrabbed: se,
     ariaHasPopup: null,
-    ariaHidden: ie,
+    ariaHidden: se,
     ariaInvalid: null,
     ariaKeyShortcuts: null,
     ariaLabel: null,
     ariaLabelledBy: Y,
     ariaLevel: T,
     ariaLive: null,
-    ariaModal: ie,
-    ariaMultiLine: ie,
-    ariaMultiSelectable: ie,
+    ariaModal: se,
+    ariaMultiLine: se,
+    ariaMultiSelectable: se,
     ariaOrientation: null,
     ariaOwns: Y,
     ariaPlaceholder: null,
     ariaPosInSet: T,
-    ariaPressed: ie,
-    ariaReadOnly: ie,
+    ariaPressed: se,
+    ariaReadOnly: se,
     ariaRelevant: null,
-    ariaRequired: ie,
+    ariaRequired: se,
     ariaRoleDescription: Y,
     ariaRowCount: T,
     ariaRowIndex: T,
     ariaRowSpan: T,
-    ariaSelected: ie,
+    ariaSelected: se,
     ariaSetSize: T,
     ariaSort: null,
     ariaValueMax: T,
@@ -3036,7 +3042,7 @@ const Wa = at({
     command: null,
     commandFor: null,
     content: null,
-    contentEditable: ie,
+    contentEditable: se,
     controls: B,
     controlsList: Y,
     coords: T | Ue,
@@ -3050,7 +3056,7 @@ const Wa = at({
     dirName: null,
     disabled: B,
     download: zn,
-    draggable: ie,
+    draggable: se,
     encType: null,
     enterKeyHint: null,
     fetchPriority: null,
@@ -3223,7 +3229,7 @@ const Wa = at({
     sizes: null,
     slot: null,
     span: T,
-    spellCheck: ie,
+    spellCheck: se,
     src: null,
     srcDoc: null,
     srcLang: null,
@@ -3238,7 +3244,7 @@ const Wa = at({
     type: null,
     typeMustMatch: B,
     useMap: null,
-    value: ie,
+    value: se,
     width: T,
     wrap: null,
     writingSuggestions: null,
@@ -3330,7 +3336,7 @@ const Wa = at({
     // `<table>`
     scheme: null,
     // `<meta>`
-    scrolling: ie,
+    scrolling: se,
     // `<frame>`. Use overflow in the child context
     standby: null,
     // `<object>`
@@ -3545,7 +3551,7 @@ const Wa = at({
     timelineBegin: "timelinebegin"
   },
   properties: {
-    about: ye,
+    about: be,
     accentHeight: T,
     accumulate: null,
     additive: null,
@@ -3657,7 +3663,7 @@ const Wa = at({
     k2: T,
     k3: T,
     k4: T,
-    kernelMatrix: ye,
+    kernelMatrix: be,
     kernelUnitLength: null,
     keyPoints: null,
     // SEMI_COLON_SEPARATED
@@ -3815,21 +3821,21 @@ const Wa = at({
     preserveAspectRatio: null,
     primitiveUnits: null,
     propagate: null,
-    property: ye,
+    property: be,
     r: null,
     radius: null,
     referrerPolicy: null,
     refX: null,
     refY: null,
-    rel: ye,
-    rev: ye,
+    rel: be,
+    rev: be,
     renderingIntent: null,
     repeatCount: null,
     repeatDur: null,
-    requiredExtensions: ye,
-    requiredFeatures: ye,
-    requiredFonts: ye,
-    requiredFormats: ye,
+    requiredExtensions: be,
+    requiredFeatures: be,
+    requiredFonts: be,
+    requiredFormats: be,
     resource: null,
     restart: null,
     result: null,
@@ -3857,7 +3863,7 @@ const Wa = at({
     strikethroughThickness: T,
     string: null,
     stroke: null,
-    strokeDashArray: ye,
+    strokeDashArray: be,
     strokeDashOffset: null,
     strokeLineCap: null,
     strokeLineJoin: null,
@@ -3871,7 +3877,7 @@ const Wa = at({
     syncMaster: null,
     syncTolerance: null,
     syncToleranceDefault: null,
-    systemLanguage: ye,
+    systemLanguage: be,
     tabIndex: T,
     tableValues: null,
     target: null,
@@ -3885,7 +3891,7 @@ const Wa = at({
     title: null,
     transformBehavior: null,
     type: null,
-    typeOf: ye,
+    typeOf: be,
     to: null,
     transform: null,
     transformOrigin: null,
@@ -3974,7 +3980,7 @@ const Wa = at({
 }, Ya = /[A-Z]/g, Zr = /-[a-z]/g, Qa = /^data[-\w.:]+$/i;
 function Xa(e, t) {
   const n = Mn(t);
-  let r = t, i = ge;
+  let r = t, i = me;
   if (n in e.normal)
     return e.property[e.normal[n]];
   if (n.length > 4 && n.slice(0, 4) === "data" && Qa.test(t)) {
@@ -5875,7 +5881,7 @@ function Tu(e, t, n) {
     return b === null || z(b) ? D(b) : U(b) ? (e.consume(b), A) : n(b);
   }
   function D(b) {
-    return b === 45 && i === 2 ? (e.consume(b), V) : b === 60 && i === 1 ? (e.consume(b), W) : b === 62 && i === 4 ? (e.consume(b), Z) : b === 63 && i === 3 ? (e.consume(b), y) : b === 93 && i === 5 ? (e.consume(b), se) : z(b) && (i === 6 || i === 7) ? (e.exit("htmlFlowData"), e.check(Eu, ae, M)(b)) : b === null || z(b) ? (e.exit("htmlFlowData"), M(b)) : (e.consume(b), D);
+    return b === 45 && i === 2 ? (e.consume(b), V) : b === 60 && i === 1 ? (e.consume(b), W) : b === 62 && i === 4 ? (e.consume(b), Z) : b === 63 && i === 3 ? (e.consume(b), y) : b === 93 && i === 5 ? (e.consume(b), ie) : z(b) && (i === 6 || i === 7) ? (e.exit("htmlFlowData"), e.check(Eu, ae, M)(b)) : b === null || z(b) ? (e.exit("htmlFlowData"), M(b)) : (e.consume(b), D);
   }
   function M(b) {
     return e.check(Iu, _, ae)(b);
@@ -5890,16 +5896,16 @@ function Tu(e, t, n) {
     return b === 45 ? (e.consume(b), y) : D(b);
   }
   function W(b) {
-    return b === 47 ? (e.consume(b), o = "", te) : D(b);
+    return b === 47 ? (e.consume(b), o = "", re) : D(b);
   }
-  function te(b) {
+  function re(b) {
     if (b === 62) {
       const he = o.toLowerCase();
       return hi.includes(he) ? (e.consume(b), Z) : D(b);
     }
-    return fe(b) && o.length < 8 ? (e.consume(b), o += String.fromCharCode(b), te) : D(b);
+    return fe(b) && o.length < 8 ? (e.consume(b), o += String.fromCharCode(b), re) : D(b);
   }
-  function se(b) {
+  function ie(b) {
     return b === 93 ? (e.consume(b), y) : D(b);
   }
   function y(b) {
@@ -6016,12 +6022,12 @@ function Ou(e, t, n) {
     return y === 62 ? (e.consume(y), e.exit("htmlTextData"), e.exit("htmlText"), t) : n(y);
   }
   function W(y) {
-    return e.exit("htmlTextData"), e.enter("lineEnding"), e.consume(y), e.exit("lineEnding"), te;
+    return e.exit("htmlTextData"), e.enter("lineEnding"), e.consume(y), e.exit("lineEnding"), re;
   }
-  function te(y) {
-    return U(y) ? K(e, se, "linePrefix", r.parser.constructs.disable.null.includes("codeIndented") ? void 0 : 4)(y) : se(y);
+  function re(y) {
+    return U(y) ? K(e, ie, "linePrefix", r.parser.constructs.disable.null.includes("codeIndented") ? void 0 : 4)(y) : ie(y);
   }
-  function se(y) {
+  function ie(y) {
     return e.enter("htmlTextData"), o(y);
   }
 }
@@ -6643,7 +6649,7 @@ function xc(e, t, n) {
   function R(A, D) {
     return M;
     function M(_, O, V) {
-      let W, te, se, y;
+      let W, re, ie, y;
       return Array.isArray(_) ? (
         /* c8 ignore next 1 */
         ae(_)
@@ -6667,12 +6673,12 @@ function xc(e, t, n) {
         }
       }
       function ae(le) {
-        return W = le, te = 0, le.length === 0 ? V : b(le[te]);
+        return W = le, re = 0, le.length === 0 ? V : b(le[re]);
       }
       function b(le) {
         return ut;
         function ut(_e) {
-          return y = F(), se = le, le.partial || (l.currentConstruct = le), le.name && l.parser.constructs.disable.null.includes(le.name) ? $e() : le.tokenize.call(
+          return y = F(), ie = le, le.partial || (l.currentConstruct = le), le.name && l.parser.constructs.disable.null.includes(le.name) ? $e() : le.tokenize.call(
             // If we do have fields, create an object w/ `context` as its
             // prototype.
             // This allows a “live binding”, which is needed for `interrupt`.
@@ -6684,10 +6690,10 @@ function xc(e, t, n) {
         }
       }
       function he(le) {
-        return A(se, y), O;
+        return A(ie, y), O;
       }
       function $e(le) {
-        return y.restore(), ++te < W.length ? b(W[te]) : V;
+        return y.restore(), ++re < W.length ? b(W[re]) : V;
       }
     }
   }
@@ -6922,8 +6928,8 @@ function Lc(e) {
       htmlText: u(_),
       htmlTextData: w,
       image: u(W),
-      label: se,
-      labelText: te,
+      label: ie,
+      labelText: re,
       lineEnding: A,
       link: u(V),
       listItem: u(),
@@ -6996,16 +7002,16 @@ function Lc(e) {
   function i(I, P, H) {
     let q = P - 1, J = -1, Se = !1, Be, Ae, ct, ft;
     for (; ++q <= H; ) {
-      const me = I[q];
-      switch (me[1].type) {
+      const ye = I[q];
+      switch (ye[1].type) {
         case "listUnordered":
         case "listOrdered":
         case "blockQuote": {
-          me[0] === "enter" ? J++ : J--, ft = void 0;
+          ye[0] === "enter" ? J++ : J--, ft = void 0;
           break;
         }
         case "lineEndingBlank": {
-          me[0] === "enter" && (Be && !ft && !J && !ct && (ct = q), ft = void 0);
+          ye[0] === "enter" && (Be && !ft && !J && !ct && (ct = q), ft = void 0);
           break;
         }
         case "linePrefix":
@@ -7017,7 +7023,7 @@ function Lc(e) {
         default:
           ft = void 0;
       }
-      if (!J && me[0] === "enter" && me[1].type === "listItemPrefix" || J === -1 && me[0] === "exit" && (me[1].type === "listUnordered" || me[1].type === "listOrdered")) {
+      if (!J && ye[0] === "enter" && ye[1].type === "listItemPrefix" || J === -1 && ye[0] === "exit" && (ye[1].type === "listUnordered" || ye[1].type === "listOrdered")) {
         if (Be) {
           let Ze = q;
           for (Ae = void 0; Ze--; ) {
@@ -7027,17 +7033,17 @@ function Lc(e) {
               Ae && (I[Ae][1].type = "lineEndingBlank", Se = !0), Re[1].type = "lineEnding", Ae = Ze;
             } else if (!(Re[1].type === "linePrefix" || Re[1].type === "blockQuotePrefix" || Re[1].type === "blockQuotePrefixWhitespace" || Re[1].type === "blockQuoteMarker" || Re[1].type === "listItemIndent")) break;
           }
-          ct && (!Ae || ct < Ae) && (Be._spread = !0), Be.end = Object.assign({}, Ae ? I[Ae][1].start : me[1].end), I.splice(Ae || q, 0, ["exit", Be, me[2]]), q++, H++;
+          ct && (!Ae || ct < Ae) && (Be._spread = !0), Be.end = Object.assign({}, Ae ? I[Ae][1].start : ye[1].end), I.splice(Ae || q, 0, ["exit", Be, ye[2]]), q++, H++;
         }
-        if (me[1].type === "listItemPrefix") {
+        if (ye[1].type === "listItemPrefix") {
           const Ze = {
             type: "listItem",
             _spread: !1,
-            start: Object.assign({}, me[1].start),
+            start: Object.assign({}, ye[1].start),
             // @ts-expect-error: we’ll add `end` in a second.
             end: void 0
           };
-          Be = Ze, I.splice(q, 0, ["enter", Ze, me[2]]), q++, H++, ct = void 0, ft = !0;
+          Be = Ze, I.splice(q, 0, ["enter", Ze, ye[2]]), q++, H++, ct = void 0, ft = !0;
         }
       }
     }
@@ -7193,11 +7199,11 @@ function Lc(e) {
       delete I.identifier, delete I.label;
     this.data.referenceType = void 0;
   }
-  function te(I) {
+  function re(I) {
     const P = this.sliceSerialize(I), H = this.stack[this.stack.length - 2];
     H.label = Ic(P), H.identifier = Ie(P).toLowerCase();
   }
-  function se() {
+  function ie() {
     const I = this.stack[this.stack.length - 1], P = this.resume(), H = this.stack[this.stack.length - 1];
     if (this.data.inReference = !0, H.type === "link") {
       const q = I.children;
@@ -11511,7 +11517,7 @@ function Ln(e, t) {
   return t ? e === "beneficiary" ? `${t.name || t.userId}${t.email ? ` (${t.email})` : ""}` : t.name || t.code || "" : "";
 }
 function hp({ resolveChoices: e }) {
-  const { t } = ee(), { loading: n } = we(), r = Pe(), [i, s] = re(null), [o, a] = re(""), { slotId: u, default: l, alternatives: c = [], allowSearch: f } = e, h = () => r.sendChoice({ slotId: u, action: "confirm", value: l }, Ln(u, l)), d = (m) => r.sendChoice({ slotId: u, action: "select", value: m }, Ln(u, m)), p = () => {
+  const { t } = ee(), { loading: n } = we(), r = Pe(), [i, s] = ne(null), [o, a] = ne(""), { slotId: u, default: l, alternatives: c = [], allowSearch: f } = e, h = () => r.sendChoice({ slotId: u, action: "confirm", value: l }, Ln(u, l)), d = (m) => r.sendChoice({ slotId: u, action: "select", value: m }, Ln(u, m)), p = () => {
     const m = o.trim();
     m && r.sendChoice({ slotId: u, action: "search", value: m }, m);
   };
@@ -11545,8 +11551,8 @@ function hp({ resolveChoices: e }) {
   ] });
 }
 function ji({ control: e, onPick: t, onCommit: n }) {
-  const { t: r } = ee(), { loading: i } = we(), s = e.source || {}, o = s.minChars || 2, a = s.directory || "user", u = e.multi === !0, [l, c] = re(() => Array.isArray(e.selected) ? e.selected : []), f = (x) => l.some((R) => String(R.value ?? R.userId ?? R.id) === String(x.value)), [h, d] = re(""), [p, m] = re([]), [v, k] = re(!1), C = oe(null);
-  ne(() => {
+  const { t: r } = ee(), { loading: i } = we(), s = e.source || {}, o = s.minChars || 2, a = s.directory || "user", u = e.multi === !0, [l, c] = ne(() => Array.isArray(e.selected) ? e.selected : []), f = (x) => l.some((R) => String(R.value ?? R.userId ?? R.id) === String(x.value)), [h, d] = ne(""), [p, m] = ne([]), [v, k] = ne(!1), C = oe(null);
+  te(() => {
     const x = h.trim();
     if (x.length < o) {
       m([]), k(!1);
@@ -11610,7 +11616,7 @@ function ji({ control: e, onPick: t, onCommit: n }) {
   ] });
 }
 function pp({ control: e, onSelect: t }) {
-  const { t: n } = ee(), { loading: r } = we(), [i, s] = re(e.prefill || "");
+  const { t: n } = ee(), { loading: r } = we(), [i, s] = ne(e.prefill || "");
   return /* @__PURE__ */ N("div", { className: "fdv2-date-control fdv2-choice-row", children: [
     /* @__PURE__ */ g(
       "input",
@@ -11637,7 +11643,7 @@ function pp({ control: e, onSelect: t }) {
   ] });
 }
 function gp({ control: e, onCommit: t }) {
-  const { t: n } = ee(), { loading: r } = we(), i = e.options || [], [s, o] = re(() => new Set(e.selected || [])), a = (l) => {
+  const { t: n } = ee(), { loading: r } = we(), i = e.options || [], [s, o] = ne(() => new Set(e.selected || [])), a = (l) => {
     o((c) => {
       const f = new Set(c);
       return f.has(l) ? f.delete(l) : f.add(l), f;
@@ -11678,7 +11684,7 @@ function gp({ control: e, onCommit: t }) {
   ] });
 }
 function mp({ control: e, onCommit: t }) {
-  const { t: n } = ee(), { loading: r } = we(), { type: i, placeholder: s, prefill: o, rows: a } = e, [u, l] = re(o != null ? String(o) : ""), c = i === "textarea", f = !r && String(u).trim() !== "", h = () => {
+  const { t: n } = ee(), { loading: r } = we(), { type: i, placeholder: s, prefill: o, rows: a } = e, [u, l] = ne(o != null ? String(o) : ""), c = i === "textarea", f = !r && String(u).trim() !== "", h = () => {
     f && t(u);
   }, p = {
     className: "fdv2-slot-input",
@@ -11747,7 +11753,7 @@ function zt(e, t) {
   return e === "location" ? { code: t.value, name: t.label } : { userId: t.value, name: t.label, ...t.meta && t.meta.email ? { email: t.meta.email } : {} };
 }
 function go({ control: e }) {
-  const { t } = ee(), { loading: n } = we(), r = Pe(), [i, s] = re(null), { id: o, type: a, slotId: u, label: l, defaultValue: c, options: f = [], children: h = [], showChildrenOn: d } = e, p = (x, R, j) => r.sendControlAction({ controlId: o, slotId: u, action: x, value: R }, j), m = d === "_search" && h.some((x) => x.type === "autocomplete"), v = c && typeof c == "object" ? c : null, k = v && (v.name || v.label || [v.firstName, v.lastName].filter(Boolean).join(" ")) || null, C = m && i === "_search", S = C || i != null && i !== "list" && i === d ? h : [], E = (x) => x.type === "autocomplete" ? /* @__PURE__ */ g(
+  const { t } = ee(), { loading: n } = we(), r = Pe(), [i, s] = ne(null), { id: o, type: a, slotId: u, label: l, defaultValue: c, options: f = [], children: h = [], showChildrenOn: d } = e, p = (x, R, j) => r.sendControlAction({ controlId: o, slotId: u, action: x, value: R }, j), m = d === "_search" && h.some((x) => x.type === "autocomplete"), v = c && typeof c == "object" ? c : null, k = v && (v.name || v.label || [v.firstName, v.lastName].filter(Boolean).join(" ")) || null, C = m && i === "_search", S = C || i != null && i !== "list" && i === d ? h : [], E = (x) => x.type === "autocomplete" ? /* @__PURE__ */ g(
     ji,
     {
       control: { ...x, multi: e.multi === !0, selected: e.selected },
@@ -11934,7 +11940,7 @@ function Ep({ review: e, interactive: t = !0 }) {
 }
 function Ip({ open: e, sources: t, onClose: n }) {
   const { t: r } = ee();
-  if (ne(() => {
+  if (te(() => {
     if (!e) return;
     const s = (o) => {
       o.key === "Escape" && n();
@@ -12146,7 +12152,7 @@ function Dp({ message: e, isLast: t, onNavigate: n, userAvatar: r, assistantAvat
 }
 function _p({ children: e, emptyState: t, onNavigate: n, userAvatar: r, assistantAvatar: i }) {
   const { t: s } = ee(), o = os(), a = Pe(), u = oe(null), l = oe(null), c = oe(0);
-  ne(() => {
+  te(() => {
     const h = u.current;
     if (!h) return;
     const d = o.length > c.current;
@@ -12524,8 +12530,8 @@ class Up {
   }
 }
 function qp({ userId: e, lang: t, voice: n } = {}) {
-  const [r, i] = re(G.IDLE), [s, o] = re(null), [a, u] = re(0), l = oe(null), c = oe(null), f = Pe(), h = is((k) => k.session.id);
-  ne(() => {
+  const [r, i] = ne(G.IDLE), [s, o] = ne(null), [a, u] = ne(0), l = oe(null), c = oe(null), f = Pe(), h = is((k) => k.session.id);
+  te(() => {
     if (!(r !== G.IDLE && r !== G.ERROR)) {
       u(0);
       return;
@@ -12562,7 +12568,7 @@ function qp({ userId: e, lang: t, voice: n } = {}) {
     });
     l.current = k, await k.start();
   }, [h, e, t, n, f]), m = Ee(() => l.current ? d() : p(), [p, d]);
-  ne(() => () => {
+  te(() => () => {
     l.current && l.current.stop();
   }, []);
   const v = r !== G.IDLE && r !== G.ERROR;
@@ -12632,7 +12638,7 @@ const Yp = {
 };
 function Qp({ userId: e, onActiveChange: t }) {
   const { t: n } = ee(), [r] = er(), { state: i, level: s, isActive: o, toggle: a } = qp({ userId: e, lang: r.language, voice: mo(r, r.language) });
-  ne(() => {
+  te(() => {
     t?.(o);
   }, [o, t]);
   const u = n("liveChat"), l = i === G.CONNECTING, c = {
@@ -12773,7 +12779,7 @@ function Hi() {
 }
 function tg({ open: e, onClose: t }) {
   const { t: n } = ee(), [r, i] = er(), s = xr(r.language), o = mo(r, r.language);
-  return ne(() => {
+  return te(() => {
     if (!e) return;
     const a = (u) => {
       u.key === "Escape" && t && t();
@@ -12851,16 +12857,16 @@ function tg({ open: e, onClose: t }) {
 }
 const ng = 8;
 function rg({ userId: e, showVoiceControls: t = !0, showSettings: n = !0, onVoiceActiveChange: r }) {
-  const { t: i } = ee(), { loading: s, composerDisabled: o } = we(), a = Pe(), [u, l] = re(""), [c, f] = re(!1), h = oe(null), d = oe(null), p = Ee(() => {
+  const { t: i } = ee(), { loading: s, composerDisabled: o } = we(), a = Pe(), [u, l] = ne(""), [c, f] = ne(!1), h = oe(null), d = oe(null), p = Ee(() => {
     const S = h.current;
     if (!S) return;
     S.style.height = "auto";
     const L = (parseFloat(getComputedStyle(S).lineHeight) || 20) * ng;
     S.style.height = `${Math.min(S.scrollHeight, L)}px`, S.style.overflowY = S.scrollHeight > L ? "auto" : "hidden";
   }, []);
-  ne(() => {
+  te(() => {
     p();
-  }, [u, p]), ne(() => {
+  }, [u, p]), te(() => {
     !s && !o && h.current?.focus();
   }, [s, o]);
   const m = u.trim().length > 0 && !s && !o, v = Ee(async () => {
@@ -12957,8 +12963,8 @@ function ag(e) {
   return e == null || e === "" ? null : typeof e == "object" ? e.name || e.city || e.id || e.mode || JSON.stringify(e) : String(e);
 }
 function lg({ slotDef: e, slotValue: t, affectedStale: n, onEdit: r }) {
-  const { t: i } = ee(), [s, o] = re(!1), [a, u] = re(""), l = oe(null), c = ag(t?.value), f = t?.provenance || null, h = f ? sg[f] : null, d = f ? i(`provenance.${f}`, { defaultValue: f }) : "", p = e.type === "enum", v = !(t && typeof t.value == "object");
-  ne(() => {
+  const { t: i } = ee(), [s, o] = ne(!1), [a, u] = ne(""), l = oe(null), c = ag(t?.value), f = t?.provenance || null, h = f ? sg[f] : null, d = f ? i(`provenance.${f}`, { defaultValue: f }) : "", p = e.type === "enum", v = !(t && typeof t.value == "object");
+  te(() => {
     s && l.current?.focus();
   }, [s]);
   const k = () => {
@@ -13039,21 +13045,21 @@ function cg({
   onNavigate: h,
   onVoiceActiveChange: d
 }) {
-  const { t: p } = ee(), m = Pe(), v = as(), k = Je(), [C, S] = re(Vr()), E = oe(!1);
-  ne(() => {
+  const { t: p } = ee(), m = Pe(), v = as(), k = Je(), [C, S] = ne(Vr()), E = oe(!1);
+  te(() => {
     E.current || !s || (E.current = !0, m.adoptSession(s), m.loadVoiceHistory && m.loadVoiceHistory());
-  }, [s, m]), ne(() => {
+  }, [s, m]), te(() => {
     const R = () => S(Vr());
-    return be.on("languageChanged", R), () => be.off("languageChanged", R);
+    return ge.on("languageChanged", R), () => ge.off("languageChanged", R);
   }, []);
   const L = oe(!1);
-  ne(() => {
+  te(() => {
     m.setAnchorContext && m.setAnchorContext(c || null), c && c.anchorId && !L.current && (L.current = !0, m.sendAnchorExplain(c));
-  }, [c, m]), ne(() => {
+  }, [c, m]), te(() => {
     a && a.userId && m.setUser(a);
   }, [a, m]);
   const x = oe(!1);
-  return ne(() => {
+  return te(() => {
     x.current || !i || (x.current = !0, v.serviceId !== i && (k.getState().messages.length > 0 || m.startSession(i)));
   }, [i, v.serviceId, m]), /* @__PURE__ */ g(
     "div",
@@ -13106,15 +13112,15 @@ function fg({
   onVoiceActiveChange: D
 }) {
   const M = oe(null), _ = oe(null), O = os(), V = Pe();
-  ne(() => {
-    if (!R || !Array.isArray(O) || (_.current === null && (_.current = new Set(O.map((se) => se.id))), !O.length)) return;
-    const te = [...O].reverse().find((se) => se.metadata && se.metadata.openForm);
-    if (!(!te || M.current === te.id)) {
-      if (M.current = te.id, _.current.has(te.id)) {
+  te(() => {
+    if (!R || !Array.isArray(O) || (_.current === null && (_.current = new Set(O.map((y) => y.id))), !O.length)) return;
+    const ie = [...O].reverse().find((y) => y.metadata && y.metadata.openForm);
+    if (!(!ie || M.current === ie.id)) {
+      if (M.current = ie.id, _.current.has(ie.id)) {
         V.resetSession();
         return;
       }
-      R(te.metadata.openForm), V.resetSession();
+      R(ie.metadata.openForm), V.resetSession();
     }
   }, [O, R, V]), Ia({
     apiBaseUrl: e,
@@ -13128,12 +13134,12 @@ function fg({
     onReveal: j,
     debug: A
   });
-  const [W] = er();
-  return ne(() => {
+  const W = n && n.userId ? n : t ? { userId: t } : null, [re] = er();
+  return te(() => {
     u && !ja() && ls({ language: u });
-  }, [u]), ne(() => {
-    ya(W.language);
-  }, [W.language]), /* @__PURE__ */ g(Zi, { i18n: be, children: /* @__PURE__ */ g(Fa, { storeId: F, children: /* @__PURE__ */ g(
+  }, [u]), te(() => {
+    ya(re.language);
+  }, [re.language]), /* @__PURE__ */ g(Zi, { i18n: ge, children: /* @__PURE__ */ g(Fa, { storeId: F, children: /* @__PURE__ */ g(
     cg,
     {
       showDraftPanel: c,
@@ -13143,7 +13149,7 @@ function fg({
       serviceId: l,
       sessionId: w,
       emptyState: p ?? m,
-      userProfile: n,
+      userProfile: W,
       userAvatar: r,
       assistantAvatar: i,
       anchorContext: S,
@@ -13162,12 +13168,12 @@ const bo = Jn({
   }
 });
 function xg({ children: e, storeId: t = "default" }) {
-  const [n, r] = re(!1), [i, s] = re(null), o = Ee((u = null) => {
+  const [n, r] = ne(!1), [i, s] = ne(null), o = Ee((u = null) => {
     s(u || null), r(!0);
   }, []), a = Ee(() => {
     r(!1);
   }, []);
-  return ne(() => {
+  return te(() => {
     const u = (c) => o(c && c.detail ? c.detail : null), l = () => a();
     return window.addEventListener("openAltioraChat", u), window.addEventListener("closeAltioraChat", l), () => {
       window.removeEventListener("openAltioraChat", u), window.removeEventListener("closeAltioraChat", l);
@@ -13200,7 +13206,7 @@ function hg() {
 }
 function pg({ anchorContext: e, closeChat: t, chatProps: n, storeId: r }) {
   const { t: i } = ee();
-  ne(() => {
+  te(() => {
     const u = (l) => {
       l.key === "Escape" && t();
     };
@@ -13234,7 +13240,7 @@ function pg({ anchorContext: e, closeChat: t, chatProps: n, storeId: r }) {
 function kg({ chatProps: e }) {
   const { isOpen: t, anchorContext: n, closeChat: r, storeId: i } = dg();
   return t ? qi(
-    /* @__PURE__ */ g(Zi, { i18n: be, children: /* @__PURE__ */ g(pg, { anchorContext: n, closeChat: r, chatProps: e || {}, storeId: i }) }),
+    /* @__PURE__ */ g(Zi, { i18n: ge, children: /* @__PURE__ */ g(pg, { anchorContext: n, closeChat: r, chatProps: e || {}, storeId: i }) }),
     document.body
   ) : null;
 }
@@ -13261,7 +13267,7 @@ function vg({ anchorId: e, anchorTitle: t, className: n = "" }) {
 }
 function wg(e) {
   const { t } = ee();
-  ne(() => {
+  te(() => {
     const n = e && e.current || document.body, r = (o) => {
       const a = o.getAttribute("data-kb-anchor");
       if (!a || o.querySelector(":scope > .fdv2-explain-trigger")) return;
@@ -13308,7 +13314,7 @@ export {
   Gp as getDefaultVoice,
   xr as getVoicesForLanguage,
   ja as hasStoredAIPrefs,
-  be as i18n,
+  ge as i18n,
   Jp as isValidVoice,
   ls as setAIPrefs,
   ya as setLang,

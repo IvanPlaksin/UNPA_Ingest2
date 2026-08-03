@@ -141,6 +141,12 @@ function createAgentLoop(deps = {}) {
     // to its human label against those controls.
     const shownControls = session.controls || [];
     session.controls = []; // controls belong to THIS reply, not the session
+    // Rows belong to the reply that fetched them, exactly as controls do. Without
+    // this the list stayed on the session and every later turn re-emitted it: ask
+    // for a request once, and the same card reappears under every answer for the
+    // rest of the conversation (fdv2-7200be16). The three per-turn resets are
+    // together on purpose — anything the tools write for ONE reply is cleared here.
+    session.cards = [];
     // A new turn: the form may have changed since the last one, so the per-turn
     // snapshot memo starts empty.
     const turnStamp = Date.now();

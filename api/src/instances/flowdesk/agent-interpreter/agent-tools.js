@@ -259,6 +259,18 @@ const TOOL_SCHEMAS = [
     },
   },
   {
+    name: 'describe_capabilities',
+    // Asked "what can you do", the model answered with a list of SERVICES from the
+    // catalogue (fdv2-7200be16) — a fair guess, and the wrong answer: the user was
+    // asking about the assistant, not about HR forms. Improvising the answer also
+    // means it drifts from what the assistant can actually do, in both directions.
+    description: 'What THIS assistant can do. Call it whenever the user asks what you can do, '
+      + 'what you are for, how you can help, or what they can ask you — and when they seem lost '
+      + 'about where to start. Do NOT answer such a question from memory, and do NOT answer it '
+      + 'by listing catalogue services: those are what a request can be ABOUT, not what you do.',
+    input_schema: { type: 'object', properties: {} },
+  },
+  {
     name: 'catalog_search',
     description: 'Search the service catalogue. Returns real services only. You MUST call this before creating a draft, and you may only create a draft for a serviceCode this returned.',
     input_schema: {
@@ -1148,6 +1160,51 @@ function createAgentTools(deps = {}) {
    * it judges relevant is a model inventing an answer out of real data, and the
    * user cannot tell which happened.
    */
+  /**
+   * HELP-003 (first cut) — what the assistant can do, from one place.
+   *
+   * Every entry here is something that WORKS today. The temptation with a list like
+   * this is to describe the finished product; a user who is told the assistant can do
+   * something, tries it, and finds it cannot, has been misled by us rather than
+   * failed by the model. So each line corresponds to a tool above it.
+   *
+   * The wording is deliberately NOT final prose: the model renders it in the user's
+   * language and register. What is fixed is the CONTENT — which is the part that was
+   * being invented.
+   *
+   * When HELP-001/002 land this list becomes the fallback, and the live version is
+   * generated from the ALTIORA knowledge base with the same shape.
+   */
+  const CAPABILITIES = [
+    { id: 'raise_request',
+      what: 'Raise a service request',
+      detail: 'Find the right service from the catalogue and fill the form together, one question at a '
+        + 'time; then hand it to the request form with everything already filled in.' },
+    { id: 'my_requests',
+      what: 'Show the requests they have raised',
+      detail: 'Filtered however they describe it — the last one, the ones from June, anything still open. '
+        + 'Shown as rows they can click to open the request itself.' },
+    { id: 'my_tasks',
+      what: 'Show the tasks waiting on them',
+      detail: 'The same way, including the tasks belonging to one request.' },
+    { id: 'kb_search',
+      what: 'Answer questions from the knowledge base',
+      detail: 'What a service covers, what a form field means, which service fits a situation.' },
+    { id: 'self_help',
+      what: 'Explain what it can do',
+      detail: 'This list.' },
+  ];
+
+  async function describe_capabilities(_input, _ctx) {
+    return {
+      ok: true,
+      capabilities: CAPABILITIES,
+      tellUser: 'Tell the user what you can do, in their language, using ONLY the list above. '
+        + 'Keep each one to a line, in the same order, and end by asking which they would like. '
+        + 'Do not list catalogue services here, and do not promise anything not on the list.',
+    };
+  }
+
   async function list_requests(input, ctx) {
     const limit = Math.min(Math.max(Number(input?.limit) || 10, 1), 25);
     let out;
@@ -1802,7 +1859,7 @@ function createAgentTools(deps = {}) {
     return undefined;
   }
 
-  const TOOLS = { catalog_search, kb_search, list_requests, list_tasks, draft_create, draft_update, draft_submit, escalation_create, emit_control, open_form };
+  const TOOLS = { catalog_search, kb_search, describe_capabilities, list_requests, list_tasks, draft_create, draft_update, draft_submit, escalation_create, emit_control, open_form };
 
   /**
    * Execute one tool call. Never throws — an unexpected failure comes back as a
