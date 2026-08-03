@@ -185,7 +185,15 @@ describe('the rows a turn shows', () => {
     const row = mapTask({ Id: 't1', Label: 'Submit Selection Recommendation', RfsNumber: 'SR-1001', Priority: 'Medium' });
 
     expect(row.ref).toBe('SR-1001');
-    expect(toCard('task', row).revealIntent).toEqual({ domain: 'requests', id: 'SR-1001' });
+    // The REQUEST is what opens — a task detail is shown within its parent, and the
+    // host cannot fetch a task without one. The task's own id rides alongside.
+    expect(toCard('task', row).revealIntent).toEqual({ domain: 'requests', id: 'SR-1001', taskId: 't1' });
+  });
+
+  test('a task with no parent reference cannot be opened, and does not pretend to be', () => {
+    // A row that looks clickable and does nothing is worse than one that does not
+    // invite the click — the card renders inert rather than broken.
+    expect(toCard('task', { id: 't9', title: 'Orphan' }).revealIntent).toBeUndefined();
   });
 
   test('a row with nothing on it still says so rather than rendering an empty box', () => {

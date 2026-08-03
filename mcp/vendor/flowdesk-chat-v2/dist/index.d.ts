@@ -127,6 +127,24 @@ export interface ChatErrorInfo {
 // ── Component ───────────────────────────────────────────────────────────────
 
 /** Payload the chat emits when it hands control to Altiora's request form. */
+/**
+ * REQ-005: what a row the chat SHOWED asks the host to open.
+ *
+ * Rows are requests and tasks. The chat renders them and knows nothing about how this
+ * application displays one — it carries the intent the backend attached to the row and
+ * lets the host decide, so a portal, a back-office and a test harness can each open the
+ * screen they have rather than the one the chat imagined.
+ */
+export interface RevealIntent {
+  /** What kind of thing to open. 'requests' today; a task opens inside its request. */
+  domain: 'requests';
+  /** The request's ticket number or id — whichever the backend row carried. */
+  id: string;
+  /** Present on a TASK row: the task to focus within that request. A host that ignores
+   *  this still opens the right request, which is the useful part of the answer. */
+  taskId?: string;
+}
+
 export interface OpenFormTarget {
   /** Our service code (e.g. "EO-HR-SA-EXT"). */
   serviceId: string;
@@ -217,6 +235,15 @@ export interface AltioraChatProps {
   /** P1: called when the chat hands off to Altiora's request form. The host opens the
    *  wizard prefilled with `prefill`; `ousId` lets it skip provider detection. */
   onOpenForm?: (form: OpenFormTarget) => void;
+  /** REQ-005: called when the user clicks a row the chat showed (a request or a task).
+   *  The chat does not know how this host displays one — it passes the intent the
+   *  backend put on the row and the host opens its own detail view. Without this
+   *  handler the rows still read; they simply do not invite the click.
+   *
+   *  `domain` is what to open ('requests'), `id` the request's number or id, and
+   *  `taskId` is present on a TASK row — a task is shown within its parent request,
+   *  so a host that ignores `taskId` still opens the right request. */
+  onReveal?: (intent: RevealIntent) => void;
   /** Phase V1: isolate this chat's session/history under a named store. Default 'default' (Home). */
   storeId?: string;
   /** Phase V1.1: adopt an external backend session id so this chat shares ONE session with another surface (e.g. the portal voice channel). */

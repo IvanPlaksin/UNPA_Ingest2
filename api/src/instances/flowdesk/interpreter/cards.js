@@ -67,6 +67,7 @@ function requestCard(r) {
  */
 function taskCard(r) {
   const ref = r.ref || r.ticketNumber || null;
+  const taskId = r.id || r.taskId || null;
   const fields = [
     field('Request', ref || r.requestTitle),
     field('Service', r.service),
@@ -78,13 +79,19 @@ function taskCard(r) {
 
   return {
     type: 'task',
-    id: String(r.id || r.taskId || ''),
+    id: String(taskId || ''),
     title: r.title || r.label || 'Task',
     subtitle: ref || undefined,
     fields,
     accent: r.priority || r.status || undefined,
+    // The REQUEST is what the host opens — a task detail is shown over its parent,
+    // and a task cannot be fetched without one. `taskId` rides alongside so the host
+    // can open the task itself within that request; a host that only understands
+    // `domain` and `id` still opens the right request and ignores the rest.
     revealIntent: r.revealIntent
-      || (ref ? { domain: 'requests', id: String(ref) } : undefined),
+      || (ref
+        ? { domain: 'requests', id: String(ref), ...(taskId ? { taskId: String(taskId) } : {}) }
+        : undefined),
   };
 }
 
