@@ -84,6 +84,7 @@ const resolvers = require('../interpreter/resolvers');
 const { draftToInitialFormData } = require('../interpreter/form-handoff');
 const { resolveCascadeCluster, isAutofillCascadeSlot } = require('../interpreter/cascade-resolver');
 const { buildFormHydration } = require('../interpreter/form-hydration');
+const { isMultiDirectory } = require('../interpreter/controls');
 const { effectiveSnapshot, CONTEXT_SLOTS } = require('../interpreter/form-overlay');
 const { ui } = require('../interpreter/templates/ui-strings');
 const { questionFor } = require('../interpreter/context-questions');
@@ -1472,8 +1473,23 @@ function createAgentTools(deps = {}) {
     } else if (SELF_DEFAULT_SLOTS.has(slotId)) {
       value = await selfValue(ctx); // …and if the control is gone, to the signed-in user
     }
-    // `false` is a value; only absence is not.
-    if (value === undefined || value === null || value === '') return null;
+    // A field that holds SEVERAL records commits them together — one chat step, any
+    // number of people. Altiora's own selector works the same way, and the hand-off
+    // requires an ARRAY: `draftToInitialFormData` only emits `sharedWith` when the
+    // value is one, so a single record stored here reached the wizard as nothing at
+    // all and the "Shared with (read-only)" field stayed empty.
+    if (def && isMultiDirectory(def)) {
+      const list = (Array.isArray(value) ? value : [value]).filter(
+        (v) => v !== undefined && v !== null && v !== '',
+      );
+      // An empty commit is the user saying "nobody", which is a real answer to an
+      // optional field — recorded as an empty list rather than dropped, so the field
+      // is not asked again.
+      value = list;
+    } else if (value === undefined || value === null || value === '') {
+      // `false` is a value; only absence is not.
+      return null;
+    }
 
     if (!hasDraft) {
       const ok = await recordPreDraftAnswer(ctx, slotId, value);

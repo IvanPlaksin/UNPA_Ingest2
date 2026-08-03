@@ -174,3 +174,40 @@ describe('who the request is for is proposed, not forked', () => {
     }
   });
 });
+
+/**
+ * The field reached the wizard as nothing at all.
+ *
+ * "Shared with (read-only access)" stayed empty after the user picked someone in
+ * chat, because `draftToInitialFormData` only emits `sharedWith` when the stored
+ * value is an ARRAY — and a directory pick was stored as a single record. The chain
+ * was broken at its quietest point: the pick succeeded, the draft held it, and the
+ * hand-off skipped it without a word.
+ */
+describe('a field that holds several people reaches the form', () => {
+  const { draftToInitialFormData } = require('../form-handoff');
+  const SNAP = { metadata: {}, slots: [] };
+
+  test('a list of people is carried, each in the shape the selector renders', () => {
+    const draft = { slots: { sharedWith: { value: [
+      { userId: 'u2', name: 'Maria Silva', email: 'm@un.org' },
+      { userId: 'u3', name: 'Ivan Petrov', email: 'i@un.org' },
+    ] } } };
+    const out = draftToInitialFormData(draft, SNAP);
+    expect(out.sharedWith).toEqual([
+      expect.objectContaining({ id: 'u2', firstName: 'Maria', lastName: 'Silva' }),
+      expect.objectContaining({ id: 'u3', firstName: 'Ivan', lastName: 'Petrov' }),
+    ]);
+  });
+
+  test('one person is still a list — the wizard reads an array or nothing', () => {
+    const draft = { slots: { sharedWith: { value: [{ userId: 'u2', name: 'Maria Silva' }] } } };
+    expect(draftToInitialFormData(draft, SNAP).sharedWith).toHaveLength(1);
+  });
+
+  test('nobody chosen sends nothing rather than an empty array', () => {
+    // Altiora treats an absent optional field sensibly; an empty array it did not
+    // expect is a good way to trip its 400 path.
+    expect(draftToInitialFormData({ slots: { sharedWith: { value: [] } } }, SNAP).sharedWith).toBeUndefined();
+  });
+});
