@@ -44,6 +44,11 @@ function buildQuery(f = {}) {
 
 const pick = (o, keys) => { for (const k of keys) if (o && o[k] != null) return o[k]; return undefined; };
 
+/** A person, however Altiora shaped them — an object with a name, or a bare string. */
+const named = (o) => (typeof o === 'string'
+  ? o
+  : pick(o || {}, ['name', 'Name', 'displayName', 'DisplayName', 'fullName', 'FullName']));
+
 /** Altiora Ticket → the compact shape the chat renders. rfsNumber is the preferred ref. */
 function mapTicket(t) {
   return {
@@ -55,6 +60,25 @@ function mapTicket(t) {
     createdAt: pick(t, ['createdAt', 'CreatedAt']),
     dueDate: pick(t, ['dueDate', 'DueDate']),
     slaStatus: pick(t, ['slaStatus', 'SlaStatus']),
+    // REQ-003 — the columns Altiora's own list shows, so a request read in chat and
+    // the same request read on /requests say the same things. Its table is
+    // `accent, id, service, onBehalf, urgency, submitted, status, tasks, completed,
+    // shared, rating, actions`; `accent` is a colour bar and `actions` are the
+    // buttons Ivan asked to leave out, and everything between them is here.
+    onBehalf: named(pick(t, ['beneficiary', 'Beneficiary']))
+      || pick(t, ['beneficiaryName', 'BeneficiaryName'])
+      || named(pick(t, ['requester', 'Requester'])),
+    taskCount: pick(t, ['taskCount', 'TaskCount'])
+      ?? (Array.isArray(pick(t, ['tasks', 'Tasks'])) ? pick(t, ['tasks', 'Tasks']).length : undefined),
+    completedAt: pick(t, ['completedAt', 'CompletedAt', 'closedAt', 'ClosedAt']),
+    sharedWith: (pick(t, ['sharedWith', 'SharedWith']) || []).map(named).filter(Boolean),
+    rating: pick(t, ['rating', 'Rating']),
+    // How the HOST is asked to open its own detail dialog. The chat does not know
+    // how that dialog works and must not: this is the Host Adapter's `reveal`.
+    revealIntent: {
+      domain: 'requests',
+      id: String(pick(t, ['rfsNumber', 'RfsNumber']) || pick(t, ['ticketNumber', 'TicketNumber']) || pick(t, ['id', 'Id']) || ''),
+    },
   };
 }
 

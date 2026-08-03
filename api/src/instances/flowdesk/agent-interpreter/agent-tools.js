@@ -229,6 +229,35 @@ function largeFormOffer(snapshot, state, session) {
 /** Anthropic tool definitions. Shape is the model's contract; keep names stable. */
 const TOOL_SCHEMAS = [
   {
+    name: 'list_requests',
+    description: "List the user's OWN service requests. Use whenever they ask about requests they have raised — \"my last request\", \"requests from June\", \"anything still open\". Do not describe the results field by field: they are rendered as a list the user can open.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', description: 'open | closed | all. Omit for the default (everything ongoing).' },
+        fromDate: { type: 'string', description: 'ISO date (YYYY-MM-DD). Resolve relative wording — "last week", "since June" — before calling.' },
+        toDate: { type: 'string', description: 'ISO date (YYYY-MM-DD).' },
+        service: { type: 'string', description: 'Service or category name, when they named one.' },
+        search: { type: 'string', description: 'Free text to match against the title.' },
+        limit: { type: 'integer', description: 'How many. 1 for "my last request". Default 10.' },
+      },
+    },
+  },
+  {
+    name: 'list_tasks',
+    description: "List the tasks assigned to the user. Use for \"my tasks\", \"what is waiting on me\", \"tasks for SR-123\".",
+    input_schema: {
+      type: 'object',
+      properties: {
+        search: { type: 'string' },
+        service: { type: 'string' },
+        ticketNumber: { type: 'string', description: 'Tasks belonging to one request.' },
+        priority: { type: 'string' },
+        limit: { type: 'integer', description: 'Default 10.' },
+      },
+    },
+  },
+  {
     name: 'catalog_search',
     description: 'Search the service catalogue. Returns real services only. You MUST call this before creating a draft, and you may only create a draft for a serviceCode this returned.',
     input_schema: {
@@ -379,6 +408,10 @@ function createAgentTools(deps = {}) {
   // SCH-002 — the dictionary. The state machine has had this since P1-12; the agent
   // that replaced it never did, so every cascade field the Altiora form fills for
   // itself was simply absent from the conversation AND from the hand-off.
+  const ticketList = () => (deps.ticketList
+    || require('../services/backends/ticket-list.backend').makeTicketListBackend());
+  const tasksBackend = () => (deps.tasksBackend
+    || require('../services/backends/tasks.backend').makeTasksBackend());
   const fetchLovValues = deps.fetchLovValues || (async (req) => {
     const { getAltioraSchemaClient } = require('../services/altiora-schema-client');
     return getAltioraSchemaClient().getLovValues(req);
@@ -1097,6 +1130,83 @@ function createAgentTools(deps = {}) {
       : [built];
   }
 
+
+  /**
+   * The user's own requests and tasks — the third capability the state machine had
+   * and the agent that replaced it did not.
+   *
+   * `MY_REQUESTS` and `QUERY_TASKS` are routes in `interpreter-engine`, which is not
+   * the live path: the agent's whole tool inventory was eight entries and none of
+   * them could answer "show me my last request". The backends existed all along
+   * (ticket-list, tasks) — nothing here re-implements them, it only makes them
+   * reachable from the interpreter that is actually running.
+   *
+   * The model does NOT filter. It resolves the wording into parameters and the
+   * backend does the rest: a model that receives fifty requests and picks the ones
+   * it judges relevant is a model inventing an answer out of real data, and the
+   * user cannot tell which happened.
+   */
+  async function list_requests(input, ctx) {
+    const limit = Math.min(Math.max(Number(input?.limit) || 10, 1), 25);
+    let out;
+    try {
+      out = await ticketList().listTickets({
+        status: input?.status,
+        fromDate: input?.fromDate,
+        toDate: input?.toDate,
+        service: input?.service,
+        search: input?.search,
+        mineOnly: true,          // "my requests" is the only question this tool answers
+        page: 1,
+        pageSize: limit,
+      });
+    } catch (e) {
+      return err(`your requests could not be loaded: ${e.message}`);
+    }
+    const items = out.tickets || [];
+    ctx.session.lastList = { kind: 'requests', items };
+    return {
+      ok: true,
+      items,
+      total: out.totalCount,
+      hasMore: !!out.hasMore,
+      tellUser: items.length
+        // The list is RENDERED. A model that also recites it says everything twice,
+        // and in voice reads out a table.
+        ? 'These are shown as a list the user can open. Say how many there are and '
+          + 'what stands out — do not repeat the rows.'
+        : 'Nothing matched. Say so plainly and offer to widen it (a longer period, any status).',
+    };
+  }
+
+  async function list_tasks(input, ctx) {
+    const limit = Math.min(Math.max(Number(input?.limit) || 10, 1), 25);
+    let out;
+    try {
+      out = await tasksBackend().listTasks({
+        search: input?.search,
+        service: input?.service,
+        ticketNumber: input?.ticketNumber,
+        priority: input?.priority,
+        page: 1,
+        pageSize: limit,
+      });
+    } catch (e) {
+      return err(`your tasks could not be loaded: ${e.message}`);
+    }
+    const items = out.tasks || out.items || [];
+    ctx.session.lastList = { kind: 'tasks', items };
+    return {
+      ok: true,
+      items,
+      total: out.totalCount ?? items.length,
+      hasMore: !!out.hasMore,
+      tellUser: items.length
+        ? 'These are shown as a list the user can open. Say how many there are and what is urgent — do not repeat the rows.'
+        : 'Nothing is waiting on them. Say so.',
+    };
+  }
+
   /**
    * SCH-002 — resolve the dictionary fields the Altiora form fills for itself.
    *
@@ -1679,7 +1789,7 @@ function createAgentTools(deps = {}) {
     return undefined;
   }
 
-  const TOOLS = { catalog_search, kb_search, draft_create, draft_update, draft_submit, escalation_create, emit_control, open_form };
+  const TOOLS = { catalog_search, kb_search, list_requests, list_tasks, draft_create, draft_update, draft_submit, escalation_create, emit_control, open_form };
 
   /**
    * Execute one tool call. Never throws — an unexpected failure comes back as a
