@@ -186,7 +186,8 @@ jobs:
               echo "GHCR=ghcr.io/ivanplaksin/unpa_ingest2"
               echo "MEMGRAPH_PASSWORD=${MEMGRAPH_PASSWORD}"
               for k in HTTP_PORT HTTPS_PORT SERVER_NAME PUBLIC_IP PUBLIC_BASE_URL \
-                       CORS_ORIGINS DOCUMENT_INDEXER_ENABLED VALIDITY_REFRESH_ENABLED; do
+                       CORS_ORIGINS DOCUMENT_INDEXER_ENABLED VALIDITY_REFRESH_ENABLED \
+                       FLOWDESK_PROXY_API_KEY; do
                 grep -E "^${k}=" .env.prev 2>/dev/null | tail -1 || true
               done
             } > .env
@@ -195,6 +196,15 @@ jobs:
             mkdir -p certs certbot-www
             # api app/feature config + secrets (env_file for the api service)
             printf '%s' "${FLOWDESK_ENV}" > api.env
+            # Node-local additions the shared secret does not carry (auth gate hash,
+            # proxy key). Appended AFTER the secret so they win. The newline guard is
+            # not optional: FLOWDESK_ENV has no trailing newline, and appending
+            # straight onto it silently fuses two variables into one.
+            if [ -f api.env.local ]; then
+              [ -s api.env ] && [ -n "$(tail -c 1 api.env)" ] && echo >> api.env
+              cat api.env.local >> api.env
+            fi
+            chmod 600 api.env
             echo "${GHCR_TOKEN}" | sudo docker login ghcr.io -u "${GHCR_USER}" --password-stdin
             sudo docker compose --env-file .env pull
             sudo docker compose --env-file .env up -d --remove-orphans

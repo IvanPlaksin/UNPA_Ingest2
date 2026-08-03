@@ -141,6 +141,9 @@ services:
       - SERVER_NAME=${SERVER_NAME:-_}
       - PUBLIC_IP=${PUBLIC_IP:-}
       - PUBLIC_BASE_URL=${PUBLIC_BASE_URL:-}
+      # Injected by nginx into /api/ so the same-origin SPA never holds the secret.
+      # Must match FLOWDESK_PROXY_API_KEY in api.env, or /flowdesk-admin gets 401.
+      - FLOWDESK_PROXY_API_KEY=${FLOWDESK_PROXY_API_KEY:-}
     volumes:
       # TLS material (Let's Encrypt live copy, refreshed by the certbot deploy hook)
       # and the shared ACME HTTP-01 webroot. Created by the deploy job if absent —
