@@ -12,6 +12,11 @@ server {
     # NGINX_API_URL is injected at container startup via envsubst (e.g. https://unpa-api...)
     location /api/ {
         proxy_pass ${NGINX_API_URL}/api/;
+        # The backend enforces X-Flowdesk-Api-Key on /api/v1/flowdesk/*. Inject it
+        # here so the same-origin SPA never has to hold the secret. Supplied at
+        # container start; an empty value sends no header (and the API stays open
+        # only if the backend also has no key configured).
+        proxy_set_header X-Flowdesk-Api-Key "${FLOWDESK_PROXY_API_KEY}";
         proxy_http_version 1.1;
         proxy_ssl_verify off;
         proxy_ssl_server_name on;
