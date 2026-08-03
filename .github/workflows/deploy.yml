@@ -277,6 +277,37 @@ jobs:
             fi
             wait_http http://localhost:5100/health  gliner 48 || echo "gliner still loading (non-fatal)"
             wait_http http://localhost:8081/health  tei    48 || echo "tei still loading model (non-fatal)"
+            # ── configuration invariants ─────────────────────────────────────
+            # The deploy rewrites api.env from the FLOWDESK_ENV secret, which does
+            # not carry the node-local login gate or proxy key (see
+            # api.env.local.example). Losing either used to be silent: the login
+            # form answered 503 and the FlowDesk API fell open to the internet.
+            code() { curl -s -o /dev/null -w '%{http_code}' "$@"; }
+
+            if grep -qs '^UNPA_AUTH_SECRET=..*' api.env; then
+              c=$(code -X POST http://localhost:3010/api/v1/auth/login \
+                    -H 'Content-Type: application/json' -d '{"username":"probe","password":"probe"}')
+              # 401 = configured and rejecting a bad password; 503 = no secret/hash.
+              [ "$c" = "401" ] && echo "auth gate OK" || { echo "auth gate FAIL (login -> $c)"; fail=1; }
+            else
+              echo "auth gate not configured on this node — SPA login will 503"
+            fi
+
+            if grep -qs '^FLOWDESK_PROXY_API_KEY=..*' api.env; then
+              # /flowdesk/__verify is deliberately unrouted: the proxy-key middleware
+              # runs before routing, so 401 = key enforced, 404 = the request got past it.
+              c=$(code http://localhost:3010/api/v1/flowdesk/__verify)
+              [ "$c" = "401" ] && echo "proxy key enforced OK" \
+                || { echo "proxy key FAIL: FlowDesk API answered $c without a key (expected 401)"; fail=1; }
+              if [ -s certs/fullchain.pem ]; then
+                c=$(curl -sk -o /dev/null -w '%{http_code}' https://localhost/api/v1/flowdesk/__verify)
+                [ "$c" != "401" ] && echo "nginx injects the proxy key OK" \
+                  || { echo "nginx proxy-key header FAIL: /flowdesk-admin would 401"; fail=1; }
+              fi
+            else
+              echo "proxy key not configured — FlowDesk API is open on this node"
+            fi
+
             for c in projectadvisor-etl projectadvisor-sync; do
               st=$(sudo docker inspect -f '{{.State.Status}}' $c 2>/dev/null || echo missing)
               [ "$st" = "running" ] || { echo "$c not running ($st)"; fail=1; }
