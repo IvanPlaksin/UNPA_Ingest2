@@ -2505,11 +2505,17 @@ function _a(e) {
             return i((c) => ({ messages: [...c.messages, l] })), l;
           },
           /**
-           * Set the current user profile (host prop). Seeds a personalized greeting on
-           * first set when the thread is empty. Idempotent for the same userId.
+           * Set the current user profile (host prop). Idempotent for the same userId.
+           *
+           * Does NOT seed the greeting. It used to, and that meant a chat panel put a
+           * conversation on screen as soon as the page loaded — before the user had
+           * shown any interest in it — which collapsed the host's own empty state and
+           * changed the look of the landing page. The greeting is seeded when the user
+           * focuses the composer instead: identity is known at mount, but the opening
+           * message belongs to the moment they turn towards the chat.
            */
           setUser: (o) => {
-            !o || !o.userId || s().user && s().user.userId === o.userId || (i(() => ({ user: o })), s().messages.length === 0 && s().actions.seedGreeting());
+            !o || !o.userId || s().user && s().user.userId === o.userId || i(() => ({ user: o }));
           },
           /** Seed the first assistant message: greeting by FIRST name, in the selected language. */
           seedGreeting: () => {
@@ -12896,6 +12902,7 @@ function rg({ userId: e, showVoiceControls: t = !0, showSettings: n = !0, onVoic
           onKeyDown: (S) => {
             S.key === "Enter" && !S.shiftKey && (S.preventDefault(), v());
           },
+          onFocus: () => a.seedGreeting(),
           placeholder: i(o ? "composerDisabled" : "composerPlaceholder"),
           disabled: o,
           "aria-label": i("composerPlaceholder")
