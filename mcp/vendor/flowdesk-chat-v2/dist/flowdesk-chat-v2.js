@@ -1700,7 +1700,7 @@ const Jn = [
     voice: "Voice",
     thinking: "Thinking…",
     node: { LOAD_DRAFT: "Opening the draft…", ROUTER: "Understanding your request…", RESOLVE: "Finding the right service…", SLOT_EXTRACT: "Reading the details…", VALIDATE: "Checking the data…", PATCH: "Saving the draft…", ACTIVE_SLOTS: "Working out what else is needed…", RESOLVERS: "Looking up options…", TERM_CHECK: "Checking readiness…", QUESTION_PLANNER: "Preparing a question…", INFO_ANSWER: "Preparing an answer…", CONFIRM: "Assembling the request…", SUBMIT: "Submitting the request…" },
-    choice: { yes: "✓ Yes, correct", chooseOther: "Choose another", search: "🔍 Search…", find: "Find", searchUser: "Name or email…", searchLocation: "Location name…" },
+    choice: { yes: "✓ Yes, correct", chooseOther: "Choose another", cancel: "Cancel", search: "🔍 Search…", find: "Find", searchUser: "Name or email…", searchLocation: "Location name…" },
     date: { set: "Set date" },
     multichoice: { confirm: "Confirm selection", clear: "Clear" },
     freeInput: { submit: "Submit" },
@@ -1744,7 +1744,7 @@ const Jn = [
     voice: "Голос",
     thinking: "Думаю…",
     node: { LOAD_DRAFT: "Открываю черновик…", ROUTER: "Разбираю ваш запрос…", RESOLVE: "Ищу подходящую услугу…", SLOT_EXTRACT: "Извлекаю данные из сообщения…", VALIDATE: "Проверяю данные…", PATCH: "Сохраняю черновик…", ACTIVE_SLOTS: "Определяю, что ещё нужно…", RESOLVERS: "Подбираю варианты…", TERM_CHECK: "Проверяю готовность…", QUESTION_PLANNER: "Формулирую вопрос…", INFO_ANSWER: "Готовлю ответ…", CONFIRM: "Собираю заявку…", SUBMIT: "Оформляю заявку…" },
-    choice: { yes: "✓ Да, верно", chooseOther: "Выбрать другого", search: "🔍 Искать…", find: "Найти", searchUser: "Имя или email…", searchLocation: "Название локации…" },
+    choice: { yes: "✓ Да, верно", chooseOther: "Выбрать другого", cancel: "Отмена", search: "🔍 Искать…", find: "Найти", searchUser: "Имя или email…", searchLocation: "Название локации…" },
     date: { set: "Указать дату" },
     multichoice: { confirm: "Подтвердить выбор", clear: "Очистить" },
     freeInput: { submit: "Отправить" },
@@ -1787,7 +1787,7 @@ const Jn = [
     ttsTooltip: "Sortie vocale — bientôt",
     voice: "Voix",
     thinking: "Réflexion…",
-    choice: { yes: "✓ Oui, correct", chooseOther: "Choisir un autre", search: "🔍 Rechercher…", find: "Trouver", searchUser: "Nom ou e-mail…", searchLocation: "Nom du lieu…" },
+    choice: { yes: "✓ Oui, correct", chooseOther: "Choisir un autre", cancel: "Annuler", search: "🔍 Rechercher…", find: "Trouver", searchUser: "Nom ou e-mail…", searchLocation: "Nom du lieu…" },
     date: { set: "Définir la date" },
     multichoice: { confirm: "Confirmer la sélection", clear: "Effacer" },
     freeInput: { submit: "Envoyer" },
@@ -1829,7 +1829,7 @@ const Jn = [
     ttsTooltip: "Salida de voz — próximamente",
     voice: "Voz",
     thinking: "Pensando…",
-    choice: { yes: "✓ Sí, correcto", chooseOther: "Elegir otro", search: "🔍 Buscar…", find: "Buscar", searchUser: "Nombre o correo…", searchLocation: "Nombre del lugar…" },
+    choice: { yes: "✓ Sí, correcto", chooseOther: "Elegir otro", cancel: "Cancelar", search: "🔍 Buscar…", find: "Buscar", searchUser: "Nombre o correo…", searchLocation: "Nombre del lugar…" },
     date: { set: "Establecer fecha" },
     multichoice: { confirm: "Confirmar selección", clear: "Borrar" },
     freeInput: { submit: "Enviar" },
@@ -1871,7 +1871,7 @@ const Jn = [
     ttsTooltip: "الإخراج الصوتي — قريباً",
     voice: "صوت",
     thinking: "جارٍ التفكير…",
-    choice: { yes: "✓ نعم، صحيح", chooseOther: "اختر آخر", search: "🔍 بحث…", find: "بحث", searchUser: "الاسم أو البريد…", searchLocation: "اسم الموقع…" },
+    choice: { yes: "✓ نعم، صحيح", chooseOther: "اختر آخر", cancel: "إلغاء", search: "🔍 بحث…", find: "بحث", searchUser: "الاسم أو البريد…", searchLocation: "اسم الموقع…" },
     date: { set: "تحديد التاريخ" },
     multichoice: { confirm: "تأكيد الاختيار", clear: "مسح" },
     freeInput: { submit: "إرسال" },
@@ -1913,7 +1913,7 @@ const Jn = [
     ttsTooltip: "语音输出——即将推出",
     voice: "语音",
     thinking: "思考中……",
-    choice: { yes: "✓ 是的，正确", chooseOther: "选择其他", search: "🔍 搜索……", find: "查找", searchUser: "姓名或邮箱……", searchLocation: "地点名称……" },
+    choice: { yes: "✓ 是的，正确", chooseOther: "选择其他", cancel: "取消", search: "🔍 搜索……", find: "查找", searchUser: "姓名或邮箱……", searchLocation: "地点名称……" },
     date: { set: "设置日期" },
     multichoice: { confirm: "确认选择", clear: "清除" },
     freeInput: { submit: "提交" },
@@ -11660,7 +11660,7 @@ function $i(e, t) {
   return e === "location" ? { code: t.value, name: t.label } : { userId: t.value, name: t.label, ...t.meta && t.meta.email ? { email: t.meta.email } : {} };
 }
 function go({ control: e }) {
-  const { t } = te(), { loading: n } = we(), r = Pe(), [i, s] = re(null), { id: o, type: a, slotId: u, label: l, defaultValue: c, options: f = [], children: d = [], showChildrenOn: h } = e, p = (w, F, H) => r.sendControlAction({ controlId: o, slotId: u, action: w, value: F }, H), g = h === "_search" && d.some((w) => w.type === "autocomplete"), k = c && typeof c == "object" ? c : null, x = k && (k.name || k.label || [k.firstName, k.lastName].filter(Boolean).join(" ")) || null, S = g && (i === "_search" || !!x && i === null) || i != null && i !== "list" && i === h ? d : [], I = (w) => w.type === "autocomplete" ? /* @__PURE__ */ m(zi, { control: w, onPick: (F) => p("submit", $i(w.source?.directory, F), F.label) }, w.id) : /* @__PURE__ */ m("div", { className: "fdv2-control-child", children: /* @__PURE__ */ m(go, { control: w }) }, w.id), O = (w) => {
+  const { t } = te(), { loading: n } = we(), r = Pe(), [i, s] = re(null), { id: o, type: a, slotId: u, label: l, defaultValue: c, options: f = [], children: d = [], showChildrenOn: h } = e, p = (w, F, H) => r.sendControlAction({ controlId: o, slotId: u, action: w, value: F }, H), g = h === "_search" && d.some((w) => w.type === "autocomplete"), k = c && typeof c == "object" ? c : null, x = k && (k.name || k.label || [k.firstName, k.lastName].filter(Boolean).join(" ")) || null, C = g && i === "_search", S = C || i != null && i !== "list" && i === h ? d : [], I = (w) => w.type === "autocomplete" ? /* @__PURE__ */ m(zi, { control: w, onPick: (F) => p("submit", $i(w.source?.directory, F), F.label) }, w.id) : /* @__PURE__ */ m("div", { className: "fdv2-control-child", children: /* @__PURE__ */ m(go, { control: w }) }, w.id), O = (w) => {
     if (d.length && h === w.value) {
       s(i === w.value ? null : w.value);
       return;
@@ -11685,7 +11685,19 @@ function go({ control: e }) {
         t("choice.chooseOther"),
         " ▾"
       ] }),
-      a === "confirm" && g && /* @__PURE__ */ m("button", { type: "button", className: "fdv2-choice-btn", disabled: n, onClick: () => s(i === "_search" ? null : "_search"), children: t("choice.search") })
+      a === "confirm" && g && !C && /* @__PURE__ */ m("button", { type: "button", className: "fdv2-choice-btn", disabled: n, onClick: () => s("_search"), children: t("choice.search") }),
+      a === "confirm" && C && /* @__PURE__ */ m(
+        "button",
+        {
+          type: "button",
+          className: "fdv2-choice-btn fdv2-choice-cancel",
+          disabled: n,
+          title: t("choice.cancel"),
+          "aria-label": t("choice.cancel"),
+          onClick: () => s(null),
+          children: "✕"
+        }
+      )
     ] }),
     a === "confirm" && i === "list" && /* @__PURE__ */ m("ul", { className: "fdv2-choice-list", children: f.map((w) => /* @__PURE__ */ m("li", { children: /* @__PURE__ */ m("button", { type: "button", disabled: n, onClick: () => p("select", w.value, w.label), children: ji(w) }) }, w.value)) }),
     a === "autocomplete" && /* @__PURE__ */ m(zi, { control: e, onPick: (w) => p("submit", $i(e.source?.directory, w), w.label) }),
