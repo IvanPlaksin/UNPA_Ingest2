@@ -11,6 +11,11 @@
  * @module instances/flowdesk/interpreter/chat-v2.service
  */
 
+// TURN-001 — the one list of fields a turn carries to the client. Required at the
+// top, not lazily: it is a plain data contract with no dependencies of its own, and
+// the point of it is that no layer can quietly go without it.
+const { pickTurnPayload } = require('./turn-contract');
+
 let _engine = null;
 
 function getEngine() {
@@ -370,26 +375,19 @@ async function processMessageWithAgent(sessionId, userId, message, userContext, 
   if (turn.openForm) await endSessionAfterHandoff(sessionId);
 
   return {
-    response: turn.response,
+    // TURN-001 — response, controls, cards, openForm, carried by the contract
+    // (interpreter/turn-contract) instead of by a hand-written list. The list this
+    // replaces had no line for `cards`, and a field missing from it is dropped in
+    // silence: the tool reports success, the client has nothing to draw, and the
+    // model describes in prose what it was told is already on screen.
+    ...pickTurnPayload(turn),
     preamble: null,
     choices: null,
     responseType: turn.responseType,
     resolveChoices: null,
-    controls: turn.controls,
-    // REQ-005 — the rows a turn SHOWS (requests, tasks). Separate from `controls`
-    // because they fill no slot; the client reads `result.cards`.
-    //
-    // This return is a NAMED-FIELD copy, not a spread: a field the agent sets and
-    // this list does not name is dropped here without a word, and the loss is
-    // invisible from both ends — the tool reports success, the client renders
-    // nothing, and the model, seeing rows it believes went unshown, recites them in
-    // prose instead. That is exactly how it failed. Anything new on the turn has to
-    // be added here too.
-    ...(Array.isArray(turn.cards) && turn.cards.length ? { cards: turn.cards } : {}),
-    // The form hand-off rides the turn here exactly as it does on the state
-    // machine's path, so the client opens the same pre-filled Altiora form — and
-    // ends this session with it.
-    ...(turn.openForm ? { openForm: turn.openForm, sessionEnded: 'form_handoff' } : {}),
+    // The hand-off also ENDS the session — that part is this layer's own, not the
+    // turn's, so it stays here beside the contract rather than inside it.
+    ...(turn.openForm ? { sessionEnded: 'form_handoff' } : {}),
     askingSlot: turn.askingSlot,
     state: {
       serviceId: (turn.draft && turn.draft.serviceId) || null,

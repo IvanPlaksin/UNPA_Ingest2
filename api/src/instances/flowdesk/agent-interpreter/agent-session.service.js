@@ -21,6 +21,7 @@
 const { createAgentLoop } = require('./agent-loop.service');
 const { createAgentTools, createToolSession } = require('./agent-tools');
 const { createDraftSRService } = require('../services/draft-sr.service');
+const { pickTurnPayload } = require('../interpreter/turn-contract');
 const { memStore } = require('../services/prompt-sandbox.service');
 
 let _seq = 0;
@@ -120,17 +121,15 @@ function createAgentSession(p = {}, deps = {}) {
       const draft = await draftService.get(sessionId);
       // Shaped like the state machine's turn so the arena reads both the same way.
       const turn = {
-        response: out.response,
-        controls: out.controls,
+        // TURN-001 — response, controls, cards, openForm, carried by the contract.
+        //
+        // This was a hand-written list, and `cards` was missing from it: the loop
+        // built the rows, this copy dropped them, and the chat showed nothing while
+        // the tests on either side of the line passed. The comment that used to sit
+        // here warned about exactly that risk — for `openForm`, the field above the
+        // one that then fell to it. A warning is not a mechanism.
+        ...pickTurnPayload(out),
         responseType: out.openForm ? 'open_form' : (out.controls ? 'agent_with_controls' : 'text'),
-        // The host opens Altiora's own form from this; dropping it here would
-        // leave the agent promising a hand-off the client never receives.
-        ...(out.openForm ? { openForm: out.openForm } : {}),
-        // REQ-005 — the rows the turn shows. Dropped here once already: the loop
-        // built them, this copy did not name them, and the chat showed nothing while
-        // every test either side of this line passed. The warning above `openForm`
-        // was about the same hazard on the same object; the field after it fell to it.
-        ...(Array.isArray(out.cards) && out.cards.length ? { cards: out.cards } : {}),
         route: 'AGENT',
         askingSlot: null,
         waiting: true,
