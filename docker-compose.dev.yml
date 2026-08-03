@@ -91,13 +91,18 @@ services:
   # ─────────────────────────────────────────────────────────────
   frontend:
     build:
-      context: ./mcp
-      target: deps
+      # repo root: the SPA bundles ../packages/guided-ux (see mcp/Dockerfile)
+      context: .
+      dockerfile: mcp/Dockerfile
+      target: builder
     command: npm run dev -- --host 0.0.0.0
+    # the builder stage works in /app/mcp; ../packages is the aliased tour package
+    working_dir: /app/mcp
     volumes:
-      - ./mcp/src:/app/src:ro
-      - ./mcp/index.html:/app/index.html:ro
-      - ./mcp/vite.config.js:/app/vite.config.js:ro
+      - ./mcp/src:/app/mcp/src:ro
+      - ./mcp/index.html:/app/mcp/index.html:ro
+      - ./mcp/vite.config.js:/app/mcp/vite.config.js:ro
+      - ./packages:/app/packages:ro
     ports:
       - "${FRONTEND_PORT:-5173}:5173"
     profiles:

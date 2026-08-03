@@ -70,7 +70,7 @@ jobs:
         with:
           filters: |
             api:    ['api/**', 'indexing-pipeline/src/processors/**']
-            mcp:    ['mcp/**']
+            mcp:    ['mcp/**', 'packages/guided-ux/**']   # the SPA bundles the tour package
             gliner: ['api/services/gliner/**']
             etl:    ['indexing-pipeline/**', 'api/src/**']
             sync:   ['services/sync/**']
@@ -120,7 +120,7 @@ jobs:
         run: |
           case "${{ matrix.service }}" in
             api)    echo "file=api/Dockerfile"                     >> "$GITHUB_OUTPUT"; echo "ctx=."                       >> "$GITHUB_OUTPUT" ;;
-            mcp)    echo "file=mcp/Dockerfile"                     >> "$GITHUB_OUTPUT"; echo "ctx=mcp"                     >> "$GITHUB_OUTPUT" ;;
+            mcp)    echo "file=mcp/Dockerfile"                     >> "$GITHUB_OUTPUT"; echo "ctx=."                       >> "$GITHUB_OUTPUT" ;;
             gliner) echo "file=api/services/gliner/Dockerfile.cpu" >> "$GITHUB_OUTPUT"; echo "ctx=api/services/gliner"    >> "$GITHUB_OUTPUT" ;;
             etl)    echo "file=indexing-pipeline/Dockerfile.ci"    >> "$GITHUB_OUTPUT"; echo "ctx=."                       >> "$GITHUB_OUTPUT" ;;
             sync)   echo "file=services/sync/Dockerfile"           >> "$GITHUB_OUTPUT"; echo "ctx=services/sync"          >> "$GITHUB_OUTPUT" ;;

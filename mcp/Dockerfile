@@ -1,25 +1,34 @@
+# The build context is the REPOSITORY ROOT, not mcp/.
+# The SPA imports @guided-ux/tour, which vite.config.js aliases to
+# ../packages/guided-ux — a path an mcp-only context cannot reach, so the image
+# could not be built from a clean checkout at all. Every caller must therefore
+# pass `context: .` together with `file: mcp/Dockerfile`.
+
 # Stage 1: Build
 FROM node:20-alpine AS builder
-WORKDIR /app
+WORKDIR /app/mcp
 ARG VITE_API_URL=/api/v1
 ENV VITE_API_URL=$VITE_API_URL
-COPY package*.json ./
-# vendored local package (@flowdesk/chat-v2, file:./vendor/...) must exist before install
-COPY vendor ./vendor
+COPY mcp/package*.json ./
+# vendored local packages (@flowdesk/chat-v2, @flowdesk/voice-launcher —
+# file:./vendor/...) must exist before install
+COPY mcp/vendor ./vendor
 RUN npm install --prefer-offline
-COPY . .
+# the aliased package lives outside mcp/ — hence the repo-root context
+COPY packages /app/packages
+COPY mcp .
 RUN npm run build
 
 # Stage 2: Serve
 FROM nginx:alpine
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/mcp/dist /usr/share/nginx/html
 # nginx:alpine processes *.template files in /etc/nginx/templates/ via envsubst at startup
-COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+COPY mcp/nginx.conf.template /etc/nginx/templates/default.conf.template
 # Public HTTP(S) variant (:80 ACME + redirect, :443 SPA + /api proxy). Swapped in
 # by the entrypoint hook below ONLY when /etc/nginx/ssl holds a certificate, so
 # the same image still starts on hosts without one.
-COPY nginx.public-tls.conf.template /etc/nginx/templates/public-tls.conf.template
-COPY docker-entrypoint.d/05-enable-tls-template.sh /docker-entrypoint.d/05-enable-tls-template.sh
+COPY mcp/nginx.public-tls.conf.template /etc/nginx/templates/public-tls.conf.template
+COPY mcp/docker-entrypoint.d/05-enable-tls-template.sh /docker-entrypoint.d/05-enable-tls-template.sh
 RUN chmod +x /docker-entrypoint.d/05-enable-tls-template.sh
 # Default API URL (overridden via ACA env var NGINX_API_URL at runtime)
 ENV NGINX_API_URL=http://localhost:3010

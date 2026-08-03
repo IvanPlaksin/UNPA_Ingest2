@@ -205,7 +205,8 @@ stages:
               repository: 'unpa-mcp'
               command: 'build'
               Dockerfile: 'mcp/Dockerfile'
-              buildContext: 'mcp'
+              # repo root: the SPA bundles packages/guided-ux (see mcp/Dockerfile)
+              buildContext: '.'
               arguments: >
                 --platform linux/amd64
                 --build-arg VITE_API_URL=$(COMPUTED_VITE_API_URL)
