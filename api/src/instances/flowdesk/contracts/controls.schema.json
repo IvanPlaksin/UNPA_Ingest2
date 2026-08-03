@@ -41,10 +41,19 @@
         "defaultValue": {
           "description": "For type=confirm: the pre-resolved value to accept on a bare confirm (object for user/location slots, scalar otherwise)."
         },
+        "multi": {
+          "type": "boolean",
+          "description": "For type=autocomplete: the field holds SEVERAL directory records, so the picker stays open and shows each pick as a chip. Altiora renders the same field as a MultiEmployeeSelector, which toggles a user in and out of an array; each pick still arrives as an ordinary `submit` and is APPENDED rather than replacing the last."
+        },
         "selected": {
+          "description": "For type=multichoice: option values already chosen, pre-checked in the client. For type=autocomplete with multi: the records already picked, as {value,label} so they can be rendered without a second lookup.",
           "type": "array",
-          "description": "For type=multichoice: option values already chosen, pre-checked in the client.",
-          "items": { "type": "string" },
+          "items": {
+            "oneOf": [
+              { "type": "string" },
+              { "$ref": "#/definitions/option" }
+            ]
+          },
           "default": []
         },
         "prefill": {

@@ -1,0 +1,143 @@
+'use strict';
+
+/**
+ * Two defects from session fdv2-781b9302, both of the same shape: the assistant
+ * already held what the user was being asked for.
+ *
+ *   turn 3 — "Which location or duty station should this request be processed from?"
+ *            asked cold, while the control underneath it offered the answer for one
+ *            click. The user confirmed that control on the next turn. The value was
+ *            right; the sentence simply did not mention it.
+ *
+ *   turn 8 — `sharedWith` rendered as a free-text box: a typing field for a value
+ *            that only exists as directory records.
+ *
+ * The location cause is narrow and worth naming: `describeField` handed the model
+ * `promptHint` and nothing else, so it had no way to name a duty station it was about
+ * to propose. A model cannot write a better sentence than the information it is given.
+ */
+
+const { questionFor, locationQuestion, isSelf } = require('../context-questions');
+const { buildControlFromSlot, directoryOf } = require('../controls');
+
+const LOC = { slotId: 'location', type: 'location', promptHint: 'Which location or duty station?' };
+const geneva = { code: 'GVA', name: 'Geneva', city: 'Geneva' };
+const draftWith = (slots) => ({ slots });
+
+describe('the duty-station question names the duty station', () => {
+  test('for the person asking, it is THEIR profile that is quoted', () => {
+    // `author` is resolved silently at intake for every Altiora form, so in a real
+    // draft both parties are known and the comparison is by identity.
+    const draft = draftWith({
+      author: { value: { userId: 'u1' } },
+      beneficiary: { value: { userId: 'u1', name: 'Ivan P', location: geneva } },
+    });
+    expect(questionFor(LOC, draft)).toBe('Your profile has you at Geneva. Should this request be handled there?');
+  });
+
+  test('with no author to compare against, it names the person rather than guessing', () => {
+    // My first fixture omitted `author` and I expected "your profile" — the code
+    // named the person instead, and it was right to. "Your profile has you at X"
+    // told to someone raising a request FOR A COLLEAGUE is wrong in a way the
+    // neutral phrasing never is, and the name is true either way.
+    const draft = draftWith({ beneficiary: { value: { userId: 'u1', name: 'Ivan P', location: geneva } } });
+    expect(questionFor(LOC, draft)).toBe('Ivan P is based at Geneva. Should this request be handled there?');
+  });
+
+  test('for a colleague, it is THEIRS — and they are named', () => {
+    // One phrasing for both cases is wrong in one of them, every time.
+    const draft = draftWith({
+      author: { value: { userId: 'u1' } },
+      beneficiary: { value: { userId: 'u2', name: 'Maria Silva', location: { name: 'Nairobi' } } },
+    });
+    expect(questionFor(LOC, draft)).toBe('Maria Silva is based at Nairobi. Should this request be handled there?');
+  });
+
+  test('a place with a distinct city reads as both', () => {
+    const draft = draftWith({
+      beneficiary: { value: { userId: 'u1', location: { name: 'UNON', city: 'Nairobi' } } },
+    });
+    expect(questionFor(LOC, draft)).toMatch('UNON, Nairobi');
+  });
+
+  test('with nothing to propose it asks plainly rather than promising a suggestion', () => {
+    // A sentence that offers a suggestion and shows none is worse than a plain ask.
+    expect(questionFor(LOC, draftWith({}))).toBe('Which location or duty station should this request be handled at?');
+    expect(questionFor(LOC, draftWith({ beneficiary: { value: { userId: 'u1', name: 'No Place' } } })))
+      .toBe('Which location or duty station should this request be handled at?');
+  });
+
+  test('an unnamed colleague still gets a question about the right place', () => {
+    const draft = draftWith({
+      author: { value: { userId: 'u1' } },
+      beneficiary: { value: { userId: 'u2', location: { name: 'Vienna' } } },
+    });
+    expect(questionFor(LOC, draft)).toMatch(/someone based at Vienna/);
+  });
+
+  test('every other field keeps the schema’s own prompt', () => {
+    // Deliberately a closed map: a templating language over prompts is one nobody
+    // could audit.
+    expect(questionFor({ slotId: 'amount', promptHint: 'Amount' }, draftWith({}))).toBe('Amount');
+  });
+
+  test('a malformed draft does not take the turn down', () => {
+    expect(questionFor(LOC, null)).toBeTruthy();
+    expect(locationQuestion({}, null)).toBeTruthy();
+  });
+});
+
+describe('who the request is for', () => {
+  test('nothing chosen yet reads as self, which is the default the control offers', () => {
+    expect(isSelf(draftWith({}))).toBe(true);
+  });
+
+  test('the same person is self', () => {
+    expect(isSelf(draftWith({
+      author: { value: { userId: 'u1' } },
+      beneficiary: { value: { userId: 'u1' } },
+    }))).toBe(true);
+  });
+
+  test('a different person is not', () => {
+    expect(isSelf(draftWith({
+      author: { value: { userId: 'u1' } },
+      beneficiary: { value: { userId: 'u2' } },
+    }))).toBe(false);
+  });
+});
+
+describe('sharing a request with colleagues is a directory pick, not typing', () => {
+  const SHARED = { slotId: 'sharedWith', type: 'userlist', promptHint: 'Share with colleagues?' };
+
+  test('a userlist IS a directory field — it was not, which is the whole defect', () => {
+    expect(directoryOf(SHARED)).toBe('user');
+  });
+
+  test('it renders as a search that keeps its picks', () => {
+    const c = buildControlFromSlot(SHARED, { label: SHARED.promptHint });
+    expect(c).toMatchObject({
+      type: 'autocomplete', slotId: 'sharedWith', multi: true, selected: [],
+    });
+    expect(c.source).toMatchObject({ directory: 'user', minChars: 2 });
+  });
+
+  test('NOT a text box — the value only exists as directory records', () => {
+    expect(buildControlFromSlot(SHARED, {}).type).not.toBe('text');
+  });
+
+  test('people already chosen come back as options the client can render', () => {
+    // Without label and value the chips would have to be looked up a second time.
+    const c = buildControlFromSlot(SHARED, {
+      label: 'x', defaultValue: [{ userId: 'u2', name: 'Maria Silva', email: 'm@un.org' }],
+    });
+    expect(c.selected).toEqual([{ value: 'u2', label: 'Maria Silva', description: 'm@un.org' }]);
+  });
+
+  test('a single-user field is still a confirm, not a multi picker', () => {
+    // `beneficiary` proposes one person to accept with one click; nothing changed there.
+    const c = buildControlFromSlot({ slotId: 'beneficiary', type: 'user' }, { defaultValue: { userId: 'u1', name: 'A' } });
+    expect(c.type).toBe('confirm');
+    expect(c.multi).toBeUndefined();
+  });
+});

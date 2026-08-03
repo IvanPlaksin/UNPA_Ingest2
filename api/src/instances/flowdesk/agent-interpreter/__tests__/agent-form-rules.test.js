@@ -104,7 +104,12 @@ describe('the request-level overlay is applied to every form', () => {
   test('the duty station is in the queue even though the service schema has no such field', async () => {
     const h = harness();
     const created = await started(h, { fillOverlay: false });
-    expect(created.willAsk).toContain('Which location or duty station?');
+    // The duty-station question now NAMES the duty station it is about to propose,
+    // taken from the caller's own profile. The bare label was what left the model
+    // asking cold while the control below it already held the answer
+    // (fdv2-781b9302). This harness supplies an acting user, so the composed form is
+    // what a real turn produces.
+    expect(created.willAsk).toContain('Your profile has you at New York HQ. Should this request be handled there?');
     // And it is asked before the service's own fields: it is context.
     expect(created.nextField.slotId).toBe('beneficiary');
 

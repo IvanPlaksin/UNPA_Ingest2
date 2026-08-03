@@ -86,6 +86,7 @@ const { resolveCascadeCluster, isAutofillCascadeSlot } = require('../interpreter
 const { buildFormHydration } = require('../interpreter/form-hydration');
 const { effectiveSnapshot, CONTEXT_SLOTS } = require('../interpreter/form-overlay');
 const { ui } = require('../interpreter/templates/ui-strings');
+const { questionFor } = require('../interpreter/context-questions');
 
 /**
  * How a completed request leaves the chat.
@@ -130,10 +131,18 @@ const requiredNow = (slotDef, draft, snapshot) =>
   policy.isRequiredNow(slotDef, policy.trefContext(draft, snapshot));
 
 /** One field as the model sees it. `required` is the live answer, never the static flag. */
-function describeField(s, draft, snapshot) {
+function describeField(s, draft, snapshot, actingUser) {
   return {
     slotId: s.slotId,
-    label: s.promptHint || s.slotId,
+    // The question, not the field name. For most fields these are the same string;
+    // for the ones whose wording turns on an answer already given — the duty station,
+    // which is "yours" or "theirs" depending on who the request is for — the schema's
+    // prompt cannot say it and the model was left to ask cold. It has no way to name
+    // a value it was never told (fdv2-781b9302: the sentence asked, the control below
+    // it already offered the answer).
+    // The model still needs SOMETHING to call the field by, so the slotId remains
+    // its last resort here — unlike the template, which must stay silent instead.
+    label: questionFor(s, draft, actingUser) || s.promptHint || s.slotId,
     type: s.type,
     required: requiredNow(s, draft, snapshot),
     section: s.sectionLabel || s.section || null,
@@ -166,17 +175,17 @@ const overview = (fields) => (fields || []).map((f) => f.label);
  * field can reveal or hide others — that is the whole point of trefCondition and
  * requiredWhen.
  */
-function formState(draft, snapshot, session) {
+function formState(draft, snapshot, session, actingUser) {
   const queue = askableQueue(draft, snapshot, session);
   const next = policy.chooseNextSlot(queue, draft, snapshot);
   const required = queue.filter((s) => requiredNow(s, draft, snapshot));
   return {
     // Everything that may be asked, in the order it will be asked — so a model
     // reading the list and a model following nextField reach the same field.
-    askable: policy.orderAskable(queue, snapshot).map((s) => describeField(s, draft, snapshot)),
-    stillMissing: required.map((s) => describeField(s, draft, snapshot)),
-    optionalRemaining: queue.filter((s) => !requiredNow(s, draft, snapshot)).map((s) => describeField(s, draft, snapshot)),
-    nextField: next ? describeField(next, draft, snapshot) : null,
+    askable: policy.orderAskable(queue, snapshot).map((s) => describeField(s, draft, snapshot, actingUser)),
+    stillMissing: required.map((s) => describeField(s, draft, snapshot, actingUser)),
+    optionalRemaining: queue.filter((s) => !requiredNow(s, draft, snapshot)).map((s) => describeField(s, draft, snapshot, actingUser)),
+    nextField: next ? describeField(next, draft, snapshot, actingUser) : null,
     complete: required.length === 0,
   };
 }
@@ -505,7 +514,7 @@ function createAgentTools(deps = {}) {
     const open = await draftService.get(ctx.sessionId).catch(() => null);
     if (open && open.serviceId === serviceCode && open.status !== 'submitted') {
       ctx.session.draftServiceCode = serviceCode;
-      const state = formState(open, snapshot, ctx.session);
+      const state = formState(open, snapshot, ctx.session, ctx.userContext);
       const carriedOpen = { ...(fields || {}), ...(ctx.session.pendingContext || {}) };
       const trustedOpen = new Set(Object.keys(ctx.session.pendingContext || {}));
       const applied = Object.keys(carriedOpen).length
@@ -517,9 +526,9 @@ function createAgentTools(deps = {}) {
         alreadyOpen: true,
         serviceCode,
         title: (snapshot.metadata && snapshot.metadata.title) || serviceCode,
-        ...(applied ? formState(after, snapshot, ctx.session) : state),
+        ...(applied ? formState(after, snapshot, ctx.session, ctx.userContext) : state),
         fields: undefined,
-        largeForm: largeFormOffer(snapshot, applied ? formState(after, snapshot, ctx.session) : state, ctx.session),
+        largeForm: largeFormOffer(snapshot, applied ? formState(after, snapshot, ctx.session, ctx.userContext) : state, ctx.session),
         note: 'This draft is already open and nothing was reset. Record what the user told you with draft_update — draft_create does not save answers.',
       };
     }
@@ -559,7 +568,7 @@ function createAgentTools(deps = {}) {
     const applied = Object.keys(carried).length ? await draft_update({ fields: carried }, ctx, { trustedSlots }) : { ok: true, set: [] };
     ctx.session.pendingContext = {};
     const draft = await draftService.get(ctx.sessionId);
-    const state = formState(draft, snapshot, ctx.session);
+    const state = formState(draft, snapshot, ctx.session, ctx.userContext);
 
     // A form this size is faster in the form itself than one question at a time.
     // Offered once, and only as a CHOICE — the user may well prefer the chat.
@@ -604,7 +613,7 @@ function createAgentTools(deps = {}) {
     if ((!fields || !Object.keys(fields).length) && input && input.value !== undefined) {
       const d0 = await draftService.get(ctx.sessionId).catch(() => null);
       const s0 = d0 && d0.serviceId ? await loadSnapshot(d0.serviceId).catch(() => null) : null;
-      const due = s0 ? formState(d0, s0, ctx.session).nextField : null;
+      const due = s0 ? formState(d0, s0, ctx.session, ctx.userContext).nextField : null;
       if (!due) return err('there is no field waiting for a value — name the field with `fields` instead.');
       fields = { [due.slotId]: input.value };
     }
@@ -699,7 +708,7 @@ function createAgentTools(deps = {}) {
       rejected,
       ...(refused.length ? { refused: refused.map((f) => f.slotId), note: `${refused.map((f) => `"${f.slotId}"`).join(', ')} must be picked from the directory — emit its control with a searchHint instead.` } : {}),
       ...(invalid.length ? { invalid: invalid.map((p) => ({ slotId: p.slotId, reason: p.reason })) } : {}),
-      ...formState(after, snapshot, ctx.session),
+      ...formState(after, snapshot, ctx.session, ctx.userContext),
     };
   }
 
@@ -777,7 +786,7 @@ function createAgentTools(deps = {}) {
     if (target === 'field' || (!target && input.slotId && !String(input.slotId).startsWith('__'))) {
       const draft0 = await draftService.get(ctx.sessionId).catch(() => null);
       const snap0 = draft0 && draft0.serviceId ? await loadSnapshot(draft0.serviceId).catch(() => null) : null;
-      const st0 = snap0 ? formState(draft0, snap0, ctx.session) : preFormState(ctx);
+      const st0 = snap0 ? formState(draft0, snap0, ctx.session, ctx.userContext) : preFormState(ctx);
       if (!st0 || !st0.nextField) return err('there is no field waiting to be asked right now.');
       slotId = st0.nextField.slotId;
     } else {
@@ -802,7 +811,7 @@ function createAgentTools(deps = {}) {
       // mandatory field was never collected. The model still writes every word —
       // it no longer decides which field the words are about.
       // Before the form exists the opening queue still decides the order.
-      const state = snapshot ? formState(draft, snapshot, ctx.session) : preFormState(ctx);
+      const state = snapshot ? formState(draft, snapshot, ctx.session, ctx.userContext) : preFormState(ctx);
       if (state && state.nextField && state.nextField.slotId !== slotId) {
         return err(
           `"${slotId}" is not the field due now. Ask for "${state.nextField.label}" (slotId ${state.nextField.slotId}) — ` +
@@ -866,7 +875,7 @@ function createAgentTools(deps = {}) {
       const draft = await draftService.get(ctx.sessionId).catch(() => null);
       const snapshot = draft && draft.serviceId ? await loadSnapshot(draft.serviceId).catch(() => null) : null;
       if (snapshot) {
-        const st = formState(draft, snapshot, ctx.session);
+        const st = formState(draft, snapshot, ctx.session, ctx.userContext);
         return err(
           `"${slotId}" is not a field on this form, so anything the user typed into it would be lost. ` +
           (st.nextField ? `Use "${st.nextField.slotId}" (${st.nextField.label}) — that is the field due next.` : 'There is nothing left to ask.')
@@ -1017,7 +1026,7 @@ function createAgentTools(deps = {}) {
     // moment a chat is least able to show what is about to be filed: it can
     // paraphrase, the form can show it.
     if (finalGate() === 'form' && !ctx.session.finalGateShown && !covers('__open_form__')) {
-      const stillMissing = formState(draft, snapshot, ctx.session).stillMissing;
+      const stillMissing = formState(draft, snapshot, ctx.session, ctx.userContext).stillMissing;
       if (!stillMissing.length && !queue.length) {
         ctx.session.finalGateShown = true;
         const S = ui(ctx.lang || 'en');
@@ -1268,7 +1277,7 @@ function createAgentTools(deps = {}) {
       }
       const snapshot = await loadSnapshot(draft.serviceId);
       if (!snapshot) return null;
-      const st = formState(draft, snapshot, ctx.session);
+      const st = formState(draft, snapshot, ctx.session, ctx.userContext);
       const collected = Object.entries(draft.slots || {})
         .filter(([, v]) => v && v.value !== null && v.value !== undefined && v.value !== '' && !v.stale)
         .map(([k]) => k);
@@ -1494,7 +1503,7 @@ function createAgentTools(deps = {}) {
       if (!draft || !draft.serviceId) return [];
       const snapshot = await loadSnapshot(draft.serviceId);
       if (!snapshot) return [];
-      return formState(draft, snapshot, ctx.session).stillMissing;
+      return formState(draft, snapshot, ctx.session, ctx.userContext).stillMissing;
     } catch {
       return []; // a form we cannot read must not block the conversation
     }

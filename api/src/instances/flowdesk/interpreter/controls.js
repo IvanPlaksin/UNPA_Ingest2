@@ -19,10 +19,18 @@ const LOCATION_SLOTS = new Set(['location', 'dutyStation', 'facility']);
 
 function directoryOf(slotDef) {
   if (!slotDef) return null;
-  if (slotDef.type === 'user' || USER_SLOTS.has(slotDef.slotId)) return 'user';
+  // `userlist` is a user field that holds SEVERAL of them. It was missing here, so
+  // `sharedWith` matched no directory, fell through the type switch to the default
+  // branch, and rendered as a free-text box — a typing field for a value that only
+  // exists as directory records (fdv2-781b9302). Altiora renders the same field as a
+  // MultiEmployeeSelector: search, pick, chip, repeat.
+  if (slotDef.type === 'user' || slotDef.type === 'userlist' || USER_SLOTS.has(slotDef.slotId)) return 'user';
   if (slotDef.type === 'location' || LOCATION_SLOTS.has(slotDef.slotId)) return 'location';
   return null;
 }
+
+/** A directory field that holds several records rather than one. */
+const isMultiDirectory = (slotDef) => !!slotDef && (slotDef.type === 'userlist' || slotDef.type === 'userList');
 
 /** A resolved user/location object (or scalar) → an {value,label,description} option. */
 function toOption(v, directory) {
@@ -185,9 +193,49 @@ function buildCascadeConfirmControl(fields, { label } = {}) {
  * mapping is how two chats start showing the user different forms. It lives here,
  * next to the builders it dispatches to, and both interpreters call it.
  */
+/**
+ * A directory search that keeps every pick — Altiora's MultiEmployeeSelector, in
+ * chat form.
+ *
+ * `multi` is what tells the client to stay open and show the chosen people as chips
+ * instead of closing on the first pick. The commit action is unchanged (`submit` per
+ * pick), so nothing about how a value is validated or recorded changes; only how many
+ * of them the control is willing to collect.
+ */
+function buildDirectoryMultiControl(slotDef, directory, { label, selected = [], searchHint } = {}) {
+  const control = {
+    id: `ctrl-${slotDef.slotId}`,
+    type: 'autocomplete',
+    slotId: slotDef.slotId,
+    label: label || slotDef.promptHint || slotDef.slotId,
+    multi: true,
+    // Already chosen, so the client can render them and not offer them again.
+    selected: (selected || []).map((v) => toOption(v, directory)),
+    source: {
+      directory,
+      endpoint: autocompleteEndpoint(directory),
+      minChars: 2,
+      placeholder: 'Search staff member…',
+    },
+  };
+  if (searchHint) control.prefill = String(searchHint);
+  return [control];
+}
+
 function buildControlFromSlot(slotDef, { label, options, defaultValue, searchHint, alternatives } = {}) {
   const opts = { label };
   const directory = directoryOf(slotDef);
+  if (directory && isMultiDirectory(slotDef)) {
+    // No default to confirm — there is no "the colleague" to propose — so this is a
+    // search that keeps its picks. Each pick arrives as an ordinary `submit` and is
+    // APPENDED, which is how Altiora's own selector behaves: it toggles a user in
+    // and out of an array and never replaces one with the next.
+    return buildDirectoryMultiControl(slotDef, directory, {
+      ...opts,
+      selected: Array.isArray(defaultValue) ? defaultValue : [],
+      searchHint,
+    })[0];
+  }
   if (directory) {
     // allowSearch attaches the autocomplete child carrying source.directory and
     // the matching endpoint. Emitting a bare autocomplete is what produced a
@@ -227,6 +275,7 @@ module.exports = {
   buildConfirmControl, buildChoiceControl, buildDateControl, buildMultichoiceControl,
   buildCascadeConfirmControl,
   buildTextControl, buildTextareaControl, buildNumberControl, buildToggleControl,
+  buildDirectoryMultiControl, isMultiDirectory,
   directoryOf, toOption,
   buildControlFromSlot,
 };

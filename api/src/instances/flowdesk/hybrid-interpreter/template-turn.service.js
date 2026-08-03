@@ -28,6 +28,7 @@
 const ctrl = require('../interpreter/controls');
 const policy = require('../interpreter/form-policy');
 const { ui } = require('../interpreter/templates/ui-strings');
+const { questionFor } = require('../interpreter/context-questions');
 
 /** Nothing rendered — the model takes this turn. `why` is for telemetry only. */
 const fallthrough = (why) => ({ fallthrough: true, why });
@@ -92,7 +93,10 @@ async function buildTemplateTurn(p = {}) {
     const slotDef = (snapshot.slots || []).find((s) => s.slotId === nextField.slotId);
     if (!slotDef) return fallthrough('slot_not_in_snapshot');
 
-    const question = slotDef.promptHint || nextField.promptHint;
+    // The same question the model would be given. Both paths ask the SAME sentence,
+    // or a conversation reads differently depending on which of them answered — and
+    // the duty-station question is exactly where they would have diverged.
+    const question = questionFor(slotDef, draft) || nextField.promptHint;
     if (!question) return fallthrough('no_prompt_hint');
 
     const S = ui(lang);
