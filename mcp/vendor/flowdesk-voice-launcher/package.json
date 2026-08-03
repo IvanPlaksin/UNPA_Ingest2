@@ -1,6 +1,6 @@
 {
   "name": "@flowdesk/voice-launcher",
-  "version": "1.0.3",
+  "version": "1.0.6",
   "description": "FlowDesk Voice Launcher — a round pulsing button that starts a live voice conversation with the Altiora assistant (React)",
   "license": "UNLICENSED",
   "type": "module",
