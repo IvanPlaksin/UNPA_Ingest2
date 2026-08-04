@@ -1080,12 +1080,20 @@ function createAgentTools(deps = {}) {
         const S = ui(ctx.lang || 'en');
         return [{
           replaces: true,
-          question: `${S.fillingComplete} ${S.proceedToForm}`,
+          // Stating it, not asking it. "Open it now?" was a question with two answers,
+          // and there is one left; a question whose only button is "yes" reads as a
+          // choice that has been taken away rather than one that never existed.
+          question: `${S.fillingComplete} ${S.proceedToFormOnly || S.proceedToForm}`,
           id: 'ctrl-final-gate', type: 'choice', slotId: '__open_form__',
-          options: [
-            { value: 'open', label: S.openFormLabel },
-            { value: 'stay', label: S.stayHereLabel },
-          ],
+          // ONE way out, because there is only one. Under FLOWDESK_FINAL_GATE=form the
+          // chat cannot file the request — draft_submit refuses — so "Carry on here"
+          // led nowhere: the user chose it, answered whatever came next, and arrived
+          // back at a gate they had already declined. An option that cannot end the
+          // journey should not be offered at the step whose whole purpose is to end it.
+          //
+          // Typing still works. This removes a BUTTON, not the conversation: someone
+          // who wants to change an answer says so, and the assistant reopens the field.
+          options: [{ value: 'open', label: S.openFormLabel }],
         }];
       }
     }

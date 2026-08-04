@@ -1065,7 +1065,11 @@ describe('a completed request ends at the form', () => {
     expect(auto[0].slotId).toBe('__open_form__');
     expect(auto[0].replaces).toBe(true);
     expect(auto[0].question).toBeTruthy();
-    expect(auto[0].options.map((o) => o.value)).toEqual(['open', 'stay']);
+    // ONE option. This used to assert ['open', 'stay'] — the gate offered "Carry on
+    // here" beside the form while draft_submit refused to file anything, so the
+    // second button led back to the same gate by a longer road. The assertion was
+    // green the whole time it was describing a dead end.
+    expect(auto[0].options.map((o) => o.value)).toEqual(['open']);
   });
 
   test('it is offered once, not on every later turn', async () => {
