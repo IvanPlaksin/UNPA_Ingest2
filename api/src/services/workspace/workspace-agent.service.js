@@ -377,6 +377,7 @@ class WorkspaceAgentService {
 - \`workspace_list_drafts\` — list draft knowledge objects (filterable by type, status)
 - \`workspace_get_draft\` — full content of a single draft
 - \`workspace_search_drafts\` — semantic search across drafts in this WorkSpace
+- \`workspace_retrieve\` — hybrid retrieval: semantic search PLUS graph expansion from what it finds. Returns \`assembledContext\` — prompt-ready text you can reason over directly. Use this instead of \`workspace_search_drafts\` when you need context to answer a question, rather than a list of matching drafts: it also surfaces the rules governing a matched entity, its dependencies, and any draft that contradicts it — none of which share wording with the query.
 
 ### Mutation
 - \`workspace_create_draft\` — create a new draft knowledge object (entity, business_rule, workflow, etc.)

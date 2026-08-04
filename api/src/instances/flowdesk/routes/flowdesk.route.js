@@ -25,6 +25,27 @@ router.get('/graph-versions', controller.getGraphVersions);
 router.get('/chat/:sessionId/stream', controller.streamChat);
 router.get('/schema/:serviceId', controller.getSchema);
 
+// DOC-1-001 — the one multipart route in the chat API.
+//
+// `sessionId` rides in the query rather than the form: a query param does not
+// depend on the body having been parsed, which for multipart happens inside the
+// middleware below, and it stays visible in logs and telemetry.
+//
+// The 10 MB cap here is a coarse guard against garbage, NOT the real limit.
+// Altiora holds that, per file extension, in an editable table it serves from
+// /api/Attachments/config — copying those numbers into our code would freeze a
+// limit that is meant to move. Anything under the cap goes to Altiora and is
+// judged there.
+router.post('/chat/upload', controller.uploadChatFileMiddleware, controller.uploadChatFile);
+
+// DOC-5 — the staged documents follow the request onto its ticket.
+//
+// Separate from submit because the ticket id does not exist until the wizard has
+// created it, and separate from the hand-off because handing the ids to the form
+// breaks ticket creation outright (see attachment-link.service). JSON, so the
+// acting-user context survives — no multer on this path.
+router.post('/chat/attachments/link', controller.linkSessionAttachments);
+
 // DraftSR (C2) — live draft service request
 router.post('/draft', controller.createDraft);
 router.get('/draft/:sessionId', controller.getDraft);

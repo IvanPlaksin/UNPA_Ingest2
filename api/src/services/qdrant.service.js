@@ -561,10 +561,15 @@ class QdrantService {
      * @param {number} [options.limit=10]
      * @param {string} [options.type] - Filter by knowledge type
      * @param {string} [options.status] - Filter by draft status
+     * @param {string[]} [options.excludeStatus] - Draft statuses to exclude (must_not)
+     * @param {string} [options.kind] - Only points of this payload `kind` (e.g. 'source_chunk')
+     * @param {string} [options.excludeKind] - Exclude points of this payload `kind`.
+     *   Points written before `kind` existed have no such field and are NOT excluded,
+     *   so drafts indexed earlier keep matching without a re-index.
      * @param {number} [options.scoreThreshold=0.7]
      * @returns {Promise<Array<{id: string, score: number, payload: object}>>}
      */
-    async workspaceSearch(workspaceId, vector, { limit = 10, type, status, scoreThreshold = 0.7 } = {}) {
+    async workspaceSearch(workspaceId, vector, { limit = 10, type, status, excludeStatus, kind, excludeKind, scoreThreshold = 0.7 } = {}) {
         const collectionName = `workspace_${workspaceId.replace(/-/g, '_')}`;
 
         // Check collection exists
@@ -574,7 +579,24 @@ class QdrantService {
         const must = [];
         if (type) must.push({ key: 'type', match: { value: type } });
         if (status) must.push({ key: 'status', match: { value: status } });
-        const filter = must.length > 0 ? { must } : undefined;
+        if (kind) must.push({ key: 'kind', match: { value: kind } });
+
+        // Exclusion is filtered server-side, not after the fact: a post-filter
+        // would silently shrink a `limit`-sized page and starve the caller.
+        const mustNot = [];
+        if (Array.isArray(excludeStatus) && excludeStatus.length > 0) {
+            mustNot.push({ key: 'status', match: { any: excludeStatus } });
+        }
+        if (excludeKind) {
+            mustNot.push({ key: 'kind', match: { value: excludeKind } });
+        }
+
+        const filter = (must.length > 0 || mustNot.length > 0)
+            ? {
+                ...(must.length > 0 ? { must } : {}),
+                ...(mustNot.length > 0 ? { must_not: mustNot } : {})
+            }
+            : undefined;
 
         try {
             const results = await this.client.search(collectionName, {
@@ -641,6 +663,26 @@ class QdrantService {
             wait: true,
             points: pointIds
         });
+    }
+
+    /**
+     * Delete points from a WorkSpace collection by payload filter.
+     *
+     * Needed when the set of points to remove is not known by id — re-indexing a
+     * source, for example, must clear its previous chunks without first knowing
+     * how many there were.
+     *
+     * @param {string} workspaceId
+     * @param {Object} filter - Qdrant filter, e.g. { must: [{ key, match: { value } }] }
+     * @returns {Promise<void>}
+     */
+    async workspaceDeleteByFilter(workspaceId, filter) {
+        const collectionName = `workspace_${workspaceId.replace(/-/g, '_')}`;
+
+        const exists = await this.workspaceCollectionExists(workspaceId);
+        if (!exists) return;
+
+        await this.client.delete(collectionName, { wait: true, filter });
     }
 
     /**

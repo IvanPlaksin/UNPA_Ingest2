@@ -37,6 +37,9 @@ export interface ChatMessage {
     executionLog?: Array<{ node: string; status?: string }> | null;
     srNumber?: string | null;
     isComplete?: boolean;
+    /** The backend closed its side of this conversation. Travels with `openForm` today;
+     *  carried separately so an ending that is not a hand-off needs no new contract. */
+    sessionEnded?: string | null;
   } | null;
 }
 
@@ -145,13 +148,47 @@ export interface RevealIntent {
   taskId?: string;
 }
 
+/**
+ * A document the user attached in the chat, already stored in Altiora under
+ * `Chat/{sessionId}` and waiting to be put on the ticket the form creates.
+ *
+ * These are DELIBERATELY not part of `prefill`. The wizard reads
+ * `initialFormData.attachments`, but on create it forwards any entry without
+ * file bytes straight into the ticket DTO, where the id collides with the
+ * staged row's primary key and the ticket is never created. Use
+ * `linkStagedAttachments` after submit instead — it copies the bytes under a
+ * fresh id server-side.
+ */
+export interface StagedAttachment {
+  /** Altiora attachment id of the staged copy. */
+  attachmentId: string;
+  fileName: string;
+  contentType: string;
+  size: number;
+  /** Where it lives now — kind is always "Chat", ownerId is the conversation. */
+  stagedUnder: { kind: 'Chat'; ownerId: string };
+}
+
 export interface OpenFormTarget {
+  /**
+   * The conversation these values came from. Present even when nothing is
+   * attached: a hand-off is terminal, so the chat resets to a new session the
+   * moment the wizard opens and this is the only remaining way to name the
+   * conversation whose documents are still staged.
+   */
+  sessionId?: string;
   /** Our service code (e.g. "EO-HR-SA-EXT"). */
   serviceId: string;
   /** organizationUnitServiceId — lets the wizard load the schema without provider detection. */
   ousId?: number;
   /** Values gathered in the conversation, in the wizard's initialFormData shape. */
   prefill: Record<string, any>;
+  /**
+   * Documents attached during the conversation. Omitted when there are none.
+   * Pass this whole object to `linkStagedAttachments` once the wizard reports a
+   * ticket id — do NOT merge it into `prefill`.
+   */
+  stagedAttachments?: StagedAttachment[];
   /**
    * Dictionary rows the backend already holds, so the form need not fetch them while it
    * paints. Pass straight through to the wizard (`initialDictionary`); the form uses only
@@ -209,6 +246,8 @@ export interface AltioraChatProps {
   showLanguageSwitcher?: boolean;
   /** Show the Live Chat button in the composer toolbar. Default true. */
   showVoiceControls?: boolean;
+  /** Show the paperclip that lets the user attach a document. Default true. */
+  showAttachments?: boolean;
   /** Extra class on the root element. */
   className?: string;
   /**
@@ -450,7 +489,52 @@ export declare const chatClient: {
     handlers?: ProgressHandlers,
     opts?: { EventSourceImpl?: typeof EventSource }
   ): () => void;
+  uploadFile(sessionId: string, file: File | Blob, opts?: { signal?: AbortSignal }): Promise<UploadedAttachment>;
+  linkAttachments(sessionId: string, ticketId: string | number, opts?: { signal?: AbortSignal }): Promise<LinkResult>;
+  linkStagedAttachments(openForm: OpenFormTarget, ticketId: string | number, opts?: { signal?: AbortSignal }): Promise<LinkResult | null>;
 };
+
+/** What the server says about a file it accepted. */
+export interface UploadedAttachment {
+  attachmentId: string;
+  fileName: string;
+  size: number;
+  contentType: string;
+  /**
+   * Whether the ASSISTANT can read it — not whether the upload worked. Altiora
+   * accepts .docx and .xlsx, which travel with the request but which the model
+   * cannot open.
+   */
+  canExtract: boolean;
+}
+
+export interface LinkResult {
+  linked: number;
+  /** Already on the ticket — linking twice cannot duplicate a document. */
+  skipped: number;
+  failed: number;
+  details: Array<{
+    attachmentId: string;
+    fileName: string;
+    status: 'linked' | 'already_linked' | 'failed';
+    linkedAttachmentId?: string | null;
+    error?: string;
+  }>;
+}
+
+export declare function uploadFile(sessionId: string, file: File | Blob, opts?: { signal?: AbortSignal }): Promise<UploadedAttachment>;
+export declare function linkAttachments(sessionId: string, ticketId: string | number, opts?: { signal?: AbortSignal }): Promise<LinkResult>;
+/**
+ * Put a finished conversation's documents on the ticket the wizard created.
+ *
+ * Pass the object `onOpenForm` handed you. Returns null when nothing was
+ * attached. Safe to call twice — the server skips what it has already linked.
+ */
+export declare function linkStagedAttachments(
+  openForm: OpenFormTarget,
+  ticketId: string | number,
+  opts?: { signal?: AbortSignal }
+): Promise<LinkResult | null>;
 
 export declare const SSE_EVENTS: readonly string[];
 

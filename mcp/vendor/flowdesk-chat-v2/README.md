@@ -293,6 +293,39 @@ import {
 
 ---
 
+## Attached documents
+
+The composer has a paperclip: the user attaches a PDF or a photo, it is stored
+against the conversation, and the assistant reads it into the request's fields
+once a service has been chosen. `showAttachments={false}` removes the button.
+
+**One thing the host must do.** The chat puts the documents on the ticket by
+itself only when the request is submitted *in the chat*. When it hands off to the
+wizard it cannot: `onOpenForm` fires and the component resets to a fresh
+conversation, so once the wizard produces a ticket the chat no longer knows which
+conversation the files belong to. Link them from the submit callback, passing the
+same object you were handed:
+
+```jsx
+import AltioraChat, { linkStagedAttachments } from '@flowdesk/chat-v2';
+
+<AltioraChat
+  onOpenForm={(openForm) => openWizard(openForm, async ({ ticketId }) => {
+    await linkStagedAttachments(openForm, ticketId);
+  })}
+/>
+```
+
+`openForm` carries `sessionId` and `stagedAttachments[]` for this. It returns
+`null` when nothing was attached, and is safe to call twice — the server skips
+what it has already linked. Omit it and the documents are retired unlinked after
+48 hours.
+
+> **Do not merge `stagedAttachments` into `prefill.attachments`.** The wizard reads
+> that key, but on create it forwards any entry without file bytes straight into
+> the ticket DTO, where the attachment id collides with the staged row's primary
+> key and the ticket is never created.
+
 ## Notes & limitations
 
 - **SSE auth.** `EventSource` cannot send custom headers, so `getAuthHeaders`

@@ -69,6 +69,94 @@ export async function patchDraft(sessionId, patches) {
 }
 
 /**
+ * DOC-3 — attach a document to the conversation.
+ *
+ * Multipart, and the Content-Type is deliberately NOT set: multipart needs a
+ * boundary, `fetch` derives one from the FormData, and writing the header by
+ * hand loses it, so the server cannot parse a request that looks correct.
+ *
+ * `canExtract` in the reply says whether the assistant can READ the file, which
+ * is not the same as whether the upload worked — Altiora accepts .docx and
+ * .xlsx, which reach the request but which the model cannot open.
+ *
+ * @param {string} sessionId
+ * @param {File|Blob} file
+ * @returns {Promise<{attachmentId, fileName, size, contentType, canExtract}>}
+ */
+export async function uploadFile(sessionId, file, { signal } = {}) {
+  const form = new FormData();
+  form.append('file', file, file.name || 'document');
+
+  let res;
+  try {
+    res = await fetch(url(`/flowdesk/chat/upload?sessionId=${encodeURIComponent(sessionId)}`), {
+      method: 'POST', body: form, signal,
+    });
+  } catch (e) {
+    throw new ChatError('NETWORK', e.message);
+  }
+
+  const data = await res.json().catch(() => ({}));
+  // The server's message is the useful one — it is Altiora's own verdict on the
+  // file ("File content does not match its extension", "Extension '.exe' is not
+  // allowed"), written for whoever chose it.
+  if (!res.ok) throw new ChatError(data.code || 'UPLOAD_FAILED', data.error || `upload HTTP ${res.status}`);
+  return data;
+}
+
+/**
+ * DOC-5 — put the conversation's documents on the request that was just created.
+ *
+ * Called once the form reports the ticket it made. Safe to call more than once:
+ * the server skips anything already linked, so a retry or a double-fire cannot
+ * put the same document on a request twice.
+ *
+ * Answers 200 even when some files failed — the request already exists, so the
+ * per-file `details` is the news, not the status code.
+ *
+ * @returns {Promise<{linked:number, skipped:number, failed:number, details:Array}>}
+ */
+export async function linkAttachments(sessionId, ticketId, { signal } = {}) {
+  let res;
+  try {
+    res = await fetch(url(`/flowdesk/chat/attachments/link?sessionId=${encodeURIComponent(sessionId)}`), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ticketId }),
+      signal,
+    });
+  } catch (e) {
+    throw new ChatError('NETWORK', e.message);
+  }
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ChatError(data.code || 'LINK_FAILED', data.error || `link HTTP ${res.status}`);
+  return data;
+}
+
+/**
+ * DOC-3 — link the documents of a FINISHED conversation onto the ticket it became.
+ *
+ * Separate from `linkAttachments` because a hand-off is terminal: the moment the
+ * form opens, the chat resets to a fresh session with an empty attachment list,
+ * so by the time a ticket exists it no longer knows which conversation staged
+ * the files. This reads the conversation out of the hand-off payload itself, so
+ * the caller never has to hold a sessionId or guess which one was current.
+ *
+ * Returns null when nothing was attached. Safe to call twice — the server skips
+ * what it has already linked.
+ */
+export async function linkStagedAttachments(openForm, ticketId, opts = {}) {
+  const staged = (openForm && openForm.stagedAttachments) || [];
+  if (!staged.length) return null;
+  const sessionId = (openForm && openForm.sessionId)
+    || (staged[0] && staged[0].stagedUnder && staged[0].stagedUnder.ownerId)
+    || null;
+  if (!sessionId || ticketId === undefined || ticketId === null || ticketId === '') return null;
+  return linkAttachments(sessionId, ticketId, opts);
+}
+
+/**
  * POST a chat turn. Returns the final turn result plus the refreshed draft.
  * @returns {Promise<{response, choices, state, executionLog, spawnResult, isComplete, version, draft}>}
  */
@@ -184,5 +272,5 @@ export async function getVoiceTranscript(sessionId) {
   return Array.isArray(data.messages) ? data.messages : [];
 }
 
-export const chatClient = { sendMessage, getDraft, patchDraft, subscribeProgress, getSchema, getVoiceTranscript };
+export const chatClient = { sendMessage, getDraft, patchDraft, subscribeProgress, getSchema, getVoiceTranscript, uploadFile, linkAttachments, linkStagedAttachments };
 export { SSE_EVENTS };

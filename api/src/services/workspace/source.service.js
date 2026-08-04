@@ -218,6 +218,19 @@ class SourceService {
       analysisLog.push({ timestamp: new Date().toISOString(), step: 'TEXT_EXTRACT_ERROR', message: err.message });
     }
 
+    // 1b. Index the text as retrievable chunks (Radix R2.3).
+    // Hooked here rather than at upload because this is where the text first
+    // exists — extracting it a second time would double the cost for a large PDF.
+    // Never throws: search enrichment must not fail source analysis.
+    const chunkResult = await this._indexSourceChunks(workspaceId, source, textContent);
+    analysisLog.push({
+      timestamp: new Date().toISOString(),
+      step: 'CHUNKS_INDEXED',
+      message: chunkResult.skipped
+        ? `Chunk indexing skipped: ${chunkResult.reason}`
+        : `Indexed ${chunkResult.indexed} searchable chunks${chunkResult.truncated ? ' (truncated)' : ''}`
+    });
+
     // 2. Generate summary via LLM
     let summary = '';
     let documentType = 'UNKNOWN';
@@ -474,6 +487,16 @@ ${textContent.substring(0, 3000)}`;
       }
     }
 
+    // Drop this source's indexed chunks (best-effort, non-blocking). Without
+    // this they stay searchable and the assistant keeps citing a document that
+    // no longer exists in the workspace.
+    try {
+      const { deleteSourceChunks } = require('../radix/indexing/source-chunk-indexer');
+      await deleteSourceChunks(require('../qdrant.service'), workspaceId, sourceId);
+    } catch (err) {
+      console.warn(`${LOG_PREFIX} chunk cleanup failed for ${sourceId}: ${err.message}`);
+    }
+
     await mg().runQuery(
       `MATCH (w:WorkSpace {id: $wsId})-[r:HAS_SOURCE]->(s:SourceReference {id: $sourceId})
        OPTIONAL MATCH (d)-[r2:EXTRACTED_FROM]->(s)
@@ -619,6 +642,34 @@ ${textContent.substring(0, 3000)}`;
    * Supports: PDF, DOCX, XLSX/XLS/CSV, TXT/MD/JSON/XML, HTML, code files
    * @private
    */
+  /**
+   * Indexes a source's text as retrievable chunks (Radix).
+   *
+   * Wrapped rather than called inline so a failure here can never propagate:
+   * search enrichment is optional, source analysis is not.
+   *
+   * @param {string} workspaceId
+   * @param {Object} source
+   * @param {string} textContent
+   * @returns {Promise<{indexed: number, skipped: boolean, truncated: boolean, reason?: string}>}
+   * @private
+   */
+  async _indexSourceChunks(workspaceId, source, textContent) {
+    try {
+      const { indexSourceChunks } = require('../radix/indexing/source-chunk-indexer');
+      return await indexSourceChunks({
+        workspaceId,
+        source,
+        text: textContent,
+        qdrantService: require('../qdrant.service'),
+        teiService: require('../tei.service')
+      });
+    } catch (err) {
+      console.warn(`${LOG_PREFIX} Chunk indexing failed for ${source.id}: ${err.message}`);
+      return { indexed: 0, skipped: true, truncated: false, reason: err.message };
+    }
+  }
+
   async _extractText(source) {
     // If text content was provided directly (TEXT source type)
     if (source.textContent && source.textContent.length > 0) {

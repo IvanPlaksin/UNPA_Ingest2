@@ -13,6 +13,7 @@ const express = require('express');
 const multer = require('multer');
 const router = express.Router();
 const controller = require('../controllers/workspace.controller');
+const radixController = require('../controllers/radix.controller');
 const { validate } = require('../middleware/input-validator.middleware');
 const { sanitizeInput } = require('../middleware/sanitizer.middleware');
 const { rateLimit } = require('../middleware/rate-limiter.middleware');
@@ -67,6 +68,12 @@ router.get('/:id/drafts/:draftId/edges',   (req, res, next) => controller.getEdg
 // ==================== EDGES ====================
 
 router.post('/:id/edges',                  (req, res, next) => controller.createEdge(req, res, next));
+
+// ==================== RADIX RETRIEVAL ====================
+// Workspace-scoped hybrid retrieval (vector seed + graph expansion + fusion).
+// Lives in its own controller — the route is workspace-scoped, the subsystem is not.
+
+router.post('/:id/retrieve',               (req, res, next) => radixController.retrieve(req, res, next));
 
 // ==================== KB ACCESS (READ-ONLY) ====================
 

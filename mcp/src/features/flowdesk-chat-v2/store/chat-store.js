@@ -60,7 +60,7 @@ function newSessionId() {
 
 const initialSession = () => ({ id: newSessionId(), serviceId: null, schemaVersion: null, status: 'idle' });
 const initialDraft = () => ({ slots: {}, beneficiary: null, patches: [] });
-const initialUI = () => ({ loading: false, error: null, currentNode: null, composerDisabled: false, draftPanelOpen: true, completed: false, endedKey: null });
+const initialUI = () => ({ loading: false, error: null, currentNode: null, composerDisabled: false, draftPanelOpen: true, completed: false, endedKey: null, uploading: false });
 
 function createChatStore(storeId) {
   // Per-store SSE subscription (kept out of state — not serializable). Closure-
@@ -85,6 +85,10 @@ function createChatStore(storeId) {
     (set, get) => ({
       session: initialSession(),
       messages: [],
+      // DOC-3 — documents attached to this conversation, staged server-side and
+      // waiting to follow the request onto its ticket. Not persisted: the ids
+      // are meaningless without the session they were staged under.
+      attachments: [],
       draft: initialDraft(),
       schema: null, // compiled SchemaSnapshot for the active service (labels/phases/dependsOn)
       user: null, // the current user profile (from the host via props) — identity + greeting
@@ -120,6 +124,68 @@ function createChatStore(storeId) {
           const msg = makeMessage(role, content, metadata);
           set((s) => ({ messages: [...s.messages, msg] }));
           return msg;
+        },
+
+        /**
+         * DOC-3 — attach a document to the conversation.
+         *
+         * The upload is its own step, not a turn: nothing is sent to the model
+         * here. The assistant reads the file only when the conversation reaches
+         * a point where reading it helps, which needs a chosen service — so a
+         * file attached before that is staged and waits, and saying "attached"
+         * is the whole of the feedback the user gets now.
+         *
+         * `canExtract` comes back from the server and is NOT the same as "the
+         * upload worked": Altiora accepts .docx and .xlsx, which travel with the
+         * request but which the assistant cannot open. The message says which
+         * happened, so nobody is left expecting the contents to be understood.
+         */
+        uploadAttachment: async (file, { signal } = {}) => {
+          const { actions } = get();
+          const sessionId = get().session.id;
+          if (!file || !sessionId || get().ui.uploading) return null;
+
+          set((s) => ({ ui: { ...s.ui, uploading: true, error: null } }));
+          try {
+            const record = await chatClient.uploadFile(sessionId, file, { signal });
+            set((s) => ({ attachments: [...(s.attachments || []).filter((a) => a.attachmentId !== record.attachmentId), record] }));
+            actions.addMessage('system', fdv2i18n.t(
+              record.canExtract ? 'upload.attachedReadable' : 'upload.attached',
+              { fileName: record.fileName },
+            ), { attachment: record });
+            return record;
+          } catch (e) {
+            // The server's text is Altiora's own verdict on the file and is
+            // meant for the person who chose it; only a bare network failure
+            // gets a generic line.
+            const message = e.code === 'NETWORK' ? fdv2i18n.t('upload.failed') : e.message;
+            actions.setError({ code: e.code, message });
+            actions.addMessage('system', `⚠️ ${message}`);
+            return null;
+          } finally {
+            set((s) => ({ ui: { ...s.ui, uploading: false } }));
+          }
+        },
+
+        /**
+         * DOC-5 — the documents follow the request onto its ticket.
+         *
+         * Called once the form reports what it created. Deliberately quiet: the
+         * request is already submitted, so a failure here is not the user's
+         * problem to solve mid-flow — it is logged, the server keeps the staged
+         * copies, and nothing about the submission is undone.
+         */
+        linkAttachments: async (ticketId) => {
+          const sessionId = get().session.id;
+          if (!ticketId || !sessionId) return null;
+          if (!(get().attachments || []).length) return null;
+          try {
+            return await chatClient.linkAttachments(sessionId, ticketId);
+          } catch (e) {
+            // eslint-disable-next-line no-console
+            console.warn('[fdv2] attaching the documents to the request failed:', e.message);
+            return null;
+          }
         },
 
         /** Send a turn: optimistic user message → SSE progress + POST → assistant
@@ -237,6 +303,7 @@ function createChatStore(storeId) {
           set(() => ({
             session: { ...initialSession(), serviceId },
             messages: [],
+            attachments: [],
             draft: initialDraft(),
             schema: null,
             ui: initialUI(),
@@ -246,7 +313,7 @@ function createChatStore(storeId) {
 
         resetSession: () => {
           stopProgress();
-          set(() => ({ session: initialSession(), messages: [], draft: initialDraft(), schema: null, ui: initialUI() }));
+          set(() => ({ session: initialSession(), messages: [], attachments: [], draft: initialDraft(), schema: null, ui: initialUI() }));
           get().actions.seedGreeting();
         },
 

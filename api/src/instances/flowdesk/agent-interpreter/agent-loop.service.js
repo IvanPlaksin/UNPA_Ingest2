@@ -25,6 +25,7 @@
  */
 
 const { createAgentTools, createToolSession, TOOL_SCHEMAS } = require('./agent-tools');
+const { knowledgeBrief } = require('./knowledge-context.service');
 const { ui } = require('../interpreter/templates/ui-strings');
 
 const MAX_TOOL_ITERATIONS = 8;
@@ -269,11 +270,18 @@ function createAgentLoop(deps = {}) {
     // not as words the user said, and it is NOT kept in history: only what is
     // true NOW should steer the next question.
     const brief = typeof tools.turnBrief === 'function' ? await tools.turnBrief(ctx, p.userMessage) : null;
+
+    // Workspace knowledge for what the user just said. Rides with the turn like
+    // the brief does, for the same reason — and like the brief, it is deliberately
+    // absent from `history` below: background retrieved for THIS message must not
+    // accumulate and steer later ones. Returns null when not configured, when the
+    // message is too short to retrieve on, or on any failure.
+    const knowledge = await knowledgeBrief(p.userMessage, { controlAction: p.controlAction });
+
+    const asides = [brief, knowledge && knowledge.text].filter(Boolean);
     const messages = [
       ...(p.history || []),
-      { role: 'user', content: brief ? `${userTurnText}
-
-${brief}` : userTurnText },
+      { role: 'user', content: asides.length ? `${userTurnText}\n\n${asides.join('\n\n')}` : userTurnText },
     ];
 
     // Stable part first, varying part second: the provider caches up to and
@@ -479,6 +487,13 @@ ${brief}` : userTurnText },
         // context has to be recorded too — otherwise attribution can name the version
         // and still not explain what the model was given.
         promptContext,
+        // Whether workspace knowledge reached the model on THIS turn, and what it
+        // cost. Recorded rather than inferred: a pre-fetch that quietly stops
+        // firing looks exactly like one that fires and finds nothing, and this
+        // project has shipped that confusion often enough to stop guessing.
+        knowledgeUsed: Boolean(knowledge),
+        knowledgeElements: knowledge ? knowledge.elements : 0,
+        knowledgeMs: knowledge ? knowledge.ms : 0,
       },
       // History for the next turn: the user's message and the final reply only.
       // Tool traffic stays out — replaying it would grow the context without

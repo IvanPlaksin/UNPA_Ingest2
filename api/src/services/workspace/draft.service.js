@@ -159,6 +159,10 @@ class DraftService {
 
     // Qdrant indexing is now handled by unified pipeline step 08 (embed-and-index)
     // to avoid double-indexing and ensure consistent payload format.
+    // Radix sync additionally covers drafts created OUTSIDE that pipeline —
+    // by the agent, the canvas, or the REST API — which the pipeline never sees.
+    // Upserts are keyed by draft id, so the two paths converge rather than clash.
+    this._emitSync('draft.created', workspaceId, params.id);
 
     const draft = this._buildDraftObject(params);
     console.log(`${LOG_PREFIX} Created ${label} "${name}" in workspace ${workspaceId}`);
@@ -290,7 +294,11 @@ class DraftService {
       throw new Error(`Failed to update draft ${draftId}`);
     }
 
-    // Qdrant re-indexing on update is handled externally (unified pipeline or manual re-extract)
+    // Re-index through Radix sync. This is the case that actually went stale:
+    // an edited or re-statused draft kept its ORIGINAL embedding and payload, so
+    // it stayed findable by its old name and a REJECTED draft kept looking
+    // acceptable to the status filter.
+    this._emitSync('draft.updated', workspaceId, draftId);
 
     return this._recordToDraft(result[0]);
   }
@@ -318,6 +326,31 @@ class DraftService {
       await qdrant().workspaceDeletePoints(workspaceId, [draftId]);
     } catch (err) {
       console.warn(`${LOG_PREFIX} Qdrant delete deferred for ${draftId}: ${err.message}`);
+      // The direct delete failed, so hand it to sync: it retries, and its
+      // handler removes the point for a draft that is no longer in the graph.
+      this._emitSync('draft.deleted', workspaceId, draftId);
+    }
+  }
+
+  /**
+   * Notifies Radix that a draft changed, so the vector index can follow.
+   *
+   * Deliberately NOT awaited: the graph write is the source of truth and must
+   * not wait on, or be failed by, a derived index. Errors are swallowed inside
+   * the producer and logged there.
+   *
+   * @param {string} type - One of SYNC_EVENTS
+   * @param {string} workspaceId
+   * @param {string} draftId
+   * @private
+   */
+  _emitSync(type, workspaceId, draftId) {
+    if (!draftId) return;
+    try {
+      const { emitSyncEvent } = require('../radix/sync/sync-producer');
+      emitSyncEvent({ type, workspaceId, draftId }).catch(() => { /* logged in producer */ });
+    } catch (err) {
+      console.warn(`${LOG_PREFIX} Radix sync emit failed for ${draftId}: ${err.message}`);
     }
   }
 

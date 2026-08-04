@@ -253,6 +253,12 @@ try {
   const decayWorker = require('./src/workers/confidence-decay.worker');
   decayWorker.initialize().catch(() => {});
 } catch (err) { console.warn('[DecayWorker] Init skipped:', err.message); }
+try {
+  // Keeps the Radix vector index in step with draft changes in the graph.
+  // If it does not start, the producer applies events inline instead — slower,
+  // but the index never silently diverges.
+  require('./src/services/radix/sync/sync-worker').startSyncWorker();
+} catch (err) { console.warn('[RadixSync] Worker init skipped:', err.message); }
 app.use('/api/v1/metrics', require('./src/routes/metrics.route'));
 app.use('/api/v1/metacognition', metacognitionRoutes);
 app.use('/api/v1/workspaces', workspaceRoutes);

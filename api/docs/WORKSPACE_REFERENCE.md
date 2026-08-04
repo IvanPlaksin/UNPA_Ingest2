@@ -7,6 +7,50 @@
 
 ---
 
+## ⚠️ Required setup on every new database
+
+```bash
+node api/scripts/create-workspace-indexes.js
+```
+
+Every workspace service opens with `MATCH (w:WorkSpace {id: $wsId})`. Without an
+index on `:WorkSpace(id)` — and on `id` for each draft label — that plans as a
+full scan of the entire graph, so workspace operations get slower as *unrelated*
+data grows.
+
+Measured on a real workspace: retrieval P95 of **681 ms without the indexes vs
+201 ms with them**, and cold start 3398 ms vs 830 ms, with no application code
+changed between runs.
+
+This is a silent degradation — nothing errors, nothing is logged, the system is
+simply several times slower. Run the script once per database, including on CI
+and on every freshly provisioned environment. It is idempotent. See
+[KNOWN_ISSUES.md](KNOWN_ISSUES.md) for the query plan and the full measurement.
+
+## Optional: backfill source-text chunks
+
+```bash
+node api/scripts/backfill-source-chunks.js --all
+```
+
+Sources uploaded before Radix R2.3 had their text extracted but never indexed
+for retrieval, so only the drafts an extractor produced from them are findable.
+This indexes their text. New uploads are chunked automatically during
+`analyzeSource`, so this is a one-off catch-up.
+
+**Limitation worth knowing before you deploy.** It only works for sources that
+still have retrievable text — either the original file at `storagePath`, or
+`textContent` for `TEXT` sources. A file source whose upload no longer exists on
+disk cannot be backfilled: the drafts extracted from it survive in the graph,
+but the text itself is gone.
+
+In a containerized deployment without a persistent volume for uploads, that
+means chunks will exist only for sources uploaded **after** the deployment. If
+source text should stay searchable across deployments, the upload directory
+needs to be a persistent volume.
+
+---
+
 ## 0. The Problem: Extracting Trustworthy Knowledge from Legacy Documents
 
 ### 0.1 Why we need a knowledge extraction subsystem at all

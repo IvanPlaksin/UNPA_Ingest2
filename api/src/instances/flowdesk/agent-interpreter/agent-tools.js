@@ -334,6 +334,28 @@ const TOOL_SCHEMAS = [
     input_schema: { type: 'object', properties: {} },
   },
   {
+    name: 'extract_from_document',
+    // The description carries the ORDER as well as the trigger, because the
+    // failure this guards against is the model reading a document and writing
+    // the values straight into the draft. A value read off a scan is a
+    // suggestion; only the user can turn it into an answer.
+    description: 'Read the documents the user attached and pull out values for the fields of the request in hand. '
+      + 'Use it when they have attached something and say to use it, or when a document is attached and you are about to start asking fields. '
+      + 'A service must already be chosen — the fields to look for come from its form, so if there is no draft yet, resolve the service first and call this after. '
+      + 'What comes back is PROPOSED, never recorded: say what was found and how confident it is, attach a confirm control with emit_control, '
+      + 'and only once the user agrees record it with draft_update. Never present a proposed value as though it were already filled in.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        attachmentIds: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Which attachments to read. Omit to read every attached document the assistant can open.',
+        },
+      },
+    },
+  },
+  {
     name: 'emit_control',
     description: 'REQUIRED whenever your reply asks the user to pick, confirm, or supply a value: attaches the interactive control they click. A question that lists options only as prose cannot be clicked and is unusable on the voice channel. Call this in the SAME turn as the sentence that explains the choice. Use target:"field" for a form field — the field due now is chosen for you and you never name it.',
     input_schema: {
@@ -430,6 +452,14 @@ function createAgentTools(deps = {}) {
     const { getAltioraSchemaClient } = require('../services/altiora-schema-client');
     return getAltioraSchemaClient().getLovValues(req);
   });
+  // DOC-2-002 — resolved lazily, like ticketList/tasksBackend: the attachment
+  // store reaches for Redis on construction, and a test that injects its own
+  // should never pay for that.
+  const attachmentsStore = () => (deps.attachmentsStore
+    || require('../services/chat-attachments.store').getChatAttachmentsStore());
+  const extraction = () => (deps.extraction || require('../services/document-extraction.service'));
+  const altioraClient = () => (deps.altioraClient || require('../services/altiora-client').getAltioraClient());
+  const actingToken = () => (deps.getActingToken || require('../services/acting-user.context').getActingToken)();
   // Same loader the sandbox and the state machine use, so both architectures see
   // identical forms (schema-orchestrator exposes a factory, not a bare function).
   let _loader = null;
@@ -1378,15 +1408,67 @@ function createAgentTools(deps = {}) {
       hydration = await buildFormHydration(draft, snapshot, { fetchLovValues });
     } catch { /* the form resolves everything itself, as it did before */ }
 
+    // DOC-4-001 — the documents travel with the hand-off, BESIDE the prefill.
+    //
+    // Collected here rather than inside `draftToInitialFormData`, which is a pure
+    // function by design and tested without the engine (see its module header).
+    //
+    // EVERY attachment goes, including ones extraction could not read. A `.docx`
+    // is `skipped` because the MODEL cannot open it, not because the user did not
+    // mean to attach it — dropping those would lose exactly the supporting
+    // documents a request most often needs.
+    //
+    // THEY ARE **NOT** PUT IN `prefill.attachments`, AND THAT IS THE WHOLE POINT.
+    //
+    // The wizard reads `initialFormData.attachments`, so that key looks like the
+    // obvious home for them — but it is a trap. `request-service.createTicket`
+    // passes any entry WITHOUT a `fileObj` through verbatim into the create DTO
+    // (`return a`), the controller then calls `AttachmentRepository.CreateAsync`,
+    // and that is an unconditional `INSERT … AttachmentId` against a table whose
+    // PRIMARY KEY is AttachmentId (Database/01_Tables/50_FileAttachments.sql:9).
+    // Our id already exists — it is the staged row — so the insert violates the
+    // key and the whole ticket creation fails. `size` would not bind to
+    // `FileSize` either, tripping CK_FileAttachments_FileSize (FileSize > 0).
+    // Putting them under `attachments` therefore does not attach the files: it
+    // stops the user submitting at all.
+    //
+    // `Attachments/{kind}/{owner}/link/{sourceId}` is the supported way to put an
+    // existing file on a new owner — it COPIES the bytes under a fresh id, so no
+    // key collides and nothing travels through the turn payload. That call needs
+    // a ticket id, which only exists after submit, so the list is published here
+    // for whoever performs it and is deliberately kept out of the form's own data.
+    let stagedAttachments = [];
+    try {
+      stagedAttachments = (await attachmentsStore().getAttachments(ctx.sessionId)).map((a) => ({
+        attachmentId: a.attachmentId,
+        fileName: a.fileName,
+        contentType: a.contentType,
+        size: a.size,
+        stagedUnder: { kind: 'Chat', ownerId: ctx.sessionId },
+      }));
+    } catch { /* the hand-off is worth more than the attachment list */ }
+
     ctx.session.openForm = {
+      // The conversation the staged documents belong to.
+      //
+      // Carried because THE CHAT CANNOT LINK THEM ITSELF on this path. A hand-off
+      // is terminal: the host opens the wizard and the component resets to a new
+      // session, so by the time a ticket exists the chat holds a different
+      // sessionId and an empty attachment list. Whoever submits the form is the
+      // only party that will ever hold both the ticket id and this id at once,
+      // so the payload has to be sufficient on its own — present even when
+      // nothing is attached, so the host never has to dig it out of an entry.
+      sessionId: ctx.sessionId,
       serviceId: snapshot.serviceId,
       ousId: snapshot.metadata && snapshot.metadata.altioraOusId,
       prefill: draftToInitialFormData(draft, snapshot),
+      ...(stagedAttachments.length ? { stagedAttachments } : {}),
       ...(hydration ? { dictionary: hydration } : {}),
     };
     return {
       ok: true,
-      tellUser: 'The form is opening with everything collected so far filled in. '
+      tellUser: 'The form is opening with everything collected so far filled in'
+        + (stagedAttachments.length ? ', and the documents they attached stay with the request' : '') + '. '
         + 'This turn ENDS the conversation: say what was handed over, say that assisted filling ends here, and STOP. '
         + 'Do not ask a question, offer a field, or invite a reply — there is no one left to answer to.',
     };
@@ -1867,7 +1949,172 @@ function createAgentTools(deps = {}) {
     return undefined;
   }
 
-  const TOOLS = { catalog_search, kb_search, describe_capabilities, list_requests, list_tasks, draft_create, draft_update, draft_submit, escalation_create, emit_control, open_form };
+  /**
+   * DOC-2-002 — read the attached documents into proposed field values.
+   *
+   * Two things this deliberately does NOT do.
+   *
+   * It does not write to the draft. `draft_update` exists, the user's agreement
+   * is what authorises it, and routing a document around that gate would make
+   * the one irreversible thing in the flow — a value the user never said —
+   * happen without them. The tool returns a proposal and an instruction to ask.
+   *
+   * It does not work without a chosen service. The fields to look for ARE the
+   * form's fields; with no form there is nothing to extract INTO, and the
+   * alternative — pulling out "a name, a place, a date" and mapping them later —
+   * is a second mapping mechanism beside the schema. Ratified: ask for the
+   * service first, extract after.
+   */
+  async function extract_from_document(input, ctx) {
+    const { schemaKey } = extraction();
+
+    const draft = await draftService.get(ctx.sessionId).catch(() => null);
+    if (!draft || !draft.serviceId) {
+      return err('there is no request in hand yet, so there are no fields to read the document into', {
+        tellUser: 'Tell the user you can read their document once you know what they are requesting, and ask what they need. Do not call this again until a draft exists.',
+      });
+    }
+
+    const snapshot = await loadSnapshot(draft.serviceId);
+    if (!snapshot) return err('the form for this request could not be loaded');
+
+    const token = actingToken();
+    if (!token) {
+      return err('the acting user is not available, so the attached files cannot be opened', {
+        tellUser: 'Tell the user their session has expired and they should reload the page.',
+      });
+    }
+
+    const store = attachmentsStore();
+    const readable = await store.getExtractable(ctx.sessionId);
+    if (!readable.length) {
+      return err('nothing readable is attached to this conversation', {
+        tellUser: 'Tell the user there is no document you can read yet, and that a PDF or a photo of the document works.',
+      });
+    }
+
+    const wanted = Array.isArray(input.attachmentIds) && input.attachmentIds.length
+      ? readable.filter((a) => input.attachmentIds.includes(a.attachmentId))
+      : readable;
+    if (!wanted.length) return err('those attachments are not on this conversation, or cannot be read');
+
+    const key = schemaKey(snapshot);
+    const results = [];
+    const failures = [];
+
+    for (const att of wanted) {
+      // Re-reading the same document against the same form costs a model call
+      // and can return a different answer — so the stored result wins until the
+      // FORM changes, which is what makes the answer different for real.
+      if (att.extractionStatus === 'done' && att.extractedForSchema === key && att.extractedData) {
+        results.push({ fileName: att.fileName, cached: true, ...att.extractedData });
+        continue;
+      }
+
+      try {
+        const bytes = await altioraClient().downloadAttachment(token, att.attachmentId);
+        const out = await extraction().extractFromDocument(bytes, att.fileName, att.contentType, snapshot);
+
+        await store.updateAttachment(ctx.sessionId, att.attachmentId, {
+          extractionStatus: store.STATUS.DONE,
+          extractedData: { extracted: out.extracted, confidence: out.confidence, rejected: out.rejected },
+          extractedForSchema: key,
+          extractedAt: Date.now(),
+          extractionError: null,
+        });
+        results.push({ fileName: att.fileName, cached: false, ...out });
+      } catch (e) {
+        // One unreadable document must not lose the others: a user who attaches
+        // a good scan and a broken one should still get the good one's values.
+        await store.updateAttachment(ctx.sessionId, att.attachmentId, {
+          extractionStatus: store.STATUS.FAILED,
+          extractionError: e.message,
+          extractedAt: Date.now(),
+        }).catch(() => {});
+        // Read the code off the error rather than testing `instanceof
+        // ExtractionError`: an identity check only holds while both sides came
+        // from the same module registry, and the codes are the contract here.
+        failures.push({
+          fileName: att.fileName,
+          code: (typeof e.code === 'string' && e.code) || 'EXTRACTION_FAILED',
+          message: e.message,
+        });
+      }
+    }
+
+    if (!results.length) {
+      return err('none of the attached documents could be read', {
+        failures,
+        tellUser: 'Tell the user what went wrong with each document, using the message given for it, and carry on asking the fields yourself.',
+      });
+    }
+
+    const merged = mergeExtractions(results);
+    const found = Object.keys(merged.extracted).length;
+
+    return {
+      ok: true,
+      extracted: merged.extracted,
+      confidence: merged.confidence,
+      ...(merged.conflicts.length ? { conflicts: merged.conflicts } : {}),
+      ...(merged.rejected.length ? { rejected: merged.rejected } : {}),
+      sources: results.map((r) => r.fileName),
+      ...(failures.length ? { failures } : {}),
+      tellUser: found
+        ? 'These values are PROPOSED, not recorded. Say what was found and from which document, flag anything marked low confidence '
+          + 'or listed under conflicts as needing a check, then attach a confirm control with emit_control. '
+          + 'Record them with draft_update only after the user agrees. Do not describe any of it as already filled in.'
+        : 'The document did not contain any of the fields this request needs. Say so plainly and carry on asking the user directly.',
+    };
+  }
+
+  /**
+   * Several documents, one set of values.
+   *
+   * Higher confidence wins; on a tie the later document wins, because when a
+   * user attaches a correction after the original the second one is the one
+   * they mean. A disagreement between two documents is REPORTED rather than
+   * silently resolved — quietly picking one of two contradictory beneficiaries
+   * is how a wrong value reaches a confirm control looking exactly like a right
+   * one.
+   */
+  function mergeExtractions(results) {
+    const rank = { high: 3, medium: 2, low: 1 };
+    const extracted = {};
+    const confidence = {};
+    const source = {};
+    const conflicts = [];
+    const rejected = [];
+
+    for (const r of results) {
+      for (const [slotId, value] of Object.entries(r.extracted || {})) {
+        const c = (r.confidence && r.confidence[slotId]) || 'medium';
+        const held = Object.prototype.hasOwnProperty.call(extracted, slotId);
+
+        if (held && JSON.stringify(extracted[slotId]) !== JSON.stringify(value)) {
+          conflicts.push({
+            slotId,
+            kept: rank[c] >= rank[confidence[slotId]] ? value : extracted[slotId],
+            alternatives: [
+              { value: extracted[slotId], fileName: source[slotId], confidence: confidence[slotId] },
+              { value, fileName: r.fileName, confidence: c },
+            ],
+          });
+        }
+
+        if (!held || rank[c] >= rank[confidence[slotId]]) {
+          extracted[slotId] = value;
+          confidence[slotId] = c;
+          source[slotId] = r.fileName;
+        }
+      }
+      for (const rej of r.rejected || []) rejected.push({ fileName: r.fileName, ...rej });
+    }
+
+    return { extracted, confidence, source, conflicts, rejected };
+  }
+
+  const TOOLS = { catalog_search, kb_search, describe_capabilities, list_requests, list_tasks, draft_create, draft_update, draft_submit, escalation_create, emit_control, open_form, extract_from_document };
 
   /**
    * Execute one tool call. Never throws — an unexpected failure comes back as a
@@ -1899,7 +2146,7 @@ function createAgentTools(deps = {}) {
   }
 
   return { execute, TOOLS, TOOL_SCHEMAS, createToolSession, CONTROL_TYPES, autoControlFor, recordSkip, missingRequired, turnBrief, recordPreDraftAnswer, recordControlAnswer, recordTypedAnswer, resolveForControl, prefetchCatalog, loadSnapshot,
-    beginTurn, currentDraft };
+    beginTurn, currentDraft, mergeExtractions };
 }
 
 module.exports = { createAgentTools, createToolSession, TOOL_SCHEMAS, CONTROL_TYPES };

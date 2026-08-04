@@ -1,7 +1,7 @@
 /**
  * WorkSpace MCP Tools
  *
- * 19 tools for agent interaction with WorkSpace system.
+ * 20 tools for agent interaction with WorkSpace system.
  * Enables isolated knowledge extraction with read-only KB access.
  *
  * Categories:
@@ -11,8 +11,9 @@
  * - KB Access: kb_search, kb_get_node, kb_get_neighbors (3)
  * - Edges: create_edge, get_edges (2)
  * - Analysis: validate_graph, detect_contradictions, analyze_sources (3)
+ * - Retrieval: retrieve (1)
  *
- * Total: 19 tools
+ * Total: 20 tools
  */
 
 const { CreateWorkspaceTool } = require('./CreateWorkspaceTool');
@@ -34,6 +35,7 @@ const { GetEdgesTool } = require('./GetEdgesTool');
 const { ValidateGraphTool } = require('./ValidateGraphTool');
 const { DetectContradictionsTool } = require('./DetectContradictionsTool');
 const { AnalyzeSourcesTool } = require('./AnalyzeSourcesTool');
+const { RetrieveContextTool } = require('./RetrieveContextTool');
 
 function createWorkspaceTools() {
   return [
@@ -61,7 +63,9 @@ function createWorkspaceTools() {
     // Analysis (WS2-007)
     new ValidateGraphTool(),
     new DetectContradictionsTool(),
-    new AnalyzeSourcesTool()
+    new AnalyzeSourcesTool(),
+    // Retrieval (Radix R1.5)
+    new RetrieveContextTool()
   ];
 }
 
@@ -85,5 +89,6 @@ module.exports = {
   ValidateGraphTool,
   DetectContradictionsTool,
   AnalyzeSourcesTool,
+  RetrieveContextTool,
   createWorkspaceTools
 };

@@ -855,6 +855,210 @@ async function getLaptopSession(req, res) {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// DOC-1-002 — chat file upload
+// ═══════════════════════════════════════════════════════════════════
+
+/** Coarse guard only — Altiora owns the real per-extension limits. */
+const UPLOAD_MAX_BYTES = 10 * 1024 * 1024;
+
+/**
+ * Multipart parsing for the upload route, with multer's own failures turned
+ * into JSON.
+ *
+ * Left to itself, multer rejects an oversized file by calling `next(err)`, and
+ * Express's default handler answers with an HTML error page and a 500 — to a
+ * fetch() expecting JSON that is indistinguishable from the server falling
+ * over, for the entirely ordinary case of a file that is too big. So the error
+ * is caught here and given the status it deserves: 413 for size, 400 for the
+ * rest.
+ */
+function uploadChatFileMiddleware(req, res, next) {
+  const multer = require('multer');
+  const parse = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: UPLOAD_MAX_BYTES, files: 1 },
+  }).single('file');
+
+  parse(req, res, (err) => {
+    if (!err) return next();
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({
+        error: `File is too large. Maximum is ${Math.round(UPLOAD_MAX_BYTES / (1024 * 1024))} MB.`,
+        code: 'FILE_TOO_LARGE',
+      });
+    }
+    return res.status(400).json({ error: `Upload could not be read: ${err.message}`, code: 'BAD_UPLOAD' });
+  });
+}
+
+/**
+ * POST /api/v1/flowdesk/chat/upload?sessionId=...  (multipart, field `file`)
+ *
+ * Stages a user's document in Altiora under `Chat/{sessionId}` and indexes it
+ * against the conversation. Two deliberate properties:
+ *
+ * FAIL-CLOSED ON IDENTITY. The rest of the chat falls back to the service
+ * account when reached outside Altiora's proxy; this route does not. A file
+ * carries personal data, is written into an external system, and is stamped
+ * with `UploadedBy` there — uploading it as "the service account" would put an
+ * unattributable document into a UN ticketing system. No acting user, no
+ * upload.
+ *
+ * THE UPLOAD IS THE AUTHORITY, NOT US. Extension allow-list, magic-number
+ * check, unsafe-SVG and PDF-with-JavaScript rejection all live in Altiora and
+ * run on this path. We do not pre-judge the file; we relay Altiora's verdict,
+ * because a second copy of those rules here would be a copy that drifts.
+ */
+async function uploadChatFile(req, res) {
+  const { sessionId } = req.query;
+  const file = req.file;
+  const user = req.flowdeskUser || {};
+
+  if (!sessionId) return res.status(400).json({ error: 'sessionId query parameter is required', code: 'NO_SESSION' });
+  if (!file) return res.status(400).json({ error: 'No file provided', code: 'NO_FILE' });
+
+  // THE TOKEN COMES OFF THE REQUEST, NOT OUT OF THE ACTING-USER CONTEXT.
+  //
+  // Everywhere else in the chat, `getActingToken()` is the way to get it: the
+  // middleware opens an AsyncLocalStorage scope and every downstream await
+  // stays inside it. That breaks here, and silently. AsyncLocalStorage follows
+  // async continuations, but an EventEmitter listener runs in the emitter's
+  // context, not the one it was registered in — and multer parses the body off
+  // the request stream's events. Measured: with multer in front of a handler,
+  // `getActingToken()` returns null while the identical handler without it
+  // returns the token. The route would have refused every upload with 401.
+  //
+  // `req.flowdeskUser` is a property of the request object and survives that
+  // crossing, so it is the primary source; the context is kept as a fallback
+  // for any caller that reaches this handler another way.
+  const { getActingToken } = require('../services/acting-user.context');
+  const actingToken = user.token || getActingToken();
+  if (!actingToken) {
+    return res.status(401).json({
+      error: 'Sign-in is required before attaching a file.',
+      code: 'NO_ACTING_USER',
+    });
+  }
+
+  const { getAltioraClient, AltioraValidationError, AltioraAuthError, AltioraUnavailableError } =
+    require('../services/altiora-client');
+  const { getChatAttachmentsStore } = require('../services/chat-attachments.store');
+  const { recordAction } = require('../services/chat-action-log.service');
+
+  const audit = (status, extra) => recordAction({
+    sessionId,
+    userId: user.userId || null,
+    userEmail: user.email || null,
+    orgCode: (user.orgUnit && user.orgUnit.code) || null,
+    actionType: 'UPLOAD_FILE',
+    actionParams: { fileName: file.originalname, size: file.size, contentType: file.mimetype },
+    targetLabel: 'Attachment',
+    status,
+    motivation: 'User attached a document to the chat so its contents can fill the request.',
+    ...extra,
+  }).catch(() => { /* audit must never break the upload */ });
+
+  try {
+    const uploaded = await getAltioraClient().uploadAttachment(actingToken, {
+      kind: 'Chat',
+      ownerId: sessionId,
+      file: file.buffer,
+      fileName: file.originalname,
+      contentType: file.mimetype,
+      notes: 'Attached via the AI assistant',
+    });
+
+    // Altiora serialises FileAttachment camelCase, but its own frontend reads
+    // both spellings — so do we, rather than trusting one and storing undefined.
+    const attachmentId = uploaded && (uploaded.attachmentId || uploaded.AttachmentId);
+    if (!attachmentId) throw new Error('Altiora accepted the file but returned no attachment id');
+
+    // `canExtract` comes from the store, which derives it from the types the
+    // MODEL can read. Altiora's allow-list is wider (.docx, .xlsx, .svg), so
+    // "uploaded successfully" and "the assistant can read it" are not the same
+    // answer, and only one of them is ours to give.
+    const record = await getChatAttachmentsStore().addAttachment(sessionId, {
+      attachmentId,
+      fileName: file.originalname,
+      contentType: file.mimetype,
+      size: file.size,
+    });
+
+    await audit('EXECUTED', { targetId: attachmentId, result: { canExtract: record.canExtract } });
+
+    return res.json({
+      attachmentId: record.attachmentId,
+      fileName: record.fileName,
+      size: record.size,
+      contentType: record.contentType,
+      canExtract: record.canExtract,
+    });
+  } catch (err) {
+    await audit('FAILED', { error: err.message });
+
+    // Altiora's own rejection is the useful message — "File content does not
+    // match its extension", "Extension '.exe' is not allowed" — and it is meant
+    // for the person who chose the file. Passing it through is the point of
+    // having taken the validated route.
+    if (err instanceof AltioraValidationError) {
+      return res.status(400).json({ error: err.body?.message || err.message, code: 'REJECTED_BY_ALTIORA' });
+    }
+    if (err instanceof AltioraAuthError) {
+      return res.status(401).json({ error: 'Your session has expired. Please reload and try again.', code: 'AUTH_FAILED' });
+    }
+    if (err instanceof AltioraUnavailableError) {
+      return res.status(503).json({ error: 'The document service is unavailable. Please try again.', code: 'UPSTREAM_UNAVAILABLE' });
+    }
+
+    console.error('[FlowDesk] uploadChatFile error:', err.message);
+    return res.status(500).json({ error: 'The file could not be attached.', code: 'INTERNAL_ERROR' });
+  }
+}
+
+/**
+ * POST /api/v1/flowdesk/chat/attachments/link?sessionId=...  { ticketId }
+ *
+ * Called once the wizard reports the ticket it created. Everything staged in
+ * this conversation is copied onto that ticket — see attachment-link.service
+ * for why this is a step of its own rather than a field in the hand-off.
+ *
+ * Answers 200 even when some files failed. The request is already submitted by
+ * the time this runs, so the outcome is per-file news, not a verdict on the
+ * call: the caller gets counts and a per-file status and can tell the user which
+ * document did not make it, rather than being handed a failure for the whole
+ * batch when four of five worked.
+ */
+async function linkSessionAttachments(req, res) {
+  const { sessionId } = req.query;
+  const { ticketId } = req.body || {};
+  const user = req.flowdeskUser || {};
+
+  if (!sessionId) return res.status(400).json({ error: 'sessionId query parameter is required', code: 'NO_SESSION' });
+  if (ticketId === undefined || ticketId === null || ticketId === '') {
+    return res.status(400).json({ error: 'ticketId is required', code: 'NO_TICKET' });
+  }
+
+  const { getActingToken } = require('../services/acting-user.context');
+  const actingToken = user.token || getActingToken();
+  if (!actingToken) {
+    return res.status(401).json({ error: 'Sign-in is required before attaching files to a request.', code: 'NO_ACTING_USER' });
+  }
+
+  try {
+    const { linkSessionAttachments: link } = require('../services/attachment-link.service');
+    const out = await link(sessionId, ticketId, actingToken, {
+      userId: user.userId || null,
+      userEmail: user.email || null,
+      orgCode: (user.orgUnit && user.orgUnit.code) || null,
+    });
+    return res.json(out);
+  } catch (err) {
+    console.error('[FlowDesk] linkSessionAttachments error:', err.message);
+    return res.status(500).json({ error: 'The attached files could not be added to the request.', code: 'LINK_FAILED' });
+  }
+}
+
 module.exports = {
   classify, route, getUserContext, getServices, getServiceByCode, health,
   createRequest, getRequest, chat, getChatSession, getGraphVersions,
@@ -863,4 +1067,6 @@ module.exports = {
   laptopChat, getLaptopSession,
   createDraft, getDraft, patchDraft, submitDraft, escalateDraft, streamChat, getSchema,
   directoryTypeahead,
+  uploadChatFile, uploadChatFileMiddleware, UPLOAD_MAX_BYTES,
+  linkSessionAttachments,
 };

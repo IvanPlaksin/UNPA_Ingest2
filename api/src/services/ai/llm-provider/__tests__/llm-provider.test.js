@@ -159,3 +159,109 @@ describe('C0: AnthropicAPIProvider (injected client)', () => {
     if (prev !== undefined) process.env.ANTHROPIC_API_KEY = prev;
   });
 });
+
+/**
+ * DOC-0-001 — the turn that can carry a file.
+ *
+ * The assertions worth having are about the REQUEST, not the reply: a document
+ * that arrives after the question, or as a `system` block, still returns text,
+ * so a test that only checks the answer passes while extraction quietly gets
+ * worse. Each case below captures what was sent and asserts on that.
+ */
+describe('DOC-0-001: AnthropicAPIProvider.completionWithContent', () => {
+  /** Captures the request so the test can assert on what the API was asked. */
+  const mkSpy = (content = [{ type: 'text', text: 'ok' }], usage = { input_tokens: 5, output_tokens: 2 }) => {
+    const sent = [];
+    return {
+      sent,
+      client: { messages: { create: async (params) => { sent.push(params); return { content, usage }; } } },
+    };
+  };
+
+  const PDF_BLOCK = {
+    type: 'document',
+    source: { type: 'base64', media_type: 'application/pdf', data: 'JVBERi0=' },
+  };
+  const ASK = { type: 'text', text: 'Extract the beneficiary.' };
+
+  test('sends the blocks verbatim as ONE user turn', async () => {
+    const { sent, client } = mkSpy();
+    const p = new AnthropicAPIProvider({ client });
+    await p.completionWithContent([PDF_BLOCK, ASK]);
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0].messages).toEqual([{ role: 'user', content: [PDF_BLOCK, ASK] }]);
+  });
+
+  test('preserves block order — the document reaches the model before the question', async () => {
+    const { sent, client } = mkSpy();
+    const p = new AnthropicAPIProvider({ client });
+    await p.completionWithContent([PDF_BLOCK, ASK]);
+
+    const types = sent[0].messages[0].content.map((b) => b.type);
+    expect(types).toEqual(['document', 'text']);
+  });
+
+  test('system rides as its own parameter, never as a content block', async () => {
+    const { sent, client } = mkSpy();
+    const p = new AnthropicAPIProvider({ client });
+    await p.completionWithContent([PDF_BLOCK, ASK], { system: 'You extract form fields.' });
+
+    expect(sent[0].system).toBe('You extract form fields.');
+    expect(sent[0].messages[0].content).not.toContainEqual(
+      expect.objectContaining({ text: 'You extract form fields.' }),
+    );
+  });
+
+  test('joins text blocks of the reply and prices the turn (Haiku 4.5 rates)', async () => {
+    // 1M input @ $1/M + 1M output @ $5/M = $6.00
+    const { client } = mkSpy(
+      [{ type: 'text', text: '{"beneficiary":' }, { type: 'text', text: '"I. Plaksin"}' }],
+      { input_tokens: 1e6, output_tokens: 1e6 },
+    );
+    const p = new AnthropicAPIProvider({ client, model: 'claude-haiku-4-5-20251001' });
+    const r = await p.completionWithContent([PDF_BLOCK, ASK]);
+
+    expect(r.text).toBe('{"beneficiary":"I. Plaksin"}');
+    expect(r.provider).toBe('anthropic-api');
+    expect(r.model).toBe('claude-haiku-4-5-20251001');
+    expect(r.cost).toBeCloseTo(6.0, 6);
+  });
+
+  test('opts override model and max_tokens; extraction is not stuck on the chat model', async () => {
+    const { sent, client } = mkSpy();
+    const p = new AnthropicAPIProvider({ client, model: 'claude-haiku-4-5-20251001' });
+    await p.completionWithContent([PDF_BLOCK, ASK], { model: 'claude-sonnet-5', maxTokens: 2048 });
+
+    expect(sent[0].model).toBe('claude-sonnet-5');
+    expect(sent[0].max_tokens).toBe(2048);
+  });
+
+  test('temperature is omitted unless asked for', async () => {
+    const { sent, client } = mkSpy();
+    const p = new AnthropicAPIProvider({ client });
+    await p.completionWithContent([PDF_BLOCK, ASK]);
+    expect(sent[0]).not.toHaveProperty('temperature');
+
+    await p.completionWithContent([PDF_BLOCK, ASK], { temperature: 0 });
+    expect(sent[1].temperature).toBe(0);
+  });
+
+  test('rejects a missing or empty block list rather than sending an empty turn', async () => {
+    const { sent, client } = mkSpy();
+    const p = new AnthropicAPIProvider({ client });
+
+    await expect(p.completionWithContent([])).rejects.toThrow(/non-empty array of blocks/);
+    await expect(p.completionWithContent()).rejects.toThrow(/non-empty array of blocks/);
+    await expect(p.completionWithContent('a prompt')).rejects.toThrow(/non-empty array of blocks/);
+    expect(sent).toHaveLength(0);
+  });
+
+  test('completion(string) still works — the existing path is untouched', async () => {
+    const { sent, client } = mkSpy([{ type: 'text', text: 'plain' }]);
+    const p = new AnthropicAPIProvider({ client });
+
+    expect((await p.completion('x')).text).toBe('plain');
+    expect(sent[0].messages).toEqual([{ role: 'user', content: 'x' }]);
+  });
+});

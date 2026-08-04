@@ -1,54 +1,103 @@
-# FlowDeskChatV2 ↔ AltioraChat — sync parity
+# FlowDeskChatV2 ↔ AltioraChat — the sync rule, and why the old one failed
 
-Two copies of the same chat feature exist and **must be kept in step**:
+## The rule
 
-| Copy | Path | Role |
+**One build. Two consumers. Never a hand-copied source.**
+
+| | Path | Role |
 |---|---|---|
-| **Source** (`FlowDeskChatV2`) | `mcp/src/features/flowdesk-chat-v2/` (UNPA_Ingest) | Dev/reference — in-repo with the backend, unit-tested (vitest) |
-| **Package** (`AltioraChat`, `@flowdesk/chat-v2`) | `FlowDesk/…/Frontend/Components/flowdesk-chat-v2/` | Production — embedded in the Altiora Portal via `AltioraChat` |
+| **Package source** | `FlowDesk/…/Frontend/Components/flowdesk-chat-v2/src/` | The code. Edited here. |
+| **Build output** | `…/flowdesk-chat-v2/dist/` | The only thing anyone consumes. |
+| **Consumer — this repo** | `mcp/vendor/flowdesk-chat-v2/` | A COPY of `dist` + `package.json`. |
+| **Consumer — Altiora portal** | `Frontend/Clients/shared/features` via `file:` | Resolves to the package dir. |
+| **Dev/reference copy** | `mcp/src/features/flowdesk-chat-v2/` (this dir) | **Stale. See below.** |
 
-The package was extracted from the source and **has deliberately diverged** in three
-areas — do NOT copy files blindly; port the *change*, adapting to these:
+Ship a change with **one** command — never by copying files by hand:
 
-1. **Entry component.** Source = `FlowDeskChatV2.jsx` (route entry, `config/api.config`
-   `API_BASE_URL`). Package = `AltioraChat.jsx` (runtime-config props: `apiBaseUrl`,
-   `userId`, `userProfile`, `getAuthHeaders`, `fetchImpl`, `eventSourceImpl`, `lang`,
-   `onSubmitted/onError/onSessionStart`, voice + draft-panel toggles).
-2. **Transport.** Source uses `fetch` + `API_BASE_URL` directly. Package uses
-   `config/runtime-config` (`apiUrl`, `getFetch`, `buildHeaders`, `getConfig`, `emit`).
-   → In `chat-client.js` and `AutocompleteControl.jsx`, the package variant must call
-   through those, not `fetch`/`API_BASE_URL`.
-3. **Extras the package has and the source doesn't.** `voice/*`, host callbacks
-   (`emit('onSubmitted'|'onError')`), shadcn theme tokens in the CSS.
+```bash
+# 1. bump the version in the package's package.json (mandatory — see below)
+# 2. then:
+bash scripts/build-install-chat-v2.sh
+```
 
-## Files that carry the shared functionality (change BOTH)
+It builds, installs the artifact into both consumers, and prints a byte-comparison of the
+two so an out-of-sync install cannot pass unnoticed.
 
-`components/ControlRenderer.jsx`, `components/AutocompleteControl.jsx`,
-`components/MessageBubble.jsx`, `store/chat-store.js`, `api/chat-client.js`,
-`i18n/resources.js`, `styles/chat-v2.css`, entry (`FlowDeskChatV2.jsx` / `AltioraChat.jsx`),
-and the package's `index.d.ts`.
+**The version bump is not a formality.** npm (`--install-links`) and Vite both cache a
+same-version rebuild away: without a bump the build succeeds, the copy succeeds, and the
+consumer keeps running the previous bundle. The script refuses to run if the version has
+not moved.
 
-## Rule when changing chat UI behavior
+## Why this document was rewritten (2026-07-30)
 
-1. Make the change in the **source** first, unit-test it (vitest).
-2. Port the same change into the **package**, adapting to the divergences above.
-3. **Bump `package.json` version** in the package (mandatory — same-version rebuilds
-   are cached away by npm `--install-links` + Vite and never reach the portal).
-4. `npm run build` the package; `npm install @flowdesk/chat-v2 --install-links` in mcp.
+The previous rule was "two copies, keep them in step by hand; port the *change*, not the
+*file*". It did not survive contact with reality. Measured drift at the moment it was
+replaced — package versus this directory, shared files only:
 
-## Current parity (2026-07-17) — both have
+| File | here | package | behind by |
+|---|---|---|---|
+| `styles/chat-v2.css` | 574 | 937 | **+363** |
+| `components/AISettingsDialog.jsx` | 63 | 135 | +72 |
+| `store/chat-store.js` | 509 | 579 | +70 |
+| `components/MessageBubble.jsx` | 104 | 159 | +55 |
+| `components/VoiceControls.jsx` | 55 | 107 | +52 |
+| `components/ControlRenderer.jsx` | 135 | 185 | +50 |
+| `components/LanguageSwitcher.jsx` | 25 | 74 | +49 |
+| `components/AutocompleteControl.jsx` | 69 | 115 | +46 |
+| `api/chat-client.js` | 276 | 315 | +39 |
+| …7 more | | | ~100 |
 
-- `controls[]` turn-contract: `ControlRenderer` + `AutocompleteControl` (typeahead →
-  `/flowdesk/directory/:type`) + `MessageBubble` render + store `sendControlAction` +
-  `chat-client` `controlAction` in the POST body + `controls`/`tickets`/`breadcrumb` in
-  message metadata.
-- User profile: `userProfile` identity → store `user`/`setUser`, `userContext` sent on
-  every turn.
-- Personalized greeting by first name in the selected language (`seedGreeting`, i18n
-  `greeting {{name}}`, 6 languages).
-- Participant captions: agent = "Altiora" (`agentName`), user = localized "me"
-  (`senderMe`), `.fdv2-sender`.
-- Respond-in-selected-language: the frontend sends `lang`; the backend localizes (see
-  `api/.../ui-strings.js` `agent.*` + `langInstruction`).
+Roughly **900 lines** behind across 16 files, plus a whole component
+(`components/CardList.jsx`, the request/task rows) that never arrived here at all. The
+CSS gap is the clearest symptom: `AISettingsDialog.jsx` exists in this directory, but the
+57 `.fdv2-settings-*`, `.fdv2-lang-*`, `.fdv2-card-*` rules it needs do not — so the
+component this copy would render is unstyled.
 
-Package version at last sync: **1.0.4**.
+Drift ran the other way too, which is the more expensive half: `sessionEnded` — the
+backend saying it closed its side of a conversation — was implemented **here** and never
+reached the package, so for as long as that lasted the production component ignored a
+contract the backend was emitting. (Fixed in 1.0.46.)
+
+**The lesson: a hand-synchronised second copy is not a copy, it is a fork.** Nobody
+notices, because both halves keep working — each host renders its own copy perfectly
+well. The divergence surfaces only when someone compares them, which is exactly what
+nobody does on a busy day.
+
+## Status of this directory
+
+`mcp/src/features/flowdesk-chat-v2/` is **no longer authoritative for anything shipped**.
+It is kept for two reasons only:
+
+- `FlowDeskChatV2.jsx` — the entry the mcp SPA's own route mounts.
+- `__tests__/` — 9 vitest files. The package has none, so these are the only unit tests
+  the component has anywhere.
+
+Do **not** fix a production bug here and expect it to ship: nothing in this directory is
+built or installed. Fix it in the package source.
+
+The intended end state is to eliminate the fork by moving the package source into this
+repo, so the code is edited here, built here, and only the artifact is installed into
+Altiora. The tests and the SPA entry above move with it. Until that lands, this directory
+is reference material with known gaps.
+
+## Divergences that are deliberate (not drift)
+
+Even once the source is single, these two build targets differ by design:
+
+1. **Entry component.** `FlowDeskChatV2.jsx` (SPA route, `config/api.config`) vs
+   `AltioraChat.jsx` (runtime-config props: `apiBaseUrl`, `userId`, `userProfile`,
+   `getAuthHeaders`, `fetchImpl`, `eventSourceImpl`, `lang`, `onSubmitted`/`onError`/
+   `onSessionStart`/`onOpenForm`/`onReveal`, voice + draft-panel toggles).
+2. **Transport.** The SPA entry uses `fetch` + `API_BASE_URL` directly; the package goes
+   through `config/runtime-config` (`apiUrl`, `getFetch`, `buildHeaders`, `getConfig`,
+   `emit`). In `chat-client.js` and `AutocompleteControl.jsx` the package variant must
+   call through those.
+3. **Package-only modules.** `voice/*`, `index.js`, shadcn theme tokens in the CSS.
+
+## Where the API base URL comes from
+
+The package never hard-codes a URL: the host injects `apiBaseUrl` into a module-level
+config (not React context — the Zustand store issues requests outside the React tree).
+The Altiora hosts derive it with `getUnpaProxyBaseUrl()` from `VITE_API_BASE_URL`, i.e.
+`{API base}/proxy/unpa`, because `UnpaProxyController` is an endpoint of the API and in
+every deployed mode the API is a different host than the portal.

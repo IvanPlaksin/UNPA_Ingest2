@@ -358,6 +358,20 @@
 .fdv2-icon-btn:disabled { cursor: not-allowed; opacity: 0.45; }
 
 .fdv2-send:not(:disabled) { background: var(--fdv2-accent); color: var(--fdv2-accent-contrast); }
+
+/* DOC-3 — attach a document. The input is kept in the DOM (so the button can
+   click it) but out of sight and out of the tab order; `display:none` would
+   work too, but a hidden-but-present input is what screen readers expect to
+   find behind a file button. */
+.fdv2-file-input {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.fdv2-attach { flex: 0 0 auto; }
+.fdv2-spin { animation: fdv2-spin 0.9s linear infinite; transform-origin: 50% 50%; }
+@keyframes fdv2-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .fdv2-spin { animation: none; opacity: 0.6; } }
+
 .fdv2-send:not(:disabled):hover { filter: brightness(1.05); background: var(--fdv2-accent); color: var(--fdv2-accent-contrast); }
 .fdv2-stop { background: var(--fdv2-surface-2); color: var(--fdv2-text); }
 

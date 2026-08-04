@@ -167,6 +167,45 @@ class AnthropicAPIProvider {
   }
 
   /**
+   * DOC-0-001 — one user turn whose content is BLOCKS, not a string.
+   *
+   * `completion` takes a prompt and can only ever send text; the Messages API
+   * accepts a `document` or `image` block in the same turn, which is how a PDF
+   * or a scan reaches the model at all. This is that turn and nothing more —
+   * the caller assembles the blocks (see ../multimodal), this sends them and
+   * returns the text, so the shape of a document is decided in one place rather
+   * than at every call site.
+   *
+   * NOT a second agent path. `messages()` below already passes its `messages`
+   * through verbatim, so the agent loop can carry a document today with no
+   * change here; what it lacked was a way to ask a one-shot question about a
+   * file without pretending the file was a prompt.
+   *
+   * A `document` block MUST precede the text that asks about it — the model
+   * reads the instruction against the document, and reversing them measurably
+   * degrades extraction. `system` is a separate parameter, not a block.
+   *
+   * @param {Array<object>} content ordered content blocks, document/image first
+   * @param {{system?:string, model?:string, maxTokens?:number, temperature?:number}} [opts]
+   * @returns {Promise<{text:string, provider:string, model:string}>} plus usage
+   */
+  async completionWithContent(content, opts = {}) {
+    if (!Array.isArray(content) || !content.length) {
+      throw new Error('[anthropic-api] completionWithContent: content must be a non-empty array of blocks');
+    }
+    const model = opts.model || this._model;
+    const resp = await this._c().messages.create({
+      model,
+      max_tokens: opts.maxTokens || 4096,
+      ...(opts.temperature !== undefined ? { temperature: opts.temperature } : {}),
+      ...(opts.system ? { system: opts.system } : {}),
+      messages: [{ role: 'user', content }],
+    });
+    const text = (resp.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('');
+    return { text, provider: this.id, model, ...usageFields(model, resp) };
+  }
+
+  /**
    * Multi-turn tool use (EXP-002 agent interpreter).
    *
    * `structuredOutput` forces exactly one tool and returns its input; an agent

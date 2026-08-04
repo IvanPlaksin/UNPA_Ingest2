@@ -166,13 +166,30 @@ function createAltioraClient({
 } = {}) {
   if (!baseUrl) throw new Error('AltioraClient: baseUrl (ALTIORA_API_BASE) is required');
 
-  async function once(method, path, { query, body, token, signal } = {}) {
-    const headers = { Accept: 'application/json' };
+  /**
+   * DOC-1-003 added two shapes this originally could not express, and both are
+   * about files.
+   *
+   * `formData` — a multipart upload. The Content-Type is NOT set here on
+   * purpose: multipart needs a boundary, fetch derives one from the FormData
+   * instance, and a hand-written `multipart/form-data` header loses it and
+   * makes the server fail to parse a request that looks correct.
+   *
+   * `raw` — a response that is bytes, not JSON. The default path calls
+   * `res.text()`, which decodes as UTF-8 and silently corrupts a PDF.
+   *
+   * Both ride THROUGH here rather than around it so uploads and downloads get
+   * the same timeout, the same typed errors and the same telemetry as every
+   * other Altiora call — the alternative was a second `fetch` path whose
+   * failures would be invisible in exactly the traffic most likely to fail.
+   */
+  async function once(method, path, { query, body, token, signal, formData, raw } = {}) {
+    const headers = { Accept: raw ? '*/*' : 'application/json' };
     if (apiKey) headers['API-Key'] = apiKey;
 
     const bearer = token !== undefined ? token : (tokenProvider ? await tokenProvider() : null);
     if (bearer) headers.Authorization = `Bearer ${bearer}`;
-    if (body !== undefined) headers['Content-Type'] = 'application/json';
+    if (body !== undefined && !formData) headers['Content-Type'] = 'application/json';
 
     // Own timeout, but honour a caller's abort too.
     const ctl = new AbortController();
@@ -185,7 +202,8 @@ function createAltioraClient({
       res = await fetchImpl(buildUrl(baseUrl, path, query), {
         method,
         headers,
-        body: body === undefined ? undefined : JSON.stringify(body),
+        body: formData !== undefined ? formData
+          : (body === undefined ? undefined : JSON.stringify(body)),
         signal: ctl.signal,
       });
     } catch (err) {
@@ -194,6 +212,13 @@ function createAltioraClient({
     } finally {
       clearTimeout(timer);
       if (signal) signal.removeEventListener('abort', onAbort);
+    }
+
+    // A failed binary request still carries a text explanation, so the error
+    // path reads the body as text either way and only a 2xx is taken as bytes.
+    if (raw && res.ok) {
+      const buf = Buffer.from(await res.arrayBuffer());
+      return buf;
     }
 
     const text = await res.text().catch(() => '');
@@ -258,6 +283,130 @@ function createAltioraClient({
     throw lastErr;
   }
 
+  /**
+   * DOC-1-003 — attachments.
+   *
+   * Four calls against Altiora's own `AttachmentsController`, deliberately the
+   * multipart route rather than the base64-in-JSON one that `POST /api/tickets`
+   * also accepts. Only the multipart route runs Altiora's validation: extension
+   * allow-list, magic-number check, unsafe-SVG check, and rejection of a PDF
+   * carrying JavaScript. The JSON route persists whatever it is handed. We are
+   * putting user-supplied files into a UN ticketing system; taking the checked
+   * door is not optional, even though Altiora's own frontend does not.
+   *
+   * NONE OF THESE ARE RETRIED, and that is correct rather than an oversight.
+   * `request` replays GET/HEAD only. An upload is a POST whose handler runs
+   * `Guid.NewGuid()` per call, so a replayed upload does not overwrite — it
+   * creates a SECOND attachment with the same bytes. Since a transport failure
+   * cannot be distinguished from a lost response, retrying trades a visible
+   * error for a silent duplicate on the user's ticket. Telemetry and typed
+   * errors still apply, because these go through `request`.
+   */
+  const ATTACHMENT_KIND = Object.freeze({
+    Ticket: 1, Task: 2, Message: 3, Avatar: 4, Template: 5, Chat: 6,
+  });
+
+  /** Accepts 'Chat' or 6; the route wants the numeric enum value. */
+  function kindValue(kind) {
+    if (typeof kind === 'number') return kind;
+    const v = ATTACHMENT_KIND[kind];
+    if (!v) throw new Error(`AltioraClient: unknown attachment kind "${kind}"`);
+    return v;
+  }
+
+  /**
+   * Upload a file. For chat staging use kind 'Chat' with the sessionId as
+   * `ownerId` — the owner need not exist yet, which is how a file can be
+   * attached before the ticket it will belong to has been created.
+   *
+   * @param {string|null} token acting-user bearer; null falls back to the provider
+   * @param {{kind:string|number, ownerId:string, file:Buffer, fileName:string,
+   *          contentType:string, notes?:string, tag?:string, signal?:AbortSignal}} o
+   * @returns {Promise<object>} the created FileAttachment (no FileData)
+   */
+  function uploadAttachment(token, o = {}) {
+    const { kind, ownerId, file, fileName, contentType, notes, tag, signal } = o;
+    if (!Buffer.isBuffer(file)) throw new Error('AltioraClient.uploadAttachment: file must be a Buffer');
+    if (!fileName) throw new Error('AltioraClient.uploadAttachment: fileName is required');
+    if (!ownerId) throw new Error('AltioraClient.uploadAttachment: ownerId is required');
+
+    // Native FormData/Blob (Node 18+) — no `form-data` package needed. The field
+    // names match UploadFileDto's properties; ASP.NET binds them case-insensitively.
+    const form = new FormData();
+    form.append('File', new Blob([file], { type: contentType || 'application/octet-stream' }), fileName);
+    if (notes) form.append('Notes', notes);
+
+    return request('POST', `/api/Attachments/${kindValue(kind)}/${encodeURIComponent(ownerId)}`, {
+      formData: form,
+      ...(tag ? { query: { tag } } : {}),
+      token,
+      signal,
+    });
+  }
+
+  /**
+   * Re-own an existing attachment — the step that moves a chat-staged file onto
+   * the ticket once it exists. Altiora COPIES the bytes to a new attachment
+   * rather than moving them, so the staged original survives and is still
+   * reachable until the session's staging is cleaned up.
+   *
+   * @param {string|null} token
+   * @param {{kind:string|number, ownerId:string, sourceAttachmentId:string, signal?:AbortSignal}} o
+   */
+  function linkAttachment(token, o = {}) {
+    const { kind, ownerId, sourceAttachmentId, signal } = o;
+    if (!ownerId) throw new Error('AltioraClient.linkAttachment: ownerId is required');
+    if (!sourceAttachmentId) throw new Error('AltioraClient.linkAttachment: sourceAttachmentId is required');
+
+    return request(
+      'POST',
+      `/api/Attachments/${kindValue(kind)}/${encodeURIComponent(ownerId)}/link/${encodeURIComponent(sourceAttachmentId)}`,
+      { token, signal },
+    );
+  }
+
+  /**
+   * Fetch the bytes back — what extraction reads before building a content
+   * block. Returns a Buffer; see `raw` in `once` for why that is not the
+   * default path.
+   */
+  function downloadAttachment(token, attachmentId, o = {}) {
+    if (!attachmentId) throw new Error('AltioraClient.downloadAttachment: attachmentId is required');
+    return request('GET', `/api/Attachments/${encodeURIComponent(attachmentId)}/content`, {
+      raw: true, token, signal: o.signal,
+    });
+  }
+
+  /**
+   * Retire an attachment.
+   *
+   * SOFT delete on Altiora's side: `IsDeleted = 1` with `DeletedBy`/`DeletedAt`
+   * stamped from the bearer (AttachmentRepository.DeleteAsync). The row and its
+   * bytes stay in the table, so this hides a file from listings and records who
+   * hid it — it does NOT reclaim storage. Anything that needs the space back
+   * needs a change on Altiora's side.
+   *
+   * Not retried: DELETE is not GET/HEAD, so `request` runs it once. A repeat
+   * would answer 404 anyway, the row already being marked.
+   */
+  function deleteAttachment(token, attachmentId, o = {}) {
+    if (!attachmentId) throw new Error('AltioraClient.deleteAttachment: attachmentId is required');
+    return request('DELETE', `/api/Attachments/${encodeURIComponent(attachmentId)}`, {
+      token, signal: o.signal,
+    });
+  }
+
+  /**
+   * Altiora's live upload limits: allowed extensions and per-type max size.
+   *
+   * Read rather than hardcoded because the underlying `AllowedFileTypes` table
+   * is editable in Altiora — a limit copied into our code is a limit that goes
+   * stale silently. The endpoint is `[AllowAnonymous]`, hence `token: null`.
+   */
+  function getAttachmentConfig(o = {}) {
+    return request('GET', '/api/Attachments/config', { token: null, signal: o.signal });
+  }
+
   return {
     request,
     get:   (path, opts)       => request('GET', path, opts),
@@ -265,6 +414,15 @@ function createAltioraClient({
     put:   (path, body, opts) => request('PUT', path, { ...opts, body }),
     patch: (path, body, opts) => request('PATCH', path, { ...opts, body }),
     del:   (path, opts)       => request('DELETE', path, opts),
+
+    // DOC-1-003
+    ATTACHMENT_KIND,
+    uploadAttachment,
+    linkAttachment,
+    downloadAttachment,
+    getAttachmentConfig,
+    // DOC-1-005
+    deleteAttachment,
   };
 }
 
