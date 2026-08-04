@@ -141,10 +141,13 @@ function frame(assembled) {
 async function knowledgeBrief(userText, opts = {}) {
   // Cheap checks first: resolving the binding costs a graph read on a cache
   // miss, and there is no point paying it to retrieve for "yes".
-  if (!opts.workspaceId && !shouldRetrieve(userText, opts.controlAction, 'probe')) return null;
+  if (!shouldRetrieve(userText, opts.controlAction, 'probe')) return null;
 
-  const workspaceId = opts.workspaceId || await resolveWorkspaceId();
-  if (!shouldRetrieve(userText, opts.controlAction, workspaceId)) return null;
+  // An explicit `workspaceId` — including null — is taken as given. Only its
+  // ABSENCE means "go and resolve the binding", so a caller that already knows
+  // the answer (and a test) never reaches the graph.
+  const workspaceId = 'workspaceId' in opts ? opts.workspaceId : await resolveWorkspaceId();
+  if (!workspaceId) return null;
 
   const started = Date.now();
   const svc = opts.retriever || retriever();

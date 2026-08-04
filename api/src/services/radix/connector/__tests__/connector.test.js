@@ -61,17 +61,23 @@ describe('RadixConnector: schema', () => {
       }
     });
 
+    it('has no vectorThreshold — it could not affect a shared retrieval', () => {
+      // Dropped rather than kept as a no-op: a setting that saves and displays
+      // but changes nothing is worse than an absent one.
+      expect(DEFAULTS.vectorThreshold).toBeUndefined();
+      expect(validateConnector({ ...valid, vectorThreshold: 0.9 }).value.vectorThreshold)
+        .toBeUndefined();
+    });
+
     it('clamps numeric settings instead of rejecting them', () => {
       const r = validateConnector({
         ...valid,
-        vectorThreshold: 5,
         maxElements: 999,
         tokenBudget: 1,
         priority: 9999
       });
 
       expect(r.valid).toBe(true);
-      expect(r.value.vectorThreshold).toBe(1);
       expect(r.value.maxElements).toBe(50);
       expect(r.value.tokenBudget).toBe(100);
       expect(r.value.priority).toBe(100);
@@ -175,8 +181,8 @@ describe('RadixConnector: service', () => {
       await svc(graph).create('ws_1', valid);
 
       const { props } = graph.runQuery.mock.calls[0][1];
-      expect(props.vectorThreshold).toBe(DEFAULTS.vectorThreshold);
       expect(props.maxElements).toBe(DEFAULTS.maxElements);
+      expect(props.tokenBudget).toBe(DEFAULTS.tokenBudget);
       expect(props.enabled).toBe(true);
     });
 

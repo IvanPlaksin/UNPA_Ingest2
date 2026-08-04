@@ -28,7 +28,11 @@ const KNOWLEDGE_FAMILIES = Object.freeze([
 const DEFAULTS = Object.freeze({
   enabled: true,
   priority: 0,
-  vectorThreshold: 0.78,
+  // No `vectorThreshold` here on purpose. A connector partitions candidates that
+  // ONE shared retrieval already returned, so a per-connector similarity floor
+  // could only be applied after the fact to scores it did not shape — a setting
+  // that saves, displays, and changes nothing. It returns if connectors ever get
+  // their own query.
   maxElements: 10,
   tokenBudget: 1500,
   // Empty means "no filter". Memgraph rejects a null literal inside a CREATE
@@ -104,12 +108,6 @@ function validateConnector(input, partial = false) {
     const p = Number(src.priority);
     if (!Number.isFinite(p)) errors.push('priority must be a number');
     else value.priority = Math.trunc(clamp(p, -100, 100));
-  }
-
-  if (has('vectorThreshold')) {
-    const t = Number(src.vectorThreshold);
-    if (!Number.isFinite(t)) errors.push('vectorThreshold must be a number');
-    else value.vectorThreshold = clamp(t, 0, 1);
   }
 
   if (has('maxElements')) {

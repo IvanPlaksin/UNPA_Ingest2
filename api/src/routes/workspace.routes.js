@@ -14,6 +14,7 @@ const multer = require('multer');
 const router = express.Router();
 const controller = require('../controllers/workspace.controller');
 const radixController = require('../controllers/radix.controller');
+const connectorController = require('../controllers/connector.controller');
 const { validate } = require('../middleware/input-validator.middleware');
 const { sanitizeInput } = require('../middleware/sanitizer.middleware');
 const { rateLimit } = require('../middleware/rate-limiter.middleware');
@@ -74,6 +75,13 @@ router.post('/:id/edges',                  (req, res, next) => controller.create
 // Lives in its own controller — the route is workspace-scoped, the subsystem is not.
 
 router.post('/:id/retrieve',               (req, res, next) => radixController.retrieve(req, res, next));
+
+// Connectors — the workspace's own declaration of what categories it answers with.
+router.get('/:id/connectors',                     (req, res, next) => connectorController.list(req, res, next));
+router.post('/:id/connectors',                    (req, res, next) => connectorController.create(req, res, next));
+router.get('/:id/connectors/:connectorId',        (req, res, next) => connectorController.get(req, res, next));
+router.patch('/:id/connectors/:connectorId',      (req, res, next) => connectorController.update(req, res, next));
+router.delete('/:id/connectors/:connectorId',     (req, res, next) => connectorController.remove(req, res, next));
 
 // ==================== KB ACCESS (READ-ONLY) ====================
 

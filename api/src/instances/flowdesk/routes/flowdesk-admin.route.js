@@ -16,6 +16,16 @@ const { flowdeskAdminMiddleware } = require('../../../middleware/flowdesk-admin.
 router.use(flowdeskUserMiddleware);
 router.use(flowdeskAdminMiddleware);
 
+// Knowledge workspace binding (Radix R4.4b) — which workspace the chat draws
+// context from, and which workspaces are available to bind.
+const kb = require('../controller/knowledge-binding.controller');
+router.get('/knowledge-binding', (req, res, next) => kb.get(req, res, next));
+router.put('/knowledge-binding', (req, res, next) => kb.set(req, res, next));
+router.delete('/knowledge-binding', (req, res, next) => kb.remove(req, res, next));
+router.post('/knowledge-binding/disable', (req, res, next) => kb.disable(req, res, next));
+router.post('/knowledge-binding/enable', (req, res, next) => kb.enable(req, res, next));
+router.get('/available-workspaces', (req, res, next) => kb.availableWorkspaces(req, res, next));
+
 // Sessions (P1)
 router.get('/sessions', c.listSessions);
 router.get('/sessions/stats', c.sessionStats);

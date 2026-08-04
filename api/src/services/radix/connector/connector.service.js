@@ -45,9 +45,6 @@ function toConnector(props) {
     category: props.category,
     enabled: props.enabled !== false,
     priority: typeof props.priority === 'number' ? props.priority : DEFAULTS.priority,
-    vectorThreshold: typeof props.vectorThreshold === 'number'
-      ? props.vectorThreshold
-      : DEFAULTS.vectorThreshold,
     maxElements: typeof props.maxElements === 'number' ? props.maxElements : DEFAULTS.maxElements,
     tokenBudget: typeof props.tokenBudget === 'number' ? props.tokenBudget : DEFAULTS.tokenBudget,
     draftTypes: Array.isArray(props.draftTypes) ? props.draftTypes : [],

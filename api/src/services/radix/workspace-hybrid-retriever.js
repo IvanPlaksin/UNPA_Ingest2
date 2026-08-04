@@ -46,6 +46,7 @@ class WorkspaceHybridRetriever {
     this.fusionPolicy = dependencies.fusionPolicy || null;
     this.assembler = dependencies.assembler || new ContextAssembler(dependencies);
     this.reranker = dependencies.reranker || new RerankerService(dependencies);
+    this.connectorService = dependencies.connectorService || null;
     this.logger = dependencies.logger || logger.child('Radix');
   }
 
@@ -140,7 +141,12 @@ class WorkspaceHybridRetriever {
     bundle.timing.rerankMs = reranked.ms;
     bundle.reranked = reranked.reranked;
 
-    this.assembler.assemble(bundle, reranked.candidates);
+    // The workspace's own declaration of what categories it can answer with.
+    // Resolved late so a connector edited mid-session takes effect on the next
+    // turn rather than at process start.
+    const connectors = await this._resolveConnectors(workspaceId);
+
+    this.assembler.assemble(bundle, reranked.candidates, connectors);
 
     bundle.timing.byStrategy = Object.fromEntries(
       allResults.map((r) => [r.strategyName, r.executionMs])
@@ -169,6 +175,26 @@ class WorkspaceHybridRetriever {
     }
 
     return bundle;
+  }
+
+  /**
+   * Connectors declared on this workspace.
+   *
+   * Absent service or any failure yields [] — retrieval then assembles into a
+   * single default section, which is what it did before connectors existed.
+   *
+   * @param {string} workspaceId
+   * @returns {Promise<Object[]>}
+   * @private
+   */
+  async _resolveConnectors(workspaceId) {
+    if (!this.connectorService) return [];
+    try {
+      return await this.connectorService.resolveForRetrieval(workspaceId);
+    } catch (error) {
+      this.logger.warn('[Radix] connector resolution failed', { message: error.message });
+      return [];
+    }
   }
 
   /**

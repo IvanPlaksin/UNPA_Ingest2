@@ -64,7 +64,9 @@ function createRadixRetriever(dependencies = {}) {
   const resolved = {
     ...dependencies,
     embeddingService: dependencies.embeddingService || createTeiEmbeddingAdapter(),
-    memgraphService: dependencies.memgraphService || require('../memgraph.service')
+    memgraphService: dependencies.memgraphService || require('../memgraph.service'),
+    connectorService: dependencies.connectorService
+      || require('./connector/connector.service').getConnectorService()
   };
   return new WorkspaceHybridRetriever({
     ...resolved,

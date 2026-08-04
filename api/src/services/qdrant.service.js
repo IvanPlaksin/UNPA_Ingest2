@@ -562,6 +562,8 @@ class QdrantService {
      * @param {string} [options.type] - Filter by knowledge type
      * @param {string} [options.status] - Filter by draft status
      * @param {string[]} [options.excludeStatus] - Draft statuses to exclude (must_not)
+     * @param {string[]} [options.types] - Any of these draft types (supersedes `type`)
+     * @param {string[]} [options.knowledgeFamilies] - Any of these knowledge families
      * @param {string} [options.kind] - Only points of this payload `kind` (e.g. 'source_chunk')
      * @param {string} [options.excludeKind] - Exclude points of this payload `kind`.
      *   Points written before `kind` existed have no such field and are NOT excluded,
@@ -569,7 +571,7 @@ class QdrantService {
      * @param {number} [options.scoreThreshold=0.7]
      * @returns {Promise<Array<{id: string, score: number, payload: object}>>}
      */
-    async workspaceSearch(workspaceId, vector, { limit = 10, type, status, excludeStatus, kind, excludeKind, scoreThreshold = 0.7 } = {}) {
+    async workspaceSearch(workspaceId, vector, { limit = 10, type, types, knowledgeFamilies, status, excludeStatus, kind, excludeKind, scoreThreshold = 0.7 } = {}) {
         const collectionName = `workspace_${workspaceId.replace(/-/g, '_')}`;
 
         // Check collection exists
@@ -577,7 +579,17 @@ class QdrantService {
         if (!exists) return [];
 
         const must = [];
-        if (type) must.push({ key: 'type', match: { value: type } });
+        // `types` supersedes `type`; an empty array means "no filter", not
+        // "match nothing", so a connector with no type restriction behaves like
+        // one that was never configured.
+        if (Array.isArray(types) && types.length > 0) {
+            must.push({ key: 'type', match: { any: types } });
+        } else if (type) {
+            must.push({ key: 'type', match: { value: type } });
+        }
+        if (Array.isArray(knowledgeFamilies) && knowledgeFamilies.length > 0) {
+            must.push({ key: 'knowledgeFamily', match: { any: knowledgeFamilies } });
+        }
         if (status) must.push({ key: 'status', match: { value: status } });
         if (kind) must.push({ key: 'kind', match: { value: kind } });
 

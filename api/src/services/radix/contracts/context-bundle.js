@@ -86,6 +86,25 @@
  */
 
 /**
+ * One labelled block of the assembled context.
+ *
+ * A workspace declares its retrieval endpoints as connectors, and each connector
+ * produces a section. The category is what lets the consuming model tell one
+ * kind of knowledge from another — "this is the service catalogue" versus "this
+ * is policy" — rather than receiving one undifferentiated wall of facts.
+ *
+ * @typedef {Object} ContextSection
+ * @property {string} category - Category name, e.g. 'serviceCatalog'
+ * @property {string|null} connectorId - Connector that produced it; null for the default section
+ * @property {string|null} connectorName
+ * @property {ContextElement[]} elements
+ * @property {number} tokenCount
+ * @property {string} preamble - Introduces the section. For some categories this
+ *   carries a guardrail that configuration cannot remove.
+ * @property {number} priority - Higher sorts earlier
+ */
+
+/**
  * Complete result of workspace-scoped retrieval.
  * This is the primary output contract of RadixRetriever.
  *
@@ -95,6 +114,9 @@
  * @property {string} query - Original query text
  * @property {number[]|null} queryEmbedding - Query embedding vector (optional, for debugging)
  * @property {ContextElement[]} elements - Retrieved elements, ordered by score desc
+ * @property {ContextSection[]} sections - The same elements grouped by category.
+ *   `assembledContext` is the serialization of these, so a consumer can either take
+ *   the ready text or work with the groups directly.
  * @property {string[]} strategiesUsed - Names of strategies that contributed
  * @property {RetrievalTiming} timing - Performance metrics
  * @property {RetrievalStats} stats - Retrieval statistics
@@ -295,6 +317,7 @@ function createContextBundle(workspaceId, query, config = {}) {
     query,
     queryEmbedding: null,
     elements: [],
+    sections: [],
     strategiesUsed: [],
     timing: {
       totalMs: 0,

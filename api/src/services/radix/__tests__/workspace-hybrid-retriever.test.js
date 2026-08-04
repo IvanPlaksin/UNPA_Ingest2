@@ -55,10 +55,18 @@ const noopReranker = () => ({
   )
 });
 
+/**
+ * No connectors → single default section. Injected so these tests never reach a
+ * live Memgraph: the production factory resolves a real connector service, and
+ * letting that default through turns unit tests into integration tests.
+ */
+const noConnectors = () => ({ resolveForRetrieval: jest.fn().mockResolvedValue([]) });
+
 const build = (strategies, deps = {}) => new WorkspaceHybridRetriever({
   strategies,
   embeddingService: okEmbedder(),
   reranker: noopReranker(),
+  connectorService: noConnectors(),
   logger: silentLogger,
   ...deps
 });
@@ -497,6 +505,7 @@ describe('Radix Orchestrator: WorkspaceHybridRetriever', () => {
       const retriever = createRadixRetriever({
         embeddingService: okEmbedder(),
         logger: silentLogger,
+        connectorService: noConnectors(),
         strategies: [seedStrategy('s1', [candidate('a')])]
       });
 
@@ -515,6 +524,7 @@ describe('Radix Orchestrator: WorkspaceHybridRetriever', () => {
       const retriever = createRadixRetriever({
         embeddingService: okEmbedder(),
         logger: silentLogger,
+        connectorService: noConnectors(),
         memgraphService: { runQuery: jest.fn().mockResolvedValue([]) }
       });
 
